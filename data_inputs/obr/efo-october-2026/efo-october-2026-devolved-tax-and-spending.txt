@@ -1,0 +1,1925 @@
+Office for
+Budget
+Responsibility
+
+
+
+
+Devolved tax and spending forecasts
+
+                               October 2026
+Contents
+
+
+Chapter 1            Introduction ................................................................................ 1
+                           Background.......................................................................... 1
+                           Forecast timetable ................................................................ 1
+                           Structure of this report ........................................................... 2
+
+Chapter 2            Rest of UK forecasts .................................................................... 3
+                           Income tax ........................................................................... 3
+                           Box 2.1: Impact of the reclassification of carried interest on
+                           net funding positions............................................................. 6
+                           Other taxes .......................................................................... 8
+                           Social security forecasts ......................................................... 9
+
+Chapter 3            Scottish tax forecasts and net position ........................................ 13
+                           Introduction ........................................................................ 13
+                           Scottish receipts, BGAs and net position ............................... 14
+                           Scottish tax forecasts ........................................................... 19
+
+Chapter 4            Welsh tax forecasts and net position .......................................... 27
+                           Introduction ........................................................................ 27
+                           Welsh receipts, BGAs and net position ................................. 28
+                           Welsh tax forecasts ............................................................. 31
+Annex A              Illustrative forecasts for taxes not yet devolved ............................ 35
+                           Welsh aggregates levy ........................................................ 35
+                           VAT assignment .................................................................. 35
+Annex B              Additional forecast tables .......................................................... 37
+
+Index of charts and tables .................................................................................. 39
+1          Introduction
+
+
+Background
+1.1        The Office for Budget Responsibility (OBR) was established in 2010 to provide independent
+           and authoritative analysis of the UK public finances. Alongside the UK Government's
+           Budgets and other fiscal events, we publish forecasts for the economy and public finances in
+           our Economic and fiscal outlook (EFO). Under the fiscal frameworks agreed between the UK
+           Government and the Scottish and Welsh Governments, we are also responsible for
+           producing the rest of UK forecasts of revenues and spending that underpin the block grant
+           adjustments (BGAs) which determine the annual reduction in funding from the UK
+           Government to reflect the devolution of tax powers.1 This document sets out those forecasts
+           alongside the latest outlook for the devolved taxes. We also set out projections of the net tax
+           positions in Scotland and Wales, which are the difference between the forecasts of devolved
+           revenues and the BGAs.
+
+1.2        The methodologies and the forecasts represent the collective view of the independent
+           members of the OBR’s Budget Responsibility Committee (BRC). The BRC takes full
+           responsibility for the judgements that underpin them. We have drawn heavily on the work
+           and expertise of numerous officials in preparing these forecasts, including in the Welsh
+           Government, Scottish Fiscal Commission, Scottish Government, HM Revenue and Customs
+           (HMRC), HM Treasury and the Department for Work and Pensions. We are grateful for their
+           expertise, hard work, and patience.
+
+Forecast timetable
+1.3        The devolved tax and spending forecasts in this document are consistent with the central
+           forecast for the UK economy and public finances presented in our October 2026 EFO.
+
+1.4        The October 2026 EFO describes the timetable that was followed in producing these
+           forecasts. The pre-measures economy forecast was closed on 7 September and the pre-
+           measures fiscal forecast on 18 September. The forecast was finalised on 22 October after
+           incorporating the effects of new policy announcements.
+
+1.5        The process for producing the devolved forecasts in this report has been as follows:
+
+
+
+
+1
+  For the Scottish Government, a BGA is also used to determine the annual increase in funding to account for the devolution of social
+security powers. We have no role in the final calculation of the BGAs which falls under HM Treasury’s remit. For more detail on the OBR’s
+role in the fiscal frameworks see McCurry, H., Lanskey, L. and Baiju, T. (2026), The OBR's role in the devolved fiscal frameworks, 30 July
+2026.
+
+
+                                                                    1                   Devolved tax and spending forecasts
+Introduction
+
+
+
+
+        •      Officials in HMRC, the Scottish Fiscal Commission and the Welsh Government
+               produced draft Scottish and Welsh tax forecasts using our preliminary UK economy
+               and fiscal forecasts;
+
+        •      These were scrutinised by the BRC in two challenge meetings attended by those
+               officials on 15 and 16 September; and
+
+        •      A final set of forecasts was produced on 22 October, which included the impact of UK
+               Government policies.
+
+Structure of this report
+1.6     The rest of this document is structured as follows:
+
+        •      Chapter 2 sets out the rest of UK forecasts which are used as inputs to the block grant
+               adjustments;
+
+        •      Chapter 3 presents our Scottish tax forecasts and projections of the Scottish net tax
+               position;
+
+        •      Chapter 4 presents our Welsh tax forecasts and projections of the Welsh net tax
+               position;
+
+        •      Annex A provides illustrative forecasts for taxes not yet devolved;
+
+        •      Annex B provides additional forecast tables which underpin our devolved tax and
+               spending forecasts.
+
+
+
+
+Devolved tax and spending forecasts                 2
+2          Rest of UK forecasts
+
+
+2.1        This chapter presents our latest forecasts for rest of UK taxation and spending, which are
+           used as inputs to the block grant adjustments (BGAs) in Scotland and Wales.1 These include
+           our forecasts for non-savings non-dividends (NSND) income tax, stamp duty land tax, air
+           passenger duty, landfill tax and aggregates levy. In Chapter 3 and 4, we set out in more
+           detail the indicative impact of these changes on the tax BGAs in Scotland and Wales. We
+           also set out our forecasts for rest of UK social security spending, which are used as inputs
+           for the social security BGAs in Scotland.
+
+Income tax
+2.2        Our forecast for England and Northern Ireland (ENI) NSND income tax forms the basis of
+           the income tax BGAs used for budget setting in Scotland and Wales. There are three main
+           stages in generating this forecast:
+
+           •      First, we generate a UK-wide forecast for NSND income tax liabilities from the full UK
+                  income tax forecast published in our Economic and fiscal outlook (EFO). We set out our
+                  latest forecast for UK NSND below in paragraph 2.3;
+
+           •      Second, we calculate the Welsh and Scottish shares of UK-wide NSND liabilities and
+                  apply these to the UK forecast. We discuss the Scottish and Welsh shares in more
+                  detail in Chapters 3 and 4 respectively.2 This is done on a pre-measures basis, as the
+                  effect of measures announced since our previous forecast is instead captured in cash
+                  terms. We then subtract the Scottish and Welsh share from our UK NSND forecast to
+                  generate an overall ENI forecast; and
+
+           •      Third, we add the effects of UK Government policy measures announced since our
+                  previous forecast. 3
+
+UK NSND income tax forecast
+2.3        As shown in Table 2.1, we forecast that UK-wide NSND income tax liabilities will be £300
+           billion in 2025-26, rising to £410 billion by 2031-32. Year-on-year growth is forecast to
+           average 6 per cent, largely reflecting frozen personal tax thresholds until 2030-31 which
+
+1
+  Rest of UK refers to those parts of the UK where the relevant tax or spending responsibility has not been devolved and form part of the
+calculation of the BGAs. The geographical coverage of rest of UK varies by tax and spending area. For NSND income tax, stamp duty
+land tax and landfill tax, rest of UK refers to England and Northern Ireland. For aggregates levy and air passenger duty, rest of UK refers
+to England, Wales and Northern Ireland. For the elements of social security spending devolved to Scotland, rest of UK refers to England
+and Wales.
+2
+  In Chapter 4, we discuss the Welsh rates share, which refers to the share of UKNSND income tax retained by the Welsh Government.
+For the purposes of calculating the ENI share however, it is the overall Welsh share of NSND income tax (including that retained by the UK
+Government), which is subtracted from our UKNSND forecast to generate the ENI forecast.
+3
+  More detail on the forecast methodology is available in the OBR's Forecasts in depth page on Devolved aspects of income tax.
+
+
+                                                                    3                   Devolved tax and spending forecasts
+Rest of UK forecasts
+
+
+
+
+                  result in greater numbers of taxpayers moving into higher tax bands as nominal earnings
+                  rise.
+
+2.4               Relative to our March 2026 forecast, receipts have been revised up by an average of £9
+                  billion a year from 2026-27 onwards. Chart 2.1 shows the increase relative to March is
+                  mainly driven by the pre-measures upwards revision to PAYE income tax liabilities, which
+                  reflects both stronger forecast growth in nominal earnings and higher-than-expected in-year
+                  receipts. Self-assessment liabilities on a pre-measures basis have been revised down in
+                  2025-26 but are revised up by an average of £2.4 billion from 2026-27, due largely to a
+                  stronger forecast for self-employment income. The impact of UK Government policy
+                  measures announced since March is relatively small, increasing receipts by £0.2 billion on
+                  average from 2026-27 onwards.
+
+Table 2.1: UK NSND income tax forecast
+                                                                      £ billion
+                                          Outturn                           Forecast
+                                          2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+March 2026 forecast                         275.9   299.9   318.8   333.8     347.1  364.6  381.6
+October 2026 forecast                       276.6   299.7   327.0   341.9     355.2  374.4  394.3   409.6
+Difference                                     0.7   -0.2     8.2     8.1        8.1   9.8   12.7
+of which:
+  Pre-measures forecast changes                          -0.2        8.3   8.0        7.9      9.8     12.3
+  UK Government policies                                            -0.1   0.1        0.1      0.0      0.4        0.5
+  of which:
+    Direct effect                                                   -0.1    0.1       0.1      0.1       0.5        0.8
+    Indirect effects                                                 0.0   -0.1       0.1     -0.1      -0.1       -0.3
+Source: OBR
+
+
+Chart 2.1: Change in UK NSND income tax forecast since March 2026
+             14
+                                                                                            PAYE: change due to
+             12
+                                                                                            employment and earnings
+
+
+             10                                                                             PAYE: change due to
+                                                                                            receipts outturn
+             8
+                                                                                            Self-assessment
+
+£ billiion
+                                                                                            income tax
+             6
+
+                                                                                            Other pre-measures
+             4
+                                                                                            changes
+
+             2
+                                                                                            UK Government policy
+                                                                                            measures
+             0
+
+                                                                                            Change
+             -2
+                   2026-27      2027-28        2028-29          2029-30     2030-31
+Source: OBR
+
+
+
+
+Devolved tax and spending forecasts                             4
+                                                                                                               Rest of UK forecasts
+
+
+
+
+2.5        As Table 2.2 shows, the largest impact from UK Government policy measures announced
+           since March on NSND income tax receipts comes from the 2 percentage point increase to
+           property income tax rates announced at this Budget, which increases receipts by an average
+           of £0.4 billion a year from 2027-28 onwards. As income tax rates are devolved to Scotland,
+           the 2 percentage point increase to rates has no direct impact on Scottish NSND income tax
+           receipts, but raises receipts from ENI and the non-devolved element of Welsh income tax.4
+           This is partly offset by several smaller measures. A range of HMRC tax administration,
+           compliance and debt collection measures also raise receipts, with their impact increasing in
+           the later years of the forecast reaching £0.5 billion by 2031-32.
+
+Table 2.2: Impact of UK Government measures on UK NSND income tax
+                                                                            £ billion
+                                                                            Forecast
+                                                        2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+UK Government policies                                     -0.1     0.1     0.1       0.0   0.4     0.5
+of which:
+  Direct effect                                               -0.1           0.1           0.1           0.1           0.5           0.8
+  of which:
+    Increase to property income tax rates                      0.0           0.4           0.4           0.4           0.4           0.4
+    HMRC tax administration, compliance
+                                                               0.0           0.0           0.0           0.1           0.2           0.5
+    and debt collection measures
+    Other                                                     -0.1          -0.3          -0.3          -0.4          -0.1          -0.1
+  Indirect effects                                             0.0          -0.1           0.1          -0.1          -0.1          -0.3
+Source: OBR
+
+
+
+ENI share of UK NSND income tax
+2.6        Table 2.2 sets out the forecast for the ENI share of UK NSND income tax liabilities on a pre-
+           measures basis. We forecast that the ENI share will increase from 90.5 per cent in 2024-25
+           to 90.7 per cent by 2031-32. The increase in 2026-27 reflects the reclassification of carried
+           interest receipts, which we assume accrue to ENI. We explain this further in Box 2.1.
+           Thereafter, the ENI share rises gradually, reflecting differences in projected population
+           growth and ageing across the UK. In particular, based on the latest ONS principal
+           population projections, Scotland’s population is projected to decline and age more quickly
+           than the populations of England and Northern Ireland. We use this to inform the share of
+           income tax which accrues to Scotland, based on weighting liabilities by age group. This
+           reduces Scotland's share of liabilities and so increases the ENI share.
+
+2.7        Relative to March, the ENI share has been revised up by around 0.1 percentage points
+           throughout the forecast period. This is primarily driven by the latest outturn data, which
+           point to a lower Scottish share of UK liabilities, which is assumed to persist through the
+           forecast. We discuss the drivers of the changes in Welsh and Scottish shares revisions in
+           more detail in Chapters 3 and 4.
+
+
+
+4
+ There is a small reduction in Scottish NSND income tax from changes to finance cost relief as a result of the measure. This also has a
+small impact on Welsh rates.
+
+
+                                                                     5                  Devolved tax and spending forecasts
+Rest of UK forecasts
+
+
+
+
+Table 2.3: ENI share of UK NSND income tax on a pre-measures basis
+                                               Per cent of UK total for non-savings, non-dividend liabilities
+                                     Outturn                                  Forecast
+                                     2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+March 2026 forecast                     90.4        90.3       90.4     90.4      90.4      90.5      90.6
+October 2026 pre-measures forecast      90.5        90.5       90.5     90.6      90.6      90.6      90.7       90.7
+Difference                               0.1         0.1        0.1      0.1       0.1       0.1       0.1
+of which:
+  Scottish share                          0.1        0.2        0.2      0.2       0.1       0.1       0.1
+  Welsh share                             0.0        0.0        0.0      0.0       0.0       0.0       0.0
+Source: OBR
+
+
+
+ENI income tax forecast
+2.8     Table 2.4 sets out our latest forecast for ENI NSND income tax receipts, which form the
+        basis of the BGAs in Wales and Scotland. ENI NSND income tax receipts are expected to
+        rise from £250 billion in 2024-25 to £372 billion in 2031-32. This primarily reflects the
+        growth in UK NSND receipts due to the combination of continued nominal earnings growth
+        alongside frozen personal tax thresholds until 2030-31. Relative to our March 2026
+        forecast, receipts have been revised up largely due to the stronger UK NSND forecast
+        reflecting our stronger nominal earnings forecast and the latest in-year receipts data. The
+        impact of UK Government policies announced since March raise receipts by £0.2 billion on
+        average a year from 2026-27 onwards, of which the largest is the increase to property
+        income tax rates discussed above.
+
+Table 2.4: ENI NSND income tax forecast
+                                                                        £ billion
+                                Outturn                                       Forecast
+                                2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+March 2026 forecast                  249.3      270.9        288.3    301.9    314.0     329.9     345.5
+October 2026 forecast                250.2      271.1        296.1    309.6    321.7     339.3     357.6        371.5
+Difference                             0.9        0.2          7.8      7.8      7.7       9.4      12.0
+of which:
+  ENI share modelling                              0.4         1.0      1.0       1.1       1.2       1.4
+  UKNSND pre-measures changes                     -0.2         6.9      6.7       6.5       8.1      10.3
+  UK Government policies:                                     -0.1      0.1       0.1       0.1       0.4         0.4
+  of which:
+    Direct effect                                             -0.1      0.1       0.1       0.1       0.5         0.7
+    Indirect effects                                           0.0     -0.1       0.1      -0.1      -0.1        -0.3
+Source: OBR
+
+
+
+ Box 2.1: Impact of the reclassification of carried interest on net funding positions
+ In October 2024, the UK Government announced that carried interest, the income received by
+ fund executives linked to the performance of investment funds, would be taxed as trading profits
+ for income tax purposes from April 2026. This reclassification from capital gains tax (CGT) to
+ income tax was incorporated in our March 2025 EFO. Prior to April 2026, carried interest was
+
+
+Devolved tax and spending forecasts                      6
+                                                                                 Rest of UK forecasts
+
+
+
+
+subject to CGT, a reserved tax, and therefore had no direct impact on the tax BGAs or devolved
+tax revenues. Following its reclassification, carried interest forms part of UK NSND income tax
+and therefore affects the Scottish and Welsh net funding positions. In this box, we examine the
+impact of the reclassification on those projected net funding positions.
+While the OBR does not produce the costings of UK Government policy measures, it is
+responsible for scrutinising them and assessing whether they represent reasonable and central
+estimates. As part of our role under the devolved fiscal frameworks, this includes assessing the
+geographic distribution of policy effects where they affect devolved taxes or the rest of UK
+forecasts that underpin the tax BGAs. For carried interest, we judged it reasonable and central to
+assume that all additional NSND income tax receipts arising from the reclassification would
+accrue to England. This was informed by HMRC analysis of 2022-23 outturn data, which showed
+that around 90 per cent of carried interest liabilities were attributable to taxpayers in London and
+the South East, with almost all of the remainder arising elsewhere in England. The latest
+available data for 2023-24 also shows a similar geographic distribution. On this basis, the
+reclassification increases our ENI NSND income tax forecast by around £3.6 billion a year, or
+1.1 per cent, from 2026-27 onwards and so impacts the projected indicative income tax BGAs
+and net positions of the Welsh and Scottish Governments. Chart A shows that:
+   •   For the Scottish income tax net position, the reclassification is projected to increase the
+       Scottish income tax BGA by around £250 million a year from 2026-27 onwards and
+       therefore reduce the Scottish net position by the same amount. This reflects the
+       assumption that the additional NSND income tax receipts accrue entirely to England and
+       are therefore included in the rest of UK revenues used to calculate the BGA, while
+       generating no corresponding increase in Scottish income tax revenues.
+   •   For the Welsh rates net position, the reclassification is projected to have a much smaller
+       impact, reducing the net position by around £15 million a year from 2026-27 onwards.
+       The proportionately smaller effect relative to Scotland reflects our assumption that the
+       majority of carried interest receipts accrue to additional-rate taxpayers in England. Under
+       the Welsh fiscal framework, only the first 10p of each income tax band is devolved, while
+       the Welsh rates tax BGA is calculated on a by-band basis. Both these factors mean that
+       the Welsh net position is much less exposed to changes in NSND income tax liabilities at
+       the top of the income distribution in ENI. This means that only a small proportion of the
+       increase in ENI NSND income tax receipts arising from the reclassification is projected to
+       impact the Welsh rates BGA.
+
+
+
+
+                                                 7              Devolved tax and spending forecasts
+Rest of UK forecasts
+
+
+
+
+ Chart A: Impact on the Scottish and Welsh net positions of the reclassification of
+ carried interest receipts
+                                SIT net position                                            WRIT net position
+              900                                                           700
+
+              800
+                                                                            600
+              700
+                                                                            500
+              600
+                                                                            400
+
+  £ million
+              500
+
+              400                                                           300
+              300
+                                                                            200
+              200
+                                     Net position ex carried interest
+                                                                            100
+              100
+                                     Net position
+               0                                                             0
+                    2022-23    2025-26        2028-29          2031-32            2022-23   2025-26   2028-29   2031-32
+ Source: OBR
+
+
+
+
+Other taxes
+2.9                 Stamp duty land tax (SDLT) receipts in ENI are forecast to increase from £15 billion in
+                    2025-26 to £24 billion in 2031-32, an average of 8 per cent annual growth. Relative to
+                    March 2026, we have revised down our forecast by an average of £3.7 billion (17 per cent)
+                    in each year. This downward revision is because receipts in the first few months of 2026-27
+                    imply a lower forecast for both commercial and residential property. This aligns with reports
+                    of particularly weak performance in the high-value property market in London and the
+                    South East, which receipts are particularly sensitive to given SDLT’s progressive structure. UK
+                    Government policy increases SDLT receipts by £0.3 billion in 2028-29, this is more than
+                    explained by the measure to restrict sovereign wealth and overseas public pension funds’
+                    immunity from direct taxes on UK income and gains. In every other year of the forecast the
+                    total effect of new UK Government policy is small.
+
+2.10                Air passenger duty (APD) receipts in England, Wales and NI (EWNI) are forecast to be £4.8
+                    billion in 2027-28 and grow to £5.9 billion in 2031-32. This is the first forecast where we
+                    have produced an official forecast of APD revenues in EWNI. In the absence of outturn data
+                    we have estimated the EWNI receipts by subtracting from the total UK forecast an estimate
+                    of the Scottish share. Until outturn is available for Scottish receipts, these estimates are
+                    highly uncertain. In Table 2.5 we compare this forecast to the one based on our March
+                    2026 illustrative forecast, which was based on estimates from government expenditure and
+                    revenue Scotland and the ONS on Scottish shares. Relative to March 2026, the forecast is
+                    lower by on average £0.4 billion per year, largely driven by weaker outturn for UK APD in
+                    early 2026-27.
+
+2.11                Landfill tax receipts in ENI are largely unchanged from our March 2026 forecast. This is due
+                    to largely offsetting changes with higher outturn in the early months of 2026-27 and higher
+
+Devolved tax and spending forecasts                                     8
+                                                                                                                  Rest of UK forecasts
+
+
+
+
+           RPI inflation uprating being offset by updating data on landfill tonnage and the impact of
+           policies from the Department for Environment Food and Rural Affairs.
+
+2.12       Aggregates levy receipts in England, Wales and NI are also largely unchanged since March.
+           A higher forecast for uprating due to increases in the RPI forecast are more than offset by
+           lower-than-expected outturn.
+
+Table 2.5: Other rest of UK tax forecasts
+                                                                                      £ billion
+                                          Outturn                                            Forecast
+                                          2025-26       2026-27        2027-28        2028-29 2029-30              2030-31       2031-32
+Stamp duty land tax
+March 2026 forecast                            15.4           18.2          20.3           22.6           24.5          26.2
+October 2026 forecast                          15.2           15.0          16.9           18.9           20.4          22.0           23.7
+Difference                                     -0.2           -3.1          -3.4           -3.6           -4.1          -4.1
+Air passenger duty
+March 2026 illustrative forecast                                              5.1            5.4           5.7            6.0
+October 2026 forecast                                                         4.8            5.0           5.3            5.6            5.9
+Difference                                                                   -0.4           -0.4          -0.4           -0.3
+Landfill tax
+March 2026 forecast                              0.6            0.4           0.4            0.5           0.5            0.5
+October 2026 forecast                            0.6            0.4           0.4            0.5           0.5            0.5            0.5
+Difference                                       0.0            0.0           0.0            0.0           0.0            0.0
+Aggregates levy
+March 2026 forecast                                             0.4           0.4            0.4           0.4            0.4
+October 2026 forecast                                           0.3           0.4            0.4           0.4            0.4            0.4
+Difference                                                      0.0           0.0            0.0           0.0            0.0
+Source: OBR
+
+
+
+Social security forecasts
+2.13       Following the Scotland Act 2016, the UK Government has devolved responsibility for some
+           social security benefits to the Scottish Government. The UK Government gives additional
+           funding to the Scottish Government to reflect this.
+
+2.14       Table 2.6 sets out forecasts for the elements of England and Wales social security that have
+           been devolved to Scotland and which are used to calculate the welfare BGAs for Scottish
+           Government funding. Total spending on the devolved benefits in England and Wales is
+           estimated to be £58 billion in 2026-27. It is then forecast to rise by an average of £4.4
+           billion a year over the forecast period, reaching £79 billion in 2031-32. The main drivers of
+           rising spending are rising disability benefit caseloads and the annual inflation-linked benefit
+           uprating.5
+
+
+
+
+5
+  Disability benefits refer to disability living allowance, the disability benefit now open only to children, personal independence payment,
+the disability benefit open to those of working-age, and attendance allowance, the disability benefit open to pensioners. Carer’s
+allowance caseloads are directly driven by our disability benefit caseload forecasts.
+
+
+                                                                      9                   Devolved tax and spending forecasts
+Rest of UK forecasts
+
+
+
+
+Table 2.6: Social security spending in England and Wales
+                                                                      £ million
+                                               Outturn                     Forecast
+                                              2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Total England and Wales devolved
+                                                52,571     57,896      62,875     67,260      71,102     75,124      79,182
+social security
+of which:
+  Carer's allowance                              4,576      4,990       5,457      5,817       6,098      6,441       6,776
+  Personal independence payment                 28,497     31,553      34,511     37,810      41,176     44,175      47,040
+  Disability living allowance                    8,297      8,983       9,619      9,857       9,627      9,832      10,131
+  Attendance allowance                           8,484      9,639      10,572     11,061      11,471     11,929      12,439
+  Industrial injuries disablement benefit          722        735         730        719         698        677         657
+  Severe disablement allowance                      47         42          37         32          26         19          13
+  Cold weather payment                              36         43          43         43          43         43          43
+  Winter fuel payment                            1,911      1,911       1,906      1,922       1,965      2,007       2,084
+Note: These forecasts are for spending in England and Wales on benefits which have now been devolved to Scotland. Winter fuel
+payments were devolved from April 2024, cold weather payments were devolved in November 2022, carer's allowance was devolved
+in September 2018, and all other benefits in this table were devolved in April 2020.
+Source: DWP, OBR
+
+
+2.15     Table 2.7 shows that, relative to our March 2026 forecast, social security spending in
+         England and Wales for benefits now devolved to Scotland has risen by an average of £0.9
+         billion across the forecast. This rise is more than explained by uprating due to a higher CPI
+         forecast, increasing spending by £1.7 billion in 2030-31. Partially offsetting the impact of
+         higher uprating are lower disability caseloads, which reflect the net impact of two
+         developments in outturn:
+
+         •      Higher-than-expected new claims for disability benefits in 2026 increase spending by
+                £0.9 billion in 2030-31. Most of this rise was driven by personal independence
+                payment (PIP) and attendance allowance (AA) (£0.4 billion each in 2030-31), with the
+                rest explained by disability living allowance (DLA).
+
+         •      Lower-than-expected award rates for non-pensioner disability benefits more than offset
+                the impact of higher new claims, reducing spending in 2030-31 by £1.6 billion. A
+                lower proportion of new claims for child and working-age disability benefits are
+                receiving an award than in previous years, leading to lower caseloads in our forecast.
+                This is nearly all driven by PIP (£1.4 billion), with the rest by DLA (£0.2 billion).
+
+
+
+
+Devolved tax and spending forecasts                          10
+                                                                                                         Rest of UK forecasts
+
+
+
+
+Table 2.7: Change in social security spending in England and Wales since March
+                                                                  £ billion
+                                          Outturn                        Forecast
+                                          2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+March 2026 forecast                          52.7    58.0    61.9     65.7        69.8 74.4
+October 2026 forecast                        52.6    57.9    62.9     67.3        71.1 75.1  79.2
+Difference                                    -0.1   -0.1     1.0        1.6       1.3  0.7
+of which:
+  Uprating                                       0.0          0.0         0.6          1.5         1.6          1.7
+  Disability new claims                          0.0          0.4         1.1          1.1         1.0          0.9
+  Disability award rates                         0.0         -0.2        -0.8         -1.1        -1.4         -1.6
+  Other forecasting changes                     -0.1         -0.2         0.1          0.1         0.0         -0.4
+Note: These forecasts are for spending in England and Wales on benefits which have now been devolved to Scotland.
+Source: DWP, OBR
+
+
+
+
+                                                               11                 Devolved tax and spending forecasts
+Devolved tax and spending forecasts   12
+3         Scottish tax forecasts and net
+          position
+
+
+Introduction
+3.1       In this chapter we provide:
+
+          •      A summary of the projections of the tax block grant adjustments (BGAs) and Scottish
+                 net tax position. The net tax position reflects the difference between revenues from the
+                 Scottish taxes and the tax BGAs. While the BGAs are calculated by HM Treasury, they
+                 are based on our forecasts for the equivalent rest of UK taxes set out in Chapter 2.
+
+          •      Our latest forecasts for Scottish taxes, which include Scottish income tax, land and
+                 buildings transaction tax (LBTT), Scottish landfill tax, Scottish aggregates tax and air
+                 departure tax.
+
+3.2       The rest of UK tax forecasts set out in Chapter 2 are used in calculating the Scottish
+          Government’s tax BGAs, which reduce the funding received by the Scottish Government to
+          reflect the devolution of tax revenues. They are calculated using the indexed per capita (IPC)
+          method, which adjusts the previous year's BGA for each devolved tax in line with the growth
+          in the rest of UK tax forecasts and projected differences in population growth. In this
+          chapter, to facilitate understanding of how our forecasts inform the tax BGAs, we provide an
+          analysis of the latest tax BGAs and how these have changed since they were last calculated.
+          However, it is HM Treasury that is responsible for making the formal BGA calculations and
+          they are subject to final agreement between the UK Government and Scottish Government.
+          The analysis that we set out here should therefore be treated as indicative.
+
+3.3       Our Scottish tax forecasts form the basis of our overall UK receipts forecast. For income tax,
+          as described in Chapter 2, our Scottish income tax forecast also informs the calculation of
+          the rest of UK forecast which is used to calculate the BGA. However, the forecasts for
+          Scottish tax that the Scottish Government uses for its budget-setting are produced by the
+          Scottish Fiscal Commission (SFC). Therefore, as agreed with the SFC, in this chapter we
+          compare our two forecasts to improve understanding and transparency of the underlying
+          judgements and methodologies.1 These comparisons should be considered on the basis that
+          the SFC's most recent published forecasts were released in January 2026 so do not reflect
+          the latest economic conditions nor the impact of policies announced at this event. The SFC
+          will publish an updated set of forecasts alongside the Scottish Budget on 3 December 2026.
+
+
+
+1
+ Scottish Fiscal Commission and Office for Budget Responsibility, Memorandum of Understanding between the Scottish Fiscal Commission
+and the Office for Budget Responsibility, January 2019.
+
+
+                                                                13                  Devolved tax and spending forecasts
+Scottish tax forecasts and net position
+
+
+
+
+Scottish receipts, BGAs and net position
+Comparison of rest of UK tax forecasts and OBR Scottish tax forecasts
+3.4       Table 3.1 provides a comparison of our rest of UK tax forecasts, described in Chapter 2,
+          which form the basis of the Scottish block-grant adjustments, and our Scottish tax forecasts,
+          which we describe in more detail later in this chapter. Overall, total rest of UK equivalent
+          taxes are forecast to grow by 6 per cent on average each year over the forecast period. This
+          is stronger growth than our forecasts for Scottish taxes, which grow by 5 per cent on
+          average a year. As a result, Scottish tax receipts as a proportion of the equivalent rest of UK
+          receipts decline over the forecast period, as shown in the bottom half of the table. This
+          decline is driven primarily by non-savings non-dividends (NSND) income tax, reflecting the
+          combination of the carried interest reclassification described in Box 2.1 and differences in
+          projected population growth and ageing. In particular, based on the latest ONS principal
+          population projections, Scotland’s population is projected to decline and age more quickly
+          than the populations of England and Northern Ireland.
+
+Table 3.1: Rest of UK tax forecasts and Scottish tax forecasts
+                                                         £ million
+                              Outturn                         Forecast
+                             2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Total Scottish devolved taxes 19,591 21,063 22,669 24,017 24,922 26,060 27,218 28,245
+of which:
+  Scottish income tax         18,635 20,055 21,622 22,501 23,323 24,356 25,410 26,343
+  LBTT                            899    952     977   1,024     1,083 1,163   1,245   1,320
+  Air departure tax                                      424       445   466     485     503
+  Scottish landfill tax            57     56      27      22        24    26      27      27
+  Scottish aggregates tax                         44      46        48    49      51      52
+Total rest of UK forecasts   264,563 286,885 311,894 332,009 346,534 365,874 386,086 402,109
+of which:
+  NSND income tax            250,212 271,119 296,088 309,624 321,699 339,274 357,550 371,522
+  Property taxes              13,854 15,178 15,038 16,871 18,945 20,398 22,015 23,697
+  Air passenger duty                                   4,760     5,040 5,344   5,622   5,947
+  Landfill tax                    497    588     429     390       468   459     483     514
+  Aggregates levy                                339     364       382   400     416     429
+                                                                Scotland as a percentage of rest of UK receipts
+Total Scottish devolved taxes               7.4         7.3         7.3       7.2       7.2         7.1      7.0                  7.0
+of which:
+  Scottish income tax                       7.4         7.4          7.3         7.3         7.2         7.2          7.1         7.1
+  LBTT                                      6.5         6.3          6.5         6.1         5.7         5.7          5.7         5.6
+  Air departure tax                                                              8.9         8.8         8.7          8.6         8.5
+  Scottish landfill tax                   11.4          9.5          6.4         5.6         5.1         5.6          5.6         5.3
+  Scottish aggregates tax                                          12.9        12.6         12.4        12.3        12.2        12.1
+Note: Currently outturn data is available for 2024-25 for income tax, and 2025-26 remains a forecast. For property and landfill taxes,
+the latest outturn is 2025-26.
+Source: OBR
+
+
+
+
+Devolved tax and spending forecasts                              14
+                                                                                        Scottish tax forecasts and net position
+
+
+
+
+Latest indicative BGA projections
+3.5        Table 3.2 shows the latest projections for the indicative tax BGAs. Following the IPC method
+           these are calculated by adjusting the rest of UK forecasts, set out in Chapter 2, for projected
+           relative population growth in Scotland compared to the rest of the UK.2 Overall, the Scottish
+           tax BGA is indicatively projected to increase from £19 billion in 2024-25 to £28 billion in
+           2031-32, with growth averaging 6 per cent a year. Growth in the indicative tax BGA is
+           slightly lower than in the corresponding rest of UK tax forecasts because of Scotland's
+           expected relatively slower population growth.
+
+3.6        For the first time, this includes the air departure tax (ADT) BGA following the agreement
+           between the Scottish and UK Government to devolve APD from April 2027. The Scottish and
+           UK Government have agreed to base the BGA on the SFC forecast for 2027-28 with an
+           adjustment to exclude the estimated revenue impact of changes to the Highlands and
+           Islands exemption. Thereafter, the BGA is calculated using the IPC method based on our
+           forecasts for receipts in England, Wales and Northern Ireland. Estimates of both the 2027-
+           28 baseline and subsequent growth in the BGA are uncertain, as the relevant outturn data is
+           not yet available.
+
+Table 3.2: Indicative BGA projection by tax
+                                                                   £ million
+                                        Outturn                         Forecast
+                                       2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Scottish tax BGA                        18,642 20,151 21,865 23,254 24,161 25,411 26,711 27,709
+of which:
+  Income tax                             17,943       19,377       21,091      21,981       22,761       23,924      25,128       26,023
+  LBTT                                      625          680          672         752          841          903         971        1,042
+  Air departure tax                                                               423          447          472         495          522
+  Scottish landfill tax                        73           94           64        58           70           68          71           76
+  Scottish aggregates tax                                                37        40           42           44          45           47
+Memo: index of relative population
+                                              100         99.7         99.3         99.0         98.7        98.3         98.0         97.7
+growth (2024-25=100)
+Note: BGA figures are based on HM Treasury calculations of OBR forecasts. These numbers can sometimes be revised, so should be
+treated as provisional. The index of relative population refer to relative growth between Scotland and ENI which inform the
+calculations of the BGAs for income tax, LBTT and SLfT. For SAT and ADT, the relavent comparison is relative growth between EWNI
+and Scotland. The latest outturn year for LBTT and SLfT is 2025-26.
+Source: HM Treasury
+
+
+3.7        Chart 3.1 shows that the indicative projections of the tax BGAs have increased relative to
+           when these were last calculated in March 2026 and to those that informed the Scottish
+           Budget in January 2026. The upward revision is largely driven by the higher forecast for
+           England and Northern Ireland (ENI) NSND income tax liabilities. This is partly offset by our
+           weaker forecast for stamp duty land tax (SDLT) receipts which reduces the LBTT tax BGA.
+           The impact of UK Government policy measures increases the indicative BGAs by an average
+
+
+2
+  This is based on taking the latest ONS mid-year estimates of the difference in outturn population growth between Scotland and the ‘rest
+of the UK’ and projecting this forward by assuming that the relative growth rate remains constant. As the countries included in the ‘rest of
+the UK’ vary by tax, this projection is calculated separately for each BGA.
+
+
+                                                                    15                     Devolved tax and spending forecasts
+Scottish tax forecasts and net position
+
+
+
+
+                   of £12 million a year,3 with the largest impact coming from the increase to property income
+                   tax rates.
+
+Chart 3.1: Indicative change in the tax BGAs since March 2026 and January 2026
+                             Change since March 2026                                      Change since January 2026
+      1,200                                                            1,200
+                       Income tax
+                       LBTT
+      1,000                                                            1,000
+                       Other
+                       Total
+            800                                                          800
+
+            600                                                          600
+
+
+£ million
+            400                                                          400
+
+            200                                                          200
+
+              0                                                             0
+
+            -200                                                        -200
+
+            -400                                                        -400
+                   2024-25          2026-27   2028-29        2030-31            2024-25         2026-27           2028-29    2030-31
+Note: We exclude the air departure tax BGA from this comparison.
+Source: HM Treasury, OBR
+
+
+
+OBR projections of the Scottish net tax position
+3.8                The net tax position is devolved tax revenues received by the Scottish Government minus the
+                   amount deducted from the block grant through the BGA. It summarises the impact of tax
+                   devolution on the Scottish budget. Table 3.3 shows that the net tax position based on the
+                   OBR’s Scottish tax forecasts stood at £0.9 billion in 2025-26 and is projected to fall to £0.5
+                   billion by 2031-32. This is comprised of:
+
+                   •       The Scottish income tax net position falls from £0.7 billion in 2024-25 to £0.3 billion
+                           in 2031-32. The decline in the net position is largely driven by the reclassification of
+                           carried interest receipts as explained in Box 3.1. There is also a negative impact on the
+                           net position from the 4 percentage point increase to property income tax rates in the
+                           rest of the UK from 2027-28 onwards (of which 2 percentage points is announced at
+                           this event). As income tax rates are devolved to Scotland, the increase in the property
+                           income tax rates has no direct impact on Scottish income tax, but does raise the BGA
+                           (as it increases ENI income tax).4 We estimate the 4 percentage point increase in
+                           property income tax rates from 2027-28 onwards lowers the Scottish net position by
+                           around £60 million from 2027-28 onwards.
+
+                   •       The net position for LBTT is projected to remain largely flat over the forecast period, at
+                           £272 million a year on average.
+
+
+
+
+3
+    This excludes the ADT BGA.
+4
+    There is a small reduction in Scottish NSND income tax from changes to finance cost relief as a result of the measure.
+
+
+Devolved tax and spending forecasts                                   16
+                                                                                      Scottish tax forecasts and net position
+
+
+
+
+          •       The decline in the net position for other taxes is mostly driven by Scottish landfill tax,
+                  which has declined since devolution due to increases in Scottish incineration capacity
+                  and policies like the biodegradable municipal waste ban. This leads to a negative net
+                  tax position.
+
+Table 3.3: Projected Scottish net tax position based on OBR tax forecasts
+                                                                  £ million
+                                       Outturn                         Forecast
+                                      2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Total Scottish devolved taxes
+                                        19,591      21,063       22,669      24,017       24,922      26,060       27,218      28,245
+(OBR)
+Scottish tax BGA                        18,642      20,151       21,865      23,254       24,161      25,411       26,711      27,709
+Net tax position                           949         912          805         762          761         649          506         536
+of which:
+  Income tax                                692          678         531          520         561          431         282          320
+  LBTT                                      274          272         305          272         242          261         275          279
+  Other taxes                               -17          -38         -31          -29         -42          -43         -50          -63
+Note: BGA figures are based on HM Treasury calculations of OBR forecasts. These numbers can sometimes be revised, so should be
+treated as provisional. Other taxes includes Scottish landfill tax (SLfT) and Scottish aggregates tax. We present the outturn numbers net
+of reconciliations. The latest outturn year for LBTT and SLfT is 2025-26.
+Source: HM Treasury, SFC, OBR
+
+
+3.9       Chart 3.2 shows that compared with our March 2026 forecast, the Scottish net position is
+          an average of £0.5 billion lower a year from 2025-26 onwards. This is explained by
+          changes to our pre-measures ENI NSND forecast, which increases the BGA and so lowers
+          the net position. Scottish income tax in contrast is on average largely unchanged across the
+          forecast as described in paragraph 3.15. The downward revision to our SDLT forecast
+          discussed further in paragraph 2.9 decreases the size of the BGA and so partly offsets these
+          changes. The impact of UK Government measures announced since March is small,
+          reducing the net position by around £30 million from 2026-27 onwards, which is largely
+          explained by the 2 percentage point increase to property income tax rates.
+
+
+
+
+                                                                   17                   Devolved tax and spending forecasts
+Scottish tax forecasts and net position
+
+
+
+
+Chart 3.2: Change in OBR projected Scottish net tax position since March 2026
+            200
+
+            100
+
+              0
+
+            -100
+
+            -200
+
+
+£ million
+            -300
+
+            -400
+                     Income tax
+            -500
+                     LBTT
+            -600
+                     Other taxes
+            -700
+                     Total
+            -800
+                      2024-25       2025-26       2026-27       2027-28       2028-29       2029-30       2030-31
+Source: OBR
+
+
+3.10               Chart 3.3 compares the projections of the Scottish net tax position based on our latest
+                   Scottish income tax forecast and the latest indicative tax BGAs to the net position which
+                   informed the most recent Scottish budget in January 2026. The latter was based on the
+                   SFC’s January 2026 forecast for Scottish income tax and tax BGA projections consistent with
+                   our November 2025 forecasts for the corresponding rest of UK taxes. Overall, the latest
+                   projection based on our Scottish income tax forecasts is materially lower throughout the
+                   forecast period. This is driven both by the upwards revision to the tax BGAs since the
+                   January 2026 budget, reflecting the difference between our updated outlook for ENI NSND
+                   income tax receipts, and by differences between the SFC’s January 2026 income tax
+                   forecasts and our latest forecasts. Some of this is likely to reflect timing differences, with the
+                   SFC forecasts produced prior to the latest Scottish income tax outturn for 2024-25, which
+                   showed weaker receipts than expected. We discuss this further in paragraph 3.19.
+
+
+
+
+Devolved tax and spending forecasts                           18
+                                                                                      Scottish tax forecasts and net position
+
+
+
+
+Chart 3.3: Scottish net tax position projections
+            3,000
+                          Net position based on OBR tax forecasts (October 2026)
+                          Projection of net position at Scottish Budget (January 2026)
+            2,500
+
+
+
+            2,000
+
+
+
+
+£ million
+            1,500
+
+
+
+            1,000
+
+
+
+             500
+
+
+
+               0
+              2023-24            2024-25     2025-26     2026-27      2027-28      2028-29       2029-30       2030-31       2031-32
+Source: SFC, OBR
+
+
+
+Scottish tax forecasts
+3.11                In this section we provide further detail on our latest Scottish tax forecasts, which include
+                    Scottish income tax, air departure tax, Scottish landfill tax and Scottish aggregates tax.
+
+Scottish income tax
+                Scottish share of UK NSND income tax
+3.12                Our Scottish income tax forecast is based on estimating and projecting Scotland's share of
+                    UK NSND income tax liabilities before the effects of policy measures. We apply this share to
+                    our latest forecast for UK NSND income tax liabilities, which is described in Chapter 2, and
+                    then incorporate the effects of UK Government policy measures. Table 3.4 reports our latest
+                    forecast for Scotland's share of UK NSND income tax liabilities on a pre-measures basis.5
+
+3.13                The Scottish share is forecast to fall from 6.74 per cent in 2024-25 to 6.44 per cent by
+                    2031-32. This decline reflects both the reclassification of carried interest receipts, which
+                    takes effect in 2026-27, and differences in projected demographic trends across the UK.
+                    The latest ONS principal population projections indicate that Scotland's population will
+                    decline and age more rapidly than elsewhere in the UK. We use an index based on the
+                    ONS population projections to reflect the different projected growth rates of the adult
+                    population in Scotland compared with the UK as a whole. This ‘population index’ combines
+                    two separate indices – one each for adults aged below and above the State Pension age –
+                    that are weighted by the proportion of NSND income tax paid by each group. As income tax
+                    liabilities are lower for older age groups, this drives a decline in the Scottish share over the
+                    forecast period.
+5
+  Further detail on the methodology used to produce our Scottish income tax forecast is available on our devolved aspects of income tax
+forecasts in-depth page.
+
+
+                                                                   19                  Devolved tax and spending forecasts
+Scottish tax forecasts and net position
+
+
+
+
+3.14      Relative to our March 2026 forecast, Scotland's share has been revised down by around 0.2
+          percentage points throughout the forecast period. This primarily reflects the latest outturn
+          data, which indicate a lower Scottish share of UK liabilities than previously estimated, which
+          is assumed to persist over the forecast period.
+
+Table 3.4: Scottish share of NSND income tax on a pre-measures basis
+                                                Per cent of UK total for non-savings, non-dividend liabilities
+                                      Outturn                                  Forecast
+                                      2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+March 2026 forecast                      6.85        6.85      6.78      6.75      6.72      6.66      6.60
+October 2026 pre-measures forecast       6.74        6.69      6.61      6.59      6.57      6.51      6.45      6.44
+Difference                              -0.11       -0.16     -0.17     -0.16     -0.15     -0.15     -0.15
+Memo: RTI index (2024-25=100)             100.0       99.7      99.7      99.7      99.7      99.7     99.7      99.7
+Change since March                                    -0.1      -0.1      -0.1      -0.1      -0.1     -0.1
+Memo: index of relative population
+                                                     100.0      99.7      99.4      99.1      98.8     98.4      98.1
+(2025-26=100)
+Change since March                                     0.0       0.0       0.0       0.0       0.0       0.0
+Source: OBR
+
+
+        Latest forecast
+3.15      Table 3.5 presents changes in our forecast for Scottish NSND income tax since March 2026.
+          Receipts are revised down by £0.5 billion in 2025-26, but revised up on average thereafter,
+          with the upward revision reaching £0.2 billion by 2030-31. From 2026-27 onwards there is
+          an upward revision from the increase to the UK NSND income tax forecast described in
+          Chapter 2. This is broadly offset, however, by the impact of the lower Scottish share of UK
+          NSND income tax liabilities implied by the latest outturn data, which reduces receipts by
+          around £0.5 billion a year throughout the forecast period. The effect of UK Government
+          measures announced since March on Scottish income tax is small.
+
+Table 3.5: Changes in Scottish NSND income tax since March
+                                                                         £ million
+                                     Outturn                                  Forecast
+                                     2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+March 2026 forecast                  18,893 20,539 21,606 22,522 23,328 24,282 25,176
+October 2026 forecast                18,635 20,055 21,622 22,501 23,323 24,356 25,410 26,343
+Difference                                    -484     15    -21     -5     73    235
+of which:
+  Scottish share modelling                          -470      -503      -500      -474      -503      -523
+  UK NSND pre-measures changes                       -14       524       501       488       598       757
+  UK Government policies:                              0        -5       -23       -19       -22         1        10
+  of which:
+    Direct effect                                       0        -8      -20       -27        -20         7        27
+    Indirect effects                                    0         3       -3         8         -1        -6       -18
+Source: OBR
+
+
+
+
+Devolved tax and spending forecasts                      20
+                                                                                        Scottish tax forecasts and net position
+
+
+
+
+         Comparison with Scottish Fiscal Commission forecast
+3.16       The Scottish Government’s budget position is based on both the BGAs, which reflect our
+           forecasts, and the SFC’s forecasts for tax revenues in Scotland. As a result, differences
+           between our respective forecasts for growth in revenues can affect the overall budget
+           position in any given year – although ultimately resources are aligned to revenue outturns
+           via a reconciliation process over subsequent years.6
+
+3.17       Differences in modelling approaches, data used, and judgements applied can all contribute
+           to differences between our and the SFC’s forecasts. This is compounded by the fact that we
+           produce our forecasts at different times, so the latest data will have moved on in between
+           each forecast including the impact of UK Government or Scottish Government policy
+           measures. To facilitate comparisons, as agreed with the SFC, we publish a standard set of
+           income tax comparison tables that we each update alongside new forecasts. Tables 3.6 and
+           3.7 compare our current forecast to the SFC’s January 2026 forecast.
+
+3.18       Table 3.6 compares the determinants used in our respective forecasts. Ours relate to the UK
+           as a whole, whereas the SFC’s are specific to Scotland. It shows that:
+
+           •      We forecast stronger employment growth than the SFC over the forecast period. This
+                  leaves employment 0.9 percentage points above the SFC's forecast in 2030-31 on a
+                  cumulative basis.
+
+           •      We expect average nominal earnings growth to be weaker than the SFC on average.
+                  This leaves earnings growth 0.5 percentage points below the SFC's forecast in 2030-
+                  31 on a cumulative basis.
+
+           •      Overall, stronger employment growth is more than offset by weaker average earnings
+                  growth, leaving our forecast for overall wages and salaries growth – the key economic
+                  driver of NSND income tax receipts – 0.4 percentage points below the SFC's forecast
+                  on a cumulative basis by 2030-31.
+
+
+
+
+6
+  A more detailed discussion of recent reconciliations and forecasts differences can be found in McKibbin, N., SFC, Forecasts for Scottish
+income tax, block grant adjustments and reconciliations, Sept. 2026.
+
+
+                                                                    21                   Devolved tax and spending forecasts
+Scottish tax forecasts and net position
+
+
+
+
+Table 3.6: SFC Scottish determinants compared to OBR UK-wide determinants
+                                                            Percentage change on a year earlier
+                                       Outturn                                Forecast
+                                       2025-26       2026-27 2027-28 2028-29 2029-30 2030-31                              2031-32
+Employment
+  SFC (January 2026)                         -0.3           0.1          0.4           0.5           0.5           0.5
+  OBR                                         1.4           0.5          0.2           0.6           0.7           0.8           0.6
+  Difference                                  1.7           0.4         -0.2           0.1           0.2           0.3
+Average nominal earnings
+  SFC (January 2026)                          5.2           2.9           2.7          2.7           2.8           2.8
+  OBR                                         3.6           3.6           2.9          2.1           2.3           2.5           2.6
+  Difference                                 -1.6           0.7           0.2         -0.6          -0.4          -0.2
+Wages and salaries
+  SFC (January 2026)                          4.9           3.0          3.1      3.2                3.2           3.3
+  OBR                                         5.0           4.0          2.9      2.6                2.9           3.2           3.0
+  Difference                                  0.2           1.0         -0.2     -0.6               -0.3          -0.1
+                                                                          2025-26 = 100
+Employment
+  SFC (January 2026)                                    100.1          100.5        101.0         101.5         102.0
+  OBR                                                   100.5          100.7        101.3         102.1         102.8         103.4
+  Difference                                              0.4            0.2          0.3           0.6           0.9
+Average nominal earnings
+  SFC (January 2026)                                    102.9          105.6        108.5         111.5         114.6
+  OBR                                                   103.6          106.5        108.8         111.3         114.1         117.1
+  Difference                                              0.7            0.9          0.3          -0.2          -0.5
+Wages and salaries
+  SFC (January 2026)                                    103.0          106.2        109.6         113.1         116.9
+  OBR                                                   104.0          107.0        109.7         112.9         116.5         120.0
+  Difference                                              1.0            0.8          0.2          -0.2          -0.4
+Note: Wages and salaries refers to the SFC's total nominal earnings series. 2025-26 was not outturn at the time of the SFC January
+forecast.
+Source: SFC, OBR
+
+
+3.19      Table 3.7 breaks down our forecast for UK NSND income tax and compares our forecast
+          for Scottish income tax with the SFC's January 2026 forecast. Comparisons between the two
+          forecasts need to consider that the SFC forecast is now several months old and was
+          produced prior to the 2024-25 Scottish income tax outturn data, which showed weaker
+          receipts than expected. That said, the forecasts are broadly similar until 2027-28, the period
+          which the Scottish Government will be setting its detailed spending plans at the next Scottish
+          budget. Over the medium term, however, the forecasts diverge, leaving our Scottish income
+          tax forecast £1.4 billion (5 per cent) lower than the SFC's by 2031-32. As shown in Table
+          3.6, this is likely to reflect our weaker medium-term outlook for nominal earnings growth
+          which means our Scottish income tax forecast grows more slowly all else equal. The
+          differences between the forecasts reflect the risks and uncertainties inherent in any economic
+          and fiscal forecast, particularly around the outlook for nominal earnings growth, a key
+          driver of income tax receipts.
+
+
+
+
+Devolved tax and spending forecasts                               22
+                                                                                   Scottish tax forecasts and net position
+
+
+
+
+Table 3.7: SFC Scottish income tax forecast compared to OBR UK NSND forecast
+                                                         £ million
+                             Outturn                           Forecast
+                             2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+SFC (January 2026)
+SIT (a)                        18,941       20,280       21,508       22,828       24,051        25,398   26,769
+OBR
+UK NSND                      276,612 299,684 326,992 341,898 355,205 374,375 394,297 409,605
+of which:
+  UK ex SIT and WRIT         254,677 276,028 301,464 315,316 327,642 345,559 364,198 378,403
+  WRIT                         3,300   3,601   3,906      4,081     4,240      4,460  4,689 4,859
+  SIT (b)                     18,635 20,055 21,622 22,501 23,323 24,356 25,410 26,343
+OBR vs. SFC (b-a)               -306    -224     114       -327      -728    -1,042  -1,359
+                                               Percentage change on a year earlier
+SFC (January 2026)
+SIT (a)                                          7.1          6.1          6.1          5.4         5.6      5.4
+OBR
+UK ex SIT and WRIT                               8.4          9.2         4.6     3.9               5.5      5.4     3.9
+SIT (b)                                          7.6          7.8         4.1     3.7               4.4      4.3     3.7
+OBR vs. SFC (b-a)                                0.6          1.8        -2.1    -1.7              -1.2     -1.1
+                                                                       2024-25=100
+SFC (January 2026)
+SIT (a)                                       107.1        113.6        120.5        127.0        134.1    141.3
+OBR
+UK ex SIT and WRIT                            108.4        118.4        123.8        128.7        135.7    143.0   148.6
+SIT (b)                                       107.6        116.0        120.7        125.2        130.7    136.4   141.4
+OBR vs. SFC (b-a)                               0.6          2.5          0.2         -1.8         -3.4     -5.0
+Note: Outturn for 2024-25 was not available at the time of the SFC's January 2026 publication.
+Source: SFC, OBR
+
+
+
+Other Scottish devolved taxes
+3.20      LBTT receipts were £952 million in 2025-26 and are forecast to rise to £1.3 billion in 2031-
+          32. Compared to our March 2026 forecast this is on average £59 million lower in each
+          year of the forecast. These changes are evenly split between the residential and commercial
+          elements of LBTT. On the residential element, this is primarily driven by downwards
+          revisions to our UK-wide transactions and prices outlook, which is only somewhat offset by
+          in-year receipts strength on residential main rates. On the commercial element, about one-
+          third of the change reflects a weaker outlook for the commercial property market and the
+          other two-thirds of the change reflects recent weakness in commercial receipts which we
+          assume will persist throughout the forecast period.
+
+3.21      In this forecast we have conditioned our LBTT forecast on the same assumptions for
+          residential prices and transactions growth as those used in our ENI SDLT forecast. In our
+          March 2025, November 2025 and March 2026 forecasts, we excluded from the Scottish
+          forecast the impact of England-only planning reforms. It was assumed these would have a
+          positive medium-term impact in England on housing starts and therefore a positive effect on
+          residential transactions and small negative effect on residential prices. As these reforms
+
+
+                                                                23                  Devolved tax and spending forecasts
+Scottish tax forecasts and net position
+
+
+
+
+        have now been enacted we will assess at each forecast if there is any evidence that the
+        Scottish property market is diverging from the rest of the UK. At this forecast, there is no
+        clear evidence that the Scottish property market has behaved sufficiently differently to the
+        rest of the UK to justify using different assumptions. In future, it may be the case that English
+        planning reforms could boost residential transactions in England relative to Scotland.
+        However, there are other differences between the regulatory environment for housebuilding
+        in England and Scotland, such as building safety regulations, which could offset or reinforce
+        this.
+
+3.22    Air departure tax (ADT) is set to be introduced in April 2027. We forecast that receipts will
+        be £424 million in 2027-28 and rise to £503 million by the end of the forecast. Outturn
+        data on the proportion of UK air passenger duty (APD) receipts that are Scottish has not
+        been collected, meaning estimates of ADT liable passengers were constructed from external
+        data sources and are highly uncertain. To construct this estimate, we use a model designed
+        and operated by the SFC that relies on data from the Civil Aviation Authority and HMRC.
+        Projections of passenger numbers are grown with real GDP, broadly aligning with our
+        treatment of APD in the rest of the UK.
+
+3.23    Scottish aggregates tax receipts are forecast to be £44 million in 2026-27 and expected to
+        rise to £52 million by 2031-32. Relative to our March forecast, receipts are on average £3
+        million higher each year, reflecting stronger UK outturn data and higher RPI inflation
+        uprating.
+
+3.24    Scottish landfill tax receipts were £56 million in 2025-26 and are forecast to fall to £27
+        million in 2026-27, remaining around £25 million a year thereafter. The fall in 2026-27
+        reflects expected increases in incineration capacity ahead of the biodegradable municipal
+        waste ban (BMW), which aims to reduce the amount of waste sent to landfill. The BMW ban
+        is due to take effect from January 2028 onwards. We incorporated these effects into our
+        March forecast, and our forecast is broadly unchanged since.
+
+
+
+
+Devolved tax and spending forecasts               24
+                                                              Scottish tax forecasts and net position
+
+
+
+
+Table 3.8: Other Scottish devolved taxes
+                                                           £ million
+                                   Outturn                       Forecast
+                                   2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+LBTT
+March 2026 forecast                   998    1,031    1,078   1,152      1,227     1,300
+October 2026 forecast                 952      977    1,024   1,083      1,163     1,245      1,320
+Difference                            -46      -54      -55     -69        -64       -55
+Air departure tax
+March 2026 illustrative forecast      321     368      392      413        436       458
+October 2026 forecast                                  424      445        466       485        503
+Difference                                              32       32         30        27
+Scottish landfill tax
+March 2026 forecast                    52      27       21        23        25         26
+October 2026 forecast                  56      27       22        24        26         27        27
+Difference                              4       0        1         1         1          1
+Scottish aggregates tax
+March 2026 forecast                            42       43        45        46         48
+October 2026 forecast                          44       46        48        49         51        52
+Difference                                      2        2         3         3          3
+Source: OBR
+
+
+
+
+                                                 25           Devolved tax and spending forecasts
+Devolved tax and spending forecasts   26
+4     Welsh tax forecasts and net position
+
+
+Introduction
+4.1   In this chapter we provide:
+
+      •    A summary of the projections of the Welsh net tax position. The net tax position reflects
+           the difference between revenues from the Welsh taxes and the tax block grant
+           adjustments (BGAs), which are based on our forecasts for rest of UK taxes set out in
+           Chapter 2.
+
+      •    Our latest forecasts for Welsh taxes, which include Welsh rates of income tax, land
+           transaction tax (LTT) and landfill disposals tax (LDT).
+
+4.2   Our rest of UK tax forecasts set out in Chapter 2 are used in calculating the Welsh
+      Government’s tax BGAs, which reduce the funding received by the Welsh Government to
+      reflect the devolution of tax revenues. The tax BGAs in Wales are calculated using the
+      ‘comparable model’. This adjusts the previous year’s BGA for each devolved tax in line with
+      the per person cash change in the equivalent rest of UK revenues multiplied by a
+      comparability factor (which reflects tax revenue per person in Wales as a proportion of
+      revenue per person in the rest of the UK at the time of devolution).
+
+4.3   In this chapter, to facilitate understanding of how our forecasts inform the tax BGAs, we
+      provide analysis of the latest indicative tax BGAs and how these have changed since they
+      were last calculated. However, it is HM Treasury that is responsible for making the formal
+      BGA calculations and they are subject to final agreement between the UK Government and
+      Welsh Government. The analysis that we set out here should therefore be treated as
+      indicative.
+
+4.4   In this chapter we also provide an overview of our latest forecasts for Welsh devolved tax
+      revenues. Since 2019, we have provided the official devolved tax forecasts used by the
+      Welsh Government for its budget process, which we publish in our Welsh taxes outlook
+      (WTO) that accompanies the Welsh draft and final budget. We will be publishing our latest
+      WTO, including updated forecasts for Welsh devolved taxes on 17 November to accompany
+      the Welsh draft budget. These forecasts also feed into the projections of the Welsh net tax
+      position in this chapter.
+
+
+
+
+                                               27             Devolved tax and spending forecasts
+Welsh tax forecasts and net position
+
+
+
+
+Welsh receipts, BGAs and net position
+Summary of rest of UK tax forecasts and Welsh taxes
+4.5       Table 4.1 provides a summary of our rest of UK tax forecasts which inform the tax BGAs
+          and compares them to our latest forecasts for Welsh taxes, which we describe in more detail
+          later in this chapter. Total England and Northern Ireland (ENI) equivalent taxes that are fully
+          or partially devolved are forecast to grow at around 6 per cent a year each. This is slightly
+          slower than our Welsh devolved tax forecast.
+
+4.6       Table 4.2 compares Welsh rates of income tax by band to their ENI-equivalents on a ‘Welsh
+          rates of income tax’ basis. The Welsh rates BGAs are calculated on a by-band basis
+          meaning our by-band ENI forecasts form the basis of the Welsh rates BGAs. Welsh rates
+          receipts rise slightly as a share of their ENI equivalents across all tax bands.
+
+Table 4.1: Devolved Welsh taxes relative to ENI equivalents
+                                                                                  £ million
+                                       Outturn                                         Forecast
+                                       2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Total Welsh devolved taxes    3,675   3,997   4,309     4,514     4,703     4,957  5,221  5,426
+of which:
+  Welsh rates of income tax
+                              3,300   3,601   3,906     4,081     4,240     4,460  4,689  4,859
+  (WRIT)1
+  Land transaction tax          341     363     374       402       432       465    499    534
+  Landfill disposals tax          34     32       29        30        31        32     33    33
+Total England and Northern
+                            104,603 113,372 121,192 127,098 133,242 140,587 148,293 154,865
+Ireland (ENI) equivalent
+of which:
+  NSND income tax
+                             90,251 97,606 105,725 109,837 113,830 119,731 125,795 130,655
+  (WRIT basis)
+  SDLT                       13,854 15,177 15,038 16,871 18,945 20,398 22,015 23,697
+  Landfill tax                  497     588     429       390       468       459    483    514
+                                             Wales as a percentage of ENI receipts
+Total Welsh devolved taxes       3.5     3.5     3.6       3.6       3.5       3.5    3.5    3.5
+of which:
+  WRIT 1                         3.7     3.7     3.7       3.7       3.7       3.7    3.7    3.7
+  Land transaction tax           2.5     2.4     2.5       2.4       2.3       2.3    2.3    2.3
+  Landfill disposals tax         6.9     5.5     6.7       7.8       6.7       7.0    6.8    6.4
+1
+ Outturn data is available for 2024-25 for income tax, and 2025-26 is a forecast. For other forecasts, the latest outturn is 2025-26.
+Source: OBR
+
+
+
+
+Devolved tax and spending forecasts                                28
+                                                                                   Welsh tax forecasts and net position
+
+
+
+
+Table 4.2: Welsh rates and ENI equivalent by income tax band
+                                                                  £ billion
+                                       Outturn                          Forecast
+                                      2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Welsh rates                                3.3    3.6     3.9     4.1        4.2  4.5     4.7     4.9
+of which:
+  Basic rate                                 2.7        3.0         3.2        3.3         3.4        3.6        3.8         3.9
+  Higher rate                                0.4        0.5         0.6        0.6         0.6        0.7        0.7         0.7
+  Additional rate                            0.1        0.1         0.1        0.2         0.2        0.2        0.2         0.2
+England and Northern Ireland
+                                           90.3        97.6      105.7      109.8      113.8       119.7      125.8      130.7
+NSND income tax (WRIT basis)
+of which:
+  Basic rate                               58.9       63.5      67.7     70.0     72.2      75.5      78.9                 82.0
+  Higher rate                              17.1       18.7      20.6     21.6     22.5      23.8      25.2                 25.7
+  Additional rate                          14.2       15.4      17.4     18.2     19.1      20.4      21.7                 23.0
+                                                      Wales as percentage of ENI WRIT-equivalent receipts
+Welsh rates                                  3.7       3.7       3.7       3.7      3.7       3.7       3.7                  3.7
+of which:
+  Basic rate                                 4.7        4.7         4.7        4.8         4.8        4.8        4.8         4.8
+  Higher rate                                2.6        2.6         2.7        2.7         2.8        2.8        2.9         2.9
+  Additional rate                            0.8        0.8         0.8        0.8         0.9        0.9        0.9         0.9
+Source: OBR
+
+
+
+Latest indicative BGA projections
+4.7       Table 4.3 shows the latest indicative projections for the tax BGAs. Overall, the Welsh tax
+          BGA is projected to increase from £3.3 billion in 2024-25 to £4.7 billion in 2031-32, with
+          growth averaging 5 per cent a year. Compared with March 2026, the indicative projections
+          of the tax BGAs have decreased by around £50 million on average each year. This is mainly
+          explained by the downwards revision to the LTT BGA, reflecting the weaker stamp duty land
+          tax (SDLT) receipts described in Chapter 2.
+
+Table 4.3: Projections of the indicative tax BGAs
+                                                                £ million
+                                     Outturn                         Forecast
+                                    2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Welsh tax BGA                         3,303   3,569   3,791   3,947     4,109 4,315   4,527   4,710
+of which:
+  Welsh rates of income tax            3,001       3,235       3,469      3,590       3,708       3,885       4,064      4,213
+  of which:
+    Basic rate                         2,560       2,755       2,938      3,033       3,128       3,271       3,415      3,546
+    Higher rate                          355         387         426        447         465         491         519        529
+    Additional rate                       86          93         105        110         115         123         131        138
+  Land transaction tax                   283         313         306        342         383         412         444        478
+  Landfill disposals tax                  19          21          16         15          18          18          19         20
+Note: BGA figures are based on HMT calculations of OBR forecasts. These numbers can sometimes be revised, so should be treated as
+provisional at the time of publication. We present the outturn numbers net of reconciliations. The latest outturn year for land
+transaction tax and landfill disposals tax is 2025-26.
+Source: HM Treasury
+
+
+
+                                                               29                 Devolved tax and spending forecasts
+Welsh tax forecasts and net position
+
+
+
+
+Chart 4.1: Change in the indicative tax BGA projections since March 2026
+             40
+
+
+             20
+
+
+              0
+
+
+             -20
+
+£ million
+             -40
+
+
+             -60
+                       Welsh rates
+                       Land transaction tax
+             -80
+                       Landfill disposals tax
+                       Total
+            -100
+                        2025-26            2026-27       2027-28         2028-29         2029-30         2030-31
+Source: OBR
+
+
+
+Welsh net tax position
+4.8                The net tax position, which is devolved tax revenues received by the Welsh Government
+                   minus the amount deducted from the block grant through the BGA, summarises the impact
+                   of tax devolution on the Welsh budget. Table 4.4 shows that the overall net tax position is
+                   projected to increase from £372 million in 2024-25 to £716 million in 2031-32, which
+                   reflects the net tax positions of:
+
+                   •      Welsh rates of income tax, which increase from £299 million in 2024-25 to £646
+                          million by 2031-32. The growth reflects the freeze to personal tax thresholds, which
+                          increase Welsh receipts relatively more than their equivalent ENI equivalent receipts
+                          due to distributional differences in incomes. We explain this in more detail in Box 5.1
+                          of our January 2026 WTO.
+
+                   •      LTT, which remains relatively flat over the forecast period, averaging £56 million a
+                          year. The positive net tax position reflects the performance of LTT receipts relative to
+                          SDLT receipts since devolution. This partly reflects the performance of the Welsh
+                          property market and also policy differences between SDLT and LTT.
+
+                   •      LDT, which remains relatively steady over the forecast with the net position averaging
+                          £14 million a year.
+
+
+
+
+Devolved tax and spending forecasts                            30
+                                                                                   Welsh tax forecasts and net position
+
+
+
+
+Table 4.4: Latest projected Welsh net tax position
+                                                                     £ million
+                                          Outturn                         Forecast
+                                         2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Total Welsh taxes                          3,675   3,997   4,309   4,514     4,703 4,957   5,221   5,426
+Welsh tax BGA                              3,303   3,569   3,791   3,947     4,109 4,315   4,527   4,710
+Net tax position                              372    428     518     567       594   642     694     716
+of which:
+  Welsh rates of income tax                   299    366         438         491         532        575         625          646
+  Land transaction tax                         58     50          69          60          49         52          55           56
+  Landfill disposals tax                       15     12          12          16          13         15          14           13
+Note: BGA figures are based on HMT calculations of OBR forecasts. These numbers can sometimes be revised, so should be treated as
+provisional at the time of publication. We present the outturn numbers net of reconciliations. The latest outturn year for land
+transaction tax and landfill disposals tax is 2025-26.
+Source: HM Treasury, OBR
+
+
+4.9               Compared with March, Chart 4.2 shows that the indicative net position is an average of
+                  £130 million higher each year from 2025-26 onwards. This is mainly driven by the upwards
+                  revision to the Welsh rates of income tax forecast, described in paragraph 4.13, being
+                  greater in relative terms than the upward revision to the ENI-equivalent income tax forecast.
+                  There is also an increase to the LTT net position, due to the SDLT forecast decreasing by
+                  more than the LTT forecast. The effect of UK Government measures on the net position is
+                  small, reducing the net position by less than £1 million on average from 2026-27 onwards.
+
+Chart 4.2: Change in the Welsh net tax position since March
+            200
+                    Welsh rates
+                    Land transaction tax
+                    Landfill disposals tax
+            150
+                    Total
+
+
+            100
+
+
+£ million
+            50
+
+
+
+
+             0
+
+
+
+
+            -50
+                      2025-26            2026-27       2027-28             2028-29             2029-30             2030-31
+Source: OBR
+
+
+
+Welsh tax forecasts
+4.10              In this section we provide further detail on our latest Welsh devolved tax forecasts, which
+                  include Welsh rates of income tax, land transaction tax and landfill disposals tax.
+
+
+                                                              31                   Devolved tax and spending forecasts
+Welsh tax forecasts and net position
+
+
+
+
+Welsh rates of income tax forecast
+         Welsh rates share of UK NSND income tax
+4.11       Our Welsh rates of income tax forecast is based on estimating and projecting the share of
+           UK non-savings, non-dividend (NSND) income tax liabilities attributable to Welsh rates
+           before the effects of policy measures. We apply this share to our latest forecast for UK
+           NSND income tax liabilities, which is described in Chapter 2, and then incorporate the
+           effects of UK Government policy measures.
+
+4.12       Table 4.5 reports our latest forecast for the Welsh rates share of UK NSND income tax
+           liabilities on a pre-measures basis.1 We expect the Welsh rates share to remain broadly
+           stable at 1.19 per cent throughout the forecast period. Compared with our March 2026
+           forecast, the share has been revised up slightly reflecting a stronger Welsh share in the
+           latest real time information (RTI) tax data, which is assumed to persist through the forecast.
+           This is partly offset by weaker relative population growth in Wales over the forecast period.
+
+Table 4.5: Welsh rates share of NSND income tax on a pre-measures basis
+                                                     Per cent of UK total for non-savings, non-dividend liabilities
+                                               Outturn                              Forecast
+                                               2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+March 2026 forecast                                1.19       1.19        1.19       1.19       1.19       1.19        1.19
+October 2026 pre-measures forecast                 1.19       1.20        1.19       1.20       1.20       1.19        1.19       1.19
+Difference                                         0.00       0.01        0.01       0.01       0.01       0.00        0.00
+Memo: RTI combined index (2024-25=100)             100.0      100.9      101.1       101.0      101.0      100.9       100.9      100.8
+Change since March                                              0.7        0.9         0.8        0.8        0.7         0.7
+Memo: index of relative population
+                                                              100.0      100.0        99.9       99.8        99.7       99.5       99.3
+(2025-26=100)
+Change since March                                               0.0       -0.1       -0.3        -0.4       -0.5       -0.6
+Note: The RTI combined index captures adjustments made to the Welsh rates share to reflect the latest differences in both the
+aggregate Welsh share of RTI pay and Welsh rates share of RTI tax data by band. As the latter adjustment is applied on a cash basis, its
+relative effect diminishes as overall UK NSND receipts grow, causing the index to fall slightly over the forecast period.
+Source: OBR
+
+
+         Latest forecast
+4.13       Table 4.6 presents our latest forecast for Welsh rates of income tax receipts and the
+           changes since March 2026. We also provide below the latest forecasts for Welsh rates of
+           income tax on property in Annex B. Welsh rates receipts are forecast to grow from £3.3
+           billion to £4.9 billion in 2031-32 with growth fastest in the near-term. Relative to March, the
+           forecast has been revised up throughout, reflecting a higher Welsh rates share and a
+           stronger forecast for UK NSND income tax liabilities. The effect of UK Government
+           measures on the Welsh rates forecast is small.
+
+
+
+
+1
+  Further detail on the methodology used to produce our Scottish income tax forecast is available on our devolved aspects of income tax
+forecasts in-depth page.
+
+
+Devolved tax and spending forecasts                               32
+                                                                    Welsh tax forecasts and net position
+
+
+
+
+Table 4.6: Changes in the Welsh rates of income tax forecast since March
+                                                                  £ million
+                                  Outturn                              Forecast
+                                   2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+March 2026 forecast                 3,285    3,568      3,781   3,965    4,129    4,339    4,541
+October 2026 forecast               3,300    3,601      3,906   4,081    4,240    4,460    4,689    4,859
+Difference                                      33        126     116      110      121      148
+of which:
+  Welsh share modelling                          35       35       33       29       19       12
+  UK NSND pre-measures changes                   -2       92       88       86      107      136
+  UK Government policies:                         0       -1       -5       -5       -5       -1        1
+  of which:
+    Direct effect                                 0        -1      -4       -6       -4        0        4
+    Indirect effects                              0         0      -1        1        0       -1       -3
+Source: OBR
+
+
+Table 4.7: Forecast of Welsh rates of income tax by tax band
+                                                  £ million
+                      Outturn                           Forecast
+                      2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+October 2026 forecast   3,300   3,601   3,906   4,081      4,240  4,460 4,689   4,859
+of which:
+  Basic rate            2,747   2,979   3,208   3,332      3,448  3,611 3,778   3,921
+  Higher rate             437     494     554     594        627    672   720     735
+  Additional rate         116     128     145     155        165    177   191     204
+                                                  Per cent
+  Basic rate             83.2    82.7    82.1    81.6       81.3   81.0  80.6    80.7
+  Higher rate            13.2    13.7    14.2    14.6       14.8   15.1  15.4    15.1
+  Additional rate          3.5    3.5      3.7    3.8         3.9   4.0   4.1      4.2
+Source: OBR
+
+
+
+Welsh land transaction tax forecast
+4.14    We forecast that LTT receipts will rise from £363 million in 2025-26 to £534 million in
+        2031-32, an average annual growth of 7 per cent. Relative to March 2026, our forecast is
+        £23 million lower on average in each year. This mostly reflects a weaker outlook for
+        residential and commercial property markets, largely driven by an increase in mortgage
+        rates and a decrease in real incomes which weigh on the residential prices and transactions
+        market particularly in the near term. While there is an upwards adjustment due to
+        residential outturn in recent months, this is mostly offset by weakness in commercial outturn.
+
+4.15    This LTT forecast uses the same residential prices and transactions as those used in our ENI
+        SDLT forecast. In our March 2025, November 2025 and March 2026 forecasts, we
+        excluded from the Welsh forecast the impact of England-only planning reforms. As these
+        reforms have now been enacted we will assess at each forecast whether there is any
+        evidence that the Welsh property market is diverging from the rest of the UK. That is not the
+        case in this forecast, but we will revisit this in future forecasts, as set out in paragraph 3.21.
+
+
+                                                   33              Devolved tax and spending forecasts
+Welsh tax forecasts and net position
+
+
+
+
+Table 4.8: Land transaction tax forecast: changes since March
+                                                               £ million
+                               Outturn                                Forecast
+                               2025-26    2026-27    2027-28   2028-29 2029-30       2030-31    2031-32
+March 2026 forecast                 369       398        427         457       488       520
+October 2026 forecast               363       374        402         432       465       499        534
+Difference                           -6       -23        -25          -25      -24       -20
+of which:
+  Price changes                                -9        -11        -13        -14        -15
+  Transaction changes                         -14        -15        -14        -12         -8
+  Outturn data and modelling                    0          1          2          3          4
+Source: OBR
+
+
+
+Welsh landfill disposals tax forecast
+4.16    Our forecast for LDT is for receipts to remain relatively unchanged across the forecast. Since
+        March 2026, our forecast has decreased by an average of £7 million (18 per cent). This
+        change reflects lower standard-rate tonnage in the second half of 2025-26 and the first
+        quarter of 2026-27, likely reflecting operational issues at a number of the five large landfill
+        sites in Wales. As we assume these disruptions will be temporary, we assume that only half
+        of the shortfall from the first quarter of 2026 will persist through the year. The decrease in
+        the forecast from the lower outturn is only slightly offset by a higher forecast for the rates of
+        landfill tax due to a higher outlook for RPI inflation and an adjustment to our behavioural
+        assumption on the reduction in lower-rated waste from policy announced at the Welsh final
+        budget in 2026.
+
+Table 4.9: Welsh landfill disposals tax forecast: changes since March
+                                                               £ million
+                               Outturn                                Forecast
+                               2025-26    2026-27   2027-28    2028-29 2029-30       2030-31    2031-32
+March 2026 forecast                  34        37        37            38      38         38
+October 2026 forecast                32        29        30            31      32         33         33
+Difference                           -2        -8        -7            -6      -6         -6
+of which:
+  Determinants                                  0          1          1          1          1
+  Modelling and outturn                        -8         -8         -8         -7         -7
+Source: OBR
+
+
+
+
+Devolved tax and spending forecasts                 34
+A Illustrative forecasts for taxes not
+  yet devolved
+
+
+A.1           In this annex we present illustrative forecasts for taxes that are yet to be devolved. The
+              aggregates levy is due to be devolved to Wales, while VAT assignment is due to be devolved
+              to Scotland.
+
+Welsh aggregates levy
+A.2           The aggregates levy is a tax on the commercial exploitation of rock, sand and gravel. It is
+              due from any business that quarries, dredges or imports these items.
+
+A.3           To produce the current illustrative forecasts, we use the most recent estimated Welsh shares
+              of UK-wide aggregates levy receipts produced by the ONS, relating to 2024-25.14 As Table
+              A.1 shows, our illustrative forecast for aggregates receipts in Wales has increased. This
+              reflects incorporating new estimates of the proportion of aggregates receipts from Wales
+              from the latest ONS country and regional public sector finances.
+
+Table A.1: Welsh aggregates levy illustrative forecasts
+                                                                   £ million
+                                                                   Forecast
+                                       2026-27     2027-28     2028-29     2029-30    2030-31     2031-32
+UK forecast
+March 2026                                 393         412         431         449         462
+October 2026                               383         410         430         449         467         481
+Difference                                 -10          -2          -2           0           4
+Welsh forecast
+March 2026                                   33          35         37          38          39
+October 2026                                 38          41         43          45          46          48
+Difference                                    5           6          6           6           7
+Source: ONS, OBR
+
+
+
+VAT assignment
+A.4           The Scotland Act 2016 makes provision for the first 10p of standard-rate VAT, and the first
+              2.5p of reduced-rate VAT generated in Scotland to be assigned to the Scottish Government.
+              VAT would continue to be collected by HMRC and the Scottish Government would not have
+              the power to change the collection or administration of the VAT regime in Scotland, or to
+              change VAT rates or the VAT base.
+
+
+14
+     This is 9.9 per cent.
+
+
+                                                       35             Devolved tax and spending forecasts
+Illustrative forecasts for taxes not yet devolved
+
+
+
+
+A.5       The UK and Scottish Governments initially agreed to commence VAT assignment from
+          2019-20 but this was delayed, and a new commencement date has not been agreed.
+          Therefore, our forecast continues to be presented simply for illustrative purposes.
+
+A.6       The formal methodology for VAT assignment is being developed by HMRC, the Treasury
+          and the Scottish Government. We have no role in validating or approving the chosen
+          methodology. For this projection (Table A.2) we take the latest estimated share of 4.48 per
+          cent, which relates to 2023, as our starting point and index this in line with population
+          growth in Scotland relative to the UK as a whole.15
+
+Table A.2: VAT assignment illustrative forecast
+                                                                                           £ billion
+                                                Estimated outturn                                Forecast
+                                                          2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+UK                                                          179.9      186.2     194.0       203.3    211.7        220.1   228.4
+of which:
+  Assigned to Scottish Government                               8.1       8.3        8.7        9.1         9.5      9.9     10.2
+  VAT from Scotland retained
+                                                                8.1       8.3        8.7        9.1         9.5      9.9     10.2
+  by UK Government
+  VAT from the rest of the UK                               163.8      169.5     176.6    185.1       192.8        200.4   208.0
+                                                                                        Per cent
+Assigned to Scottish Government                               4.45      4.44       4.43     4.42        4.41        4.40     4.39
+Memo: Scottish population share                                 8.0        8.0       7.9        7.9          7.9     7.9          7.9
+Memo: index Scottish population share (2023-24 = 100)          99.4       99.1      98.9       98.7         98.5    98.3         98.1
+Source: HMRC, ONS, OBR
+
+
+
+
+15
+  HM Revenue and Customs, HM Treasury, Scottish Government, Scottish VAT Assignment – Official Statistics in Development 2023,
+Autumn 2025.
+
+
+Devolved tax and spending forecasts                             36
+B Additional forecast tables
+
+
+Table B.1: Welsh rates of income tax from property by tax band
+                                                                    £ million
+                                         Outturn                         Forecast
+                                        2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Welsh rates                                   68     75      80      81       85     90      95     100
+of which:
+  Basic rate                                    49          52          55          54          55          57          60          62
+  Higher rate                                   15          18          20          22          23          26          28          30
+  Additional rate                                4           5           5           6           6           7           7           8
+                                                                                   Per cent
+  Basic rate                                    72          70          69          67          65          64          63          62
+  Higher rate                                   22          24          25          27          28          29          30          30
+  Additional rate                                6           6           6           7           7           7           8           8
+Note: Property income outturn totals are based on estimates of the share of income tax receipts attributable to property, aligned with
+the latest outturn data for overall receipts.
+Source: OBR
+
+
+Table B.2: Welsh rates of income tax from property and rest of UK equivalent by
+band
+                                                                    £ million
+                                         Outturn                         Forecast
+                                        2024-25 2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Welsh rates                                   68     75      80      81       85     90      95     100
+of which:
+  Basic rate                                    49          52          55          54          55          57          60          62
+  Higher rate                                   15          18          20          22          23          26          28          30
+  Additional rate                                4           5           5           6           6           7           7           8
+England and Northern Ireland
+                                            2,276       2,509       2,711       2,741       2,850       3,006       3,172       3,319
+NSND income tax (WRIT basis)
+of which:
+  Basic rate                                1,391      1,488     1,562    1,521     1,553    1,605     1,655                    1,719
+  Higher rate                                 597        693       777      828       881      953     1,032                    1,080
+  Additional rate                             288        328       372      392       416      448       485                      520
+                                                       Wales as a percentage of ENI WRIT-equivalent receipts
+Welsh rates
+of which:
+  Basic rate                                   3.5         3.5         3.5         3.6         3.6         3.6         3.6         3.6
+  Higher rate                                  2.5         2.6         2.6         2.6         2.6         2.7         2.7         2.8
+  Additional rate                              1.4         1.4         1.4         1.4         1.4         1.5         1.5         1.5
+Note: Property income outturn totals are based on estimates of the share of income tax receipts attributable to property, aligned with
+the latest outturn data for overall receipts.
+Source: OBR
+
+
+
+
+                                                                  37                  Devolved tax and spending forecasts
+Additional forecast tables
+
+
+
+
+Table B.3: Number of individuals in Scotland of state pension age with income
+above £35,000
+                                                      Thousand
+                                                      Forecast
+                              2025-26 2026-27 2027-28 2028-29 2029-30 2030-31 2031-32
+Number of individuals             189     204     216      227    244     259     275
+Source: OBR
+
+
+
+
+Devolved tax and spending forecasts        38
+Index of charts and tables
+
+
+Chapter 2     Rest of UK forecasts
+        Table 2.1: UK NSND income tax forecast ........................................................................4
+        Chart 2.1: Change in UK NSND income tax forecast since March 2026............................4
+        Table 2.2: Impact of UK Government measures on UK NSND income tax .........................5
+        Table 2.3: ENI share of UK NSND income tax on a pre-measures basis ............................6
+        Table 2.4: ENI NSND income tax forecast .......................................................................6
+        Chart A: Impact on the Scottish and Welsh net positions of the reclassification of carried
+        interest receipts ..............................................................................................................8
+        Table 2.5: Other rest of UK tax forecasts .........................................................................9
+        Table 2.6: Social security spending in England and Wales ..............................................10
+        Table 2.7: Change in social security spending in England and Wales since March ...........11
+
+Chapter 3    Scottish tax forecasts and net position
+        Table 3.1: Rest of UK tax forecasts and Scottish tax forecasts ..........................................14
+        Table 3.2: Indicative BGA projection by tax ...................................................................15
+        Chart 3.1: Indicative change in the tax BGAs since March 2026 and January 2026 .........16
+        Table 3.3: Projected Scottish net tax position based on OBR tax forecasts ........................17
+        Chart 3.2: Change in OBR projected Scottish net tax position since March 2026 .............18
+        Chart 3.3: Scottish net tax position projections ...............................................................19
+        Table 3.4: Scottish share of NSND income tax on a pre-measures basis..........................20
+        Table 3.5: Changes in Scottish NSND income tax since March .......................................20
+        Table 3.6: SFC Scottish determinants compared to OBR UK-wide determinants ...............22
+        Table 3.7: SFC Scottish income tax forecast compared to OBR UK NSND forecast ...........23
+        Table 3.8: Other Scottish devolved taxes .......................................................................25
+
+Chapter 4    Welsh tax forecasts and net position
+        Table 4.1: Devolved Welsh taxes relative to ENI equivalents ...........................................28
+        Table 4.2: Welsh rates and ENI equivalent by income tax band ......................................29
+        Table 4.3: Projections of the indicative tax BGAs ............................................................29
+        Chart 4.1: Change in the indicative tax BGA projections since March 2026.....................30
+        Table 4.4: Latest projected Welsh net tax position ..........................................................31
+        Chart 4.2: Change in the Welsh net tax position since March .........................................31
+        Table 4.5: Welsh rates share of NSND income tax on a pre-measures basis....................32
+        Table 4.6: Changes in the Welsh rates of income tax forecast since March ......................33
+        Table 4.7: Forecast of Welsh rates of income tax by tax band .........................................33
+        Table 4.8: Land transaction tax forecast: changes since March .......................................34
+        Table 4.9: Welsh landfill disposals tax forecast: changes since March .............................34
+
+Annex A          Illustrative forecasts for taxes not yet devolved
+            Table A.1: Welsh aggregates levy illustrative forecasts ....................................................35
+            Table A.2: VAT assignment illustrative forecast ...............................................................36
+
+
+
+                                                                  39                   Devolved tax and spending forecasts
+Index of charts and tables
+
+
+
+Annex B        Additional forecast tables
+          Table B.1: Welsh rates of income tax from property by tax band .....................................37
+          Table B.2: Welsh rates of income tax from property and rest of UK equivalent by band ....37
+          Table B.3: Number of individuals in Scotland of state pension age with income above
+          £35,000 ......................................................................................................................38
+
+
+
+
+Devolved tax and spending forecasts
+
