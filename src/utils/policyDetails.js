@@ -61,7 +61,7 @@
  * - noun: the measure as a noun after "the" in a sentence or label ("when
  *   the fuel duty cut has ended", "No fuel duty cut"), where the short name
  *   does not read as one ("Fuel duty cut extended"); nounOf falls back to
- *   the short name, lower-cased.
+ *   the short name, its first letter lowered unless it is a proper name.
  * - shortName: a short name for the measure keys' chips, the household
  *   waterfall and other tight labels (the full published name stays in
  *   their tooltips and accessible names).
@@ -492,6 +492,7 @@ export const POLICY_DETAILS = [
     id: "savings_income_rates_up",
     cardOrder: 8,
     shortName: "Savings income tax up",
+    noun: "savings income tax rise",
     sentence: "raising tax on savings income",
     name: "Savings income tax rates up",
     description: "Raise income tax on savings income by 2 points",
@@ -714,12 +715,16 @@ export function shortNameOf(measure) {
 
 /**
  * A catalogue measure as a noun after "the" in a sentence: its entry's
- * noun, else its short name with a leading capital lowered ("Threshold
- * freeze" to "threshold freeze"; "BADR cut" keeps its capitals).
+ * noun, else its short name with its first letter lowered ("Threshold
+ * freeze" to "threshold freeze"). A name with a capital after its first
+ * letter keeps its capitals ("BADR cut", "Warm Home Discount top-up",
+ * "Carer's Allowance earnings taper"), as in ProgrammeTable's inSentence.
+ * The fallback runs whenever an entry's `writtenFor` stops matching the
+ * publication, so it must not lower a proper name.
  */
 export function nounOf(measure) {
   const noun = policyDetailsFor(measure)?.noun;
   if (noun) return noun;
   const name = String(shortNameOf(measure) ?? "");
-  return /^[A-Z][a-z]/.test(name) ? name[0].toLowerCase() + name.slice(1) : name;
+  return /[A-Z]/.test(name.slice(1)) ? name : name.charAt(0).toLowerCase() + name.slice(1);
 }

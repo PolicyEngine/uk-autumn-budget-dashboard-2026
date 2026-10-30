@@ -176,5 +176,13 @@ describe("nounOf: a measure as a noun after 'the'", () => {
     const { nounOf } = await import("./policyDetails");
     expect(nounOf({ id: "x", name: "Threshold freeze" })).toBe("threshold freeze");
     expect(nounOf({ id: "y", name: "BADR cut" })).toBe("BADR cut");
+    // A proper name keeps its capitals when its entry no longer matches the publication
+    expect(nounOf({ id: "warm_home_discount_top_up", name: "Warm Home Discount top-up" })).toBe("Warm Home Discount top-up");
+    expect(nounOf({ id: "carers_allowance_earnings_taper", name: "Carer's Allowance earnings taper", description: "changed" })).toBe("Carer's Allowance earnings taper");
+  });
+  it("gives the savings income measure a noun, never 'the savings income tax up'", async () => {
+    const { POLICY_DETAILS, nounOf } = await import("./policyDetails");
+    const savings = POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up");
+    expect(nounOf({ id: savings.id, description: savings.writtenFor })).toBe("savings income tax rise");
   });
 });

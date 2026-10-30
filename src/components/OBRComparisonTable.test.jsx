@@ -456,18 +456,22 @@ describe("the comparison sentence", () => {
         ),
       ),
     ).toBe(
-      "For all 3 policies with figures this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£165m).",
+      "For all 3 policies in force this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£165m).",
     );
     expect(
       plain(
         comparisonSentence([row("Trading allowance", -0.12, -0.225), row("Pension Tax Allowance", -0.085, -0.09), { ...row("Property income tax up", 0.41, null) }, off("Bus fare cap", "Ended 2027-28"), off("Energy payment", "2026-27 only")], "post-behavioural"),
       ),
     ).toBe(
-      "For 2 of the 3 policies with figures this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£225m); 1 has no comparable official figure this year.",
+      "For 2 of the 3 policies in force this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£225m); 1 has no comparable official figure this year.",
     );
   });
   it("says when no selected policy is in force, rather than comparing £0 with £0", () => {
-    expect(comparisonSentence([off("Carer's Allowance taper", "Starts 2030-31")], "post-behavioural")).toBe("Carer's Allowance taper is not in force this year.");
+    expect(comparisonSentence([off("Carer's Allowance taper", "Starts 2030-31")], "post-behavioural")).toBe("The Carer's Allowance taper is not in force this year.");
+    // The noun, not the short name: "The fuel duty cut", never "Fuel duty cut extended"
+    const fuel = POLICY_DETAILS.find((entry) => entry.id === "fuel_duty_rise_deferral");
+    const fuelRow = { ...off("Fuel duty cut extended", "Ended 2027-28"), id: fuel.id, measure: { id: fuel.id, name: fuel.name, description: fuel.writtenFor } };
+    expect(comparisonSentence([fuelRow], "static")).toBe("The fuel duty cut is not in force this year.");
     expect(comparisonSentence([off("A", "Starts 2030-31"), off("B", "2026-27 only")], "static")).toBe("None of the selected policies is in force this year.");
   });
 });
