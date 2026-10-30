@@ -372,8 +372,7 @@ function MethodologyTab({ onShowTab }) {
                     through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
                     the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. Measures are
                     written as parameter changes where possible, or built from tested measure
-                    templates. Four of the policies here are written by hand, and are published
-                    only after two reviewers have checked the exact run.
+                    templates. Four of the policies here are written by hand.
                   </>,
                 ],
                 [
@@ -425,8 +424,7 @@ function MethodologyTab({ onShowTab }) {
               Some Budget policies act on something the model or its survey data do not hold, such as
               prices, ISAs or business mileage, or have rules not yet published, so they cannot be
               costed household by household. The rise in income tax rates on savings income is
-              modelled but held back from this release, because the data miss ISA interest and some
-              other savings income.{" "}
+              modelled but held back from this release, for the reason its card gives.{" "}
               <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
                 Budget policies we do not model
               </ViewLink>

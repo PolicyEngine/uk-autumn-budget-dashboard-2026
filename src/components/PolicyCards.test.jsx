@@ -692,7 +692,7 @@ describe("the card's frame", () => {
     expect(example.querySelector(".policy-card-example-text")).toHaveTextContent(/including:$/);
     const list = example.querySelector("ul.policy-card-example-items");
     expect([...list.children].map((item) => item.tagName)).toEqual(["LI", "LI"]);
-    expect(list.children[0]).toHaveTextContent("83% of households spending over a tenth of their income on energy");
+    expect(list.children[0]).toHaveTextContent("83% of households spending over a tenth of their income after housing costs on energy");
   });
 
   it("shows the Carer's Allowance cliff the taper removes, with the limit in the note (PR 290, Anthony, 19:20)", () => {

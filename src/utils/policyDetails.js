@@ -537,7 +537,7 @@ export const POLICY_DETAILS = [
     ],
     details: [
       "Adds £100 to the 2026-27 income of each household in England in council tax bands A to D.",
-      "The Treasury's cost also covers the devolved governments' Barnett share (about £425 million), which the model leaves out.",
+      "The Treasury's cost also covers the devolved governments' Barnett share (about £425 million, our estimate), which the model leaves out.",
       "It also covers £100 million for councils in England for targeted support, also not modelled.",
     ],
     starts: "Jan 2027",
@@ -558,9 +558,11 @@ export const POLICY_DETAILS = [
       title: "Who it reaches",
       text: "Up to 20 million households in England (about 80%), including:",
       items: [
-        "83% of households spending over a tenth of their income on energy",
+        "83% of households spending over a tenth of their income after housing costs on energy",
         "88% of households in the bottom three income deciles",
       ],
+      // "Fuel stressed" (footnote 84): spending over 10% of income after
+      // housing costs on energy
       source: { label: "Budget 2026, paragraphs 3.5 and 3.6", href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html" },
     },
     // The example's reach, drawn: England's eight bands, and the shares
@@ -574,7 +576,7 @@ export const POLICY_DETAILS = [
         millions: 20,
         share: 0.8,
         groups: [
-          { label: "Spending over a tenth of their income on energy", share: 0.83 },
+          { label: "Spending over a tenth of their income after housing costs on energy", share: 0.83 },
           { label: "In the bottom three income deciles", share: 0.88 },
         ],
       },
