@@ -319,7 +319,7 @@ export const UNMODELLED_MEASURES = [
     starts: "Apr 2029",
     summary: "Extends parental pay to self-employed fathers, partners, adopters and some irregular workers in Great Britain.",
     points: [
-      { label: "For a household", text: "Two weeks' pay after a birth: up to £194 a week (Treasury)." },
+      { label: "For a household", text: "Up to £194 a week, for two weeks; adopters up to 39." },
       { label: "Who it reaches", text: "Over 150,000 parents a year (government estimate)." },
       { label: "Why we leave it out", text: "Rules unpublished; the model takes paternity pay and Maternity Allowance as reported." },
     ],
@@ -337,10 +337,10 @@ export const UNMODELLED_MEASURES = [
     order: 16,
     reason: "data",
     name: "Gas standing charges to be abolished",
-    starts: "End of 2027 or later",
+    starts: "By end of 2027 (aim)",
     summary: "The government asks Ofgem to abolish gas standing charges, £108 a year on average.",
     points: [
-      { label: "For a household", text: "Before mitigation, about 60% save £45 a year; higher users pay more." },
+      { label: "For a household", text: "Before mitigation, 60% save £45 on average; higher users pay more." },
       { label: "Who it reaches", text: "Around 23 million homes in Great Britain (government estimate)." },
       { label: "Why we leave it out", text: "The model counts energy taxes, not supplier prices; start and mitigation unset." },
     ],

@@ -93,7 +93,9 @@ export const POLICY_DETAILS = [
     starts: "Jan 2027",
     affects: "Households buying petrol or diesel",
     type: "Fuel duty",
-    inForce: { from: "2027-01" },
+    inForce: { from: "2027-01", to: "2027-06" },
+    // The last month in force (to 30 June 2027), as for the other cards
+    ends: "Jun 2027",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
