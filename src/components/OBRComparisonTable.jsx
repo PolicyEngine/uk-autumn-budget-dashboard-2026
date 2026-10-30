@@ -189,8 +189,9 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
  * A policy not in force in the year (a row with a `status`, "Starts
  * 2030-31") shows its status in place of figures, so it is left out of the
  * count: its £0 against £0 is not a close estimate. The count is then "of
- * the N policies in force this year", and with none in force the sentence
- * says so.
+ * the N policies with figures this year" (not "in force": a measure that
+ * has ended can still have an official figure, as the Pension Tax
+ * Allowance has in 2030-31), and with none in force the sentence says so.
  */
 // A word joiner after the minus, so "−£6.5bn" never wraps after its sign
 const keep = (text) => text.replace("−", "−\u2060");
@@ -213,11 +214,11 @@ export function comparisonSentence(rows, obrKind) {
   const gap = (row) => Math.abs(shownDifference(row.pe, row.obr));
   const close = paired.filter((row) => gap(row) <= CLOSE_BN + 1e-9).length;
   const largest = paired.reduce((best, row) => (gap(row) > gap(best) ? row : best));
-  // Counted out of every policy the chart draws in force this year, with
+  // Counted out of every policy the chart draws figures for this year, with
   // those it cannot compare this year said apart, so the count matches the
   // chart's figures
   const all = inForce.length;
-  const which = outOfForce > 0 ? ` in force this year` : "";
+  const which = outOfForce > 0 ? " with figures this year" : "";
   const lead = close === all
     ? `For all ${all} policies${which} our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
     : `For ${close} of the ${all} policies${which} our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;

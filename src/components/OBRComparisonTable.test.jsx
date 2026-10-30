@@ -447,7 +447,7 @@ describe("the comparison sentence", () => {
   // is not counted as within £200m (2029-30 said "7 of the 8" with four of
   // them ended or not started)
   const off = (name, status) => ({ id: name, name, pe: 0, obr: 0, status });
-  it("counts only the policies in force that year", () => {
+  it("counts only the policies with figures that year, not those shown as not in force", () => {
     expect(
       plain(
         comparisonSentence(
@@ -456,14 +456,14 @@ describe("the comparison sentence", () => {
         ),
       ),
     ).toBe(
-      "For all 3 policies in force this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£165m).",
+      "For all 3 policies with figures this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£165m).",
     );
     expect(
       plain(
         comparisonSentence([row("Trading allowance", -0.12, -0.225), row("Pension Tax Allowance", -0.085, -0.09), { ...row("Property income tax up", 0.41, null) }, off("Bus fare cap", "Ended 2027-28"), off("Energy payment", "2026-27 only")], "post-behavioural"),
       ),
     ).toBe(
-      "For 2 of the 3 policies in force this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£225m); 1 has no comparable official figure this year.",
+      "For 2 of the 3 policies with figures this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£225m); 1 has no comparable official figure this year.",
     );
   });
   it("says when no selected policy is in force, rather than comparing £0 with £0", () => {
