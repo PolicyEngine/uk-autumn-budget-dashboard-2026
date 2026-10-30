@@ -56,7 +56,7 @@ export function LandingIntro({ headingId, provisional, className = "landing-hero
         Estimates from <SourceLink source="policyengine_uk_model" />{" "}of how
         Autumn Budget 2026 policies affect the public finances and household
         incomes across the income distribution, regions and age groups, set
-        against the pre-measures forecast. Costings are our own except the bus fare cap&apos;s, which is the Treasury&apos;s; the economic
+        against the pre-measures forecast. Costings are our own except the bus fare cap&rsquo;s, which is the Treasury&rsquo;s; the economic
         forecast is the OBR&rsquo;s{" "}
         <SourceLink source="obr_efo_current">Economic and fiscal outlook, October 2026</SourceLink>.
       </p>

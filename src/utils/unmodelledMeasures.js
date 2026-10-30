@@ -14,6 +14,8 @@
  * version.
  */
 
+import { SOURCES } from "./sources";
+
 const BUDGET_URL = "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html";
 
 export const BUDGET_DOCUMENT = {
@@ -90,50 +92,8 @@ export const UNMODELLED_MEASURES = [
     sources: [budget("paragraph 6.247")],
   },
   {
-    id: "machine-games-duty",
-    order: 2,
-    reason: "coming-soon",
-    name: "Machine Games Duty up from 20% to 25%",
-    starts: "1 Apr 2027",
-    summary: "Machines with stakes over £1 or prizes over £100 pay 25% duty, up from 20%.",
-    points: [
-      { label: "For a household", text: "Businesses pay; any household effect comes via stakes, prizes, owners or staff." },
-      { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
-      { label: "Why we leave it out", text: "Our data hold no household spending on gambling." },
-    ],
-    costings: [
-      {
-        row: 56,
-        values: [0, 135, 150, 145, 145, 145],
-        note: "Row 56 also covers moving the duty to machine suppliers from 1 April 2028: £20m in 2028-29, £15m a year after.",
-      },
-    ],
-    sources: [budget("paragraphs 2.49 and 6.225")],
-  },
-  {
-    id: "cash-isa-limit",
-    order: 3,
-    reason: "coming-soon",
-    name: "Cash ISA limit kept at £20,000",
-    starts: "6 Apr 2027",
-    summary: "Drops a planned cut in the under-65 cash ISA limit to £12,000; it stays £20,000.",
-    points: [
-      { label: "For a household", text: "Interest stays tax-free on up to £20,000 a year of new savings." },
-      { label: "Who it reaches", text: "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23." },
-      { label: "Why we leave it out", text: "The model has no ISA payments, so never had the cut." },
-    ],
-    costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
-    sources: [
-      budget("paragraphs 2.52 and 6.248"),
-      {
-        label: "HMRC, tax information and impact note on the cash ISA limit (17 September 2026)",
-        href: "https://www.gov.uk/government/publications/reduction-in-the-cash-individual-savings-account-isa-limit",
-      },
-    ],
-  },
-  {
     id: "adjusted-triple-lock",
-    order: 4,
+    order: 2,
     reason: "separately",
     name: "Adjusted Triple Lock for the State Pension",
     starts: "Apr 2030",
@@ -156,7 +116,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "bank-surcharge",
-    order: 5,
+    order: 3,
     reason: "outside",
     name: "Bank surcharge up from 3% to 6% for 15 months",
     starts: "1 Jan 2027",
@@ -171,7 +131,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "pubs-business-rates-relief",
-    order: 6,
+    order: 4,
     reason: "outside",
     name: "Business rates relief for pubs and venues up to 35%",
     starts: "1 Apr 2027",
@@ -186,7 +146,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "online-marketplace-liability",
-    order: 7,
+    order: 5,
     reason: "outside",
     name: "Online marketplaces to collect the tax on UK sellers' sales",
     starts: "1 Oct 2027",
@@ -201,7 +161,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "your-first-home",
-    order: 8,
+    order: 6,
     reason: "outside",
     name: "Your First Home equity loan scheme",
     starts: "Apr 2027",
@@ -219,6 +179,52 @@ export const UNMODELLED_MEASURES = [
       },
     ],
     sources: [budget("paragraphs 5.5 and 6.113")],
+  },
+  {
+    id: "machine-games-duty",
+    order: 7,
+    reason: "data",
+    name: "Machine Games Duty up from 20% to 25%",
+    starts: "1 Apr 2027",
+    summary: "Machines with stakes over £1 or prizes over £100 pay 25% duty, up from 20%.",
+    points: [
+      { label: "For a household", text: "Businesses pay; any household effect comes via stakes, prizes, owners or staff." },
+      { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
+      { label: "Why we leave it out", text: "Our data hold no household spending on gambling." },
+    ],
+    costings: [
+      {
+        row: 56,
+        values: [0, 135, 150, 145, 145, 145],
+        note: "Row 56 also covers moving the duty to machine suppliers from 1 April 2028: £20m in 2028-29, then £15m, £15m and £10m (policy costings p.68).",
+      },
+    ],
+    sources: [
+      budget("paragraphs 2.49 and 6.225"),
+      // The move to machine suppliers' yearly figures in row 56
+      { label: "HM Treasury, Budget 2026 policy costings, Machine Games Duty (page 68)", href: SOURCES.obr_budget_2026_costings.url },
+    ],
+  },
+  {
+    id: "cash-isa-limit",
+    order: 8,
+    reason: "data",
+    name: "Cash ISA limit kept at £20,000",
+    starts: "6 Apr 2027",
+    summary: "Drops a planned cut in the under-65 cash ISA limit to £12,000; it stays £20,000.",
+    points: [
+      { label: "For a household", text: "Interest stays tax-free on up to £20,000 a year of new savings." },
+      { label: "Who it reaches", text: "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23." },
+      { label: "Why we leave it out", text: "The model has no ISA payments, so never had the cut." },
+    ],
+    costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
+    sources: [
+      budget("paragraphs 2.52 and 6.248"),
+      {
+        label: "HMRC, tax information and impact note on the cash ISA limit (17 September 2026)",
+        href: "https://www.gov.uk/government/publications/reduction-in-the-cash-individual-savings-account-isa-limit",
+      },
+    ],
   },
   {
     id: "national-living-wage",
@@ -325,7 +331,7 @@ export const UNMODELLED_MEASURES = [
     starts: "Apr 2029",
     summary: "Extends parental pay to self-employed fathers, partners, adopters and some irregular workers in Great Britain.",
     points: [
-      { label: "For a household", text: "Fathers and partners: two weeks at up to £194 a week (Treasury)." },
+      { label: "For a household", text: "Two weeks' pay after a birth: up to £194 a week (Treasury)." },
       { label: "Who it reaches", text: "Over 150,000 parents a year (government estimate)." },
       { label: "Why we leave it out", text: "Rules not final; paternity pay and Maternity Allowance are taken as reported." },
     ],

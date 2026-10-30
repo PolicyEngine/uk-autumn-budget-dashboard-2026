@@ -70,7 +70,7 @@ export default function useDepthView(data) {
       </>
     ),
     about:
-      "People in households below 40%, 50% and 60% of the model's own median income after housing costs each year.",
+      "People in households below 40%, 50% and 60% of the model's own median income after housing costs each year. Below 40% is very deep poverty; the three bands add up to the relative poverty rate.",
     info: {
       how: [
         "Bands of the model's own median income after housing costs each year: below 40%, 40% to 50%, 50% to 60%.",
