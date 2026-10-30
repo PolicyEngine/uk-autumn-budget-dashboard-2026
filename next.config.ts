@@ -32,9 +32,19 @@ function publishedGeography(): string {
     .join(',');
 }
 
+// Each Budget has an address under /uk/budgets/, so /uk/budgets can later
+// become one home for every UK Budget.
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
   ? process.env.NEXT_PUBLIC_BASE_PATH
-  : '/uk/autumn-budget-2026';
+  : '/uk/budgets/autumn-2026';
+
+// The address until 26 October. A link to it, or to anything below it,
+// redirects to the same place under the base path, with the same query
+// values (Next writes a comma as %2C, which URLSearchParams reads back). A
+// trailing slash comes off first, through Next's own 308. The redirect is
+// temporary (307) until after the Budget, so browsers don't cache it while
+// the route could still change. scripts/check-former-address.sh checks this.
+const FORMER_BASE_PATH = '/uk/autumn-budget-2026';
 
 
 // The Household impact tab's API URL is baked in at build time: fail a
@@ -48,6 +58,18 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_POLICYENGINE_VERSION: lockedVersion('policyengine'),
     NEXT_PUBLIC_PUBLISHED_GEOGRAPHY: publishedGeography(),
+  },
+  async redirects() {
+    if (!basePath || basePath === FORMER_BASE_PATH) return [];
+    return [
+      { source: FORMER_BASE_PATH, destination: basePath, basePath: false, permanent: false },
+      {
+        source: `${FORMER_BASE_PATH}/:path*`,
+        destination: `${basePath}/:path*`,
+        basePath: false,
+        permanent: false,
+      },
+    ];
   },
   // recharts and d3 ship CJS interop and rely on browser globals; transpiling
   // them through Next's pipeline avoids ESM/CJS mismatch errors during build.

@@ -4,7 +4,7 @@ PolicyEngine's dashboard for the UK Autumn Budget 2026 (Wednesday 28 October 202
 
 | Link | |
 |---|---|
-| Live dashboard | <https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026> |
+| Live dashboard | <https://uk-autumn-budget-2026.vercel.app/uk/budgets/autumn-2026> |
 | Household API | <https://uk-budget-api-2026-qevs5bboca-ew.a.run.app/api/household-impact> (`POST`; see [Architecture](#architecture)) |
 | Budget-day runbook | [`docs/budget-day-runbook.md`](docs/budget-day-runbook.md) |
 | Decision log | [Issue #119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119) |
@@ -48,7 +48,7 @@ List them from the command line with `uv run uk-budget-data generate --list-refo
 
 ## Architecture
 
-- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/autumn-budget-2026` (`next.config.ts`). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Pre-measures forecast read precomputed files from `public/data/`; Household impact calls the household API.
+- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/budgets/autumn-2026` (`next.config.ts`). Links to the former address, `/uk/autumn-budget-2026`, redirect to the same place under it, query included (`scripts/check-former-address.sh` checks this in CI). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Pre-measures forecast read precomputed files from `public/data/`; Household impact calls the household API.
 - **Data package** (`src/uk_budget_data/`, CLI `uk-budget-data`): Python 3.13. Runs the measures through [policyengine.py](https://github.com/PolicyEngine/policyengine.py) and writes `public/data/`.
 - **Household API** (`uk-budget-api`, `src/uk_budget_data/api.py`): FastAPI on Cloud Run (`uk-budget-api-2026`, `europe-west1`). Its `POST /api/household-impact` route is documented in [`docs/budget-day-publication.md`](docs/budget-day-publication.md#household-route-post-apihousehold-impact).
 
@@ -91,7 +91,7 @@ HOUSEHOLD_WORKERS=2 PORT=8010 uv run uk-budget-api
 bun run dev
 ```
 
-The page is at <http://localhost:3000/uk/autumn-budget-2026>.
+The page is at <http://localhost:3000/uk/budgets/autumn-2026>.
 
 | Variable | Used by | Purpose |
 |---|---|---|
