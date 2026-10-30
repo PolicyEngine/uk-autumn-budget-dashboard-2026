@@ -287,3 +287,19 @@ def test_the_installed_engine_does_not_yet_carry_the_october_forecast():
         "CPI, RPI and earnings forecast: remove the forecast override "
         "(policyengine-uk#2711)"
     )
+
+
+def test_carers_allowance_earnings_limit_is_16_hours_at_the_wage(october):
+    """From April 2027, 16 hours at that April's National Living Wage,
+    rounded up to the pound (EM to SI 2025/352, paragraph 5.6): £212 from
+    £13.21, then the OBR's wage forecast, as the taper reads it. 2026-27
+    keeps the engine's £204."""
+    limit = october.gov.dwp.carers_allowance.earnings_limit
+    assert limit("2026-04-30") == 204
+    assert {year: limit(f"{year}-04-30") for year in range(2027, 2032)} == {
+        2027: 212,
+        2028: 217,
+        2029: 222,
+        2030: 228,
+        2031: 234,
+    }
