@@ -1,5 +1,7 @@
 # Publishing the Budget dashboard incrementally
 
+**Status, 28 October.** Sign-off is off from Budget day evening (`src/uk_budget_data/sign_off.py`): a pull request merges once `main`'s required checks pass, with no signing step. Where this design asks for review rows, a two-person attestation or a second signer, none is needed until sign-off is turned back on (the README's "Review and sign-off"). Every automated gate below still blocks.
+
 **Status, 19 October.** On 12 October Max ruled that changes which only fix bugs or add opt-in tooling are obvious improvements, and land on the normal review gates. Most of this design has since merged (see "Status of the work"). Six questions for Vahid and María are below. The third, on required checks, is partly settled: since 15 October `main` requires six. Comment on the PR that adds this file.
 
 The UK Autumn Budget is on Wednesday 28 October 2026, and the briefing is due by 07:00 on 29 October. There is no model freeze; the model keeps improving through Budget day. So each number on the dashboard and in the briefing has to carry evidence of what produced it, and pass checks, before it is published, measure by measure as measures are coded.
@@ -129,7 +131,7 @@ Locally, with `HOUSEHOLD_WORKERS=2 PORT=8010 uv run uk-budget-api`, it is `http:
 
 **Not modelled for one household.** The rail fares freeze (a national cost spread by rail use: it is in the national figures only); a local authority's choice of BRMA (policyengine-uk reads the BRMA, defaulting to the region's BRMA with the most private-rented households, and reads the local authority only for the few Council Tax Reduction schemes it models).
 
-**Council Tax.** Left out of the request, it is estimated from `council_tax_band` and the region's average Band D for 2026-27 (MHCLG Table 10, tax-base weighted by region; Welsh Government £2,283; Scottish Government £1,653.44), grown with policyengine-uk's OBR Council Tax series; none in Northern Ireland (domestic rates). The answer says which in `council_tax_used`. No measure changes it.
+**Council Tax.** Left out of the request, it is estimated from `council_tax_band` and a Band D for 2026-27, grown with policyengine-uk's OBR Council Tax series; none in Northern Ireland (domestic rates). With `local_authority` given, the Band D is that council's own (policyengine-uk's `gov.local_authorities.council_tax.band_d.amounts`, which `council_tax_band_d_amount` reads); without one, it is the region's average (MHCLG Table 10, tax-base weighted by region; Welsh Government £2,283; Scottish Government £1,653.44). The answer says which in `council_tax_used`. No measure changes it. The local authority does not choose the rental area (BRMA): policyengine-uk places that from the region.
 
 **Concurrency.** See the runbook: requests share the workers run by run, and Cloud Run `--concurrency 4` is the setting to pair with `--cpu 2`.
 

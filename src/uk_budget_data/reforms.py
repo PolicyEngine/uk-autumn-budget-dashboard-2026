@@ -28,6 +28,9 @@ from uk_budget_data.budget_measures import (
 from uk_budget_data.budget_measures import (
     zero_vat_on_domestic_electricity as _electricity,
 )
+from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
+    bus_fare_cap_2027,
+)
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -42,6 +45,9 @@ from uk_budget_data.budget_measures.household_energy_payment_2026 import (
 )
 from uk_budget_data.budget_measures.pension_tax_allowance import (
     pension_tax_allowance,
+)
+from uk_budget_data.budget_measures.planned_cash_isa_limit import (
+    planned_cash_isa_limit,
 )
 from uk_budget_data.budget_measures.pump_vat_on_fuel_duty_deferral import (
     pump_vat_on_fuel_duty_deferral,
@@ -130,6 +136,8 @@ CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 STATE_PENSION_DOUBLE_LOCK_ID = "state_pension_double_lock_2030"
 HOUSEHOLD_ENERGY_PAYMENT_ID = "household_energy_payment_2026"
 TRADING_ALLOWANCE_ID = "trading_allowance_raise"
+BUS_FARE_CAP_ID = "bus_fare_cap_2027"
+CASH_ISA_LIMIT_ID = "cash_isa_limit_kept"
 TRADING_ALLOWANCE = "gov.hmrc.income_tax.allowances.trading_allowance"
 
 
@@ -995,6 +1003,82 @@ def _create_trading_allowance_raise() -> Reform:
 
 
 # =============================================================================
+# SINGLE BUS FARES CAPPED AT £2 OUTSIDE LONDON, CALENDAR 2027
+# =============================================================================
+
+# Budget 2026 (Table 6.1, "Single bus fares capped at £2 outside London"):
+# a £2 maximum single fare on participating services in England outside
+# London from 1 January to 31 December 2027, where most are capped at £3
+# until then. Left out on Budget day only because runs were in flight
+# (María, 29 October 2026); registered and in the package since. Vahid,
+# 29 October 2026 (issue #329, option 3): the Treasury's costing (Table
+# 6.1) shared out across households by their bus fare spending in England
+# outside London, not our own estimate of the national cost: 10.0% of
+# spending at £3 fares while the cap runs (£230m / 0.9 operator
+# participation / £2,557m), grossed up from current law's spending at £2.
+# It reads no gov.dft.bus parameter, so it does not reach the data limit
+# bus_uncapped_single_fares. Defaults of the hand-written modifier in
+# budget_measures/bus_fare_cap_2027.py: fall=0.10, capped_2026=95/365,
+# capped_2027=270/366, country="ENGLAND", excluded_region="LONDON".
+
+
+def _create_bus_fare_cap_2027() -> Reform:
+    return Reform(
+        id=BUS_FARE_CAP_ID,
+        name="Single bus fares capped at £2",
+        description=(
+            "Single bus fares on participating services in England outside "
+            "London are capped at £2 instead of £3 from 1 January to "
+            "31 December 2027. The saving is the Treasury's costing "
+            "(Table 6.1) shared out across households by their bus fare "
+            "spending in England outside London: 10.0% of what that "
+            "spending would be at £3 fares (£230m, divided by 0.9 for "
+            "operator participation, over £2,557m of spending), for the "
+            "days the cap runs: 1 January to 5 April 2027 in 2026-27 and "
+            "6 April to 31 December 2027 in 2027-28. London residents get "
+            "£0. The saving is counted as household income, a "
+            "methodological choice: the official cost is a grant to bus "
+            "operators. Spending is held fixed, with no extra travel."
+        ),
+        simulation_modifier=bus_fare_cap_2027,
+    )
+
+
+# =============================================================================
+# CASH ISA LIMIT KEPT AT £20,000 (Household calculator only)
+# =============================================================================
+
+
+# Budget 2026 (2.52, 6.248; Table 6.1 row 11): the cut in the cash ISA limit
+# to £12,000 a year for under-65s from 6 April 2027 (SI 2026/1018 reg 6)
+# does not go ahead. policyengine-uk 2.151.0 has no ISA limits, so current
+# law is the Budget's and the pre-Budget side carries the cut
+# (budget_measures/planned_cash_isa_limit.py; its numbers are default
+# arguments there). Its effect rests on what a household pays into cash
+# ISAs, which the survey data do not hold (PolicyEngine/microcosm#1415), so
+# it is registered for the Household calculator only: listed, not in the
+# package, and never in the national results (calculatorOnlyMeasures.js).
+def _create_cash_isa_limit_kept() -> Reform:
+    return Reform(
+        id=CASH_ISA_LIMIT_ID,
+        name="Cash ISA limit kept at £20,000 for under-65s",
+        description=(
+            "The cut in the cash ISA limit to £12,000 a year for savers "
+            "under 65, planned from 6 April 2027, does not go ahead: they "
+            "can still pay up to £20,000 a year into cash ISAs. The "
+            "household's gain is the income tax it would have paid on the "
+            "interest from what the planned limit left out: the same "
+            "payments each year from April 2027, the excess held in a "
+            "taxable account earning Bank Rate as the OBR forecasts it, the "
+            "interest paid out each year. For one household at a time: the "
+            "survey data hold no payments into ISAs, so there is no "
+            "national figure."
+        ),
+        baseline_simulation_modifier=planned_cash_isa_limit,
+    )
+
+
+# =============================================================================
 # STATE PENSION DOUBLE LOCK FROM APRIL 2030 (not registered)
 # =============================================================================
 
@@ -1099,6 +1183,9 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     CARERS_ALLOWANCE_TAPER_ID,
     HOUSEHOLD_ENERGY_PAYMENT_ID,
     TRADING_ALLOWANCE_ID,
+    # 29 October 2026 (María): the £2 bus fare cap, left out on Budget day
+    # only because runs were in flight. Package of eight.
+    BUS_FARE_CAP_ID,
 )
 
 # Withdrawn on Budget day, not in the Budget 2026 document: the Warm Home
@@ -1107,7 +1194,10 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
 # secondary threshold (stays £5,000). Their factories stay, unregistered.
 # Also withdrawn that day: the savings and property income tax rates as one
 # measure (``UNEARNED_INCOME_RATES_ID``), split into the property and the
-# savings measures, Table 6.1 rows 61 and 62. Package of eight.
+# savings measures, Table 6.1 rows 61 and 62. Nine registered since the £2
+# bus fare cap (29 October 2026); eight in the package (savings held back).
+# The cash ISA limit kept at £20,000 (Table 6.1 row 11) joined on
+# 29 October, for the Household calculator only: ten registered.
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,
@@ -1117,6 +1207,8 @@ _MEASURE_FACTORIES = (
     _create_carers_allowance_earnings_taper,
     _create_household_energy_payment_2026,
     _create_trading_allowance_raise,
+    _create_bus_fare_cap_2027,
+    _create_cash_isa_limit_kept,
 )
 
 

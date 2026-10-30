@@ -250,15 +250,14 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const measure = catalogue.byId?.get(step.id);
     return measure?.sentence ?? policyDetailsFor(measure)?.sentence ?? step.name;
   };
-  // Led by all the policies together, then the policy that moves the most
-  // on its own: never read as a share of the total (POV2)
+  // The policy that moves the most on its own. The total for all the
+  // policies together is the poverty rate card's sentence, beside this one
+  // on the tab, and this chart's last bar: not repeated here
   const summary = top ? (
     peopleMode ? (
       totalStep ? (
         <>
-          The selected policies together move {about(totalStep)} {who} {direction(totalStep)} poverty. On its own,{" "}
-          {inSentence(top)} moves the most ({about(top)}
-          {direction(top) === direction(totalStep) ? "" : ` ${who} ${direction(top)} poverty`}).
+          Of the policies on their own, {inSentence(top)} moves the most: {about(top)} {who} {direction(top)} poverty.
         </>
       ) : (
         <>

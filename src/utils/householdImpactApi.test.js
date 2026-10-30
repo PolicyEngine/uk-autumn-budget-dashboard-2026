@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
+  BUS_FARE_CAP_YEARS,
   EngineMismatchError,
   STAGE_ENGINE_PACKAGES,
   StageMismatchError,
@@ -8,6 +9,7 @@ import {
   buildHouseholdRequest,
   consistentRound,
   engineDifferences,
+  inBusFareCapArea,
   mergeStages,
   normaliseHouseholdImpact,
   requestKey,
@@ -153,6 +155,23 @@ describe("buildHouseholdRequest", () => {
     );
     // The stage is not part of the cache key
     expect(requestKey(family)).toBe(requestKey({ ...family, include: [] }));
+  });
+
+  it("sends bus fares only when entered, in England outside London", () => {
+    const options = { year: 2027, policies: ["bus_fare_cap_2027"] };
+    // Not answered: not sent, so the request (and its key) is as before
+    const none = buildHouseholdRequest(WIZARD_DEFAULTS, options);
+    expect(none.household).not.toHaveProperty("bus_fare_spending");
+    expect(requestKey(none)).toBe(requestKey(buildHouseholdRequest({ ...WIZARD_DEFAULTS, bus_fare_spending_per_year: 0 }, options)));
+    const north = buildHouseholdRequest({ ...WIZARD_DEFAULTS, region: "NORTH_WEST", bus_fare_spending_per_year: 500 }, options);
+    expect(north.household.bus_fare_spending).toBe(500);
+    for (const region of ["LONDON", "SCOTLAND", "WALES", "NORTHERN_IRELAND"]) {
+      const outside = buildHouseholdRequest({ ...WIZARD_DEFAULTS, region, bus_fare_spending_per_year: 500 }, options);
+      expect(outside.household).not.toHaveProperty("bus_fare_spending");
+    }
+    expect(inBusFareCapArea("SOUTH_WEST")).toBe(true);
+    expect(inBusFareCapArea("LONDON")).toBe(false);
+    expect(BUS_FARE_CAP_YEARS).toEqual([2026, 2027]);
   });
 
   it("sends a State Pension only as entered, and only at State Pension age", () => {

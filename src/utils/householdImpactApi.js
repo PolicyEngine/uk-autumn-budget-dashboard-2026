@@ -23,6 +23,7 @@
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
+import { localAuthorityKey } from "./localAuthorities";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -94,6 +95,7 @@ export const FIELD_LABELS = {
   petrol_spending: "Petrol spending",
   diesel_spending: "Diesel spending",
   electricity_spending: "Electricity spending",
+  bus_fare_spending: "Bus fares",
   salary_sacrifice_pension_contributions: "Salary sacrifice",
   student_loan_plan: "Student loan plan",
   council_tax_band: "Council tax band",
@@ -259,6 +261,17 @@ export function childrenForRequest(inputs) {
 }
 
 const RENTING = new Set(["RENT_PRIVATELY", "RENT_FROM_COUNCIL", "RENT_FROM_HA"]);
+
+// The regions outside the £2 bus fare cap: London, and the nations outside
+// England (the API's household_impact.BUS_FARE_CAP_REGIONS)
+const OUTSIDE_BUS_FARE_CAP = new Set(["LONDON", "WALES", "SCOTLAND", "NORTHERN_IRELAND"]);
+/** Whether a region is in England outside London, where the £2 bus fare cap applies. */
+export const inBusFareCapArea = (region) => Boolean(region) && !OUTSIDE_BUS_FARE_CAP.has(region);
+/** The fiscal years the £2 bus fare cap credits anything in (2026-27 and 2027-28). */
+export const BUS_FARE_CAP_YEARS = [2026, 2027];
+/** The bus fares sent: as entered, in England outside London; else 0 (not sent). */
+export const busFares = (inputs) =>
+  inBusFareCapArea(inputs.region) && Number(inputs.bus_fare_spending_per_year) > 0 ? Number(inputs.bus_fare_spending_per_year) : 0;
 export const isRenting = (tenure) => RENTING.has(tenure);
 
 /**
@@ -270,6 +283,7 @@ export const isRenting = (tenure) => RENTING.has(tenure);
 export function buildHouseholdRequest(inputs, { year, policies, include = HEADLINE_INCLUDE }) {
   const children = childrenForRequest(inputs);
   const renting = isRenting(inputs.tenure);
+  const localAuthority = inputs.council ? localAuthorityKey(inputs.council) : null;
   return {
     year,
     policies: [...policies],
@@ -281,6 +295,11 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       partner_employment_income: inputs.has_partner ? inputs.partner_salary : 0,
       children,
       region: inputs.region,
+      // The council picked, as policyengine-uk's LocalAuthority key: the API
+      // estimates Council Tax from its own Band D. Only once picked, so a
+      // request without one (every example's) is as it was, and its key
+      // (and precomputed answer) still matches
+      ...(localAuthority ? { local_authority: localAuthority } : {}),
       claims_universal_credit: Boolean(inputs.claims_universal_credit),
       tenure: inputs.tenure,
       // Left as prefilled (null), the region's average private rent
@@ -295,8 +314,9 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       electricity_spending: inputs.electricity_spending_per_year ?? DEFAULT_SPENDING.electricity,
       salary_sacrifice_pension_contributions: inputs.salary_sacrifice_per_year,
       student_loan_plan: inputs.student_loan_plan,
-      // The API estimates Council Tax from the band and the region's average
-      // Band D (none in Northern Ireland, which has domestic rates)
+      // The API estimates Council Tax from the band and the council's own
+      // Band D, or the region's average until a council is picked (none in
+      // Northern Ireland, which has domestic rates)
       council_tax_band: inputs.council_tax_band,
       // Childcare only counts with children
       monthly_childcare: children.length ? inputs.monthly_childcare : 0,
@@ -314,6 +334,11 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       // Caring only for a carer: anyone else's request is as it was before
       // the form asked, so its key (and a precomputed answer) still matches
       ...(inputs.is_carer ? { is_carer: true, care_hours_per_week: careHours(inputs) } : {}),
+      // Bus fares only when answered, where the £2 cap reaches (England
+      // outside London), likewise
+      ...(busFares(inputs) ? { bus_fare_spending: busFares(inputs) } : {}),
+      // Cash ISA payments only when answered, likewise
+      ...(inputs.cash_isa_payments_per_year > 0 ? { cash_isa_subscriptions: inputs.cash_isa_payments_per_year } : {}),
       // Self-employment only when answered, likewise
       ...(selfEmployed(inputs)
         ? {
@@ -527,7 +552,8 @@ function normaliseByPolicy(raw) {
       change: num(row.change),
       status: row.status === "not_affected" ? "not_affected" : "affected",
       // A note where the number alone would mislead: "employer_cost" (£0 by
-      // construction) or "if_received" (the eligible amount)
+      // construction), "if_received" (the eligible amount) or "assumption"
+      // (an amount that rests on what the household would have done)
       note: row.note ?? null,
       noteKind: row.note_kind ?? null,
     })),
