@@ -909,8 +909,12 @@ def check(
     data_root: Path,
     inputs: Path = TREASURY_INPUTS,
     check_flat_index: bool = True,
+    code_root: Optional[Path] = None,
 ) -> list[str]:
     """Re-run every gate over every entry the page lists.
+
+    ``code_root``, a checkout with full history, adds the area code and
+    dataset checks ``publish index`` makes (``release_index.area_problems``).
 
     Returns one line per failure; an empty list means the manifest may be
     published as it stands.
@@ -926,7 +930,9 @@ def check(
         data_root
     )
     if check_flat_index:
-        failures += release_index_problems(data_root, manifest)
+        failures += release_index_problems(
+            data_root, manifest, code_root=code_root
+        )
     for key, entry in sorted(manifest.entries().items()):
         if entry.status not in m.LISTED:
             continue

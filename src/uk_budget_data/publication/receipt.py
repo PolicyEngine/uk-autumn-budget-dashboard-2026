@@ -154,6 +154,17 @@ class CodeRevision:
         return {"repository": REPOSITORY, "git_sha": self.git_sha}
 
 
+# A revision no commit has (40 zeros), for a definition digest: a scenario
+# bound at it has the digest of its definition alone. A code-bound identity's
+# digest covers its modifier's source, its module's source and typed
+# defaults, and the commit; binding every scenario at this one fixed
+# "commit" leaves the rest, so two checkouts whose definitions are the same
+# give the same digest whatever their commits. A content-bound identity has
+# no commit in it, so its definition digest is its own digest. Never put a
+# scenario bound at this revision in a receipt: it names no real commit.
+DEFINITION_REVISION = CodeRevision("0" * 40, True)
+
+
 def code_revision(repo_root: Path = Path(".")) -> CodeRevision:
     """Read HEAD and the working-tree state from git."""
 

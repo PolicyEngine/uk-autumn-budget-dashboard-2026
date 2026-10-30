@@ -35,7 +35,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import canonicalize from "canonicalize";
-import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaProvenanceDocument, assertAreaReceipt, assertAreaRows } from "../src/utils/publication/area.js";
+import { AREA_PROVENANCE_FILE, areaReceiptTarget, assertAreaProvenance, assertAreaProvenanceDocument, assertAreaReceipt, assertAreaRows } from "../src/utils/publication/area.js";
 import { withholdingProblems } from "../src/utils/publication/withholding.js";
 
 const RECORD_LEVEL = /\b(?:household|benunit|person)_(?:id|weight)\b/;
@@ -128,11 +128,13 @@ export function checkReleaseIndex(root) {
           assertAreaProvenance(provenance, manifest, files, index.aliases);
           verifiedProvenance = provenance;
           for (const record of Object.values(provenance.reforms)) {
-            const receiptPath = join(directory, record.artifact, "receipt.json");
+            // v1: the artifact the area run read; v2: the entry's current one
+            const target = areaReceiptTarget(provenance, record, manifest);
+            const receiptPath = join(directory, target.artifact, "receipt.json");
             if (lstatSync(receiptPath).isSymbolicLink()) throw new Error("area receipt is a symbolic link");
             const receipt = JSON.parse(readFileSync(receiptPath));
-            if (artifactDigest(receipt) !== record.artifact_sha256) throw new Error("area receipt differs from approved artifact");
-            assertAreaReceipt(record, receipt);
+            if (artifactDigest(receipt) !== target.artifactSha256) throw new Error("area receipt differs from approved artifact");
+            assertAreaReceipt(record, receipt, provenance.schema);
           }
         } catch (error) {
           problems.push(`release index: ${error.message}`);
