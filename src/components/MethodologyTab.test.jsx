@@ -290,7 +290,7 @@ describe("MethodologyTab", () => {
     expect(text).toContain("The rest of the measure is shown.");
     expect(text).toContain("so this counts records, not households");
     // The age sentence says what is withheld, as the deciles' does
-    expect(text).toContain("When an age band or single year of age rests on one or two survey households, it is not published: a single year takes the other single years of its band with it, and a band takes every row but all ages.");
+    expect(text).toContain("When an age band or single year of age rests on one or two survey households, it is not published. A single year is left out with as few other single years of its band as it takes for the years left out, with the band's ages too rare for a row of their own, to rest on at least three survey households; a band takes every row but all ages.");
     expect(text).not.toContain("would give it back");
     expect(text).not.toContain("survey records is not shown");
   });

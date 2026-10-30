@@ -619,9 +619,19 @@ def _apply_disclosure_floor(
     (``disclosure_floor.floor_record``). The gate shows no artifact whose
     receipt lacks it (#208 review, finding 9)."""
 
-    def withhold(found):
+    ages = {
+        year: labels
+        for year, labels in (
+            getattr(job, "member_thin_age_groups", None) or {}
+        ).items()
+        if year in job.config.years
+    }
+
+    def withhold(found, extra_ages=None):
         """Blank this run's own and inherited decile cells, and leave out
-        its own and inherited withheld age rows (#340)."""
+        its own and inherited withheld age rows (#340), with the single
+        ages its survey households add (``extra_ages``, #358; None where
+        none were counted, which withholds each such band whole)."""
         inherited = {
             cell: labels
             for cell, labels in (
@@ -639,18 +649,13 @@ def _apply_disclosure_floor(
                         getattr(result, table), table, cells
                     ),
                 )
-        ages = {
-            year: labels
-            for year, labels in (
-                getattr(job, "member_thin_age_groups", None) or {}
-            ).items()
-            if year in job.config.years
-        }
         rows = getattr(result, "age_impact", None) or []
-        age_cells = disclosure_floor.withheld_age_cells(rows, found, ages)
+        age_cells = disclosure_floor.withheld_age_cells(
+            rows, found, ages, extra_ages
+        )
         if hasattr(result, "age_impact"):
             result.age_impact = disclosure_floor.withhold_thin_age_rows(
-                rows, found, ages
+                rows, found, ages, extra_ages
             )
         return {**cells, **age_cells}
 
@@ -677,7 +682,9 @@ def _apply_disclosure_floor(
             f"apart, so no table can be checked against the floor: {error}",
         ) from error
     years = list(job.config.years)
-    found = disclosure_floor.thin_cells(baseline, reformed, years, survey)
+    found, extra_ages = disclosure_floor.thin_cells_and_extra_ages(
+        baseline, reformed, years, survey, ages
+    )
     warnings = []
     deciles = {
         cell: labels
@@ -694,14 +701,16 @@ def _apply_disclosure_floor(
             f"{reason}; recorded in its receipt, so it can be neither staged "
             "nor shown, and publish review-rows deletes it: never commit it"
         )
-    withheld = withhold(found)
+    withheld = withhold(found, extra_ages)
     household_ids = baseline.calculate(
         "household_id", period=years[0], map_to="household"
     ).values
     result.household_scatter = disclosure_floor.survey_scatter_rows(
         result.household_scatter, household_ids, survey
     )
-    return warnings, disclosure_floor.floor_record(found, withheld=withheld)
+    return warnings, disclosure_floor.floor_record(
+        found, withheld=withheld, extra_ages=extra_ages
+    )
 
 
 def _refuse_wealth_tax_base(

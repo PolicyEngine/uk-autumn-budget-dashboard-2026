@@ -736,8 +736,9 @@ def _create_carers_allowance_earnings_taper() -> Reform:
         description=(
             "In England and Wales, Carer's Allowance no longer stops when "
             "weekly net earnings pass the Weekly Earnings Limit, 16 hours at "
-            "the National Living Wage (£212 a week at April 2027's £13.21, "
-            "rounded up to the pound): it is "
+            "the OBR's forecast of the National Living Wage for that April, "
+            "rounded up to the pound (£228 a week in 2030-31 and £234 in "
+            "2031-32): it is "
             "reduced by £1 for each £1 of earnings above the limit, a 100% "
             "taper, to nothing once earnings exceed the limit by the full "
             "weekly rate. The taper starts within 2030-31, on a date still to "
