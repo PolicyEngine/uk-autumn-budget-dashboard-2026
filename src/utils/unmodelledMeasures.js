@@ -14,6 +14,8 @@
  * version.
  */
 
+import { SOURCES } from "./sources";
+
 const BUDGET_URL = "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html";
 
 export const BUDGET_DOCUMENT = {
@@ -319,13 +321,18 @@ export const UNMODELLED_MEASURES = [
     starts: "Apr 2029",
     summary: "Extends parental pay to self-employed fathers, partners, adopters and some irregular workers in Great Britain.",
     points: [
-      { label: "For a household", text: "Two weeks' pay after a birth: up to £194 a week (Treasury)." },
+      { label: "For a household", text: "Two weeks, up to £194 each; adopters up to 39 weeks." },
       { label: "Who it reaches", text: "Over 150,000 parents a year (government estimate)." },
       { label: "Why we leave it out", text: "Rules unpublished; the model takes paternity pay and Maternity Allowance as reported." },
     ],
     costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
     sources: [
       budget("paragraphs 3.20 and 6.12"),
+      // Adopters' up to 39 weeks: the policy costings' Parental Pay measure
+      {
+        label: "HM Treasury, Budget 2026 policy costings, Parental Pay (page 15)",
+        href: SOURCES.obr_budget_2026_costings.url,
+      },
       {
         label: "HM Treasury, release on parental pay and other measures (26 October 2026)",
         href: "https://www.gov.uk/government/news/everyday-fixes-to-make-life-easier-for-millions-of-britons",
@@ -337,10 +344,12 @@ export const UNMODELLED_MEASURES = [
     order: 16,
     reason: "data",
     name: "Gas standing charges to be abolished",
+    // Budget paragraph 4.3: "aiming for delivery by the end of 2027 or as soon
+    // as possible after then" (the start badge holds 20 characters)
     starts: "End of 2027 or later",
     summary: "The government asks Ofgem to abolish gas standing charges, £108 a year on average.",
     points: [
-      { label: "For a household", text: "Before mitigation, about 60% save £45 a year; higher users pay more." },
+      { label: "For a household", text: "60% of account holders save about £45 a year on average." },
       { label: "Who it reaches", text: "Around 23 million homes in Great Britain (government estimate)." },
       { label: "Why we leave it out", text: "The model counts energy taxes, not supplier prices; start and mitigation unset." },
     ],
