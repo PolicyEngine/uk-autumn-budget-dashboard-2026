@@ -261,7 +261,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   from Methodology; a post stays whether or not its measure is
   //   published, so a title decides nothing the page shows of a measure.
   // - IMPROVEMENTS_NOTE: "What we're improving", the next update's plans in
-  //   the words Max approved (28 October), word for word
+  //   the words Max approved (28 October), less the dated poverty item (30 October)
   //   (ImprovementsNote.test.jsx); prose only, it decides nothing about any
   //   measure, and it goes when that update lands.
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
