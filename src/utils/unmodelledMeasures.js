@@ -326,6 +326,11 @@ export const UNMODELLED_MEASURES = [
     costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
     sources: [
       budget("paragraphs 3.20 and 6.12"),
+      // Adopters' up to 39 weeks: the policy costings' Parental Pay measure
+      {
+        label: "HM Treasury, Budget 2026 policy costings, Parental Pay (page 15)",
+        href: "https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf",
+      },
       {
         label: "HM Treasury, release on parental pay and other measures (26 October 2026)",
         href: "https://www.gov.uk/government/news/everyday-fixes-to-make-life-easier-for-millions-of-britons",
