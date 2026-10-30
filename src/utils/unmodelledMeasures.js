@@ -14,6 +14,8 @@
  * version.
  */
 
+import { SOURCES } from "./sources";
+
 const BUDGET_URL = "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html";
 
 export const BUDGET_DOCUMENT = {
@@ -329,7 +331,7 @@ export const UNMODELLED_MEASURES = [
       // Adopters' up to 39 weeks: the policy costings' Parental Pay measure
       {
         label: "HM Treasury, Budget 2026 policy costings, Parental Pay (page 15)",
-        href: "https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf",
+        href: SOURCES.obr_budget_2026_costings.url,
       },
       {
         label: "HM Treasury, release on parental pay and other measures (26 October 2026)",
@@ -342,10 +344,12 @@ export const UNMODELLED_MEASURES = [
     order: 16,
     reason: "data",
     name: "Gas standing charges to be abolished",
-    starts: "By end of 2027 (aim)",
+    // Budget paragraph 4.3: "aiming for delivery by the end of 2027 or as soon
+    // as possible after then" (the start badge holds 20 characters)
+    starts: "End of 2027 or later",
     summary: "The government asks Ofgem to abolish gas standing charges, £108 a year on average.",
     points: [
-      { label: "For a household", text: "Before mitigation, 60% save £45 on average; higher users pay more." },
+      { label: "For a household", text: "60% of account holders save about £45 a year on average." },
       { label: "Who it reaches", text: "Around 23 million homes in Great Britain (government estimate)." },
       { label: "Why we leave it out", text: "The model counts energy taxes, not supplier prices; start and mitigation unset." },
     ],
