@@ -5,11 +5,12 @@ refused, however many records Microcosm built from them; the binned scatter
 counts survey households in artifacts too.
 """
 
+import itertools
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tests.publication_support import DATASET_NAME, SMALL_DATASET_NAME
@@ -1012,12 +1013,13 @@ def test_two_members_thin_at_the_same_age_stay_hidden_as_a_sum():
 # withheld ones, with the band's ages without a row, are under the floor.
 
 
-def _band(changed, other_households=1):
+def _band(changed, other_households=1, mixed=None):
     """Band 35-49 by survey household, ten single-person records each:
     20 households aged 36 (0-19), 20 aged 38 (20-39) and 20 aged 40
     (40-59), and ``other_households`` aged 45 (60 on) with five records
     each, too few for a row of their own; and 20 households aged 70
-    (200-219). Those in ``changed`` gain £100."""
+    (200-219). Those in ``changed`` gain £100. Survey household ``mixed``,
+    aged 38, has five of its people aged 40 instead."""
     survey = np.concatenate(
         [
             np.repeat(np.arange(60), 10),
@@ -1030,6 +1032,8 @@ def _band(changed, other_households=1):
         [36, 38, 40, 45],
         70,
     )
+    if mixed is not None:
+        age[np.flatnonzero(survey == mixed)[:5]] = 40
     household_id = np.arange(len(survey)) + 1_000
     decile = survey % 10 + 1
     base = np.full(len(survey), 20_000.0)
@@ -1058,9 +1062,9 @@ BAND_LABELS = BANDS + ["all", "36", "38", "40", "70"]
 SAFE = set(range(12)) | set(range(20, 25))
 
 
-def _withheld_in_band(changed, inherited=None, other_households=1):
+def _withheld_in_band(changed, inherited=None, other_households=1, mixed=None):
     """The age rows left out of BAND_LABELS, and the extra ages chosen."""
-    baseline, reformed, survey = _band(changed, other_households)
+    baseline, reformed, survey = _band(changed, other_households, mixed)
     found, extra = floor.thin_cells_and_extra_ages(
         baseline, reformed, [YEAR], survey, inherited
     )
@@ -1115,6 +1119,16 @@ def test_two_thin_ages_that_together_clear_the_floor_take_no_other_age():
     withheld, extra = _withheld_in_band(set(range(12)) | {20} | {40, 41})
     assert withheld == {"38", "40"}
     assert extra == {}
+
+
+def test_a_household_with_two_thin_ages_counts_once():
+    """Survey household 20 has people aged 38 and 40 and changes; so does
+    household 40, aged 40. 38 rests on one household and 40 on two: summed,
+    three, but together they rest on two, so the group is still thin and
+    36 joins it (María, #367: the union, not the sum)."""
+    withheld, extra = _withheld_in_band(set(range(12)) | {20} | {40}, mixed=20)
+    assert withheld == {"36", "38", "40"}
+    assert extra == {YEAR: {"35-49": ["36"]}}
 
 
 def test_thin_ages_without_a_row_take_the_smallest_safe_age():
@@ -1187,63 +1201,282 @@ def test_an_invalid_extra_age_record_is_refused():
     assert floor.recorded_extra_ages({}) == {}
 
 
-def _abstract_extra(thin):
-    """``age_extra_ages`` without counts, conservatively: a group clears
-    the floor only if it holds an atom outside ``thin``, which rests on
-    enough households; the youngest such single age joins otherwise."""
-    if "all" in thin or floor.NO_BAND in thin or set(BANDS) & set(thin):
+# The #358 property, with survey households counted. Band 35-49 has three
+# single ages with a row, so a member's extra age is one choice among
+# several, and the package cannot recompute it.
+SINGLES_358 = ["7", "20", "30", "36", "40", "45", "55", "70", "90+"]
+LABELS_358 = BANDS + ["all"] + SINGLES_358
+ATOMS_358 = SINGLES_358 + [band + floor.OTHER_AGES for band in BANDS]
+POOL = 6  # survey households behind each atom, one person each
+
+
+def _band_atoms(band):
+    return [
+        atom
+        for atom in ATOMS_358
+        if atom == band + floor.OTHER_AGES
+        or (
+            not atom.endswith(floor.OTHER_AGES)
+            and floor._band_of_single_age(atom) == band
+        )
+    ]
+
+
+# Atoms to touch, band 35-49's four drawn four times as often: the cases
+# that need an extra age are a thin and a safe age in the same band.
+WEIGHTED = list(range(len(ATOMS_358))) + 3 * [
+    ATOMS_358.index(atom) for atom in _band_atoms("35-49")
+]
+
+
+def _atoms_358(label):
+    if label == "all":
+        return set(ATOMS_358)
+    if label in BANDS:
+        return set(_band_atoms(label))
+    return {label}
+
+
+ATOM_OF_PERSON = np.repeat(np.array(ATOMS_358, dtype=object), POOL)
+SURVEY_358 = np.arange(len(ATOM_OF_PERSON))
+GROUPS_358 = {atom: ATOM_OF_PERSON == atom for atom in ATOMS_358}
+GROUPS_358.update(
+    {band: np.isin(ATOM_OF_PERSON, _band_atoms(band)) for band in BANDS}
+)
+GROUPS_358["all"] = np.ones(len(ATOM_OF_PERSON), dtype=bool)
+
+
+def _households(changed, atoms):
+    members = np.isin(ATOM_OF_PERSON, list(atoms))
+    return len(np.unique(SURVEY_358[members & changed]))
+
+
+class _Hypothesis:
+    """Draws from hypothesis's ``st.data()``."""
+
+    def __init__(self, data):
+        self.data = data
+
+    def choice(self, options):
+        return self.data.draw(st.sampled_from(list(options)))
+
+    def integer(self, low, high):
+        return self.data.draw(st.integers(low, high))
+
+
+class _Seeded:
+    """The same draws from a seeded generator, for a fixed search."""
+
+    def __init__(self, seed):
+        self.rng = np.random.default_rng(seed)
+
+    def choice(self, options):
+        options = list(options)
+        return options[self.rng.integers(len(options))]
+
+    def integer(self, low, high):
+        return int(self.rng.integers(low, high + 1))
+
+
+def _draw_changed(draw, touched=6, counts=(1, 2, 3, 4)):
+    """Changed survey households: a few atoms touched (most reforms touch
+    few groups thinly), each with a count from ``counts`` taken from a
+    drawn place in its pool, so members overlap in some households and not
+    others."""
+    changed = np.zeros(len(ATOM_OF_PERSON), dtype=bool)
+    chosen = {draw.choice(WEIGHTED) for _ in range(draw.integer(0, touched))}
+    for index in sorted(chosen):
+        count = draw.choice(counts)
+        start = draw.integer(0, POOL - 1)
+        for k in range(count):
+            changed[index * POOL + (start + k) % POOL] = True
+    return changed
+
+
+def _member_extra(draw, changed, thin):
+    """A member's extra ages under #358, each chosen at random among the
+    band's single ages that are not withheld and have a change (so at least
+    SURVEY_HOUSEHOLD_FLOOR households): any such choice clears the floor,
+    and the package must not rely on recomputing the member's."""
+    if "all" in thin or set(BANDS) & set(thin):
         return {}
     extra = {}
     for band in BANDS:
-        singles = [s for s in SINGLES if floor._band_of_single_age(s) == band]
-        withheld = [s for s in singles if s in thin]
+        singles = [a for a in _band_atoms(band) if a in SINGLES_358]
+        withheld = [a for a in singles if a in thin]
         other = band + floor.OTHER_AGES
-        if (not withheld and other not in thin) or other not in thin:
+        if not withheld and other not in thin:
             continue
-        safe = [s for s in singles if s not in thin]
-        extra[band] = safe[:1] if safe else []
+        group = set(withheld) | {other}
+        added = []
+        while 0 < _households(changed, group) < floor.SURVEY_HOUSEHOLD_FLOOR:
+            candidates = [
+                a
+                for a in singles
+                if a not in group and _households(changed, {a}) > 0
+            ]
+            assert candidates, "a band that is not thin always has one"
+            choice = draw.choice(candidates)
+            added.append(choice)
+            group.add(choice)
+        if added:
+            extra[band] = added
     return extra
 
 
-def _published_under_358(labels, thin):
-    extra = _abstract_extra(thin)
-    dropped = floor.withheld_age_labels(thin, labels, extra) if thin else set()
+def _published_rows(dropped):
     return (
         []
         if dropped is None
-        else [label for label in labels if label not in dropped]
+        else [label for label in LABELS_358 if label not in dropped]
     )
 
 
-@given(
-    st.lists(
-        st.lists(st.sampled_from(THIN_CHOICES), max_size=3, unique=True),
-        min_size=2,
-        max_size=4,
+def _span_basis(published, package):
+    """An orthonormal basis of the published rows as vectors over (member,
+    atom); the package's row of a label is the members' rows added up (its
+    interactions aside)."""
+    members = list(published)
+    width = len(members) * len(ATOMS_358)
+
+    def vector(member_atoms):
+        row = np.zeros(width)
+        for m, atoms in member_atoms.items():
+            for atom in atoms:
+                row[
+                    members.index(m) * len(ATOMS_358) + ATOMS_358.index(atom)
+                ] = 1
+        return row
+
+    rows = [
+        vector({m: _atoms_358(label)})
+        for m, labels in published.items()
+        for label in labels
+    ] + [vector({m: _atoms_358(label) for m in members}) for label in package]
+    if not rows:
+        return np.zeros((0, width)), vector
+    _, singular, vt = np.linalg.svd(np.array(rows), full_matrices=False)
+    return vt[singular > 1e-9], vector
+
+
+def _given_back(basis, target):
+    """Whether ``target`` is a sum or difference of the published rows."""
+    if not len(basis):
+        return False
+    return np.linalg.matrix_rank(np.vstack([basis, target])) == len(basis)
+
+
+def _subsets(atoms):
+    for size in range(1, len(atoms) + 1):
+        yield from itertools.combinations(atoms, size)
+
+
+def _thin_group_given_back(
+    draw, inherit_withheld_rows=True, package_extras=True
+):
+    """One draw of the #358 package: members with counted survey households
+    and random extra ages, their receipts, and the package built from them
+    as ``generate`` builds it. Returns what leaks: a member's thin group
+    the published rows give back, or a package group that rests on 1 or 2
+    of its own survey households."""
+    n = draw.integer(2, 4)
+    changed = {f"m{i}": _draw_changed(draw) for i in range(n)}
+    published, inherited = {}, set()
+    for m, mask in changed.items():
+        thin = floor.thin_groups(GROUPS_358, mask, SURVEY_358)
+        extra = _member_extra(draw, mask, thin)
+        dropped = (
+            floor.withheld_age_labels(sorted(thin), LABELS_358, extra)
+            if thin
+            else set()
+        )
+        published[m] = _published_rows(dropped)
+        withheld = set(LABELS_358) - set(published[m])
+        record = floor.floor_record(
+            {(floor.AGE_TABLE, YEAR): thin} if thin else {},
+            withheld=(
+                {(floor.AGE_TABLE, YEAR): floor.age_labels_in_order(withheld)}
+                if inherit_withheld_rows
+                else {}
+            ),
+            extra_ages={YEAR: extra} if extra else None,
+        )
+        inherited |= set(floor.recorded_thin_age_groups(record).get(YEAR, []))
+    # The package's own households: the members' and its interactions'
+    package_changed = np.logical_or.reduce(list(changed.values()))
+    package_changed |= _draw_changed(draw, touched=2, counts=(1, 2))
+    own_thin = floor.thin_groups(GROUPS_358, package_changed, SURVEY_358)
+    extra = (
+        floor.age_extra_ages(
+            GROUPS_358,
+            package_changed,
+            SURVEY_358,
+            sorted(set(own_thin) | inherited),
+        )
+        if package_extras
+        else {}
     )
-)
-def test_under_358_the_package_gives_back_no_withheld_age(thin_lists):
-    """#340 under #358: each member leaves out only its thin single ages
-    and any extra ones; the package inherits every age a member left out.
-    No sum or difference of the members' and package's rows gives back a
-    member's thin group."""
-    thin = {f"m{i}": groups for i, groups in enumerate(thin_lists)}
-    published = {
-        m: _published_under_358(PROPERTY_LABELS, t) for m, t in thin.items()
-    }
-    # What the package inherits: members' thin groups and rows left out
-    inherited = set()
-    for m, groups in thin.items():
-        inherited |= set(groups)
-        inherited |= set(PROPERTY_LABELS) - set(published[m]) - {"all"}
-        if not published[m]:
-            inherited.add("all")
-    inherited = sorted(inherited)
     rows = floor.withhold_thin_age_rows(
-        _age_rows_for(PROPERTY_LABELS),
-        {},
-        {YEAR: inherited},
-        {YEAR: _abstract_extra(inherited)},
+        _age_rows_for(LABELS_358),
+        {(floor.AGE_TABLE, YEAR): own_thin} if own_thin else {},
+        {YEAR: sorted(inherited)} if inherited else None,
+        {YEAR: extra},
     )
     package = [row["age_band"] for row in rows]
-    assert _recoverable(published, package, thin) == []
+    leaks = []
+    basis, vector = _span_basis(published, package)
+    for m, mask in changed.items():
+        for band in BANDS:
+            for group in _subsets(_band_atoms(band)):
+                count = _households(mask, group)
+                if 0 < count < floor.SURVEY_HOUSEHOLD_FLOOR and _given_back(
+                    basis, vector({m: group})
+                ):
+                    leaks.append((m, group))
+    for band in BANDS:
+        if band not in package:
+            continue
+        group = set(_band_atoms(band)) - set(package)
+        count = _households(package_changed, group)
+        if 0 < count < floor.SURVEY_HOUSEHOLD_FLOOR:
+            leaks.append(("package", tuple(sorted(group))))
+    return leaks
+
+
+@settings(max_examples=300, deadline=None)
+@given(st.data())
+def test_under_358_the_package_gives_back_no_withheld_age(data):
+    """#340 under #358: each member leaves out only its thin single ages
+    and extra ones chosen at random among its safe ages; the package
+    inherits every age a member left out and adds ages by its own survey
+    households (members' and interactions'). No sum or difference of the
+    members' and package's rows gives back a group of a member's that rests
+    on 1 or 2 survey households (interactions aside), and the package's
+    own band less its published ages clears the floor."""
+    assert _thin_group_given_back(_Hypothesis(data)) == []
+
+
+SEEDS = range(400)
+
+
+def test_under_358_the_property_holds_for_fixed_seeds():
+    for seed in SEEDS:
+        assert _thin_group_given_back(_Seeded(seed)) == [], seed
+
+
+@pytest.mark.parametrize(
+    "safeguard",
+    [{"inherit_withheld_rows": False}, {"package_extras": False}],
+    ids=["thin-only inheritance", "no package extras"],
+)
+def test_each_safeguard_is_needed_under_358(safeguard):
+    """With either safeguard off alone, the same draws give a group back
+    (María, #367): a package inheriting only its members' thin groups
+    publishes a member's extra age, and one adding no ages of its own
+    leaves its own band's withheld group thin."""
+    leaks = [
+        seed
+        for seed in SEEDS
+        if _thin_group_given_back(_Seeded(seed), **safeguard)
+    ]
+    assert leaks

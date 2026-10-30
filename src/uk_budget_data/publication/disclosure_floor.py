@@ -201,7 +201,13 @@ def age_extra_ages(
     with a change has at least SURVEY_HOUSEHOLD_FLOOR survey households,
     so one is always enough. Only bands that need an age are named; a
     year with a thin band, "all" or NO_BAND withholds every single age
-    anyway and names none."""
+    anyway and names none.
+
+    Not handled: whether a single age has a row is decided by its record
+    count (``age_groups``), but ``AgeImpactCalculator`` also drops a group
+    whose weights sum to zero. An extra age with zero total weight would
+    publish no row and so add nothing to the group the band gives back.
+    This assumes no single age with a row has zero total weight."""
     bands = [label for label, _, _ in AGE_BANDS]
     if AGE_BAND_ALL in thin or NO_BAND in thin or set(bands) & set(thin):
         return {}
@@ -317,9 +323,10 @@ def floor_record(
     apart records that it was not checked, and why. ``age_extra_cells``,
     only where there are any, names by year and band the single ages
     withheld only to bring a band's withheld group up to the floor
-    (``age_extra_ages``), so ``withheld_age_labels`` can apply the rule
-    again without the microdata; every age row left out is also in
-    ``withheld_cells``."""
+    (``age_extra_ages``), for reviewers; every age row left out is also in
+    ``withheld_cells``. No gate re-applies the rule from it:
+    ``validate.withholding_problems`` checks only that the withheld rows
+    are absent."""
     cells = [
         {"table": table, "year": year, "groups": list(labels)}
         for (table, year), labels in sorted(found.items())
@@ -364,8 +371,9 @@ def floor_record(
 
 def recorded_extra_ages(record: dict) -> dict[int, dict[str, list[str]]]:
     """A receipt's extra single ages by year and band (``floor_record``'s
-    ``age_extra_cells``), for ``withheld_age_labels``; none for a receipt
-    made before #358."""
+    ``age_extra_cells``), validated; none for a receipt made before #358.
+    Only the tests read it: no gate checks the recorded ages against the
+    rule."""
     if not isinstance(record, dict):
         raise ValueError("its disclosure floor is not an object")
     cells = record.get("age_extra_cells") or []

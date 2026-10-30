@@ -188,14 +188,15 @@ def test_package_leaves_out_the_age_rows_its_members_leave_out(
     monkeypatch.setattr(
         pipeline, "scatter_survey_households", lambda sim, path: np.arange(10)
     )
-    monkeypatch.setattr(
-        floor,
-        "thin_cells_and_extra_ages",
-        lambda baseline, reformed, years, survey, inherited=None: (
-            baseline.thin,
-            baseline.extra,
-        ),
-    )
+    # What each run passes as its members' ages: the package must count its
+    # own survey households with the ages it inherits (#358)
+    inherited_by_run = []
+
+    def counted(baseline, reformed, years, survey, inherited=None):
+        inherited_by_run.append((baseline.measure_id, inherited))
+        return baseline.thin, baseline.extra
+
+    monkeypatch.setattr(floor, "thin_cells_and_extra_ages", counted)
     alpha = reform("alpha")
     beta = Reform(
         id="beta",
@@ -215,6 +216,7 @@ def test_package_leaves_out_the_age_rows_its_members_leave_out(
     make_result = fake_process(values)
 
     def process(measure, config, baseline, reformed, baseline_scenario):
+        baseline.measure_id = measure.id
         baseline.thin = thin[measure.id]
         baseline.extra = extra[measure.id]
         baseline.calculate = lambda *args, **kwargs: SimpleNamespace(
@@ -297,8 +299,13 @@ def test_package_leaves_out_the_age_rows_its_members_leave_out(
                     "groups": ["90+"],
                 }
             ]
-        # The package added no age of its own
+        # The package added no age of its own, and it counted its own
+        # survey households with alpha's thin age and extra age
         assert "age_extra_cells" not in record
+        package_runs = [
+            ages for run_id, ages in inherited_by_run if run_id == key
+        ]
+        assert package_runs == [{2027: ["70", "90+"]}]
         assert file_problems(reference.path, document) == []
         assert document_problems(document) == []
         stage(manifest, reference.path, **arguments)
