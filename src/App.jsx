@@ -536,19 +536,21 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     return () => observer.disconnect();
   }, []);
 
-  // The site nav is hidden above the window by default, so the title band
-  // sits at the top of the page. Scrolling never brings it in: it slides in
-  // above the band when the pointer rests at the top edge of the window
-  // (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS: utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // The site nav is in the page's flow at its top (globals.css), so it is
+  // in view on load above the title band and a scroll down takes it away
+  // with the page. Scrolling never brings it back: once it has scrolled
+  // away it slides in above the band when the pointer rests at the top
+  // edge of the window (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS:
+  // utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
   // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
   // band and tab rows move down under it, so it never covers the Year and
   // Policies pills; the slide is instant under reduced motion). Once in, it stays
   // SITE_NAV_MIN_MS, and while the pointer or focus is in it or one of its
   // menus is open, then hides SITE_NAV_LEAVE_MS after they leave. Any
   // scroll down by the reader hides it at once (unless it is in use), and
-  // within its own height of the page's top it is hidden. A touch-only
-  // device has no pointer to bring it in with: there it shows only while
-  // the page is at its very top (createSiteNavIntent).
+  // within its own height of the page's top it goes back to its place in
+  // the flow. A touch-only device has no pointer to bring it in with: there
+  // it shows only while the page is at its very top (createSiteNavIntent).
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
