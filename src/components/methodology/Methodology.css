@@ -133,6 +133,23 @@
   margin-top: 6px;
 }
 
+/* What we're improving (ImprovementsNote.jsx): a title, then each part's
+   lead line and its list */
+.method-card .method-note-title {
+  margin: 0 0 12px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.method-card .method-note-part + .method-note-part {
+  margin-top: 16px;
+}
+
+.method-card .method-note-part .method-lead {
+  margin-bottom: 8px;
+}
+
 .method-card code {
   font-size: 0.85em;
   padding: 1px 5px;
