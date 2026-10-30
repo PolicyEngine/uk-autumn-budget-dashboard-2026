@@ -64,16 +64,15 @@
   /* Beside a card with an Options pill (All households' income decile
      card), the plot keeps to the plot row, so both plots start level (the
      shared Options row stands empty on this side). Its drawing adds no
-     height and fills the row, so the decile card's plot sets the row: the
-     withheld-deciles note's line (there in every year, hidden in a year
-     with none withheld), then the decile chart at its plotHeight (480px,
-     as this page has no section key). The 410px, that plotHeight with a
-     section key, only sets a floor. Neither card has a key row: this
+     height and fills the row, so the decile card's plot sets the row:
+     the decile chart at its plotHeight (480px, as this page has no
+     section key). The 410px, that plotHeight with a section key, only
+     sets a floor. Neither card has a key row: this
      card's key sits in its sentence, and the decile chart's Recharts
      legend sits under its axis, within its plotHeight. Both draw their
      logo at the foot of the SVG, so the two charts' bottoms and logos
-     sit level. The decile chart starts lower, under the note's line, and
-     its axis and axis title sit higher, above its legend. */
+     sit level. The decile chart's axis and axis title sit higher, above
+     its legend. */
   .charts-grid:has(> div > .chart-controls) > div.household-scatter-template:not(:only-child) > .chart-plot {
     grid-row: 4;
     min-height: 410px;
