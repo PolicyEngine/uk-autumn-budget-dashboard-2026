@@ -38,7 +38,7 @@
     "digests": {
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "outputs_sha256": "d3f98c42345216cd32b61d73da718f16a156dd6cca277e803006afb366ff28fe",
-      "receipt_sha256": "3cce2d1f60652f37c8dcc0b1376543d957d546eddce78b35681241c65324c907"
+      "receipt_sha256": "c7640d10c3c165e08e08858d50917c7d5d772efde67fa279960ee45f9c27eceb"
     },
     "disclosure_floor": {
       "checked": true,
@@ -57,9 +57,9 @@
       "poverty_inequality.csv": "dc55d4e9143a6476c8f15825c1a36efc4eb21f939fa355ea1dff93b57cf082a4",
       "winners_losers.csv": "c80bddb1d12c2f27453b9a1fa4d3beb75251f4d9aa6108c6580d955ea1f62212"
     },
-    "generated_at": "2026-10-29T16:14:49.062017+00:00",
+    "generated_at": "2026-10-29T18:33:50.002842+00:00",
     "generator_argv": [
-      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/bus/src/uk_budget_data/cli.py",
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/rerun/src/uk_budget_data/cli.py",
       "generate",
       "--national",
       "--backend",
@@ -76,7 +76,7 @@
       "state_pension_income_tax_protection",
       "trading_allowance_raise"
     ],
-    "git_sha": "f400d4a5359526a8891b5aabfe5df10d9d104a8c",
+    "git_sha": "ac61319f7b0563118de2152d2169dd204959c760",
     "key": "domestic_electricity_zero_vat",
     "measure_ids": [
       "domestic_electricity_zero_vat"
@@ -151,7 +151,7 @@
       "binding": "code_revision",
       "kind": "reform",
       "name": "domestic_electricity_zero_vat",
-      "reform_sha256": "36ad6f3102abd5124441f0ca0628516ee8ece18f7c081de2099aeac97d488ec6",
+      "reform_sha256": "44eceb4b1d103f99fd3b8d7b8fa317402dc31af4c25884cc86d031cc948fe0dc",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
