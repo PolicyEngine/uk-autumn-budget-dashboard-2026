@@ -255,3 +255,28 @@ def test_a_carer_under_the_years_earnings_limit_keeps_the_allowance():
     assert over["baseline"] == 0
     assert 0 < over["reform"] < under["reform"]
     assert over_change > 0
+
+
+def _allowance(pay_2026, year):
+    result = household_impact.calculate_household_impact(
+        Answers(**OWNER_CARER, employment_income=pay_2026),
+        [TAPER],
+        year,
+        include=("by_policy",),
+    )
+    return _rows(result)["carers_allowance"]
+
+
+def test_the_limit_is_read_for_the_right_year():
+    """About £225 a week of net earnings lies between 2029-30's limit (£222)
+    and 2030-31's (£228), so it pins the year (María, #371): in 2030-31 a
+    carer on it keeps the allowance in full, and in 2029-30 one on it is
+    over the limit and gets none (the taper starts in 2030-31). £10,693
+    entered for 2026 is about £225 a week in 2030-31; £10,950 is about £225
+    a week in 2029-30."""
+    in_2030 = _allowance(10_693, 2030)
+    assert in_2030["baseline"] > 4_500
+    assert in_2030["reform"] == in_2030["baseline"]
+    in_2029 = _allowance(10_950, 2029)
+    assert in_2029["baseline"] == 0
+    assert in_2029["reform"] == 0
