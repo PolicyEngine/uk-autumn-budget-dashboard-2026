@@ -266,6 +266,10 @@ export function describePovertyFigures(shown, { files, catalogueRef, ageRowsRef 
         // #321: the bus fare cap's place in the poverty figures
         "and the £2 bus fare cap's fare savings",
         "not in the HBAI income poverty is measured on",
+        // Definitions compared and the deciles' floor point at none of it
+        "By age: as under Results by age",
+        "Income deciles · Winners and losers",
+        "winners and losers figure for all households",
       ]) {
         expect(text.includes(described), described).toBe(shown);
       }

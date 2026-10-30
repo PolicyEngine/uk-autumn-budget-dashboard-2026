@@ -526,7 +526,11 @@ function MethodologyTab({ onShowTab }) {
                       </>,
                       "Negative incomes count as zero for the ranking.",
                       "Households without a decile are left out.",
-                      "When a decile's change comes from only one or two survey households, its figures are not published, and nor is that year's winners and losers figure for all households; a package also leaves out the cells its members withhold. That is the minimum the UK Data Service requires for survey data it supplies under its End User Licence. The rest of the measure is shown.",
+                      `When a decile's change comes from only one or two survey households, its figures are not published, and nor is ${
+                        POVERTY_FIGURES_SHOWN
+                          ? "that year's winners and losers figure for all households"
+                          : "that year's average change for all households in the decile table, which would give them back by difference"
+                      }; a package also leaves out the cells its members withhold. That is the minimum the UK Data Service requires for survey data it supplies under its End User Licence. The rest of the measure is shown.`,
                     ],
                   },
                 ],
@@ -597,7 +601,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id="definitions-compared"
             title="Definitions compared with the PolicyEngine app"
-            preview={`Inequality · Income deciles · Winners and losers · ${POVERTY_FIGURES_SHOWN ? "Poverty · " : ""}Budget`}
+            preview={`Inequality · Income deciles · ${POVERTY_FIGURES_SHOWN ? "Winners and losers · Poverty · " : "No-change thresholds · "}Budget`}
           >
             <FactList
               items={[
@@ -610,13 +614,19 @@ function MethodologyTab({ onShowTab }) {
                   "The app ranks households by household net income, not adjusted for household size, so its deciles differ.",
                 ],
                 [
-                  "Winners and losers",
+                  // The age shares are withheld for now (povertyFigures.js), and
+                  // with them Results by age's definition this points to
+                  POVERTY_FIGURES_SHOWN ? "Winners and losers" : "No-change thresholds",
                   {
                     value: "Each chart has its own no-change threshold. None uses the app's 0.1% and 5% bands.",
                     more: [
-                      <>
-                        By age: as under <AnchorLink id={METHOD_SECTIONS.young}>Results by age</AnchorLink>.
-                      </>,
+                      ...(POVERTY_FIGURES_SHOWN
+                        ? [
+                            <>
+                              By age: as under <AnchorLink id={METHOD_SECTIONS.young}>Results by age</AnchorLink>.
+                            </>,
+                          ]
+                        : []),
                       "Figures by area: under 50p (or 0.005% of income) either way is no change. The map's Little change is under £10 (or 0.1%) either way.",
                       "Household scatter: under £1 either way is no change.",
                     ],

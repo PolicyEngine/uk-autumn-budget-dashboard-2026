@@ -292,7 +292,13 @@ describe("MethodologyTab", () => {
       `#${METHOD_ANCHORS.byIncome}`,
     );
     const text = container.textContent;
-    expect(text).toContain("comes from only one or two survey households, its figures are not published, and nor is that year's winners and losers figure for all households; a package also leaves out the cells its members withhold");
+    expect(text).toContain(
+      `comes from only one or two survey households, its figures are not published, and nor is ${
+        POVERTY_FIGURES_SHOWN
+          ? "that year's winners and losers figure for all households"
+          : "that year's average change for all households in the decile table, which would give them back by difference"
+      }; a package also leaves out the cells its members withhold`,
+    );
     expect(text).not.toContain("any figures that would give them back");
     expect(text).toContain("The rest of the measure is shown.");
     expect(text).toContain("so this counts records, not households");

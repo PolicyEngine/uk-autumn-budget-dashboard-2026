@@ -5,15 +5,19 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 // Each file is loaded once per page: every card, household and year reads it
 const files = {};
 
+// What a hook with no file to read returns: nothing is fetched
+const NO_FILE = { status: "off", rows: null };
+
 /**
  * A public data file (public/data/<name>), fetched once per page and
  * parsed with `parse` (keep it a stable function): { status:
- * "loading"|"ready"|"error", rows }.
+ * "loading"|"ready"|"error", rows }. A null `name` fetches nothing and
+ * gives { status: "off" } (a file only a hidden figure reads).
  */
 export default function useDataFile(name, parse) {
-  const [state, setState] = useState(() => files[name] ?? { status: "loading", rows: null });
+  const [state, setState] = useState(() => (name ? files[name] : null) ?? { status: "loading", rows: null });
   useEffect(() => {
-    if (files[name]) return undefined;
+    if (!name || files[name]) return undefined;
     let cancelled = false;
     fetch(`${BASE}/data/${name}`)
       .then((response) => {
@@ -32,5 +36,5 @@ export default function useDataFile(name, parse) {
       cancelled = true;
     };
   }, [name, parse]);
-  return state;
+  return name ? state : NO_FILE;
 }

@@ -726,7 +726,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const [whereShown, setWhereShown] = useState(WHERE_KEYS);
   const [gainsShown, setGainsShown] = useState(GAINS_KEYS);
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
-  const moves = useFile(MOBILITY_FILE, parseRecords);
+  // Only the withheld "Who moves" tip reads it, so it is not fetched while hidden
+  const moves = useFile(POVERTY_FIGURES_SHOWN ? MOBILITY_FILE : null, parseRecords);
   // The header's selection: one policy's own run, or the published combined
   // run of exactly the selected policies (read under the manifest's
   // combined key, #228), else none. Every figure below is that run's own,
@@ -1118,7 +1119,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
  */
 export function ResultTiles({ totals, changeValue, changeNote, household, year, policies }) {
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
-  const moves = useFile(MOBILITY_FILE, parseRecords);
+  // Only the withheld "Who moves" tip reads it, so it is not fetched while hidden
+  const moves = useFile(POVERTY_FIGURES_SHOWN ? MOBILITY_FILE : null, parseRecords);
   const catalogue = useMeasureCatalogue();
   const run = distributionRunOf(policies, catalogue);
   const runId = run.reformId;
