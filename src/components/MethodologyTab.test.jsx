@@ -9,6 +9,7 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 import { unavailableMeasures } from "./methodology/measures";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
+import { POVERTY_FIGURES_SHOWN, WITHHELD_SENTENCE } from "../utils/povertyFigures";
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
 const UNAVAILABLE = unavailableMeasures(catalogue);
 
@@ -193,9 +194,15 @@ describe("MethodologyTab", () => {
 
   it("leaves the energy payment out of poverty, and calls the local-area file uncertified", () => {
     const { container } = renderTab();
-    expect(container.textContent).toContain(
-      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
-    );
+    // While the poverty figures are withheld (povertyFigures.js), one sentence says so in their place
+    if (POVERTY_FIGURES_SHOWN) {
+      expect(container.textContent).toContain(
+        "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
+      );
+    } else {
+      expect(container.textContent).toContain(WITHHELD_SENTENCE);
+      expect(container.textContent).not.toContain("energy payment to households");
+    }
     expect(container.textContent).not.toContain("certified together");
     expect(container.textContent).toContain("which that certificate does not cover");
   });
@@ -285,7 +292,13 @@ describe("MethodologyTab", () => {
       `#${METHOD_ANCHORS.byIncome}`,
     );
     const text = container.textContent;
-    expect(text).toContain("comes from only one or two survey households, its figures are not published, and nor is that year's winners and losers figure for all households; a package also leaves out the cells its members withhold");
+    expect(text).toContain(
+      `comes from only one or two survey households, its figures are not published, and nor is ${
+        POVERTY_FIGURES_SHOWN
+          ? "that year's winners and losers figure for all households"
+          : "that year's average change for all households in the decile table, which would give them back by difference"
+      }; a package also leaves out the cells its members withhold`,
+    );
     expect(text).not.toContain("any figures that would give them back");
     expect(text).toContain("The rest of the measure is shown.");
     expect(text).toContain("so this counts records, not households");

@@ -48,10 +48,12 @@ describe("By age's cards share one age group", async () => {
 
   it("chosen in any card's Options, it changes all four and the address", async () => {
     const { default: AgeSection } = await import("./AgeSection");
+    const { POVERTY_FIGURES_SHOWN } = await import("../utils/povertyFigures");
     window.history.replaceState({}, "", "/?sub=age&age=16-24");
     render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
     const pills = () => screen.getAllByRole("button", { name: /^Options:/ });
-    expect(pills()).toHaveLength(4);
+    // Three while the winners and losers shares are withheld (povertyFigures.js)
+    expect(pills()).toHaveLength(POVERTY_FIGURES_SHOWN ? 4 : 3);
     for (const pill of pills()) expect(pill.getAttribute("aria-label")).toMatch(/^Options: 16 to 24/);
     // Choose 50 to 64 in the second card (Change by year)
     fireEvent.click(pills()[1]);

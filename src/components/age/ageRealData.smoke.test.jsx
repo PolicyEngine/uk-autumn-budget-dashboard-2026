@@ -5,6 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import AgeSection from "../AgeSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import { parseTable } from "../../utils/publication/csv";
+import { POVERTY_FIGURES_SHOWN } from "../../utils/povertyFigures";
 
 // A smoke test of By age on the real publication staged locally
 // (public/data/manifest.json and public/data/artifacts/, never committed):
@@ -105,9 +106,11 @@ describe.skipIf(!STAGED)("By age on the staged publication", () => {
       </MeasureCatalogueProvider>,
     );
     await screen.findByRole("heading", { name: /Average change by age/ });
-    for (const title of [/Average change by age/, /Change by year/, /Effect of each policy/, /Winners and losers/]) {
+    for (const title of [/Average change by age/, /Change by year/, /Effect of each policy/, ...(POVERTY_FIGURES_SHOWN ? [/Winners and losers/] : [])]) {
       expect(screen.getByRole("heading", { level: 3, name: title })).toBeInTheDocument();
     }
+    // The shares who gain and lose are withheld for now (povertyFigures.js)
+    if (!POVERTY_FIGURES_SHOWN) expect(screen.queryByRole("heading", { name: /Winners and losers/ })).toBeNull();
     expect(errors).not.toHaveBeenCalled();
     expect(container.textContent).not.toMatch(/NaN|undefined|£null/);
     const reason = /not published|not yet published|No figures for this selection|no published results|changes no household|No effect|unavailable/i;

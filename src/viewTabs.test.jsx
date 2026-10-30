@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation, preloadAllViews } from "./App";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { POVERTY_FIGURES_SHOWN } from "./utils/povertyFigures";
 import { EXPLAINERS, RESEARCH_URL } from "./utils/explainers";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
@@ -250,7 +251,7 @@ describe("the view tabs", () => {
     expect(bar).toHaveClass("has-notch");
   });
 
-  it("split Population impact into five sub-tabs, Public finances first", async () => {
+  it("split Population impact into its sub-tabs, Public finances first", async () => {
     window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
@@ -266,7 +267,8 @@ describe("the view tabs", () => {
       "All households",
       "By age",
       "Living standards",
-      "Poverty",
+      // Only while the poverty figures are shown (povertyFigures.js)
+      ...(POVERTY_FIGURES_SHOWN ? ["Poverty"] : []),
     ]);
     expect(subTabs()[0]).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByRole("heading", { name: "Change by age" })).toBeNull();

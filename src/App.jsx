@@ -38,6 +38,7 @@ import { PublicationCheckContext, serialisedChecks } from "./utils/publication/c
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import ViewSkeleton, { BootSkeleton } from "./components/publication/ViewSkeleton";
 import { bootView } from "./utils/bootView";
+import { POVERTY_FIGURES_SHOWN } from "./utils/povertyFigures";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalNotice } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
@@ -79,7 +80,8 @@ const VIEW_CODE = {
   "dashboard:all": [ConstituencyMap, DecileImpactCard, HouseholdScatter],
   "dashboard:age": [AgeSection],
   "dashboard:living": [GrowthWithMeasuresCard, InequalityChart],
-  "dashboard:poverty": [PovertyMeasuresRow],
+  // Withheld for now (povertyFigures.js): no sub-tab, so no code to load
+  ...(POVERTY_FIGURES_SHOWN ? { "dashboard:poverty": [PovertyMeasuresRow] } : {}),
   household: [PersonalImpactTab],
   outlook: [LivingStandardsTab],
   policies: [PolicyCards, UnmodelledMeasures],
@@ -1109,8 +1111,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         </div>
       );
     }
+    // The sub-tab is not offered while the poverty figures are withheld
+    // (povertyFigures.js); this keeps it from rendering if asked for anyway
     if (sub === "poverty") {
-      if (!results) return null;
+      if (!results || !POVERTY_FIGURES_SHOWN) return null;
       return (
         <div className="results-container">
           <SectionHeading

@@ -34,6 +34,7 @@ import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
 import { OBR_CARD_TITLE, OBR_PENDING } from "./components/OBRComparisonTable";
+import { POVERTY_FIGURES_SHOWN } from "./utils/povertyFigures";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -89,7 +90,11 @@ const LOADED = {
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "By area" }),
   // Population impact's other sub-tabs, by ?sub=
   living: (panel) => within(panel).findAllByRole("heading", { name: /Change in income inequality/ }),
-  poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
+  // Population impact's Poverty while its figures are shown; while they are
+  // withheld (povertyFigures.js), ?sub=poverty opens Public finances
+  ...(POVERTY_FIGURES_SHOWN
+    ? { poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }) }
+    : { povertyFallback: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }) }),
   finances: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }),
   // The cards, "Your household" first; the form and results are checked
   // below.
@@ -183,6 +188,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// What a withheld poverty or people-affected figure would say (povertyFigures.js),
+// and the views that must say none of it
+const WITHHELD_TEXT = /poverty|people affected|of people move|winners and losers|better off|worse off/i;
+const WITHHELD_IN = new Set(["dashboard", "age", "living", "finances", "povertyFallback", "household"]);
+
 // Each tab by its address, and Population impact's other sub-tabs:
 // [name, LOADED key, address, the panel's label]
 const CASES = [
@@ -190,7 +200,9 @@ const CASES = [
   ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
   ["Population impact: By age", "age", "/?sub=age", "By age"],
   ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
-  ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
+  POVERTY_FIGURES_SHOWN
+    ? ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"]
+    : ["Population impact: ?sub=poverty, withheld", "povertyFallback", "/?sub=poverty", "Public finances"],
   // The bare address is the landing page, over this view (landing.test.jsx)
   ["Population impact: Public finances", "finances", "/?tab=dashboard", "Public finances"],
   ["Pre-measures forecast: Poverty", "outlookPoverty", "/?tab=outlook&sub=poverty", "Poverty"],
@@ -215,7 +227,17 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       // Every Options pill on the tab names every choice its dialog holds
       expectCompletePills(panel);
       // Every card's Download offers the same formats (CSV, PNG, SVG)
-      for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
+      const menus = downloadMenus(panel);
+      for (const menu of menus) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
+      // While the poverty and people-affected figures are withheld
+      // (povertyFigures.js), no Population impact sub-tab or the Household
+      // calculator shows or offers one
+      if (!POVERTY_FIGURES_SHOWN && WITHHELD_IN.has(value)) {
+        expect(panel.textContent).not.toMatch(WITHHELD_TEXT);
+        for (const menu of menus) expect(menu.name ?? "").not.toMatch(WITHHELD_TEXT);
+        expect(within(panel.closest("#panel-dashboard") ?? panel).queryByRole("tab", { name: "Poverty" })).toBeNull();
+      }
+      if (value === "povertyFallback") expect(new URLSearchParams(window.location.search).get("sub")).toBeNull();
 
       for (const pattern of FAILURE_TEXT) {
         expect(document.body.textContent, String(pattern)).not.toMatch(pattern);
@@ -269,7 +291,10 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
   // (?tab=outlook&sub=…), each linking to its twin
   it.each([
     ["living", "Living standards", /^Change in income inequality/, "Living standards under current law", ["Incomes over time", "Growth across the distribution", "Inequality over time \\(current law\\)"]],
-    ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Change in poverty by group"]],
+    // Only while the policies' poverty figures are shown (povertyFigures.js)
+    ...(POVERTY_FIGURES_SHOWN
+      ? [["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Change in poverty by group"]]]
+      : []),
   ])("?sub=%s shows the measures, its twin on the Pre-measures forecast current law", async (sub, label, measures, currentLaw, cards) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     render(<App />);
@@ -390,7 +415,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["All households", "Living standards", "Poverty", "Household calculator", "Pre-measures forecast", "Population impact"]) {
+    // Poverty only while its figures are shown (povertyFigures.js)
+    for (const tab of ["All households", "Living standards", ...(POVERTY_FIGURES_SHOWN ? ["Poverty"] : []), "Household calculator", "Pre-measures forecast", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
