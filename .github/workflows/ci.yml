@@ -169,7 +169,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # Full history: the area code check compares the bound area run's
+      # commit with HEAD, and needs both (and the commits between)
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
@@ -186,9 +190,12 @@ jobs:
       # Re-runs every gate over the committed publication manifest: receipts,
       # file digests, certification, responsiveness, completeness,
       # reconciliation and combined-run membership. Passes when there is no
-      # manifest yet.
+      # manifest yet. --code-root also runs the area code and dataset checks
+      # against the committed area_provenance.json (v2): a change to code
+      # that can change an area figure fails here while a map made with
+      # the old code is bound (#362).
       - name: Check the publication manifest
-        run: uv run uk-budget-data publish check
+        run: uv run uk-budget-data publish check --code-root .
 
   lint:
     name: Python lint

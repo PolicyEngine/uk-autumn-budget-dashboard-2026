@@ -502,6 +502,43 @@ def test_release_index_binds_the_manifest_and_only_the_area_files(world):
     assert _build_index_problems(world) == []
 
 
+@pytest.mark.parametrize("code_root", [None, "repository"])
+def test_publish_check_passes_code_root_to_the_area_checks(
+    world, monkeypatch, tmp_path, code_root
+):
+    """María, #362: CI's Publication gate runs ``publish check
+    --code-root .`` on a full clone, so the area code and dataset checks
+    run on every PR, not only at publish index."""
+    from argparse import Namespace
+
+    from uk_budget_data.publication import release_index
+    from uk_budget_data.publication.commands import run_publish
+
+    manifest, args = _flat_snapshot(world)
+    write_release_index(manifest, **args)
+    root = None if code_root is None else tmp_path
+    seen = []
+    real = release_index.area_problems
+
+    def spy(*arguments, **keywords):
+        seen.append(keywords.get("code_root"))
+        return real(*arguments, **{**keywords, "code_root": None})
+
+    monkeypatch.setattr(release_index, "area_problems", spy)
+    said = []
+    code = run_publish(
+        Namespace(
+            action="check",
+            code_root=root,
+            data_root=world.data_root,
+            inputs=world.inputs,
+        ),
+        out=said.append,
+    )
+    assert code == 0, said
+    assert seen and set(seen) == {root}
+
+
 def test_an_area_alias_maps_to_the_combined_run_it_stands_for(world):
     """The area run labels a package by its alias (geography.PACKAGES);
     publish index records which manifest key that is, for the page."""

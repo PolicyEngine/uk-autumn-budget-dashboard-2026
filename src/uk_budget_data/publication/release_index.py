@@ -33,9 +33,14 @@ is still accepted under that rule: any national rerun refuses it until the
 area run is rerun once. The package alias the tables use (``PACKAGES`` in
 geography.py) is passed to the page as the manifest key it stands for.
 
-The code checks need git and the measure registry, so only ``publish
-index`` makes them (``code_root``); ``publish check`` and the page check the
-rest, against the exact manifest bytes the index binds.
+The code and dataset checks need git, the measure registry and the
+installed bundle, so ``publish index`` makes them (``code_root``), and so
+does ``publish check --code-root``, which CI's Publication gate runs on a
+full clone: a change to area code that a bound map was not made with fails
+the gate. Without ``code_root``, ``publish check`` and the page check the
+rest, against the exact manifest bytes the index binds. The receipts'
+commits must stay ancestors of HEAD, so a squash merge of the commit an
+area run was made at unbinds the map.
 """
 
 import csv
@@ -486,6 +491,48 @@ def _same_definition(recorded: dict, current: dict, *, exact: bool) -> bool:
     )
 
 
+def _dataset_problem(name: str, dataset: dict) -> Optional[str]:
+    """Whether the dataset an area run recorded is the one the installed
+    bundle gives now (María, #362: the constituency run accepts --cut for a
+    cut the bundle does not route to). A local-area cut must be the one
+    ``area_routing`` routes constituencies to (``constituencies.bundle_pin``);
+    any other dataset must be one the bundle certifies, by its name and
+    SHA-256 (``geography.certified_datasets``), or a local copy of one, by
+    SHA-256. None when it is."""
+    if dataset["kind"] == "local_area_cut":
+        from uk_budget_data.constituencies import bundle_pin
+
+        pin = bundle_pin() or {}
+        if (pin.get("revision"), pin.get("sha256")) != (
+            dataset["name"],
+            dataset["sha256"],
+        ):
+            return (
+                f"{name} was run on the cut {dataset['name']}, but the "
+                "installed bundle routes constituencies to "
+                f"{pin.get('revision') or 'no cut'}"
+            )
+        return None
+    from uk_budget_data.geography import certified_datasets
+
+    certified = certified_datasets()
+    if dataset["name"] in certified:
+        if certified[dataset["name"]] == dataset["sha256"]:
+            return None
+        return (
+            f"{name} was run on {dataset['name']} with another SHA-256 than "
+            "the installed bundle certifies"
+        )
+    if dataset["sha256"] is not None and dataset["sha256"] in set(
+        certified.values()
+    ):
+        return None
+    return (
+        f"{name} was run on {dataset['name']}, which the installed bundle "
+        "does not certify"
+    )
+
+
 def _area_code_problems(
     document: dict,
     used_by_file: dict[str, set],
@@ -510,6 +557,9 @@ def _area_code_problems(
     for name, used in sorted(used_by_file.items()):
         run = document["runs"][name]
         sha = run["git_sha"]
+        dataset_problem = _dataset_problem(name, run["dataset"])
+        if dataset_problem:
+            problems.append(f"area results: {dataset_problem}; {rerun}")
         try:
             changed = area_code.area_changes_since(sha, code_root)
         except ValueError as error:
@@ -568,9 +618,13 @@ def _area_code_problems(
     return problems
 
 
-def release_index_problems(data_root: Path, manifest=None) -> list[str]:
+def release_index_problems(
+    data_root: Path, manifest=None, *, code_root: Optional[Path] = None
+) -> list[str]:
     """Verify the index's identity and snapshot, its file map, and each
-    bound file's bytes.
+    bound file's bytes. With ``code_root`` (a checkout with the history
+    since the area run, as CI's Publication gate has), also the area code
+    and dataset checks ``publish index`` makes.
 
     No index means that no flat view is published: those views show as
     unavailable. That is allowed; it never authorises a figure.
@@ -691,7 +745,9 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
         model = m.parse_manifest(manifest_bytes, str(manifest_path))
     except ValueError:
         return problems + ["release index: the manifest does not parse"]
-    found, expected = area_problems(model, bound, data_root)
+    found, expected = area_problems(
+        model, bound, data_root, code_root=code_root
+    )
     problems += [f"release index: {problem}" for problem in found]
     if aliases != expected:
         problems.append(

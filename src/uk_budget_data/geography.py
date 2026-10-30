@@ -2169,6 +2169,25 @@ def dataset_record(parsed: argparse.Namespace) -> dict:
     }
 
 
+def certified_datasets() -> dict[str, Optional[str]]:
+    """Every UK dataset the installed bundle certifies, under the name
+    ``dataset_record`` gives a bundle dataset (repository/name), with its
+    SHA-256 where the bundle gives one: what ``publish index`` accepts as
+    an area run's dataset (``release_index._dataset_problem``)."""
+    release = get_release_manifest("uk")
+    found = {}
+    for name, entry in release.datasets.items():
+        repository = entry.repo_id or release.data_package.repo_id
+        sha256 = getattr(entry, "sha256", None)
+        found[f"{repository}/{name}"] = (
+            sha256
+            if isinstance(sha256, str)
+            and re.fullmatch(r"[0-9a-f]{64}", sha256)
+            else None
+        )
+    return found
+
+
 def _approved_revision(
     reform_id: str, document: dict, revision, checked: dict
 ):

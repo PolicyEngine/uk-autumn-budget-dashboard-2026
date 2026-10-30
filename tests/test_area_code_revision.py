@@ -30,8 +30,8 @@ from tests.publication_support import (
     make_household_rows,
     make_tables,
 )
+from uk_budget_data import constituencies, sign_off
 from uk_budget_data import geography as g
-from uk_budget_data import sign_off
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import attestations as a
 from uk_budget_data.publication import manifest as m
@@ -851,6 +851,12 @@ def bound(state, monkeypatch):
         "name": "synthetic-cut",
         "sha256": "9" * 64,
     }
+    # The installed bundle routes constituencies to that cut
+    monkeypatch.setattr(
+        constituencies,
+        "bundle_pin",
+        lambda: {"revision": "synthetic-cut", "sha256": "9" * 64},
+    )
     root = state.world.data_root
     table = root / "regional.csv"
     table.write_text(
@@ -1045,6 +1051,56 @@ def test_area_code_between_the_area_run_and_the_approved_receipt_counts(
     ), problems
 
 
+def test_a_cut_the_bundle_does_not_route_to_refuses_the_map(
+    state, bound, monkeypatch
+):
+    """María, #362: the constituency run accepts --cut for a cut the bundle
+    does not route to; publish index must compare the recorded dataset with
+    what the bundle routes now."""
+    monkeypatch.chdir(state.repo)
+    monkeypatch.setattr(g, "get_reform", DEFINITIONS.get)
+    monkeypatch.setattr(g, "PACKAGES", PACKAGES)
+    assert gate(state, bound) == []
+    monkeypatch.setattr(
+        constituencies,
+        "bundle_pin",
+        lambda: {"revision": "another-cut", "sha256": "8" * 64},
+    )
+    problems = gate(state, bound)
+    assert any(
+        "synthetic-cut" in p and "routes constituencies to another-cut" in p
+        for p in problems
+    ), problems
+    monkeypatch.setattr(constituencies, "bundle_pin", lambda: None)
+    assert any("no cut" in p for p in gate(state, bound))
+
+
+@pytest.mark.parametrize(
+    "dataset, refused",
+    [
+        # A bundle dataset, by name, with the bundle's SHA-256
+        ({"name": "repo/microcosm", "sha256": "1" * 64}, False),
+        # A local copy of a certified dataset, by SHA-256
+        ({"name": "microcosm.h5", "sha256": "1" * 64}, False),
+        # The bundle's name, other bytes
+        ({"name": "repo/microcosm", "sha256": "2" * 64}, True),
+        # A file the bundle does not certify
+        ({"name": "export.h5", "sha256": "3" * 64}, True),
+        ({"name": "export.h5", "sha256": None}, True),
+    ],
+)
+def test_an_area_run_s_dataset_must_be_one_the_bundle_certifies(
+    monkeypatch, dataset, refused
+):
+    monkeypatch.setattr(
+        g, "certified_datasets", lambda: {"repo/microcosm": "1" * 64}
+    )
+    problem = ri._dataset_problem(
+        "regional.csv", {"kind": "microcosm", **dataset}
+    )
+    assert bool(problem) is refused, problem
+
+
 def test_a_v1_record_still_binds_under_the_old_rule(state, bound, monkeypatch):
     """The record published before v2: accepted while every entry is the
     one it was made beside, and refused by the first national rerun."""
@@ -1101,6 +1157,53 @@ def test_only_what_build_microsimulation_uses_in_pipeline_counts(
     second = commit(repo, {path: PIPELINE.format(**{**fields, **change})})
     found = area_code.area_changes_between(first, second, repo)
     assert bool(found) is counts, found
+
+
+@pytest.mark.parametrize(
+    "imports, addition",
+    [
+        # A module-level write to the environment the engine reads
+        ("import os\n", 'os.environ["POLICYENGINE_FLAG"] = "1"\n'),
+        # A module-level change to another module's attribute
+        ("import policyengine_uk as p\n", "p.X = 1\n"),
+        # A new import kept only for its side effects
+        ("", "import uk_budget_data.side_effects  # noqa: F401\n"),
+    ],
+    ids=["environment", "attribute", "side-effect import"],
+)
+def test_module_level_side_effects_in_a_sliced_file_count(
+    tmp_path, imports, addition
+):
+    """María, #362: each of these runs when geography.py imports
+    build_microsimulation, though build_microsimulation uses none of it.
+    The modules imported are the same before and after, except for the
+    side-effect import itself."""
+    repo = new_repository(tmp_path / "repo")
+    fields = dict(imports="A", extra="", processor="A")
+    path = "src/uk_budget_data/pipeline.py"
+    head, rest = PIPELINE.format(**fields).split("\n\n\n", 1)
+    first = commit(repo, {path: head + "\n" + imports + "\n\n" + rest})
+    second = commit(
+        repo, {path: head + "\n" + imports + addition + "\n\n" + rest}
+    )
+    found = area_code.area_changes_between(first, second, repo)
+    assert found == [f"{path} (build_microsimulation)"], found
+
+
+def test_dropping_an_import_or_naming_another_name_from_it(tmp_path):
+    """Dropping a module counts, as adding one does; another name from a
+    module already imported does not (#320's OFFICIAL_BASES)."""
+    repo = new_repository(tmp_path / "repo")
+    path = "src/uk_budget_data/pipeline.py"
+    fields = dict(imports="A", extra="", processor="A")
+    source = PIPELINE.format(**fields)
+    first = commit(repo, {path: "import json\n" + source})
+    second = commit(repo, {path: source})
+    assert area_code.area_changes_between(first, second, repo) != []
+    third = commit(
+        repo, {path: PIPELINE.format(**{**fields, "imports": "A, B"})}
+    )
+    assert area_code.area_changes_between(second, third, repo) == []
 
 
 def test_a_change_to_reform_result_alone_does_not_count(tmp_path):

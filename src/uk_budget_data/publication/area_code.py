@@ -221,13 +221,53 @@ def _bound_names(statement: ast.stmt) -> list[str]:
     ]
 
 
+def _plain_target(target: ast.expr) -> bool:
+    """Whether an assignment target only binds names (``x``, ``x, y``)."""
+    if isinstance(target, ast.Name):
+        return True
+    if isinstance(target, ast.Starred):
+        return _plain_target(target.value)
+    if isinstance(target, (ast.Tuple, ast.List)):
+        return all(_plain_target(element) for element in target.elts)
+    return False
+
+
+def _has_side_effect(statement: ast.stmt) -> bool:
+    """An assignment to anything but a plain name: ``os.environ["X"] = ...``
+    or ``module.X = ...`` changes state other modules see when this module
+    is imported, whichever names the sliced definitions use (María, #362)."""
+    if isinstance(statement, ast.Assign):
+        targets = statement.targets
+    elif isinstance(statement, (ast.AnnAssign, ast.AugAssign)):
+        targets = [statement.target]
+    else:
+        return False
+    return not all(_plain_target(target) for target in targets)
+
+
+def _imported_modules(tree: ast.Module) -> list[str]:
+    """The modules a module imports at its top level, sorted: importing one
+    runs it, so a new or dropped import can change what the sliced
+    definitions see even if they use none of its names."""
+    modules = set()
+    for statement in tree.body:
+        if isinstance(statement, ast.Import):
+            modules.update(alias.name for alias in statement.names)
+        elif isinstance(statement, ast.ImportFrom):
+            modules.add("." * statement.level + (statement.module or ""))
+    return sorted(modules)
+
+
 def _slice(source: Optional[str], wanted) -> Optional[str]:
     """What the named top-level definitions of a module depend on, as a
     comparable string, or None when the file is absent.
 
     Each import is reduced to the alias a used name comes from, so adding
     an unused name to an import does not count. Positions and comments do
-    not count; docstrings do.
+    not count; docstrings do. Always counted, whatever the definitions use:
+    a top-level statement that binds no name, an assignment to anything
+    but a plain name (``_has_side_effect``), and the set of modules the
+    file imports (``_imported_modules``).
     """
     if source is None:
         return None
@@ -247,7 +287,7 @@ def _slice(source: Optional[str], wanted) -> Optional[str]:
         ):
             continue  # the module docstring
         bound_here = _bound_names(statement)
-        if not bound_here:
+        if not bound_here or _has_side_effect(statement):
             always.append(ast.dump(statement))
             continue
         if isinstance(statement, (ast.Import, ast.ImportFrom)):
@@ -278,7 +318,8 @@ def _slice(source: Optional[str], wanted) -> Optional[str]:
             )
         if name in wanted and name not in bindings:
             parts.append(f"{name}=<missing>")
-    return "\n".join(sorted(parts) + always)
+    modules = "modules=" + ",".join(_imported_modules(tree))
+    return "\n".join(sorted(parts) + always + [modules])
 
 
 def _source_at(
