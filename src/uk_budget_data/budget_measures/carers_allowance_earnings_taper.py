@@ -78,10 +78,15 @@ def carers_allowance_earnings_taper(
         52 x max(0, weekly rate - taper_rate x (weekly earnings - limit)).
 
     Everyone at or below the limit, and every year before ``start_year``,
-    keeps the native formula's amount. The limit is the Budget's (above)
+    keeps the native formula's amount. On the dashboard's forecast
+    (``uk_budget_data.forecast.carers_allowance_earnings_limits``) current
+    law's limit is this same 16 hours at the wage, so the native formula
+    pays everyone at or below it in full; on the engine's own parameters
+    (£204 after 2026-27) a carer between £204 and this limit would get
+    nothing either way. The limit is the Budget's (above)
     unless ``earnings_limit`` gives a weekly amount, which then also sets
-    who is below it; ``national_living_wage_2027=None`` gives the engine's
-    own (£204 a week, not uprated after 2026-27 in the engine). The overlapping-benefit reduction (``carers_allowance``) and
+    who is below it; ``national_living_wage_2027=None`` gives the
+    simulation's own (``gov.dwp.carers_allowance.earnings_limit``). The overlapping-benefit reduction (``carers_allowance``) and
     everything downstream (taxable income, Universal Credit's unearned
     income, the carer premiums and elements) read the new amount as the
     engine has them.
@@ -117,7 +122,7 @@ def carers_allowance_earnings_taper(
             return current
         ca = parameters(period).gov.dwp.carers_allowance
         if earnings_limit is None and national_living_wage_2027 is None:
-            # The engine's own limit (£204, not uprated)
+            # The simulation's own limit (the forecast's, or the engine's £204)
             limit = ca.earnings_limit
         elif earnings_limit is None:
             # The Weekly Earnings Limit is 16 hours at the National Living

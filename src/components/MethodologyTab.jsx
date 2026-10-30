@@ -387,7 +387,7 @@ function MethodologyTab({ onShowTab }) {
                         <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>).
                       </>,
                       "The model holds the National Living Wage at £12.71 an hour from April 2026. It sets Universal Credit's minimum income floor, the benefit cap's earnings exemption and the childcare earnings tests.",
-                      "It holds Carer's Allowance's own earnings limit at £204 a week, so a carer earning between £204 and the higher limit the Budget's Carer's Allowance change sets gets no Carer's Allowance in either run.",
+                      "Carer's Allowance's own earnings limit is 16 hours at the National Living Wage, rounded up to the pound, as set each April: £204 a week in 2026-27, then £212, £217, £222, £228 and £234 to 2031-32 on the OBR's wage forecast. The Budget's Carer's Allowance change starts its taper above that same limit, so a carer earning at or below it gets the allowance in full in both runs.",
                       <>
                         Benefit rates, including the Pension Credit guarantee, rise as described
                         under <AnchorLink id={FORECAST_FEED_ANCHOR}>how the forecast feeds the baseline</AnchorLink>.
