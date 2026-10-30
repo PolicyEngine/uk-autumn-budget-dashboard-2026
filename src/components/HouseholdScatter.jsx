@@ -22,7 +22,7 @@ import {
   decilesShowChange,
   scatterView,
 } from "../utils/householdScatter";
-import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, chartMargin } from "../utils/chartTheme";
+import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, noFigures, chartMargin } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { selectionPackageKey, showAllLabel, showAloneLabel } from "../utils/geography/selection";
@@ -138,8 +138,6 @@ function ScatterMoreInfo({ basisLabel }) {
   );
 }
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";
-// In place of the dots when the groups that gain or lose are left out
-export const HOUSEHOLDS_WITHHELD_NOTE = "Not published, too few survey households.";
 
 // Dots move between years and selections as the other charts' bars do:
 // about 850ms, easing in and out, and not at all under reduced motion.
@@ -506,7 +504,7 @@ function HouseholdScatter({
   // Cells with too few survey households are left out, so zero cells alone
   // do not mean no household's income changes: when the reform's income
   // decile results show a change, or withhold one, the groups that change
-  // were withheld, and the plot says so in place of dots. Only a selection
+  // were withheld, and the plot shows a plain "No figures" line in place of dots. Only a selection
   // whose deciles are all zero (an employer cost alone) gets "None of the
   // selected policies changes…"
   const changesWithheld =
@@ -685,7 +683,7 @@ function HouseholdScatter({
         <div className="household-scatter-template-canvas" ref={chartRef}>
           {noDots ? (
             <div className="plot-empty household-scatter-no-change" role="status">
-              <p>{changesWithheld ? HOUSEHOLDS_WITHHELD_NOTE : noHouseholdChange(yearLabel)}</p>
+              <p>{changesWithheld ? noFigures(yearLabel) : noHouseholdChange(yearLabel)}</p>
             </div>
           ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>

@@ -10,7 +10,7 @@ import { DISPLAYABLE, MANIFEST_FILE, RECEIPT_FILE } from "./manifest";
 
 // The files every view's first chart reads (load.js CATALOGUE_TABLES; the
 // script requests each only if the receipt lists it)
-export const EARLY_FILES = ["budgetary_impact", "distributional_impact", "winners_losers", "metrics", "poverty_inequality"].map((table) => contract.tables[table].file);
+export const EARLY_FILES = ["budgetary_impact", "official_basis", "distributional_impact", "winners_losers", "metrics", "poverty_inequality"].map((table) => contract.tables[table].file);
 // A link to Young people or Pensioners also needs the age table at once
 const AGE_FILE = contract.tables.age_impact.file;
 const AGE_VIEWS = ["age", "young", "pensioners"];

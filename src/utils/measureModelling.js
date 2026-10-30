@@ -44,7 +44,10 @@ export const MODELLING_FACTS = [
   { pattern: WAGES_HELD_FIXED, label: "Wages held fixed" },
   { pattern: /\bspending on [a-z ]+ is held fixed\b/i, label: "Spending held fixed" },
   { pattern: /\bfully passed through\b/i, label: "Full pass-through" },
-  { pattern: /\bin Great Britain\b/, label: "Great Britain only" },
+  // Not where the same text takes the measure across the UK later (zero
+  // VAT on electricity: Great Britain from October 2026, the UK from April
+  // 2027), which "Great Britain only" would contradict
+  { pattern: /\bin Great Britain\b/, unless: /\bacross the UK\b|\bNorthern Ireland\b/, label: "Great Britain only" },
   { pattern: MODELLED_NOT_SURVEY, label: "Modelled, not survey values" },
   { pattern: /\bimputed\b/i, label: "Imputed data" },
 ];
@@ -78,7 +81,9 @@ export const MODELLING_LIMITS = [
  * open to the sentence again (each fact once).
  */
 export function modellingFacts(text, shown = "") {
-  const facts = MODELLING_FACTS.filter(({ pattern }) => pattern.test(text ?? "") && !pattern.test(shown)).map(({ label }) => label);
+  const facts = MODELLING_FACTS.filter(
+    ({ pattern, unless }) => pattern.test(text ?? "") && !unless?.test(text ?? "") && !pattern.test(shown),
+  ).map(({ label }) => label);
   const limits = [];
   for (const sentence of sentences(text)) {
     for (const { pattern, label, saidIn } of MODELLING_LIMITS) {

@@ -74,6 +74,9 @@ from policyengine_uk.variables.household.demographic.locations import (
 )
 from policyengine_uk.variables.input.council_tax_band import CouncilTaxBand
 
+from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
+    bus_fare_cap_2027,
+)
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -792,6 +795,10 @@ class HouseholdAnswers:
     # Domestic mains gas, £ a year including VAT (GAS_SPENDING). The form
     # does not ask for it yet, so every calculator household has the average.
     gas_spending: float = GAS_SPENDING
+    # Bus and coach fares paid, £ a year (policyengine-uk's
+    # bus_fare_spending), for the £2 bus fare cap. 0 (not asked) sets
+    # nothing, so every other household is exactly as before.
+    bus_fare_spending: float = 0
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)
@@ -1099,6 +1106,28 @@ def council_tax_basis(answers: "HouseholdAnswers") -> str:
     return "region"
 
 
+def council_tax_row_note(answers: "HouseholdAnswers") -> str:
+    """The Council Tax row's note in the breakdown, from the same basis as
+    ``council_tax_used``: entered, the local authority's own Band D, the
+    region's average or none (Northern Ireland)."""
+    if answers.council_tax is not None:
+        return "As entered. No measure changes it."
+    return {
+        "none": (
+            "No Council Tax in Northern Ireland (domestic rates are not "
+            "modelled)."
+        ),
+        "council": (
+            "Estimated from the band and the local authority's own Band D, "
+            "unless entered. No measure changes it."
+        ),
+        "region": (
+            "Estimated from the band and the region's average Band D "
+            "(COUNCIL_TAX_BAND_D), unless entered. No measure changes it."
+        ),
+    }[council_tax_basis(answers)]
+
+
 def household_entities(
     answers: HouseholdAnswers, year: Optional[int] = None
 ) -> tuple[list, dict, dict]:
@@ -1209,6 +1238,12 @@ def household_entities(
         "electricity_consumption": answers.electricity_spending,
         "gas_consumption": answers.gas_spending,
     }
+    if answers.bus_fare_spending:
+        # Only with bus fares, so every other household's inputs (and its
+        # run's key) are exactly as before. policyengine-uk moves a
+        # household total to bus_fare_spending_reported on loading and
+        # gives it back unchanged without journeys
+        household["bus_fare_spending"] = answers.bus_fare_spending
     if answers.brma is not None:
         household["brma"] = answers.brma
     household["local_authority"] = (
@@ -1908,6 +1943,26 @@ CARERS_ALLOWANCE_TAPER_START = (
     .default
 )
 
+# The fiscal years the £2 bus fare cap credits anything in: its modifier's
+# own capped shares (``capped_2026``, ``capped_2027``), read from its
+# signature as the registered measure runs it
+BUS_FARE_CAP_YEARS = frozenset(
+    int(name.removeprefix("capped_"))
+    for name, parameter in inspect.signature(
+        bus_fare_cap_2027
+    ).parameters.items()
+    if name.startswith("capped_") and parameter.default
+)
+# Where the cap credits anything: England (policyengine-uk's ``country``,
+# from the region) outside London, as the modifier reads it. The region is
+# the calculator's answer, set from the council picked.
+BUS_FARE_CAP_REGIONS = frozenset(REGIONS) - {
+    "LONDON",
+    "WALES",
+    "SCOTLAND",
+    "NORTHERN_IRELAND",
+}
+
 # Measures that cannot move this household's net income in this year,
 # from the household's answers alone, so the split by policy need not run
 # them: each shows as "not affected", exactly as its run would. Every rule is
@@ -1935,6 +1990,10 @@ SKIP_REASONS = {
     "savings_income_rates_up": "no savings interest, or before 2027-28",
     "trading_allowance_raise": (
         "no self-employment receipts, or before 2027-28"
+    ),
+    "bus_fare_cap_2027": (
+        "no bus fares, not in England outside London, or outside 2026-27 "
+        "to 2027-28"
     ),
 }
 
@@ -1999,6 +2058,14 @@ def provably_unaffected(
         # The allowance reads trading receipts (and profit), which only
         # the head's self-employment answers give.
         return year < TRADING_ALLOWANCE_FROM or not answers.self_employed
+    if measure_id == "bus_fare_cap_2027":
+        # The credit is a share of bus_fare_spending, in England outside
+        # London, in the years the cap runs.
+        return (
+            not answers.bus_fare_spending
+            or answers.region not in BUS_FARE_CAP_REGIONS
+            or year not in BUS_FARE_CAP_YEARS
+        )
     return False
 
 
@@ -2148,7 +2215,16 @@ def calculate_household_impact(
         "not_modelled": sides.not_modelled,
         "by_policy": None,
         "programmes": [
-            _programme_entry(row, before, after, hidden)
+            {
+                **_programme_entry(row, before, after, hidden),
+                # The note says what this household's Council Tax starts
+                # from, as council_tax_used does
+                **(
+                    {"note": council_tax_row_note(answers)}
+                    if row.id == "council_tax"
+                    else {}
+                ),
+            }
             for row in (*PROGRAMMES, *OTHER_ROWS)
             if row.id not in hidden
         ],

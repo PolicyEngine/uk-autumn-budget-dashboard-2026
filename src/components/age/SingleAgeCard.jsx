@@ -27,8 +27,9 @@ import {
   axisWidth,
   barShape,
   fiscalYearTick,
+  noFigures,
 } from "../../utils/chartTheme";
-import { ALL_BAND, COMBINATION_NOT_PUBLISHED, SINGLE_AGE_TOP, isPublished, policiesWithoutRows, singleAgeKey, singleAgeSelection, withheldPartsCaveat } from "../../utils/ageImpact";
+import { ALL_BAND, SINGLE_AGE_TOP, isPublished, singleAgeKey, singleAgeSelection } from "../../utils/ageImpact";
 import { selectionPackageKey } from "../../utils/geography/selection";
 import { legendMembership } from "../../utils/legendMembership";
 import { PENSIONERS, ageWindow } from "../../utils/ageGroups";
@@ -68,8 +69,25 @@ export function windowTicks([first, last], ends, narrow) {
 /** "16 to 24", "67 to 90 and over": the window's ages in words. */
 export const agesText = ([first, last]) => `${first} to ${last >= SINGLE_AGE_TOP ? "90 and over" : last}`;
 
-// The text helpers live with the selection rule; re-exported for the tests
-export { withheldPartsCaveat };
+/**
+ * Whether the chosen group's single ages are all withheld in the year (too
+ * few survey records at every one, under the selection rule) while the year
+ * is published and the combination is: By age then shows the age bands
+ * instead (AgeChangeCard).
+ */
+export function everySingleAgeWithheld({ catalogue, rows, policies, selectedPolicies, selectedYear, group = PENSIONERS }) {
+  const year = Number(selectedYear);
+  if (!isPublished(rows, year)) return false;
+  const [first, last] = ageWindow(group, year);
+  const points = singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, year, first, last), {
+    rows,
+    policies,
+    selected: selectedPolicies,
+    year,
+    packageRun: selectionPackageKey(catalogue?.manifest, selectedPolicies),
+  });
+  return points.length > 0 && points.every((point) => point.netChange === null);
+}
 
 /** An age tick, the group's ends in bold teal. */
 function AgeTick({ x, y, payload, ends }) {
@@ -88,17 +106,23 @@ function AgeTick({ x, y, payload, ends }) {
   );
 }
 
-/** "Age 72: +£15 a year", the five-year average, and the top measures in the breakdown. */
+/**
+ * "Age 72: +£15 a year", the five-year average, and the top measures in the
+ * breakdown. At an age whose net is withheld, By policy gives the published
+ * policies' own parts alone, with no net.
+ */
 function AgeTooltip({ active, payload, nameOf, byMeasure }) {
   const point = payload?.[0]?.payload;
-  if (!active || !point || point.netChange === null) return null;
+  if (!active || !point) return null;
+  const withheldNet = point.netChange === null;
+  if (withheldNet && !(byMeasure && point.parts.length > 0)) return null;
   const top = byMeasure
     ? [...point.parts].filter((part) => Math.abs(part.value) >= 0.5).sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 3)
     : [];
   return (
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">
-        Age {point.label}: {changeText(point.netChange)} a year
+        {withheldNet ? `Age ${point.label}` : `Age ${point.label}: ${changeText(point.netChange)} a year`}
       </p>
       {point.smooth !== null && !byMeasure && (
         <p className="chart-tooltip-note">Five-year average around this age: {changeText(point.smooth)} a year</p>
@@ -116,8 +140,9 @@ function AgeTooltip({ active, payload, nameOf, byMeasure }) {
  * in their colours, a five-year average through them so the shape reads
  * through single-year noise, and State Pension age marked. Options: each
  * measure's part stacked instead (the section's measure key highlights
- * them), offered only when no policy is too thin at some age (else the
- * reason is in About this chart's caveats). The £ axis fits the year shown.
+ * them). At an age where a selected policy is withheld, the net is not
+ * drawn, and By policy still stacks the other policies' own published
+ * parts there. The £ axis fits the year shown.
  */
 export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age", keyInLegend = false }) {
   const chartRef = useRef(null);
@@ -128,8 +153,9 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const published = isPublished(rows, year);
   const spa = pensionerAge(year);
   const window = ageWindow(group, year);
-  // The selection rule: the published package of exactly the selection
-  // reads its own rows; other combinations draw whole or not at all
+  // The selection rule (singleAgeSelection): the published package of
+  // exactly the selection reads its own net; each policy's own published
+  // part is kept wherever no published net would sit beside a missing part
   const packageRun = selectionPackageKey(catalogue?.manifest, selectedPolicies);
   const selectAges = (each, first, last) =>
     singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, each, first, last), {
@@ -155,35 +181,25 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     return smoothByAge(padded).filter((point) => point.age >= window[0] && point.age <= window[1]);
   };
   const data = ageBars(year);
-  const combinationUnavailable = data.some((point) => point.combinationUnavailable);
-  // The package's net with no policy parts: drawn as the net bars
-  const netOnly = data.some((point) => point.fromPackage && !point.partsShown);
-  // By policy is offered only when every selected policy has rows at every
-  // age shown: a policy withheld by single year of age is never backed out
-  // of the package's own net, so then no policy parts are drawn at all.
-  // Not even the other policies' parts: the Net change view of the same
-  // chart shows the package's net at each age, and the net less the parts
-  // shown would give the withheld policies' part back by difference
-  const partsOffered = !netOnly && !combinationUnavailable;
+  // By policy is offered when any policy part is published at an age
+  // shown. Where a policy is withheld, the others' parts are drawn with no
+  // net (the package withholds that age too, #347), so no part can be
+  // worked out by difference; where the package's net is published, the
+  // parts are drawn only when every member has one (singleAgeSelection)
+  const partsOffered = data.some((point) => point.parts.length > 0);
   const stacked = byMeasure && partsOffered;
-  // The selected policies with no row at some age shown, named in Caveats
-  const windowLabels = Array.from({ length: window[1] - window[0] + 1 }, (_, i) => singleAgeKey(window[0] + i));
-  const withheldNames = netOnly
-    ? policiesWithoutRows(rows, policies, selectedPolicies, [year], windowLabels).map(
-        (policy) => catalogue.byId.get(policy.id)?.label ?? policy.label ?? policy.name ?? policy.id,
-      )
-    : [];
   const partKeys = [...new Set(data.flatMap((point) => point.parts.map((part) => part.key)))];
   // Round £ ticks from the lowest to the highest in the year shown, through
   // £0: an axis fitted to every year zoomed one year's bars out to nothing
   const { domain, ticks } = useMemo(() => {
     const values = [0];
     for (const point of data) {
-      if (point.netChange === null) continue;
-      values.push(point.netChange);
-      // The five-age line at an end reads ages beyond the window, so it can
-      // pass the bars: the axis holds it too
-      if (!stacked && Number.isFinite(point.smooth)) values.push(point.smooth);
+      if (point.netChange !== null) {
+        values.push(point.netChange);
+        // The five-age line at an end reads ages beyond the window, so it
+        // can pass the bars: the axis holds it too
+        if (!stacked && Number.isFinite(point.smooth)) values.push(point.smooth);
+      }
       if (byMeasure) {
         values.push(point.parts.reduce((sum, part) => sum + Math.max(0, part.value), 0));
         values.push(point.parts.reduce((sum, part) => sum + Math.min(0, part.value), 0));
@@ -206,7 +222,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     [rows, policies, selectedPolicies, year, group, packageRun, partsOffered],
   );
   const key = useMeasureKey(stacked ? members : [], stacked ? "Net change" : undefined);
-  const missing = data.filter((point) => point.netChange === null);
+  // Nothing drawn at any age: no net, and no policy part in By policy
+  const nothingDrawn = data.every((point) => point.netChange === null && !(stacked && point.parts.length > 0));
   const anyLoss = data.some((point) => (point.netChange ?? 0) < 0);
   const anyGain = data.some((point) => (point.netChange ?? 0) > 0);
   const nameOf = (id) => catalogue.byId.get(id)?.label ?? id;
@@ -248,12 +265,13 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
           { key: "netChange", label: "Net change", decimals: 2 },
           { key: "smooth", label: "Five-year average", decimals: 2 },
         ],
+        // Each policy's published part at every age; the net (and its
+        // five-year average) blank where it is withheld
         rows: published
           ? data
-              .filter((point) => point.netChange !== null)
+              .filter((point) => point.netChange !== null || point.parts.length > 0)
               .map((point) => ({ ...point, ...Object.fromEntries(point.parts.map((part) => [part.id, part.value])) }))
           : [],
-        notes: missing.length ? [`Not shown, too few survey records: ages ${missing.map((p) => p.label).join(", ")}`] : [],
       }),
     published,
   };
@@ -289,15 +307,11 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
-        ) : combinationUnavailable ? (
+        ) : nothingDrawn ? (
+          // Nothing to draw at any age shown: a plain empty plot, with no
+          // wording on why
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>{COMBINATION_NOT_PUBLISHED}</p>
-          </div>
-        ) : missing.length === data.length ? (
-          // The window is the group's own ages: when none has enough survey
-          // records, say so rather than draw an empty plot
-          <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>{`Not shown: too few survey records at every age from ${agesText(window)}.`}</p>
+            <p>{noFigures(yearLabel)}</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
@@ -381,7 +395,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
         )}
       </div>
       <div className="chart-legend">
-        {published && !stacked && !combinationUnavailable && (
+        {published && !stacked && (
           <span className="measure-dumbbell-legend age-change-legend">
             {anyGain && (
               <span>
@@ -399,7 +413,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
           </span>
         )}
         {/* By age: the section's shared key, in this legend row */}
-        {published && key.shared && keyInLegend && !combinationUnavailable && <SectionMeasureKey placement="card" />}
+        {published && key.shared && keyInLegend && <SectionMeasureKey placement="card" />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -411,10 +425,6 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
             members={members}
             year={year}
             info={{
-              caveats: [
-                netOnly && withheldPartsCaveat(withheldNames),
-                missing.length > 0 && !combinationUnavailable && `Not shown, as too few survey records: ages ${missing.map((p) => p.label).join(", ")}.`,
-              ],
               how: [
                 `One bar per single year of age, ${agesText(window)}.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",

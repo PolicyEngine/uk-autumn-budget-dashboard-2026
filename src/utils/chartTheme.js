@@ -821,6 +821,9 @@ export function fixedNoNegativeZero(value, decimals) {
 export const noHouseholdChange = (yearText) =>
   `None of the selected policies changes household incomes in ${yearText}.`;
 
+/** In place of a plot whose every cell is withheld: no wording on why. */
+export const noFigures = (yearText) => `No figures for this selection in ${yearText}.`;
+
 /**
  * In place of an empty "Effect of each policy" dumbbell (young people,
  * pensioners): "None of the selected policies changes…" only when every

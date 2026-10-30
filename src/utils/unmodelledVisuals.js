@@ -15,16 +15,6 @@
  */
 
 export const UNMODELLED_VISUALS = {
-  // "capped at £2, down from £3", from 1 Jan 2027 to Dec 2027
-  "bus-fare-cap": {
-    kind: "columns",
-    caption: "Single bus fare cap",
-    columns: [
-      { label: "Until 1 Jan 2027", value: 3, text: "£3" },
-      { label: "1 Jan to Dec 2027", value: 2, text: "£2", tone: "gain" },
-    ],
-    alt: "Single bus fare cap: £3 until 1 January 2027, then £2 from 1 January to December 2027.",
-  },
   // "rise by 2 points across the UK, to 24%, 44% and 49%"
   "savings-income-tax": {
     kind: "bars",
@@ -36,9 +26,11 @@ export const UNMODELLED_VISUALS = {
       { label: "Additional rate", base: 47, value: 49, text: "47% → 49%" },
     ],
     tone: "loss",
-    key: { base: "Until 6 Apr 2027", add: "2 points more" },
+    // 22%, 42% and 47% are the rates Budget 2025 set for 6 April 2027, not
+    // the rates before it (20%, 40% and 45%): OBR EFO October 2026, 3.17
+    key: { base: "Already set for 6 Apr 2027", add: "2 points more" },
     derived: { "22, 42, 47": "each rate 2 points below its new 24%, 44% and 49% (paragraph 6.247)" },
-    alt: "Income tax rates on savings income rise by 2 points from 6 April 2027: basic rate 22% to 24%, higher rate 42% to 44%, additional rate 47% to 49%.",
+    alt: "Income tax rates on savings income from 6 April 2027: 2 points above the rates already set for that date, basic rate 22% to 24%, higher rate 42% to 44%, additional rate 47% to 49%.",
   },
   // "rises from 20% to 25%"
   "machine-games-duty": {
@@ -186,10 +178,11 @@ export const UNMODELLED_VISUALS = {
     ],
     alt: "First Time Buyer ISA: the government adds a 25% bonus to the savings, paid when they buy a first home.",
   },
-  // "two weeks' pay after a birth, now up to £194 a week"
+  // "two weeks' pay after a birth, now up to £194 a week": a father's or
+  // partner's two weeks (adopters get up to 39, said in the card's point)
   "parental-allowance": {
     kind: "weeks",
-    caption: "After a birth, from April 2029",
+    caption: "A father or partner, after a birth, from April 2029",
     weeks: ["First week", "Second week"],
     amount: "Up to £194",
     alt: "Parental pay for a self-employed father or partner from April 2029: two weeks' pay after a birth, each week up to £194.",

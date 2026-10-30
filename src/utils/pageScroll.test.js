@@ -10,6 +10,7 @@ import {
   resetPageScroll,
   scrollBelowBars,
   scrollTopFor,
+  siteNavInFlow,
   stickyBottom,
 } from "./pageScroll";
 
@@ -69,6 +70,33 @@ describe("pageScroll", () => {
     nav.getBoundingClientRect.mockReturnValue({ top: 0, bottom: 58, height: 58 });
     title.getBoundingClientRect.mockReturnValue({ top: 58, bottom: 122, height: 64 });
     expect(stickyBottom()).toBe(122);
+  });
+
+  it("lines a target up from the page's top as the bars will be once the site nav in its place has scrolled away", () => {
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true, writable: true });
+    const shell = document.createElement("div");
+    shell.className = NAV_SHELL;
+    document.body.append(shell);
+    // On load: the nav in the page's flow at its top, the band and tabs under it
+    const nav = bar("", 0, 58, shell);
+    nav.setAttribute("style", "position: sticky");
+    bar("title-row", 58, 116);
+    bar("view-tabs-bar", 116, 166);
+    const heading = at(423);
+    expect(siteNavInFlow()).toBe(58);
+    // There, the band sticks at the window's top and the tabs under it
+    expect(scrollTopFor(heading)).toBe(423 - (166 - 58) - STICKY_GAP);
+    scrollBelowBars(heading);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 299, behavior: "auto" });
+    // Part of the way down, only what is left of it counts
+    nav.getBoundingClientRect.mockReturnValue({ top: -30, bottom: 28, height: 58 });
+    expect(siteNavInFlow()).toBe(28);
+    // Shown over the page it stays, and gone it is not there to count
+    document.documentElement.setAttribute("data-site-nav-shown", "");
+    expect(siteNavInFlow()).toBe(0);
+    document.documentElement.removeAttribute("data-site-nav-shown");
+    nav.getBoundingClientRect.mockReturnValue({ top: -58, bottom: 0, height: 58 });
+    expect(siteNavInFlow()).toBe(0);
   });
 
   it("leaves out bars not shown and, for a sentinel, the bars below it", () => {

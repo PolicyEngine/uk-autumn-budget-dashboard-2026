@@ -27,7 +27,7 @@ import { useDisplayYears } from "../../utils/displayYears";
 import { ALL_BAND } from "../../utils/ageImpact";
 import { legendMembership } from "../../utils/legendMembership";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
-import { shortNameOf } from "../../utils/policyDetails";
+import { nounOf, shortNameOf } from "../../utils/policyDetails";
 import { X_AXIS_HEIGHT, plotMargin } from "../youngPeople/chartRows";
 import { cumulate, groupMeasureSeries, niceRange, signedPounds, stepAnnotations } from "../youngPeople/youngPeopleData";
 import { StepLabels, TrendTooltip, YearShading, about, signed, stackColumns, stepSentence } from "../youngPeople/TrendCard";
@@ -87,12 +87,14 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
 
   const measure = (id) => catalogue.byId.get(id);
   const nameOf = (id) => (measure(id) ? shortNameOf(measure(id)) : id);
-  const inSentence = (name) => (/^[A-Z][a-z]/.test(name) ? name[0].toLowerCase() + name.slice(1) : name);
+  // In a sentence or a step's label, after "the" or "No" (TrendCard)
+  const nounFor = (id) => (measure(id) ? nounOf(measure(id)) : id);
   const notes = useMemo(
     () =>
       stepAnnotations(focusSeries).map((note) => ({
         ...note,
-        text: `${nameOf(note.measureId)}${narrow ? "" : `, ${fiscalYearTick(note.year)}`}`,
+        // A step from a measure ending is labelled by its absence (TrendCard)
+        text: `${note.ends ? `No ${nounFor(note.measureId)}` : nameOf(note.measureId)}${narrow ? "" : `, ${fiscalYearTick(note.year)}`}`,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [focusSeries, catalogue, narrow],
@@ -149,13 +151,13 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
     if (later) {
       const flips = Math.sign(later.value) !== Math.sign(selected.net) && Math.abs(later.value) >= 1;
       text += flips
-        ? `; from ${fiscalYearTick(later.year)} the ${inSentence(nameOf(later.measureId))} turns this into a ${later.value >= 0 ? "gain" : "loss"} of ${about(later.value)}`
-        : `; in ${fiscalYearTick(later.year)} the ${inSentence(nameOf(later.measureId))} moves it to ${signed(later.value)}`;
+        ? `; from ${fiscalYearTick(later.year)} the ${nounFor(later.measureId)} turns this into a ${later.value >= 0 ? "gain" : "loss"} of ${about(later.value)}`
+        : `; in ${fiscalYearTick(later.year)} the ${nounFor(later.measureId)} moves it to ${signed(later.value)}`;
     }
     return `${text}.`;
   })();
   // On a phone, the steps the plot cannot label, unless the headline names them
-  const stepsLine = phone && !cumulative ? stepSentence(notes, headline, (id) => inSentence(nameOf(id))) : null;
+  const stepsLine = phone && !cumulative ? stepSentence(notes, headline, nounFor) : null;
 
   const focusAt = (year) => {
     const point = data.find((p) => p.year === year);

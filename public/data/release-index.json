@@ -5,11 +5,11 @@
     "id": "uk-autumn-budget-2026"
   },
   "files": {
-    "constituency.csv": "793cb52b5f01cffd12b74b61bfd4d528c0a84cddbe1e7695f66587f92be9a05d"
+    "constituency.csv": "56b55f1460ff9f56ac1b89be08da910fc9f28c5eeb3e958be72b8dd754e81b40"
   },
-  "flat_provenance_sha256": "58a2e5425363e189a89afd960d59ec10ca41122d66be5b702b17df7763599d5d",
-  "manifest_revision": 17,
-  "manifest_sha256": "9685adc1bcd8c5eb67d1c3f9088bf5e5559ef9a4c33fd9ccab9b342ac83f501e",
+  "flat_provenance_sha256": "e928d7870b1607712efda731ec143a39fb43ac8aff8fa1f7451dbc6c576dbb20",
+  "manifest_revision": 60,
+  "manifest_sha256": "272f83014d2202abf19111dac49b42cab0f00edebe2f1d7d9df6127c94950565",
   "release": "uk-autumn-budget-2026",
   "schema": "uk-budget-release-index/v1"
 }

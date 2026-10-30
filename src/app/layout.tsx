@@ -2,6 +2,7 @@ import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
 import "@policyengine/ui-kit/styles.css";
 
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 // The PolicyEngine tokens, bundled with the page instead of fetched from
 // unpkg. After globals.css, as the unpkg sheet was: its spacing values win,
@@ -17,6 +18,7 @@ import { DEEP_LINK_SCRIPT } from '@/utils/landing';
 import { earlyManifestScript } from '@/utils/publication/early';
 import { BOOT_VIEW_SCRIPT } from '@/utils/bootView';
 import { publicationBoot } from './publicationBoot';
+import { GA_INIT_SCRIPT, GA_MEASUREMENT_ID } from '@/utils/analytics';
 import { chartChunkFiles, chartChunkScript } from '@/utils/chartChunk';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -106,6 +108,16 @@ export default async function RootLayout({
           {children}
           <SiteFooter />
         </PolicyEngineShell>
+        {/* Google Analytics, policyengine.org's property, in a production
+            build only (utils/analytics.js) */}
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {GA_INIT_SCRIPT}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
