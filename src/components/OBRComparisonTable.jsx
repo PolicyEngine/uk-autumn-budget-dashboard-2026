@@ -17,7 +17,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
-import { shortNameOf } from "../utils/policyDetails";
+import { nounOf, shortNameOf } from "../utils/policyDetails";
 import { loadPolicyParameters, measureWindows, outOfForceText } from "../utils/policyParameters";
 import { loadOfficialCostings, OfficialCostingsPendingError } from "../utils/publication/officialCostings";
 import { SOURCES } from "../utils/sources";
@@ -185,13 +185,29 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
  * The card's one sentence, from the rows: how many of the paired measures
  * PolicyEngine puts within £0.2bn of the official costing, and where the
  * two are furthest apart. Descriptive only. Null with nothing paired.
+ *
+ * A policy not in force in the year (a row with a `status`, "Starts
+ * 2030-31") shows its status in place of figures, so it is left out of the
+ * count: its £0 against £0 is not a close estimate. The count is then "of
+ * the N policies in force this year", and with none in force the sentence
+ * says so, naming a single policy as a noun ("The fuel duty cut is not in
+ * force this year"). A row gets a status only when all four of its figures
+ * are 0 or missing, so an ended measure with a real official figure is still
+ * counted.
  */
 // A word joiner after the minus, so "−£6.5bn" never wraps after its sign
 const keep = (text) => text.replace("−", "−\u2060");
 
 export function comparisonSentence(rows, obrKind) {
   const formatBn = (value) => keep(formatFigure(value));
-  const paired = rows.filter((row) => row.pe !== null && row.obr !== null);
+  const inForce = rows.filter((row) => !row.status);
+  const outOfForce = rows.length - inForce.length;
+  if (rows.length > 0 && inForce.length === 0) {
+    if (rows.length > 1) return "None of the selected policies is in force this year.";
+    const noun = nounOf(rows[0].measure ?? { id: rows[0].id, name: rows[0].name });
+    return `The ${noun} is not in force this year.`;
+  }
+  const paired = inForce.filter((row) => row.pe !== null && row.obr !== null);
   if (paired.length === 0) return null;
   const costing = `the official ${obrKind} costing`;
   if (paired.length === 1) {
@@ -202,12 +218,14 @@ export function comparisonSentence(rows, obrKind) {
   const gap = (row) => Math.abs(shownDifference(row.pe, row.obr));
   const close = paired.filter((row) => gap(row) <= CLOSE_BN + 1e-9).length;
   const largest = paired.reduce((best, row) => (gap(row) > gap(best) ? row : best));
-  // Counted out of every policy the chart draws, with those it cannot
-  // compare this year said apart, so the count matches the chart
-  const all = rows.length;
+  // Counted out of every policy the chart draws figures for this year, with
+  // those it cannot compare this year said apart, so the count matches the
+  // chart's figures
+  const all = inForce.length;
+  const which = outOfForce > 0 ? " in force this year" : "";
   const lead = close === all
-    ? `For all ${all} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
-    : `For ${close} of the ${all} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
+    ? `For all ${all} policies${which} our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
+    : `For ${close} of the ${all} policies${which} our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
   const unpaired = all - paired.length;
   const apart = unpaired > 0 ? `; ${unpaired} ${unpaired === 1 ? "has" : "have"} no comparable official figure this year` : "";
   if (formatBn(largest.pe) === formatBn(largest.obr)) return `${lead}${apart}.`;
