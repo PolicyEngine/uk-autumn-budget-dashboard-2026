@@ -319,7 +319,7 @@ export const UNMODELLED_MEASURES = [
     starts: "Apr 2029",
     summary: "Extends parental pay to self-employed fathers, partners, adopters and some irregular workers in Great Britain.",
     points: [
-      { label: "For a household", text: "Up to £194 a week, for two weeks; adopters up to 39." },
+      { label: "For a household", text: "Two weeks, up to £194 each; adopters up to 39 weeks." },
       { label: "Who it reaches", text: "Over 150,000 parents a year (government estimate)." },
       { label: "Why we leave it out", text: "Rules unpublished; the model takes paternity pay and Maternity Allowance as reported." },
     ],
