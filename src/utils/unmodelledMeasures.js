@@ -14,6 +14,8 @@
  * version.
  */
 
+import { SOURCES } from "./sources";
+
 const BUDGET_URL = "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html";
 
 export const BUDGET_DOCUMENT = {
@@ -39,19 +41,25 @@ const obr = (part) => ({
  * within a group, cards of a like shape side by side, so the two in a row
  * are close in height.
  *
+ * Each card's words are short (Vahid, 29 Oct: bullets, not paragraphs):
+ * `summary`, the change itself in 15 words at most, and `points`, one
+ * bullet of 12 words at most under each of UNMODELLED_POINT_LABELS: what
+ * changes for a household or person (labelled "For a household": the
+ * picture above it is headed What changes), who it reaches, and why we
+ * leave it out. None repeats the summary or Starts.
+ *
  * `costings` holds the measure's Table 6.1 rows (£ million, 2026-27 to
  * 2031-32; positive is a gain to the Exchequer, negative a cost), each with
  * an optional `note` shown under the table. A measure with no row has
  * `noCosting` instead, saying what the documents give in its place.
- * `heldBack`, a short muted line, marks a measure the model covers but this
- * release holds back.
  * `seeAlso` links PolicyEngine's own published work that models the
  * measure, after the reason this dashboard does not.
  */
 /**
  * The groups the cards are shown in, by why the dashboard does not model a
  * measure, in order (#297), each with a line under its title; each measure
- * names its `reason`. A card's own `notModelled` keeps its specific reason.
+ * names its `reason`. A card's "Why we leave it out" point keeps its
+ * specific reason.
  */
 export const UNMODELLED_REASONS = [
   { id: "coming-soon", label: "Coming soon", why: "We can model these and are adding them." },
@@ -64,107 +72,40 @@ export const UNMODELLED_REASONS = [
   { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules not yet published." },
 ];
 
+/** The labels of every card's points, in order. */
+export const UNMODELLED_POINT_LABELS = ["For a household", "Who it reaches", "Why we leave it out"];
+
 export const UNMODELLED_MEASURES = [
   {
-    id: "bus-fare-cap",
-    order: 1,
-    reason: "coming-soon",
-    name: "Single bus fares capped at £2 outside London",
-    starts: "1 Jan 2027",
-    changes:
-      "Single fares on participating buses in England outside London are capped at £2, down from £3.",
-    reaches: "Bus passengers in England outside London, on participating services.",
-    household:
-      "The same journeys cost less; household income does not change.",
-    costings: [
-      {
-        row: 4,
-        values: [-50, -180, 65, 170, 0, 0],
-        note: "The row's title adds that the cap is funded by reprioritising Department for Energy Security and Net Zero budgets.",
-      },
-    ],
-    notModelled:
-      "The model prices bus journeys, but a lower fare does not change household income, which is what this dashboard measures; we plan to show the saving after Budget day.",
-    sources: [
-      budget("paragraphs 2.8 and 3.3"),
-      {
-        label: "Prime Minister's Office, HM Treasury and Department for Transport, release on the £2 bus fare cap (22 July 2026)",
-        href: "https://www.gov.uk/government/news/cheaper-travel-for-millions-with-a-third-off-fares",
-      },
-    ],
-  },
-  {
     id: "savings-income-tax",
-    order: 2,
+    order: 1,
     reason: "coming-soon",
     name: "Tax on savings interest up 2 points",
     starts: "6 Apr 2027",
-    changes:
-      "Income tax rates on savings income rise by 2 points across the UK, to 24%, 44% and 49%.",
-    reaches: "People with taxable savings interest across the UK.",
-    household: "People with taxable savings interest pay 2 points more on it.",
+    summary: "Raises tax on savings income by 2 points, to 24%, 44% and 49%.",
+    points: [
+      { label: "For a household", text: "Each £100 of taxable interest pays £2 more tax." },
+      { label: "Who it reaches", text: "People with taxable savings interest across the UK." },
+      { label: "Why we leave it out", text: "Held back: calibrated on another basis, our taxable interest is too low." },
+    ],
     costings: [{ row: 62, values: [15, 125, 555, 520, 555, 590] }],
-    notModelled:
-      "The model covers it, but it is held back from this release: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low.",
-    heldBack:
-      "Held back: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low. We're correcting it for the next data update.",
     sources: [budget("paragraph 6.247")],
   },
   {
-    id: "machine-games-duty",
-    order: 3,
-    reason: "coming-soon",
-    name: "Machine Games Duty up from 20% to 25%",
-    starts: "1 Apr 2027",
-    changes:
-      "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%.",
-    reaches: "Adult gaming centres and other venues with these machines (Budget).",
-    household:
-      "Charged on businesses running the machines; any effect reaches households through stakes and prizes, or as owners and staff.",
-    costings: [{ row: 56, values: [0, 135, 150, 145, 145, 145] }],
-    notModelled: "Our data hold no household spending on gambling, so the model can't pass the duty through to households.",
-    sources: [budget("paragraphs 2.49 and 6.225")],
-  },
-  {
-    id: "cash-isa-limit",
-    order: 4,
-    reason: "coming-soon",
-    name: "Cash ISA limit kept at £20,000",
-    starts: "6 Apr 2027",
-    changes:
-      "A planned cut in the cash ISA limit to £12,000 for under-65s does not go ahead; it stays at £20,000.",
-    reaches:
-      "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23.",
-    household:
-      "Interest in a cash ISA stays free of income tax on up to £20,000 a year of new savings.",
-    costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
-    notModelled:
-      "Our survey data hold no payments into ISAs yet, so there's no national figure. The Household calculator models it for one household at a time.",
-    heldBack: "In the Household calculator only: our survey data hold no payments into ISAs yet.",
-    sources: [
-      budget("paragraphs 2.52 and 6.248"),
-      {
-        label: "HMRC, tax information and impact note on the cash ISA limit (17 September 2026)",
-        href: "https://www.gov.uk/government/publications/reduction-in-the-cash-individual-savings-account-isa-limit",
-      },
-    ],
-  },
-  {
     id: "adjusted-triple-lock",
-    order: 5,
+    order: 2,
     reason: "separately",
     name: "Adjusted Triple Lock for the State Pension",
     starts: "Apr 2030",
-    changes:
-      "The State Pension rises by the highest of 2.5%, inflation, or the rise keeping its April 2029 value against earnings.",
-    reaches: "Current and future State Pension recipients, from April 2030.",
-    household:
-      "The pension rises by at least 2.5% or inflation; it can rise by less than earnings from 2030.",
+    summary: "The State Pension rises by the highest of 2.5%, inflation or an earnings-based rise.",
+    points: [
+      { label: "For a household", text: "Can rise less than earnings, holding only April 2029's value against them." },
+      { label: "Who it reaches", text: "Current and future State Pension recipients." },
+      { label: "Why we leave it out", text: "No change to 2031-32: on the OBR's forecast both rules give 2.5%." },
+    ],
     costings: [],
     noCosting:
       "Table 6.1 has no row for it. On the OBR's forecast the State Pension rises by 2.5% in both 2030-31 and 2031-32 under either rule, so the change does not affect spending in those years. The government estimates that State Pension spending would be £15 billion a year lower by the late 2030s than under the current Triple Lock; the OBR says the long-term effect depends heavily on how earnings, inflation and the 2.5% floor move relative to each other.",
-    notModelled:
-      "No change in our years: on the OBR's forecast the model gives the same State Pension as the current Triple Lock in every year to 2031-32.",
     seeAlso: {
       before: 'PolicyEngine models it to 2039-40 in a separate analysis, "',
       label: "The Burnham plan vs the triple lock",
@@ -175,62 +116,61 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "bank-surcharge",
-    order: 6,
+    order: 3,
     reason: "outside",
     name: "Bank surcharge up from 3% to 6% for 15 months",
     starts: "1 Jan 2027",
-    changes:
-      "The bank surcharge rises from 3% to 6% until March 2028, helping fund the energy payment and electricity VAT cut.",
-    reaches: "Banks that pay the surcharge.",
-    household: "The surcharge is a tax on banks' profits, not on households.",
+    summary: "Raises the bank surcharge from 3% to 6% until March 2028.",
+    points: [
+      { label: "For a household", text: "Taxes banks' profits; helps fund the energy payment and electricity VAT cut." },
+      { label: "Who it reaches", text: "Banks that pay the surcharge." },
+      { label: "Why we leave it out", text: "We don't trace taxes on company profits through to households." },
+    ],
     costings: [{ row: 55, values: [305, 950, 220, 0, 0, 0] }],
-    notModelled:
-      "This dashboard measures household incomes, and does not trace taxes on company profits through to them.",
     sources: [budget("paragraphs 3.5 and 6.252")],
   },
   {
     id: "pubs-business-rates-relief",
-    order: 7,
+    order: 4,
     reason: "outside",
     name: "Business rates relief for pubs and venues up to 35%",
     starts: "1 Apr 2027",
-    changes:
-      "Business rates relief for pubs, social clubs and most live music venues in England rises from 15% to 35%.",
-    reaches: "Pubs, social clubs and most live music venues in England.",
-    household:
-      "Paid by businesses, not households; the Budget puts the relief at over £3,000 per pub on average next year.",
+    summary: "Raises business rates relief for pubs and venues in England from 15% to 35%.",
+    points: [
+      { label: "For a household", text: "A business gain: over £3,000 a pub on average next year (Budget)." },
+      { label: "Who it reaches", text: "Pubs, social clubs and most live music venues in England." },
+      { label: "Why we leave it out", text: "The model spreads business rates by shareholdings, with no reliefs." },
+    ],
     costings: [{ row: 12, values: [5, -160, -115, -5, -5, -5] }],
-    notModelled:
-      "The model attributes business rates to households through shareholdings, as a share of total receipts, with no reliefs, so a relief for pubs changes nothing in it.",
     sources: [budget("paragraphs 3.21 and 6.189")],
   },
   {
     id: "online-marketplace-liability",
-    order: 8,
+    order: 5,
     reason: "outside",
     name: "Online marketplaces to collect the tax on UK sellers' sales",
     starts: "1 Oct 2027",
-    changes:
-      "Online marketplaces collect VAT on sales by UK VAT-registered sellers, and those selling £90,000 a year or more there.",
-    reaches: "UK businesses selling through online marketplaces above the VAT or £90,000 threshold.",
-    household:
-      "The VAT rate does not change: the marketplace collects the VAT these sellers owe.",
+    summary: "Online marketplaces collect the VAT on UK sellers' sales through them.",
+    points: [
+      { label: "For a household", text: "The VAT rate does not change; only who collects it." },
+      { label: "Who it reaches", text: "UK VAT-registered sellers, and those selling £90,000 a year or more there." },
+      { label: "Why we leave it out", text: "The model has no measure of VAT that sellers leave unpaid." },
+    ],
     costings: [{ row: 46, values: [0, 165, 320, 270, 250, 265] }],
-    notModelled:
-      "The model charges VAT on households' spending, scaled to total receipts, with no measure of VAT sellers leave unpaid, so collecting it changes nothing in the model.",
     sources: [budget("paragraphs 2.44 and 6.154")],
   },
   {
     id: "your-first-home",
-    order: 9,
+    order: 6,
     reason: "outside",
     name: "Your First Home equity loan scheme",
     starts: "Apr 2027",
-    changes:
-      "A £4.7 billion scheme gives first-time buyers in England equity loans of up to 20%, with a 2.5% deposit.",
-    reaches: "Around 70,000 first-time buyers (government estimate).",
-    household:
-      "A smaller deposit, five interest-free years; the Budget says this will save the typical buyer hundreds of pounds a month.",
+    summary: "A £4.7 billion scheme of equity loans up to 20% for first-time buyers in England.",
+    points: [
+      { label: "For a household", text: "2.5% deposit; five interest-free years; saves hundreds a month, says the Budget." },
+      { label: "Who it reaches", text: "Around 70,000 first-time buyers (government estimate)." },
+      { label: "Why we leave it out", text: "A loan is lent, not paid, so household incomes do not change." },
+    ],
     costings: [
       {
         row: 37,
@@ -238,88 +178,128 @@ export const UNMODELLED_MEASURES = [
         note: "Row 37 is the scheme's net income from developer fees; the loans themselves are financial transactions, in Table 6.2.",
       },
     ],
-    notModelled: "The model has no home purchases or loans, and a loan is lent rather than paid, so household incomes do not change.",
     sources: [budget("paragraphs 5.5 and 6.113")],
   },
   {
+    id: "machine-games-duty",
+    order: 7,
+    reason: "data",
+    name: "Machine Games Duty up from 20% to 25%",
+    starts: "1 Apr 2027",
+    summary: "Machines with stakes over £1 or prizes over £100 pay 25% duty, up from 20%.",
+    points: [
+      { label: "For a household", text: "Businesses pay; any household effect comes via stakes, prizes, owners or staff." },
+      { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
+      { label: "Why we leave it out", text: "Our data hold no household spending on gambling." },
+    ],
+    costings: [
+      {
+        row: 56,
+        values: [0, 135, 150, 145, 145, 145],
+        note: "Row 56 also covers moving the duty to machine suppliers from 1 April 2028: £20m in 2028-29, then £15m, £15m and £10m (policy costings p.68).",
+      },
+    ],
+    sources: [
+      budget("paragraphs 2.49 and 6.225"),
+      // The move to machine suppliers' yearly figures in row 56
+      { label: "HM Treasury, Budget 2026 policy costings, Machine Games Duty (page 68)", href: SOURCES.obr_budget_2026_costings.url },
+    ],
+  },
+  {
+    id: "cash-isa-limit",
+    order: 8,
+    reason: "data",
+    name: "Cash ISA limit kept at £20,000",
+    starts: "6 Apr 2027",
+    summary: "Drops a planned cut in the under-65 cash ISA limit to £12,000; it stays £20,000.",
+    points: [
+      { label: "For a household", text: "Interest stays tax-free on up to £20,000 a year of new savings." },
+      { label: "Who it reaches", text: "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23." },
+      { label: "Why we leave it out", text: "Household calculator only, not the national results: our data lack ISA payments." },
+    ],
+    costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
+    sources: [
+      budget("paragraphs 2.52 and 6.248"),
+      {
+        label: "HMRC, tax information and impact note on the cash ISA limit (17 September 2026)",
+        href: "https://www.gov.uk/government/publications/reduction-in-the-cash-individual-savings-account-isa-limit",
+      },
+    ],
+  },
+  {
     id: "national-living-wage",
-    order: 10,
+    order: 9,
     reason: "data",
     name: "Minimum wage up 3.9%",
     starts: "1 Apr 2027",
-    changes:
-      "The National Living Wage rises from £12.71 to £13.21 an hour; younger and apprentice rates rise too.",
-    reaches: "Around 2.3 million workers (government estimate, provisional).",
-    household:
-      "£910 a year more before tax for a full-time worker on it (Budget); less after tax and Universal Credit.",
+    summary: "Raises the hourly National Living Wage from £12.71 to £13.21; younger and apprentice rates too.",
+    points: [
+      { label: "For a household", text: "£910 a year more full-time, before tax and Universal Credit (Budget)." },
+      { label: "Who it reaches", text: "Around 2.3 million workers (government estimate, provisional)." },
+      { label: "Why we leave it out", text: "Earnings grow with the OBR's average earnings forecast, not the minimum wage." },
+    ],
     costings: [],
     noCosting: "Table 6.1 has no row for it.",
-    notModelled:
-      "The model's earnings grow with the OBR's average earnings forecast, so a minimum wage rise on its own does not change them.",
     sources: [budget("paragraphs 3.18 and 6.128")],
   },
   {
     id: "universal-credit-surplus-earnings",
-    order: 11,
+    order: 10,
     reason: "data",
     name: "Universal Credit surplus earnings threshold kept at £2,500",
     starts: "1 Apr 2027",
-    changes:
-      "The Universal Credit surplus earnings threshold stays at £2,500 to March 2028, rather than falling to £300.",
-    reaches:
-      "Universal Credit claimants reclaiming within six months of earnings ending their award.",
-    household:
-      "Earnings up to £2,500 above where an award stops, such as a bonus, are not carried into a new claim.",
+    summary: "Keeps Universal Credit's surplus earnings threshold at £2,500 to March 2028, rather than £300.",
+    points: [
+      { label: "For a household", text: "Excess earnings up to £2,500, such as a bonus, aren't carried forward." },
+      { label: "Who it reaches", text: "Claimants reclaiming within six months of earnings ending their award." },
+      { label: "Why we leave it out", text: "The model works out Universal Credit yearly, not month by month." },
+    ],
     costings: [{ row: 8, values: [0, -140, 0, 0, 0, 0] }],
-    notModelled:
-      "The model works out Universal Credit over a whole year rather than month by month, so it has no surplus earnings rule.",
-    sources: [budget("paragraph 6.11"), obr("Box 5.1")],
+    sources: [budget("paragraph 6.11"), obr("paragraph 3.44")],
   },
   {
     id: "mileage-rates",
-    order: 12,
+    order: 11,
     reason: "data",
     name: "Tax-free mileage rates raised",
     starts: "Apr 2026 / Apr 2027",
-    changes:
-      "The tax-free 55p a mile for the first 10,000 business miles is made permanent; above that, 25p rises to 35p.",
-    reaches: "Around 2 million employees and 1 million self-employed people (government estimate).",
-    household:
-      "Less income tax for those driving for work: £120 a year for 6,000 miles, £300 for 15,000 (Treasury).",
+    summary: "Makes 55p a mile permanent up to 10,000 business miles; above that, 25p becomes 35p.",
+    points: [
+      { label: "For a household", text: "Less tax: £120 a year for 6,000 miles, £300 for 15,000 (Treasury)." },
+      { label: "Who it reaches", text: "Around 2 million employees and 1 million self-employed (government estimate)." },
+      { label: "Why we leave it out", text: "The model has no business mileage." },
+    ],
     costings: [{ row: 5, values: [-30, -200, -220, -225, -235, -245] }],
-    notModelled: "The model has no business mileage.",
     sources: [budget("paragraphs 3.14 and 6.213")],
   },
   {
     id: "company-car-tax",
-    order: 13,
+    order: 12,
     reason: "data",
     name: "Company car tax up 1 point in 2030-31",
     starts: "6 Apr 2030",
-    changes:
-      "Company car tax percentages for 2030-31 are 1 point above 2029-30's in every band, up to 40%.",
-    reaches: "Employees with a company car.",
-    household:
-      "More income tax on the same company car, from April 2030.",
+    summary: "Sets every 2030-31 company car tax band 1 point above 2029-30's, up to 40%.",
+    points: [
+      { label: "For a household", text: "More income tax on the same company car." },
+      { label: "Who it reaches", text: "Employees with a company car." },
+      { label: "Why we leave it out", text: "The model has no company cars." },
+    ],
     costings: [{ row: 86, values: [0, 0, 0, 0, 310, 345] }],
-    notModelled: "The model has no company cars.",
     sources: [budget("paragraph 6.207")],
   },
   {
     id: "business-asset-disposal-relief",
-    order: 14,
+    order: 13,
     reason: "data",
     name: "Business Asset Disposal Relief limit cut to £500,000",
     starts: "6 Apr 2027",
-    changes:
-      "The lifetime limit on gains taxed at Business Asset Disposal Relief's 18% falls from £1 million to £500,000.",
-    reaches:
-      "Sellers of qualifying businesses; three-quarters keep relief on their whole gain.",
-    household:
-      "Gains above £500,000 are taxed at up to 24% rather than 18%.",
+    summary: "Halves the lifetime limit on gains taxed at 18%, from £1 million to £500,000.",
+    points: [
+      { label: "For a household", text: "Gains above £500,000 are taxed at up to 24% rather than 18%." },
+      { label: "Who it reaches", text: "Sellers of qualifying businesses; three-quarters keep relief on their whole gain." },
+      { label: "Why we leave it out", text: "No record of relief already used; gains calibrated to 2024-25's high disposals." },
+    ],
     costings: [{ row: 60, values: [5, 60, 180, 255, 280, 305] }],
-    notModelled:
-      "The model has no record of relief used in earlier years, and its gains are calibrated to 2024-25, when disposals were unusually high.",
     sources: [
       budget("paragraphs 2.53 and 6.261"),
       { label: "HMRC, Capital Gains Tax rates", href: "https://www.gov.uk/capital-gains-tax/rates" },
@@ -327,39 +307,42 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "first-time-buyer-isa",
-    order: 15,
+    order: 14,
     reason: "data",
     name: "First Time Buyer ISA, and a lower Lifetime ISA charge",
     starts: "Oct 2026 / Apr 2029",
-    changes:
-      "A 25%-bonus First Time Buyer ISA replaces the Lifetime ISA in 2029; its charge over £450,000 falls to 20%.",
-    reaches:
-      "People saving for a first home, including existing Lifetime ISA holders.",
-    household:
-      "The bonus adds to a buyer's deposit, not their income, and is paid when the savings buy the home.",
+    summary: "A 25%-bonus ISA replaces the Lifetime ISA, whose charge over £450,000 falls to 20%.",
+    points: [
+      { label: "For a household", text: "The bonus adds to the deposit, not income, paid at purchase." },
+      { label: "Who it reaches", text: "People saving for a first home, Lifetime ISA holders included." },
+      { label: "Why we leave it out", text: "The model has no ISA payments, bonuses or home purchases." },
+    ],
     costings: [
       { row: 38, values: [0, 0, 0, 110, 110, 235], note: "Row 38 is the First Time Buyer ISA." },
       { row: 39, values: [-15, -20, -20, -25, -25, -25], note: "Row 39 is the lower Lifetime ISA withdrawal charge." },
     ],
-    notModelled: "The model has no payments into ISAs, bonuses or home purchases.",
     sources: [budget("paragraphs 5.8, 5.9, 6.239 and 6.240")],
   },
   {
     id: "parental-allowance",
-    order: 16,
+    order: 15,
     reason: "data",
     name: "Parental pay for self-employed fathers, partners and adopters",
     starts: "Apr 2029",
-    changes:
-      "Parental pay is extended to eligible self-employed fathers, partners and adopters in Great Britain, and some with irregular work.",
-    reaches: "Over 150,000 parents a year (government estimate).",
-    household:
-      "A self-employed father or partner could get two weeks' pay after a birth, now up to £194 a week (Treasury).",
+    summary: "Extends parental pay to self-employed fathers, partners, adopters and some irregular workers in Great Britain.",
+    points: [
+      { label: "For a household", text: "Two weeks, up to £194 each; adopters up to 39 weeks." },
+      { label: "Who it reaches", text: "Over 150,000 parents a year (government estimate)." },
+      { label: "Why we leave it out", text: "Rules not final; paternity pay and Maternity Allowance are taken as reported." },
+    ],
     costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
-    notModelled:
-      "The eligibility rules are not yet published, and the model takes paternity pay and Maternity Allowance as reported in its data rather than working out who qualifies.",
     sources: [
       budget("paragraphs 3.20 and 6.12"),
+      // Adopters' up to 39 weeks: the policy costings' Parental Pay measure
+      {
+        label: "HM Treasury, Budget 2026 policy costings, Parental Pay (page 15)",
+        href: SOURCES.obr_budget_2026_costings.url,
+      },
       {
         label: "HM Treasury, release on parental pay and other measures (26 October 2026)",
         href: "https://www.gov.uk/government/news/everyday-fixes-to-make-life-easier-for-millions-of-britons",
@@ -368,20 +351,21 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "gas-standing-charges",
-    order: 17,
+    order: 16,
     reason: "data",
     name: "Gas standing charges to be abolished",
+    // Budget paragraph 4.3: "aiming for delivery by the end of 2027 or as soon
+    // as possible after then" (the start badge holds 20 characters)
     starts: "End of 2027 or later",
-    changes:
-      "The government has asked Ofgem to abolish gas standing charges in Great Britain, £108 a year on average.",
-    reaches: "Around 23 million homes (government estimate).",
-    household:
-      "Before mitigation, bills fall for homes using less gas, rise for those using more; about 60% save £45 a year.",
+    summary: "The government asks Ofgem to abolish gas standing charges, £108 a year on average.",
+    points: [
+      { label: "For a household", text: "60% of account holders save about £45 a year on average." },
+      { label: "Who it reaches", text: "Around 23 million homes in Great Britain (government estimate)." },
+      { label: "Why we leave it out", text: "The model counts energy taxes, not supplier prices; start and mitigation unset." },
+    ],
     costings: [],
     noCosting:
       "Table 6.1 has no row for it. Suppliers are to recover the standing charge's costs through gas unit rates instead.",
-    notModelled:
-      "The model counts taxes on energy bills, not how suppliers set prices, and the start date and mitigation are not yet set.",
     sources: [
       budget("paragraphs 3.9 and 6.25"),
       {

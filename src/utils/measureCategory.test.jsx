@@ -21,6 +21,7 @@ const CURRENT = [
   ["property_income_rates_up", "Property income tax rates up", "From 6 April 2027 the income tax rates on property income rise", "Income tax", "wallet"],
   ["savings_income_rates_up", "Savings income tax rates up", "From 6 April 2027 the income tax rates on savings income rise", "Income tax", "wallet"],
   ["warm_home_discount_top_up", "Warm Home Discount top-up", "£100 more to each household receiving Universal Credit, Pension Credit", "Energy", "flame"],
+  ["bus_fare_cap_2027", "Single bus fares capped at £2", "Single bus fares on participating services in England outside London are capped at £2 instead of £3", "Transport", "compass"],
 ];
 
 describe("measureCategoryOf", () => {

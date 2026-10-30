@@ -81,6 +81,7 @@ def gen(n, seed=2026):
             petrol_spending=r.choice([0, 0, 600, 2000]),
             diesel_spending=r.choice([0, 0, 400]),
             electricity_spending=r.choice([0, 1040, 1800]),
+            bus_fare_spending=r.choice([0, 0, 500, 1500]),
             private_pension_income=r.choice([0, 0, 8000, 25000]),
             dividend_income=r.choice([0, 0, 2000]),
             savings_interest_income=r.choice([0, 0, 1500]),

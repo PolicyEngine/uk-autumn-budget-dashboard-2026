@@ -174,6 +174,7 @@ def test_the_registered_package_is_the_generic_combination_of_its_members():
     # shows.
     assert [m.__name__ for m in sides["baseline"]["modifiers"]] == []
     assert [m.__name__ for m in sides["reform"]["modifiers"]] == [
+        "bus_fare_cap_2027",
         "carers_allowance_earnings_taper",
         "zero_vat_on_domestic_electricity",
         "pump_vat_on_fuel_duty_deferral",

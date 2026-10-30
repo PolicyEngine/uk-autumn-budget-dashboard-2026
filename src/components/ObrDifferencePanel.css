@@ -113,6 +113,13 @@
   border: 2px solid var(--c-obr);
 }
 
+/* Ours on the official costing's basis: the chart's small teal ring */
+.obr-panel-key.is-basis {
+  width: 4px;
+  height: 4px;
+  border: 2px solid var(--c-gain);
+}
+
 .obr-panel-body {
   display: flex;
   flex-direction: column;
@@ -185,6 +192,13 @@
 
 .obr-panel-figures dd.is-ours {
   color: var(--c-gain-text);
+}
+
+/* Ours on the official costing's basis, where the measure has one: across
+   the panel under the three, its label above its figure as theirs are, so
+   the panel's width never splits the figure from its sign */
+.obr-panel-figures > .is-basis {
+  grid-column: 1 / -1;
 }
 
 /* What each side counts, as two labelled lines */

@@ -95,6 +95,7 @@ export const FIELD_LABELS = {
   petrol_spending: "Petrol spending",
   diesel_spending: "Diesel spending",
   electricity_spending: "Electricity spending",
+  bus_fare_spending: "Bus fares",
   salary_sacrifice_pension_contributions: "Salary sacrifice",
   student_loan_plan: "Student loan plan",
   council_tax_band: "Council tax band",
@@ -260,6 +261,17 @@ export function childrenForRequest(inputs) {
 }
 
 const RENTING = new Set(["RENT_PRIVATELY", "RENT_FROM_COUNCIL", "RENT_FROM_HA"]);
+
+// The regions outside the £2 bus fare cap: London, and the nations outside
+// England (the API's household_impact.BUS_FARE_CAP_REGIONS)
+const OUTSIDE_BUS_FARE_CAP = new Set(["LONDON", "WALES", "SCOTLAND", "NORTHERN_IRELAND"]);
+/** Whether a region is in England outside London, where the £2 bus fare cap applies. */
+export const inBusFareCapArea = (region) => Boolean(region) && !OUTSIDE_BUS_FARE_CAP.has(region);
+/** The fiscal years the £2 bus fare cap credits anything in (2026-27 and 2027-28). */
+export const BUS_FARE_CAP_YEARS = [2026, 2027];
+/** The bus fares sent: as entered, in England outside London; else 0 (not sent). */
+export const busFares = (inputs) =>
+  inBusFareCapArea(inputs.region) && Number(inputs.bus_fare_spending_per_year) > 0 ? Number(inputs.bus_fare_spending_per_year) : 0;
 export const isRenting = (tenure) => RENTING.has(tenure);
 
 /**
@@ -322,6 +334,9 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       // Caring only for a carer: anyone else's request is as it was before
       // the form asked, so its key (and a precomputed answer) still matches
       ...(inputs.is_carer ? { is_carer: true, care_hours_per_week: careHours(inputs) } : {}),
+      // Bus fares only when answered, where the £2 cap reaches (England
+      // outside London), likewise
+      ...(busFares(inputs) ? { bus_fare_spending: busFares(inputs) } : {}),
       // Cash ISA payments only when answered, likewise
       ...(inputs.cash_isa_payments_per_year > 0 ? { cash_isa_subscriptions: inputs.cash_isa_payments_per_year } : {}),
       // Self-employment only when answered, likewise

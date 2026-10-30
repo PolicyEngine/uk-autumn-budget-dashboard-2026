@@ -15,6 +15,7 @@ import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact"
 import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import { CALCULATOR_ONLY_MEASURES } from "../utils/calculatorOnlyMeasures";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
 import { EXPLAINERS, RESEARCH_URL } from "../utils/explainers";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
@@ -199,6 +200,15 @@ function useRevealLinkedAnchor() {
 function MethodologyTab({ onShowTab }) {
   const catalogue = useMeasureCatalogue();
   const UNAVAILABLE = unavailableMeasures(catalogue);
+  // Every published measure, then those the calculator alone adds
+  const calculatorPolicies = [
+    ...(catalogue.measures ?? []).map((measure) => ({ id: measure.id, name: measure.name })),
+    ...Object.values(CALCULATOR_ONLY_MEASURES).map((measure) => ({
+      id: measure.id,
+      name: measure.name,
+      note: "calculator only, held back from the national results",
+    })),
+  ];
   useRevealLinkedAnchor();
 
   return (
@@ -362,8 +372,7 @@ function MethodologyTab({ onShowTab }) {
                     through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
                     the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. Measures are
                     written as parameter changes where possible, or built from tested measure
-                    templates. Three of the policies here are written by hand, and are published
-                    only after two reviewers have checked the exact run.
+                    templates. Four of the policies here are written by hand.
                   </>,
                 ],
                 [
@@ -415,8 +424,7 @@ function MethodologyTab({ onShowTab }) {
               Some Budget policies act on something the model or its survey data do not hold, such as
               prices, ISAs or business mileage, or have rules not yet published, so they cannot be
               costed household by household. The rise in income tax rates on savings income is
-              modelled but held back from this release, because the data miss ISA interest and some
-              other savings income.{" "}
+              modelled but held back from this release, for the reason its card gives.{" "}
               <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
                 Budget policies we do not model
               </ViewLink>
@@ -554,7 +562,7 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
-                      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
+                      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
                       "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
                     ],
                   },
@@ -784,6 +792,20 @@ function MethodologyTab({ onShowTab }) {
           }
         >
           <Topic
+            id={METHOD_ANCHORS.householdPolicies}
+            title="Policies in the calculator"
+            preview={`${calculatorPolicies.length} policies`}
+          >
+            <ul className="method-list">
+              {calculatorPolicies.map((policy) => (
+                <li key={policy.id}>
+                  {policy.name}
+                  {policy.note && <> ({policy.note})</>}
+                </li>
+              ))}
+            </ul>
+          </Topic>
+          <Topic
             id={METHOD_ANCHORS.householdCalc}
             title="How the household calculation works"
             preview={SINGLE_YEAR_METHOD.map(([term]) => term).join(" · ")}
@@ -915,6 +937,21 @@ function MethodologyTab({ onShowTab }) {
               for vans, lorries and business use of cars, roughly half of fuel duty receipts, is
               not in the model, so a change in fuel duty moves revenue by less here than in a
               full costing.
+            </p>
+          </Topic>
+          <Topic id="method-bus-fare-income" title="Bus fare savings as income" preview="The £2 bus fare cap counted as income">
+            <p className="method-more">
+              The £2 bus fare cap is paid to bus operators, but passengers gain from it through lower
+              fares. We count that saving as household income, as for a price subsidy. The saving is
+              the Treasury&apos;s costing (Table 6.1) shared out across households by their bus fare
+              spending in England outside London, not our own estimate of the national cost: 10.0% of
+              each household&apos;s spending at £3 fares for the days the cap runs. That is £230m a
+              year, divided by 0.9 for the share of operators taking part (
+              <SourceLink id="dft_two_pound_cap_evaluation">DfT&apos;s evaluation of the first £2 cap</SourceLink>),
+              over £2,557m of bus fare spending at £3 fares. London residents get £0. This is a choice
+              of method: the household spends less on the same journeys, so its income buys more, but
+              no cash changes hands. Spending is held fixed. The saving counts in household net income,
+              not in the HBAI income poverty is measured on.
             </p>
           </Topic>
           <Topic title="Survey coverage" preview="Where the survey data move a policy's figures">

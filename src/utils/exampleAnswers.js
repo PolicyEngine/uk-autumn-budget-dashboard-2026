@@ -41,6 +41,8 @@ export const EXAMPLE_ANSWERS = Object.freeze({
   petrol_spending_per_year: 620,
   diesel_spending_per_year: 340,
   electricity_spending_per_year: 1040,
+  // No bus fares (nothing sent)
+  bus_fare_spending_per_year: 0,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   cash_isa_payments_per_year: 0,

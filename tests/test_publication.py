@@ -407,6 +407,26 @@ def test_poverty_inequality_when_present_covers_every_year(world):
     assert table_problems(tables, key="alpha", years=YEARS) == []
 
 
+def test_official_basis_when_present_covers_every_year(world):
+    """#297: a measure's figure on its official costing's basis is optional,
+    one row a year, every year when present."""
+    tables = read_tables(world.write("alpha", VALUES).path)
+    assert "official_basis" not in tables
+    assert table_problems(tables, key="alpha", years=YEARS) == []
+    tables["official_basis"] = [
+        {
+            "reform_id": "alpha",
+            "reform_name": "Alpha",
+            "year": 2027,
+            "value": -0.04,
+            "variables": "income_tax",
+        }
+    ]
+    assert table_problems(tables, key="alpha", years=YEARS) == [
+        "official_basis: missing 2028"
+    ]
+
+
 def test_an_effect_before_the_start_year_is_a_problem(world):
     tables = read_tables(world.write("alpha", VALUES).path)
     problems = table_problems(
