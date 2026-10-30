@@ -1315,9 +1315,11 @@ html[data-site-nav-shown] {
   min-width: 0;
 }
 
-/* Cards stacked one above the other, each full width (All households'
-   map, then its household scatter). Not a charts-grid, so the paired-card
-   subgrid rules never apply: the scatter keeps its own 400px plot. */
+/* Cards stacked one above the other, each full width: All households' By
+   area section (the constituency map, alone) and the Poverty sub-tab's
+   two cards (Which policies move poverty, then Change in the poverty
+   rate). Not a charts-grid, so the paired-card subgrid rules never
+   apply. */
 .charts-stack {
   display: flex;
   flex-direction: column;

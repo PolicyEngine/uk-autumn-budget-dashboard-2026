@@ -42,10 +42,12 @@
   box-sizing: border-box;
 }
 
-/* Side by side with the map, the plot takes the map's controls and map
-   rows (3 and 4) and fills them, and its key takes the colour scale's
-   row (5). Absolutely placed, the drawing adds no height of its own, so the
-   map's rows (its body is a fixed 440px) set the card's height. */
+/* Side by side with another card on a wide screen (All households'
+   income decile card), the plot takes the shared controls and plot rows
+   (3 and 4) and fills them. Absolutely placed, the drawing adds no height
+   of its own, so the other card's rows set the plot's height. The decile
+   card shows its Options in every state but "No data available yet";
+   beside Options, the rule below keeps the plot to the plot row (4). */
 @media (min-width: 1025px) {
   .charts-grid > div.household-scatter-template:not(:only-child) > .chart-plot {
     grid-row: 3 / span 2;
@@ -79,7 +81,8 @@
     align-self: end;
   }
 
-  /* The key takes the row of the map's colour scale, under the plot */
+  /* The key row, drawn only with the reader's household (`you`, which All
+     households never passes), takes the legend row (5), under the plot */
   .charts-grid > div.household-scatter-template:not(:only-child) > .scatter-legend {
     grid-row: 5;
     align-self: start;

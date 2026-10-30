@@ -65,9 +65,15 @@ const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
 // beside the income decile card it takes that card's plot height (see
 // HouseholdScatterTemplate.css).
 const STACKED_HEIGHT = 400;
-// Room under the axis for the logo, drawn in the SVG as the decile card
-// beside it draws its own (WaterfallChart's LOGO_ROOM), so the two plots,
-// axis titles and logos sit level
+// Room under the axis for the logo, which the SVG draws at its foot. The
+// decile card beside it draws its logo at its SVG's foot too, and both
+// SVGs end at the foot of the shared plot row, so the two logos sit level.
+// The axes don't: the decile chart's Recharts legend sits between its axis
+// and its logo, so its axis sits higher by the legend's height less this
+// room, and moves as the legend gains or loses rows. The decile charts'
+// own LOGO_ROOM (WaterfallChart, DistributionalChart), the same size,
+// applies only under a section key (key.shared), which All households
+// doesn't have.
 export const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
 
 // The dots' colours, as colourFor draws them; the key under the plot
@@ -670,8 +676,9 @@ function HouseholdScatter({
         </div>
       )}
 
-      {/* The plot takes the rows the map beside it uses for its controls,
-          map and colour scale, so the two cards line up and fill alike */}
+      {/* Beside the income decile card, the plot fills the plot row that
+          card's plot sets (HouseholdScatterTemplate.css), so the two
+          cards line up */}
       <div className="chart-plot household-scatter-template-plot">
         <div className="household-scatter-template-canvas" ref={chartRef}>
           {noDots ? (
