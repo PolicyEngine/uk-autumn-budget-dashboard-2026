@@ -21,6 +21,22 @@ from uk_budget_data.measure_templates import _call_formula, _replace_formula
 TAX_BEFORE_WINTER_FUEL_CHARGE = "income_tax_before_winter_fuel_payment_charge"
 
 
+def _full_state_pension(weekly, weekly_rounding):
+    """The full new State Pension for the year: the weekly rate, rounded down
+    to ``weekly_rounding``, x 52."""
+    steps = np.floor(weekly / weekly_rounding + 1e-9)
+    return round(float(steps * weekly_rounding) * 52, 2)
+
+
+def _full_allowance(full_state_pension, personal_allowance, basic_rate):
+    """The full allowance: ``basic_rate`` of the full new State Pension above
+    the personal allowance, rounded up to the pound. Rounding to a millionth
+    first keeps a whole-pound value whole."""
+    return np.ceil(
+        round(basic_rate * (full_state_pension - personal_allowance), 6)
+    )
+
+
 def _refuse_native_allowance(system, first_year, last_year):
     """Refuse an engine that already gives the allowance in these years.
 
@@ -113,14 +129,13 @@ def pension_tax_allowance(
         year = period.start.year
         current = _call_formula(native, person, period, parameters)
         on = parameters(f"{year}-04-06").gov
-        weekly = on.dwp.state_pension.new_state_pension.amount
-        steps = np.floor(weekly / weekly_rounding + 1e-9)
-        full_state_pension = round(float(steps * weekly_rounding) * 52, 2)
-        personal_allowance = (
-            on.hmrc.income_tax.allowances.personal_allowance.amount
+        full_state_pension = _full_state_pension(
+            on.dwp.state_pension.new_state_pension.amount, weekly_rounding
         )
-        allowance = np.ceil(
-            round(basic_rate * (full_state_pension - personal_allowance), 6)
+        allowance = _full_allowance(
+            full_state_pension,
+            on.hmrc.income_tax.allowances.personal_allowance.amount,
+            basic_rate,
         )
         total = person("total_income", period)
         excess = np.maximum(0, total - full_state_pension)
