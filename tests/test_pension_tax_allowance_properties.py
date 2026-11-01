@@ -165,10 +165,12 @@ def test_the_rate_on_the_band_is_a_third_above_the_rate_without(year, shares):
 @examples
 @given(
     years,
-    st.lists(st.floats(0, 40_000), min_size=SLOTS, max_size=SLOTS),
+    st.lists(st.floats(0, 34_000), min_size=SLOTS, max_size=SLOTS),
     st.floats(min_value=1, max_value=500),
 )
 def test_income_after_tax_rises_with_income(year, income, more):
+    """Up to the Winter Fuel Payment charge's £35,000, where income after tax
+    falls with or without the allowance: the whole payment comes back."""
     income = np.asarray(income)
     (_, [lower]) = _both(year, {"state_pension": income})
     (_, [higher]) = _both(year, {"state_pension": income + more})
