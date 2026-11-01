@@ -461,7 +461,8 @@ STATE_PENSION_PROTECTION_DESIGNS = {
     "tax_reduction": (
         pension_tax_allowance,
         "From 6 April 2027 to 5 April "
-        "2030, people over State Pension age whose total "
+        "2030, people over State Pension age, or reaching it in the tax "
+        "year, whose total "
         "income (the State Pension, with any increments or additional "
         "State Pension, plus all other income, savings interest included) "
         "is at or below the full new State Pension (£13,036.40 in 2027-28) "
