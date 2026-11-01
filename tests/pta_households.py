@@ -62,6 +62,13 @@ mixes = st.lists(
     min_size=SLOTS,
     max_size=SLOTS,
 )
+# Employer pension contributions, from nil to past the £60,000 annual
+# allowance, so the annual allowance charge can sit beside the allowance.
+contributions = st.lists(
+    st.one_of(st.just(0.0), st.floats(min_value=0, max_value=120_000)),
+    min_size=SLOTS,
+    max_size=SLOTS,
+)
 
 
 def rule_for(year):

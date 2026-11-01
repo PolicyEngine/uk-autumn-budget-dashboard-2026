@@ -2,9 +2,10 @@
 the template before it (tests/pension_tax_allowance_before_port.py) and
 against the engine's own allowance where it has one.
 
-The port is meant to differ from the template in one place: people reaching
+The port means to differ from the template in two places. People reaching
 State Pension age between 6 October and 5 April now qualify, as the explainer
-says. Everyone else matches.
+says. The allowance no longer offsets the annual allowance charge, which comes
+at Step 7, after the Step 6 reductions. Everyone else matches.
 """
 
 import json
@@ -29,6 +30,7 @@ from tests.pta_households import (
     YEARS,
     band_positions,
     calculate,
+    contributions,
     examples,
     in_band,
     mixes,
@@ -48,6 +50,8 @@ OLD_TEMPLATE_RUNS = not system.get_variable("income_tax").adds
 UC_TAX = ("uc_income_tax_on_earnings", "uc_income_tax_on_trade")
 NATIVE_SWITCH = "gov.hmrc.income_tax.reliefs.pension_tax_allowance.in_effect"
 STATE_PENSION_RATE = "gov.dwp.state_pension.new_state_pension.amount"
+ANNUAL_ALLOWANCE_INPUT = "employer_pension_contributions"
+ANNUAL_ALLOWANCE_CHARGE = "personal_pension_contributions_tax"
 
 ages = st.lists(
     st.integers(min_value=60, max_value=72), min_size=SLOTS, max_size=SLOTS
@@ -98,16 +102,50 @@ def test_the_port_matches_the_old_template(
         "months_since_last_birthday": months_since_birthday,
     }
     old, ported = _old_and_ported()
-    outputs = ("income_tax", *UC_TAX, "months_since_state_pension_age")
-    old_tax, *old_uc, since = calculate(old, year, inputs, outputs)
-    new_tax, *new_uc, _ = calculate(ported, year, inputs, outputs)
-    # Intended: only people reaching State Pension age after 6 October in
-    # the tax year differ, and only by gaining.
+    outputs = (
+        "income_tax",
+        *UC_TAX,
+        "months_since_state_pension_age",
+        "total_income",
+    )
+    old_tax, *old_uc, since, total = calculate(old, year, inputs, outputs)
+    new_tax, *new_uc, _, _ = calculate(ported, year, inputs, outputs)
+    # Intended: people reaching State Pension age after 6 October in the tax
+    # year get the allowance, which the template gave them none of.
     reaching = (since < 0) & (since > -6)
     assert new_tax[~reaching] == pytest.approx(old_tax[~reaching], abs=PENNY)
-    assert (new_tax[reaching] <= old_tax[reaching] + PENNY).all()
+    rule = rule_for(year)
+    excess = np.maximum(0, total - rule.full_state_pension)
+    reduction = np.maximum(0, rule.allowance - excess / 3)
+    assert new_tax[reaching] == pytest.approx(
+        np.maximum(0, old_tax - reduction)[reaching], abs=2 * PENNY
+    )
     for before, after in zip(old_uc, new_uc):
         assert after[~reaching] == pytest.approx(before[~reaching], abs=PENNY)
+
+
+@pytest.mark.skipif(
+    not OLD_TEMPLATE_RUNS or HAS_NATIVE_ALLOWANCE,
+    reason="the old template runs only where income_tax has a formula",
+)
+@pytest.mark.parametrize("year", YEARS)
+def test_the_port_keeps_the_annual_allowance_charge_the_template_offset(year):
+    """Intended: income at the personal allowance leaves no tax at Step 5, so
+    the template took its whole allowance off the charge. The port leaves the
+    charge whole."""
+    rule = rule_for(year)
+    inputs = {
+        "state_pension": [rule.personal_allowance] * SLOTS,
+        ANNUAL_ALLOWANCE_INPUT: [70_000.0] * SLOTS,
+    }
+    old, ported = _old_and_ported()
+    [old_tax] = calculate(old, year, inputs)
+    [new_tax, charge] = calculate(
+        ported, year, inputs, ("income_tax", ANNUAL_ALLOWANCE_CHARGE)
+    )
+    assert (charge > 0).all()
+    assert new_tax == pytest.approx(charge, abs=PENNY)
+    assert old_tax == pytest.approx(charge - rule.allowance, abs=PENNY)
 
 
 @pytest.mark.skipif(
@@ -193,14 +231,15 @@ def _native_and_ported():
     reason="this engine has no allowance of its own",
 )
 @examples
-@given(years, band_positions, mixes, ages, months)
+@given(years, band_positions, mixes, ages, months, contributions)
 def test_the_port_matches_the_engines_own_allowance(
-    year, positions, mix, age, months_since_birthday
+    year, positions, mix, age, months_since_birthday, paid_in
 ):
     inputs = {
         **split(in_band(rule_for(year), positions), mix),
         "age": age,
         "months_since_last_birthday": months_since_birthday,
+        ANNUAL_ALLOWANCE_INPUT: paid_in,
     }
     native, ported = _native_and_ported()
     outputs = ("income_tax", "uc_income_tax_on_earnings")

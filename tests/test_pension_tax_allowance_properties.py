@@ -22,8 +22,10 @@ from tests.pta_households import (
     PENNY,
     REGIONS,
     SLOTS,
+    YEARS,
     band_positions,
     calculate,
+    contributions,
     examples,
     in_band,
     mixes,
@@ -34,12 +36,21 @@ from tests.pta_households import (
 )
 from uk_budget_data.budget_measures.pension_tax_allowance import (
     MONTHS_TO_MID_YEAR,
+    STEP_7_CHARGES,
     TAX_BEFORE_WINTER_FUEL_CHARGE,
     pension_tax_allowance,
 )
 
 HAS_CHARGE = "winter_fuel_payment_charge" in system.variables
 HAS_NATIVE_ALLOWANCE = "pension_tax_allowance" in system.variables
+ANNUAL_ALLOWANCE_INPUT = "employer_pension_contributions"
+ANNUAL_ALLOWANCE_CHARGE = "personal_pension_contributions_tax"
+RATE_TAXES = {
+    "earned_income_tax",
+    "savings_income_tax",
+    "dividend_income_tax",
+    "property_income_tax",
+}
 needs_charge = pytest.mark.skipif(
     not HAS_CHARGE, reason="this engine has no Winter Fuel Payment charge"
 )
@@ -265,30 +276,122 @@ def _reaching(date_of_birth, year=2027, income=13_036.40):
 
 
 @pytest.mark.parametrize(
-    "date_of_birth, qualifies",
+    "year, date_of_birth, qualifies",
     [
-        # Attains 67 on 5 April 2028, the last day of 2027-28
-        (19610405, True),
-        # Attains 67 on 6 April 2028, the first day of 2028-29
-        (19610406, False),
+        # Attains 67 on 5 April, the last day of the tax year
+        (2027, 19610405, True),
+        (2028, 19620405, True),
+        (2029, 19630405, True),
+        # Attains 67 on 6 April, the first day of the next tax year
+        (2027, 19610406, False),
+        (2028, 19620406, False),
+        (2029, 19630406, False),
     ],
 )
-def test_the_tax_year_ends_on_5_april(date_of_birth, qualifies):
-    without, with_allowance, _, _ = _reaching(date_of_birth)
-    assert without == pytest.approx(93.28, abs=PENNY)
-    assert with_allowance == pytest.approx(
-        0 if qualifies else 93.28, abs=PENNY
+def test_the_tax_year_ends_on_5_april(year, date_of_birth, qualifies):
+    rule = rule_for(year)
+    without, with_allowance, _, _ = _reaching(
+        date_of_birth, year, rule.full_state_pension
     )
+    tax = 0.2 * (rule.full_state_pension - rule.personal_allowance)
+    assert without == pytest.approx(tax, abs=PENNY)
+    assert with_allowance == pytest.approx(0 if qualifies else tax, abs=PENNY)
 
 
-def test_reaching_state_pension_age_after_6_october_qualifies():
+@pytest.mark.parametrize(
+    "year, date_of_birth",
+    [(2027, 19610120), (2028, 19620120), (2029, 19630120)],
+)
+def test_reaching_state_pension_age_after_6_october_qualifies(
+    year, date_of_birth
+):
     """The engine's is_SP_age says no here, which is why the measure does
     not read it: this person attains State Pension age in the second half
     of the tax year."""
-    _, with_allowance, months, over_at_mid_year = _reaching(19610120)
+    _, with_allowance, months, over_at_mid_year = _reaching(
+        date_of_birth, year, rule_for(year).full_state_pension
+    )
     assert -6 < months < 0
     assert not over_at_mid_year
     assert with_allowance == pytest.approx(0, abs=PENNY)
+
+
+def _with_annual_allowance_charge(year, income, paid_in=70_000.0):
+    """Tax and the charge for people with this State Pension, whose employers
+    paid in past the annual allowance."""
+    inputs = {
+        "state_pension": np.full(SLOTS, float(income)),
+        ANNUAL_ALLOWANCE_INPUT: np.full(SLOTS, paid_in),
+    }
+    outputs = ("income_tax", ANNUAL_ALLOWANCE_CHARGE)
+    ([without, charge], [with_allowance, _]) = _both(year, inputs, outputs)
+    return without, with_allowance, charge
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_the_allowance_never_offsets_the_annual_allowance_charge(year):
+    """Income at the personal allowance leaves no tax at Step 5, so the
+    allowance has nothing to come off and the Step 7 charge stays whole."""
+    without, with_allowance, charge = _with_annual_allowance_charge(
+        year, rule_for(year).personal_allowance
+    )
+    assert (charge > 0).all()
+    assert without == pytest.approx(charge, abs=PENNY)
+    assert with_allowance == pytest.approx(charge, abs=PENNY)
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_the_allowance_stops_at_the_tax_before_the_charge(year):
+    """£100 above the personal allowance leaves £20 of tax at 20%, less than
+    the allowance. The reduction takes the £20 and no more."""
+    rule = rule_for(year)
+    without, with_allowance, charge = _with_annual_allowance_charge(
+        year, rule.personal_allowance + 100
+    )
+    outside_scotland = np.array(REGIONS) != "SCOTLAND"
+    assert (rule.allowance > 20) and (charge > 0).all()
+    assert without[outside_scotland] == pytest.approx(
+        charge[outside_scotland] + 20, abs=PENNY
+    )
+    assert with_allowance == pytest.approx(charge, abs=PENNY)
+
+
+@examples
+@given(years, band_positions, mixes, contributions)
+def test_the_allowance_comes_off_only_the_tax_before_the_charges(
+    year, positions, mix, paid_in
+):
+    """Step 6 takes the allowance off the Step 5 tax, and Step 7 adds the
+    charges after it, so the charges stay whole for every household."""
+    rule = rule_for(year)
+    inputs = {
+        **split(in_band(rule, positions), mix),
+        ANNUAL_ALLOWANCE_INPUT: paid_in,
+    }
+    outputs = ("income_tax", *STEP_7_CHARGES, "total_income")
+    ([without, *charges, total], [with_allowance, *_]) = _both(
+        year, inputs, outputs
+    )
+    charged = sum(charges)
+    step_5_tax = without - charged
+    excess = np.maximum(0, total - rule.full_state_pension)
+    reduction = np.maximum(0, rule.allowance - excess / 3)
+    assert without - with_allowance == pytest.approx(
+        np.minimum(reduction, step_5_tax), abs=2 * PENNY
+    )
+    assert (with_allowance >= charged - PENNY).all()
+
+
+def test_the_step_7_charges_are_the_engines():
+    """The cap takes these off the engine's tax, so a new charge among the
+    engine's additions has to join them."""
+    income_tax = system.parameters.gov.hmrc.income_tax
+    on = "2027-04-06"
+    if "income_tax_charges" in system.variables:
+        charges = income_tax.step_7_additional_tax(on)
+    else:
+        charges = set(income_tax.income_tax_additions(on)) - RATE_TAXES
+    assert set(charges) == set(STEP_7_CHARGES)
 
 
 def _with_charge_threshold(threshold, year=2027, income=13_036.40):

@@ -18,6 +18,9 @@ from uk_budget_data.measure_templates import _call_formula, _replace_formula
 # income_tax only adds the charge to it, so income_tax has no formula to wrap,
 # and this is the tax the means tests deduct.
 TAX_BEFORE_WINTER_FUEL_CHARGE = "income_tax_before_winter_fuel_payment_charge"
+# The Step 7 charges that tax still includes: the High Income Child Benefit
+# Charge and the annual allowance charge.
+STEP_7_CHARGES = ("CB_HITC", "personal_pension_contributions_tax")
 # 6 April to 6 October, the engine's MONTHS_FROM_TAX_YEAR_START_TO_MID_YEAR. A
 # receipt cannot bind an imported value, so the module writes it out.
 MONTHS_TO_MID_YEAR = 6
@@ -34,8 +37,8 @@ def pension_tax_allowance(
     """A reduction in income tax, for people over State Pension age or
     reaching it in the tax year, of the year's allowance less £1 for every
     ``taper_divisor`` pounds of total income above the full new State
-    Pension, floored at zero and at the tax otherwise due (non-refundable).
-    Hand-written: no template reduces a tax liability.
+    Pension, floored at zero and capped at the tax before the Step 7 charges
+    (non-refundable). Hand-written: no template reduces a tax liability.
 
     The design (Budget 2026 document, 6.182 and the policy costings, p.
     63; HM Treasury's Pension Tax Allowance explainer, 28 October 2026):
@@ -63,15 +66,21 @@ def pension_tax_allowance(
     within the tax year" (the explainer's FAQ): attaining it by 5 April, not
     the engine's ``is_SP_age``, which stops at 6 October.
 
-    The reduction never offsets the Winter Fuel Payment charge: it comes off,
-    and is capped at, the tax before that charge. The Budget documents do not
-    mention the charge. They value the PTA as tax on "the difference between
-    the full new State Pension and the Personal Allowance" (6.182), and the
-    explainer calls it "a tax reduction". Income Tax Act 2007 s. 23 deducts
-    tax reductions from the Step 5 tax at Step 6 (s. 29(2)) and adds the
-    charge at Step 7 (s. 30(1), from Finance Act 2026 Sch. 10 para. 4(3)).
-    The two cannot meet at the Budget's amounts: the charge needs total
-    income above £35,000 and the PTA ends below £15,000.
+    The reduction never offsets a Step 7 charge: the High Income Child
+    Benefit Charge, the annual allowance charge or the Winter Fuel Payment
+    charge. The Budget documents mention none of them. They value the PTA as
+    tax on "the difference between the full new State Pension and the
+    Personal Allowance" (6.182), and the explainer calls it "a tax
+    reduction". Income Tax Act 2007 s. 23 deducts tax reductions from the
+    Step 5 tax at Step 6 (s. 29(2)) and adds all three charges at Step 7
+    (s. 30(1), the last from Finance Act 2026 Sch. 10 para. 4(3)). The Budget
+    leaves the wording to Finance Bill 2026-27 (6.182), so this reads the PTA
+    as a Step 6 reduction until that bill says otherwise. The Winter Fuel
+    Payment charge needs total income above £35,000 and the PTA ends below
+    £15,000, so those two cannot meet at the Budget's amounts. The annual
+    allowance charge turns on pension input, not income, so it can meet the
+    PTA: this cap leaves it whole, where the template before the port took
+    the PTA off it.
     """
     system = sim.tax_benefit_system
     # policyengine-uk 2.170.0 writes the Budget into current law, with its own
@@ -102,7 +111,7 @@ def pension_tax_allowance(
         return first_year <= period.start.year <= last_year
 
     def reduction_used(person, period, parameters):
-        """The PTA used: the reduction, capped at the tax otherwise due."""
+        """The PTA used: the reduction, capped at the tax before Step 7."""
         year = period.start.year
         current = _call_formula(native, person, period, parameters)
         on = parameters(f"{year}-04-06").gov
@@ -126,7 +135,8 @@ def pension_tax_allowance(
             > -MONTHS_TO_MID_YEAR
         )
         reduction = np.where(eligible, reduction, 0)
-        return current, np.minimum(reduction, np.maximum(0, current))
+        charges = sum(person(name, period) for name in STEP_7_CHARGES)
+        return current, np.minimum(reduction, np.maximum(0, current - charges))
 
     def formula(person, period, parameters):
         if not in_force(period):
