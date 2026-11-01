@@ -15,6 +15,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from policyengine_uk import Simulation
 from policyengine_uk.system import system
+from policyengine_uk.utils.dates import MONTHS_FROM_TAX_YEAR_START_TO_MID_YEAR
 from policyengine_uk.utils.scenario import Scenario
 
 from tests.pta_households import (
@@ -32,10 +33,8 @@ from tests.pta_households import (
     years,
 )
 from uk_budget_data.budget_measures.pension_tax_allowance import (
+    MONTHS_TO_MID_YEAR,
     TAX_BEFORE_WINTER_FUEL_CHARGE,
-    _full_allowance,
-    _full_state_pension,
-    _refuse_native_allowance,
     pension_tax_allowance,
 )
 
@@ -193,22 +192,49 @@ def test_the_models_allowance_is_within_a_pound_of_the_budgets_formula(
     assert abs(rule.allowance - gap) <= 1
 
 
-@given(
-    st.floats(min_value=12_000, max_value=40_000),
-    st.floats(min_value=10_000, max_value=16_000),
+@pytest.mark.parametrize(
+    "weekly, full_state_pension, allowance",
+    [
+        # A 5p step down, then £93.28 rounded up to the pound
+        (250.74, 13_036.40, 94),
+        # 20% of the gap is a whole pound, so it stays that pound
+        (250.00, 13_000.00, 86),
+        (255.00, 13_260.00, 138),
+    ],
 )
-def test_the_full_allowance_rounds_up_to_the_pound(full, personal_allowance):
-    allowance = _full_allowance(full, personal_allowance, 0.2)
-    gap = 0.2 * (full - personal_allowance)
-    assert float(allowance).is_integer()
-    assert gap - 1e-6 <= allowance < gap + 1 + 1e-6
+def test_the_allowance_rounds_up_from_a_5p_weekly_rate(
+    weekly, full_state_pension, allowance
+):
+    """£30 into the band, the taper takes £10 and leaves tax to cover the
+    rest, so the reduction shows A itself."""
+    scenario = Scenario(
+        parameter_changes={
+            "gov.dwp.state_pension.new_state_pension.amount": {
+                "2027-01-01.2027-12-31": weekly
+            }
+        }
+    )
+    situation = {
+        "people": {
+            "p": {
+                "age": {2027: 70},
+                "state_pension": {2027: full_state_pension + 30},
+            }
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {2027: "LONDON"}}},
+    }
+    baseline = Simulation(situation=situation, scenario=scenario)
+    reformed = Simulation(situation=situation, scenario=scenario)
+    pension_tax_allowance(reformed)
+    reduction = float(baseline.calculate("income_tax", 2027)[0]) - float(
+        reformed.calculate("income_tax", 2027)[0]
+    )
+    assert reduction == pytest.approx(allowance - 10, abs=PENNY)
 
 
-@given(st.floats(min_value=150, max_value=600))
-def test_the_full_state_pension_is_a_5p_weekly_rate_x_52(weekly):
-    full = _full_state_pension(weekly, 0.05)
-    assert weekly * 52 - 0.05 * 52 - PENNY <= full <= weekly * 52 + PENNY
-    assert (full / 52 / 0.05) == pytest.approx(round(full / 52 / 0.05))
+def test_the_months_to_mid_year_are_the_engines():
+    assert MONTHS_TO_MID_YEAR == MONTHS_FROM_TAX_YEAR_START_TO_MID_YEAR
 
 
 def _reaching(date_of_birth, year=2027, income=13_036.40):
@@ -404,35 +430,39 @@ def test_the_means_tests_see_the_tax_after_the_allowance(
     assert change == pytest.approx(used, abs=PENNY)
 
 
-def _system_with_allowance(in_effect):
+class PastTheRefusal(Exception):
+    pass
+
+
+def _sim_with_allowance(in_effect):
+    def get_variable(name):
+        raise PastTheRefusal
+
+    reliefs = SimpleNamespace(
+        pension_tax_allowance=SimpleNamespace(
+            in_effect=lambda instant: in_effect
+        )
+    )
     return SimpleNamespace(
-        variables={"pension_tax_allowance": object()},
-        parameters=SimpleNamespace(
-            gov=SimpleNamespace(
-                hmrc=SimpleNamespace(
-                    income_tax=SimpleNamespace(
-                        reliefs=SimpleNamespace(
-                            pension_tax_allowance=SimpleNamespace(
-                                in_effect=lambda instant: in_effect
-                            )
-                        )
+        tax_benefit_system=SimpleNamespace(
+            variables={"pension_tax_allowance": object()},
+            parameters=SimpleNamespace(
+                gov=SimpleNamespace(
+                    hmrc=SimpleNamespace(
+                        income_tax=SimpleNamespace(reliefs=reliefs)
                     )
                 )
-            )
-        ),
+            ),
+            get_variable=get_variable,
+        )
     )
 
 
 def test_an_engine_with_the_allowance_in_force_is_refused():
     with pytest.raises(ValueError, match="count it twice"):
-        _refuse_native_allowance(_system_with_allowance(True), 2027, 2029)
+        pension_tax_allowance(_sim_with_allowance(True))
 
 
 def test_an_engine_with_the_allowance_switched_off_is_not():
-    _refuse_native_allowance(_system_with_allowance(False), 2027, 2029)
-
-
-def test_an_engine_without_the_allowance_is_not():
-    _refuse_native_allowance(
-        SimpleNamespace(variables={}, parameters=None), 2027, 2029
-    )
+    with pytest.raises(PastTheRefusal):
+        pension_tax_allowance(_sim_with_allowance(False))

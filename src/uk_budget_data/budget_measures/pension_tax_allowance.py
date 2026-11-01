@@ -8,7 +8,6 @@ One modifier in a module of its own: see the package docstring.
 """
 
 import numpy as np
-from policyengine_uk.utils.dates import MONTHS_FROM_TAX_YEAR_START_TO_MID_YEAR
 from policyengine_uk.utils.uc_income_tax import (
     uc_income_tax_on_earnings_slice,
 )
@@ -19,45 +18,9 @@ from uk_budget_data.measure_templates import _call_formula, _replace_formula
 # income_tax only adds the charge to it, so income_tax has no formula to wrap,
 # and this is the tax the means tests deduct.
 TAX_BEFORE_WINTER_FUEL_CHARGE = "income_tax_before_winter_fuel_payment_charge"
-
-
-def _full_state_pension(weekly, weekly_rounding):
-    """The full new State Pension for the year: the weekly rate, rounded down
-    to ``weekly_rounding``, x 52."""
-    steps = np.floor(weekly / weekly_rounding + 1e-9)
-    return round(float(steps * weekly_rounding) * 52, 2)
-
-
-def _full_allowance(full_state_pension, personal_allowance, basic_rate):
-    """The full allowance: ``basic_rate`` of the full new State Pension above
-    the personal allowance, rounded up to the pound. Rounding to a millionth
-    first keeps a whole-pound value whole."""
-    return np.ceil(
-        round(basic_rate * (full_state_pension - personal_allowance), 6)
-    )
-
-
-def _refuse_native_allowance(system, first_year, last_year):
-    """Refuse an engine that already gives the allowance in these years.
-
-    policyengine-uk 2.170.0 writes the Budget into current law, with its own
-    ``pension_tax_allowance`` in income tax, so a second reduction here would
-    count the allowance twice. A run that switches the native allowance off
-    keeps this one.
-    """
-    if "pension_tax_allowance" not in system.variables:
-        return
-    native = system.parameters.gov.hmrc.income_tax.reliefs
-    years = [
-        year
-        for year in range(first_year, last_year + 1)
-        if native.pension_tax_allowance.in_effect(f"{year}-04-06")
-    ]
-    if years:
-        raise ValueError(
-            "pension_tax_allowance is already in the engine's current law "
-            f"for {years}; this measure would count it twice"
-        )
+# 6 April to 6 October, the engine's MONTHS_FROM_TAX_YEAR_START_TO_MID_YEAR. A
+# receipt cannot bind an imported value, so the module writes it out.
+MONTHS_TO_MID_YEAR = 6
 
 
 def pension_tax_allowance(
@@ -111,7 +74,21 @@ def pension_tax_allowance(
     income above £35,000 and the PTA ends below £15,000.
     """
     system = sim.tax_benefit_system
-    _refuse_native_allowance(system, first_year, last_year)
+    # policyengine-uk 2.170.0 writes the Budget into current law, with its own
+    # pension_tax_allowance in income tax, so a second reduction here would
+    # count the allowance twice. A run that switches that one off keeps this.
+    if "pension_tax_allowance" in system.variables:
+        reliefs = system.parameters.gov.hmrc.income_tax.reliefs
+        years = [
+            year
+            for year in range(first_year, last_year + 1)
+            if reliefs.pension_tax_allowance.in_effect(f"{year}-04-06")
+        ]
+        if years:
+            raise ValueError(
+                "pension_tax_allowance is already in the engine's current "
+                f"law for {years}; this measure would count it twice"
+            )
     tax_variable = (
         TAX_BEFORE_WINTER_FUEL_CHARGE
         if TAX_BEFORE_WINTER_FUEL_CHARGE in system.variables
@@ -129,13 +106,15 @@ def pension_tax_allowance(
         year = period.start.year
         current = _call_formula(native, person, period, parameters)
         on = parameters(f"{year}-04-06").gov
-        full_state_pension = _full_state_pension(
-            on.dwp.state_pension.new_state_pension.amount, weekly_rounding
+        weekly = on.dwp.state_pension.new_state_pension.amount
+        steps = np.floor(weekly / weekly_rounding + 1e-9)
+        full_state_pension = round(float(steps * weekly_rounding) * 52, 2)
+        personal_allowance = (
+            on.hmrc.income_tax.allowances.personal_allowance.amount
         )
-        allowance = _full_allowance(
-            full_state_pension,
-            on.hmrc.income_tax.allowances.personal_allowance.amount,
-            basic_rate,
+        # Rounding to a millionth first keeps a whole-pound value whole.
+        allowance = np.ceil(
+            round(basic_rate * (full_state_pension - personal_allowance), 6)
         )
         total = person("total_income", period)
         excess = np.maximum(0, total - full_state_pension)
@@ -144,7 +123,7 @@ def pension_tax_allowance(
         # it on 6 April of the next year, six months on, is the next year's.
         eligible = (
             person("months_since_state_pension_age", period)
-            > -MONTHS_FROM_TAX_YEAR_START_TO_MID_YEAR
+            > -MONTHS_TO_MID_YEAR
         )
         reduction = np.where(eligible, reduction, 0)
         return current, np.minimum(reduction, np.maximum(0, current))
