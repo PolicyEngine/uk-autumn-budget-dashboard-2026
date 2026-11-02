@@ -64,13 +64,20 @@ CANDIDATES = (
     "trading_allowance_raise",
     "bus_fare_cap_2027",
     "cash_isa_limit_kept",
+    "machine_games_duty_rise",
 )
 # Individual candidates that are not components of the combined package.
 # Registered but held back from the package: the savings rates' yield is
 # about 60% of Table 6.1 because the data miss ISA interest (Vahid and Max,
 # 28 Oct); the data hold no payments into cash ISAs, so the cash ISA limit
-# is the Household calculator's only (María, 29 Oct).
-NOT_IN_PACKAGE = ("savings_income_rates_up", "cash_isa_limit_kept")
+# is the Household calculator's only (María, 29 Oct); so is the Machine
+# Games Duty rise, whose engine change reaches lower-stake machines too
+# on survey data (2 Nov).
+NOT_IN_PACKAGE = (
+    "savings_income_rates_up",
+    "cash_isa_limit_kept",
+    "machine_games_duty_rise",
+)
 # Withdrawn on 27 October 2026 (Vahid): out of the registry and the
 # package, so no default command runs or publishes them. Their factories
 # stay, unregistered, and are still tested here as code.
@@ -171,8 +178,9 @@ def test_the_package_is_the_eight_announced_measures():
     # back (Table 6.1 row 62); property rates are row 61. Eight from
     # 29 October 2026 with the £2 bus fare cap. Ten registered: the savings
     # rates held back and the cash ISA limit, Household calculator only.
+    # Eleven with the Machine Games Duty rise, likewise (2 November 2026).
     assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
-    assert len(reforms._MEASURE_FACTORIES) == 10
+    assert len(reforms._MEASURE_FACTORIES) == 11
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
     assert key == "combined--7baf4e89377bcc9c"
     # The area run's package alias stands for that key
@@ -208,6 +216,7 @@ ANNOUNCED = (
     "trading_allowance_raise",
     "bus_fare_cap_2027",
     "cash_isa_limit_kept",
+    "machine_games_duty_rise",
 )
 
 
@@ -1216,7 +1225,36 @@ FIRST_YEARS = {
         },
         {},
     ),
+    # £1,000 a year of standard-rate machine takings: 5 points more duty,
+    # £50, from 2027-28
+    "machine_games_duty_rise": (
+        2027,
+        "household_net_income",
+        {"employment_income": 30_000},
+        {"machine_games_standard_rate_net_takings": 1_000},
+    ),
 }
+
+
+def test_machine_games_duty_rise_is_five_points_on_the_standard_rate():
+    """The standard rate (the higher-stake machines' in the Household
+    calculator) is 25% from 2027-28, and the lower and higher rates are as
+    they were: £1,000 of standard-rate takings pay £250 of duty, not £200."""
+    year = 2029
+    sit = situation(
+        {"p": _person(year, employment_income=30_000)},
+        {"machine_games_standard_rate_net_takings": {year: 1_000}},
+    )
+    before, after = change(
+        "machine_games_duty_rise", sit, "machine_games_duty", year
+    )
+    assert before == pytest.approx(200, abs=PENNY)
+    assert after == pytest.approx(250, abs=PENNY)
+    changes = get_reform("machine_games_duty_rise").parameter_changes
+    assert list(changes) == [reforms.MACHINE_GAMES_STANDARD_RATE]
+    assert changes[reforms.MACHINE_GAMES_STANDARD_RATE] == {
+        str(y): 0.25 for y in POLICY_YEARS if y >= 2027
+    }
 
 
 def test_every_measure_has_a_first_year_check():

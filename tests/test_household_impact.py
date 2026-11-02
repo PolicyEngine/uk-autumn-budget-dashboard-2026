@@ -2108,6 +2108,21 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             2027,
             True,
         ),
+        # The Machine Games Duty rise: losses on higher-stake machines,
+        # from 2027-28
+        ("machine_games_duty_rise", {}, 2027, True),
+        (
+            "machine_games_duty_rise",
+            {"higher_stake_machine_losses": 1_000},
+            2026,
+            True,
+        ),
+        (
+            "machine_games_duty_rise",
+            {"higher_stake_machine_losses": 1_000},
+            2027,
+            False,
+        ),
         # The bus fare cap: bus fares, in England outside London, in
         # 2026-27 or 2027-28
         ("bus_fare_cap_2027", {"region": "NORTH_WEST"}, 2027, True),
@@ -2278,6 +2293,13 @@ SKIP_PARITY_HOUSEHOLDS = {
         employment_income=70_000,
         cash_isa_subscriptions=20_000,
     ),
+    # Loses £1,000 a year on higher-stake gaming machines: the Machine
+    # Games Duty rise runs
+    "machine_player": dict(
+        salary_year=2026,
+        employment_income=30_000,
+        higher_stake_machine_losses=1_000,
+    ),
 }
 
 
@@ -2322,6 +2344,36 @@ def test_cash_isa_payments_reach_the_pre_budget_side_and_its_note():
     plain = calculate(
         dataclasses.replace(answers, cash_isa_subscriptions=0),
         [CASH_ISA_LIMIT_ID],
+        2029,
+        skip_unaffected=False,
+    )
+    assert plain["net_income"]["change"] == pytest.approx(0, abs=0.01)
+
+
+def test_machine_games_losses_pay_the_higher_rate_from_2027_28():
+    """£1,000 a year lost on higher-stake machines is the household's
+    standard-rate machine takings: 20% duty before the Budget and 25% from
+    2027-28, so the household is £50 a year worse off, shown in the gambling
+    duty row and with the assumption's note; nothing in 2026-27."""
+    from uk_budget_data.reforms import MACHINE_GAMES_DUTY_ID
+
+    answers = Answers(
+        salary_year=2026,
+        employment_income=30_000,
+        higher_stake_machine_losses=1_000,
+    )
+    result = calculate(answers, [MACHINE_GAMES_DUTY_ID], 2029, ("by_policy",))
+    assert result["net_income"]["change"] == pytest.approx(-50, abs=0.01)
+    (row,) = result["by_policy"]["measures"]
+    assert row["note_kind"] == "assumption"
+    early = calculate(
+        answers, [MACHINE_GAMES_DUTY_ID], 2026, skip_unaffected=False
+    )
+    assert early["net_income"]["change"] == pytest.approx(0, abs=0.01)
+    # Without the answer, nothing moves
+    plain = calculate(
+        dataclasses.replace(answers, higher_stake_machine_losses=0),
+        [MACHINE_GAMES_DUTY_ID],
         2029,
         skip_unaffected=False,
     )
