@@ -56,7 +56,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     const same = fmt(a.value) === fmt(b.value);
     const what =
       measure === "gini"
-        ? "income inequality, measured by the Gini coefficient,"
+        ? "income inequality (Gini coefficient)"
         : "the gap between top and bottom incomes (90:10 ratio)";
     summary = same ? (
       <>
@@ -74,7 +74,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     period: rowsPeriod(rows),
     summary,
     // What it shows; the two measures are defined once, under Definitions
-    about: "How unequal household incomes are each year under current law. The shaded years are the ones compared.",
+    about: "How unequal household incomes are each year under current law. We compare the shaded years.",
     notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
