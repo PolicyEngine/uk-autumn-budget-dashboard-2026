@@ -1420,13 +1420,22 @@ html[data-site-nav-shown] {
     grid-row: 7;
   }
 
-  /* A Recharts plot with no legend of its own beside a card that has one
-     (By age's Average change by age, whose key is above the section; All
-     households' income decile card beside the scatter): the plot takes the
-     empty legend row too (and the logo row when its logo is in the SVG)
-     and, when its chart is drawn at height="100%", grows to fill them, so
-     no empty band opens under its axis. Its size is contained, so it
-     follows the shared rows and never props them open. */
+  /* A Recharts plot with no legend of its own beside a card that has one:
+     the plot takes the empty legend row too (and the logo row when its
+     SVG draws the logo), and its chart's container stretches to fill
+     them. The container has size containment, so it follows the shared
+     rows and never props them open. A chart at a percentage height grows
+     with its container; one at a numeric height keeps that height. In By
+     age either card can meet these rules: Change by year in its Policies
+     view, whose key then sits in Average change by age's legend row, and
+     Average change by age in Age groups showing a published package's
+     net while Change by year shows Lines, as neither card then gives the
+     shared key a member and Change by year's line key fills its own row.
+     Both draw at their height prop (400px), so the legend row's height
+     stays blank under the matched card's axis. All households' income
+     decile pair never meets them, as neither card has a legend row: the
+     decile chart's Recharts legend sits under its axis, within its
+     plotHeight, and the scatter's key sits in its sentence. */
   .charts-grid:has(> div > .chart-legend:not(:empty))
     > div:not(:only-child)
     > .chart-plot:has(.recharts-responsive-container):not(:has(~ .chart-legend:not(:empty))) {
