@@ -142,7 +142,7 @@ export const OBR_DEVIATION_NOTES = {
  */
 export const OBR_COMPARISON_BASES = {
   bus_fare_cap_2027:
-    "Official: grant to bus operators. Ours: we share that costing out by households' bus fare spending, static.",
+    "Official: grant to bus operators. Ours: a static share of that costing by households' bus fare spending.",
   household_energy_payment_2026:
     "Official: the £100 payments in England, devolved funding and a £100m fund for councils. Ours: the £100 payments in England.",
   domestic_electricity_zero_vat:

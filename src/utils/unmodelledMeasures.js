@@ -69,7 +69,7 @@ export const UNMODELLED_REASONS = [
     label: "Outside a household model",
     why: "Taxes on firms, reliefs on business premises, a change in who collects a tax and loans don't change household incomes the way this dashboard measures them.",
   },
-  { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules not yet published." },
+  { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules that still await publication." },
 ];
 
 /** The labels of every card's points, in order. */
@@ -209,7 +209,7 @@ export const UNMODELLED_MEASURES = [
     id: "cash-isa-limit",
     order: 8,
     reason: "data",
-    name: "Cash ISA limit stays at £20,000",
+    name: "Cash ISA limit kept at £20,000",
     starts: "6 Apr 2027",
     summary: "Drops a planned cut in the under-65 cash ISA limit to £12,000; it stays £20,000.",
     points: [

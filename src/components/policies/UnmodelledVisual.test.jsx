@@ -144,7 +144,7 @@ describe("each kind of picture", () => {
   it("pubs relief: the relief as a share of the bill, 15% then 35%", () => {
     const { container } = renderVisual("pubs-business-rates-relief");
     expect([...container.querySelectorAll(".umv-fill")].map((fill) => fill.style.width)).toEqual(["15%", "35%"]);
-    expect(container.querySelector(".umv-key")).toHaveTextContent("The pub pays the rest");
+    expect(container.querySelector(".umv-key")).toHaveTextContent("Pubs and venues pay the rest");
   });
 
   it("online marketplaces: the seller pays HMRC, then the marketplace collects and pays", () => {

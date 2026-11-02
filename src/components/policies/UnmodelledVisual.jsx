@@ -115,7 +115,7 @@ function Bill({ spec }) {
       <p className="umv-key">
         <span className="umv-key-item">
           <span className="umv-swatch is-whole" />
-          The pub pays the rest
+          Pubs and venues pay the rest
         </span>
       </p>
     </div>

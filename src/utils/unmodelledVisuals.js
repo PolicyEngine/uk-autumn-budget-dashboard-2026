@@ -53,7 +53,7 @@ export const UNMODELLED_VISUALS = {
       { label: "Planned", value: 12000, text: "£12,000", plain: true, dashed: true, ghost: { to: 20000, text: "no cut" } },
       { label: "Kept", value: 20000, text: "£20,000", tone: "gain" },
     ],
-    alt: "Cash ISA limit for under-65s: the planned cut to £12,000 a year does not happen, and the limit stays at £20,000.",
+    alt: "Cash ISA limit for under-65s: plans for a cut to £12,000 a year do not go ahead, and the limit stays at £20,000.",
   },
   // "the highest of 2.5%, inflation, or the rise keeping its April 2029 value against earnings"
   "adjusted-triple-lock": {
