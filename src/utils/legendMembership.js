@@ -173,7 +173,7 @@ export function noPovertyEffectReason(measure, year, fallback = "no one crosses 
   // Short: "in force from April 2031", without inForceText's "(2031-32 only)"
   if (policy && !inForceIn(policy, year)) return inForceText(policy).replace(/ \(\d{4}-\d{2} only\)$/, "");
   // In force, but paid through a variable poverty income leaves out
-  if (policy?.outsidePovertyIncome) return "poverty income leaves it out";
+  if (policy?.outsidePovertyIncome) return "not counted in poverty income";
   // The card's type where its details apply; else the category the
   // publication gives the measure (measureCategoryOf), so a price policy
   // whose description has moved on still says so
