@@ -8,8 +8,10 @@
  * The savings income tax rise is held back from the national results while
  * the savings data are corrected (María, #290, 28 October 2026); Vahid and
  * María agreed it goes in the calculator only, and it is always included
- * there (Vahid, 28 October). This is the one place the page names it
- * outside the measure catalogue.
+ * there (Vahid, 28 October). The cash ISA limit kept at £20,000 joined it
+ * on 29 October (María): its effect rests on what a household pays into
+ * cash ISAs, which our survey data do not hold yet. This is the one place
+ * the page names them outside the measure catalogue.
  */
 export const SAVINGS_INCOME_RATES_ID = "savings_income_rates_up";
 
@@ -17,6 +19,13 @@ export const CALCULATOR_ONLY_MEASURES = {
   [SAVINGS_INCOME_RATES_ID]: {
     id: SAVINGS_INCOME_RATES_ID,
     name: "Savings income tax up",
+    // As the result card names it after the count ("with 7 policies and …")
+    phrase: "the savings income tax rise",
+  },
+  cash_isa_limit_kept: {
+    id: "cash_isa_limit_kept",
+    name: "Cash ISA limit kept at £20,000",
+    phrase: "the cash ISA limit kept at £20,000",
   },
 };
 
@@ -34,3 +43,20 @@ export const withCalculatorOnly = (policies) =>
 
 /** The measures without the calculator-only ones (for the national figures). */
 export const withoutCalculatorOnly = (policies) => policies.filter((id) => !isCalculatorOnly(id));
+
+/**
+ * The measures a household's result covers, in words: the selected ones by
+ * number, then each calculator-only one by name ("7 policies and the
+ * savings income tax rise"). The number matches the header's selection
+ * ("All 7"), and the measures the calculator adds are named, not counted
+ * in it, since the result includes them (#306). `count` and `named` say
+ * the same as `text`.
+ */
+export function resultPolicies(policies) {
+  const ids = [...new Set(policies)];
+  const count = withoutCalculatorOnly(ids).length;
+  const named = ids.filter(isCalculatorOnly).map((id) => CALCULATOR_ONLY_MEASURES[id].phrase);
+  const parts = [...(count > 0 || named.length === 0 ? [`${count} ${count === 1 ? "policy" : "policies"}`] : []), ...named];
+  const text = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+  return { count, named, text };
+}

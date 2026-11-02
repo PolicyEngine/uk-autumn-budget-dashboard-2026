@@ -71,8 +71,9 @@ abolishing it through `gov.abolitions`, replacing its formula with zero,
 supplying a one-sided input on it, or setting `sdlt_liable` false. This is the
 "partly computable" scope accepted for `gov.hmrc.stamp_duty.abolish` in
 #51's review (round 19, finding F9). Modifiers that seed the cache or change these totals
-are both held today as hand-written modifiers while a data limit is active, pending
-the two-person attestation of the exact receipt described in the runbook.
+are both held as hand-written modifiers while a data limit is active and sign-off is
+on (`src/uk_budget_data/sign_off.py`, off from 28 October 2026), pending the
+two-person attestation of the exact receipt described in the runbook.
 
 The static receipt validator can prove reader names only against the installed
 model. A modifier adding a new reader and supplying it an input is detected,

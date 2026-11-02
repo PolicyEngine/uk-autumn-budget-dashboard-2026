@@ -272,5 +272,6 @@ def test_result_tables_carry_it():
         income_curve=[],
         household_scatter=[],
         age_impact=[{"age_band": "16-24"}],
+        official_basis=[],
     )
     assert result_tables(result)["age_impact"] == [{"age_band": "16-24"}]

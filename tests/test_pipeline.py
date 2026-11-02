@@ -32,6 +32,20 @@ class TestReformProcessor:
         processor = ReformProcessor(reform=reform, config=config)
         assert processor.config.years == [2026, 2027]
 
+    def test_processor_takes_the_measures_official_basis(self):
+        """#297: the variables its official costing covers
+        (calculators.OFFICIAL_BASES); none for any other measure."""
+        from uk_budget_data.models import Reform
+        from uk_budget_data.pipeline import ReformProcessor
+
+        taper = Reform(id="carers_allowance_earnings_taper", name="Taper")
+        assert ReformProcessor(reform=taper).official_basis == (
+            "carers_allowance",
+            "universal_credit",
+        )
+        other = Reform(id="test", name="Test")
+        assert ReformProcessor(reform=other).official_basis == ()
+
 
 class TestDataPipeline:
     """Tests for the main DataPipeline class."""

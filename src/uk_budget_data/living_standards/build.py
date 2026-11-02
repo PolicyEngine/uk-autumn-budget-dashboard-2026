@@ -851,14 +851,20 @@ def outlook_text(outlook: dict) -> str:
 EQ_UNIT = "£ a year, adjusted for household size (shown for a couple with no children)"
 
 # Projection caveats and baseline gaps found in policyengine-uk 2.130.1 (issue #1)
-# and unchanged in 2.132.6, shown as their own list on the page.
+# and unchanged in 2.132.6, shown as their own list on the page. The Universal
+# Credit standard allowance one is gone: policyengine-uk 2.151.0 adds the
+# legislated uplifts (gov.dwp.universal_credit.rebalancing.standard_allowance_uplift,
+# 2.3% to 4.8%) to CPI, and they survive the October forecast
+# (uk_budget_data.forecast): the single over-25 rate is £443.21 a month in
+# 2027-28, 4.3% above 2026-27's £424.90. The UC health element one is gone
+# too: 2.151.0 counts claimants only and gives one element per joint claim,
+# where 2.130.1 summed it per person. The four left were re-checked against
+# 2.151.0 and still hold.
 CAVEATS = [
     "Ages and benefit take-up are held fixed, so the State Pension age rise to 67 removes State Pension from 66-year-olds with no work response.",
     "The population is uprated uniformly, so its age structure stays as in 2025.",
     "Results for small groups are noisy: calibration roughly halves the effective sample, so family-size figures are approximate.",
     "The September 2026 free school meals expansion to all Universal Credit families in England is not modelled, so child poverty from 2026-27 is a little high.",
-    "The Universal Credit health element is assigned too widely (through disabled children, and twice to some couples), so child poverty is a little low.",
-    "The above-inflation rises in the Universal Credit standard allowance from 2027-28 are missing, so UC is about £0.6bn too low by 2029-30.",
 ]
 
 

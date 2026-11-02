@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import FactList from "./FactList";
-import { TriangleAlert } from "lucide-react";
+import { Info } from "lucide-react";
 import { ExternalLink, SourceLink, Tag, Topic } from "./MethodUi";
 import { describeDataset, fyDash, fyLabel, loadOutlook, outlookForecastSource, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, plainWords, scrubNote } from "../livingStandards/sources";
@@ -101,7 +101,7 @@ function ChartNotes({ outlook, meta }) {
   if (!groups.length) return null;
   return (
     <Topic id={METHOD_ANCHORS.lsNotes} title="Notes on the forecast charts" preview={groups.map(([title]) => title).join(" · ")}>
-      <FactList items={groups.map(([title, notes]) => [title, { points: notes }, TriangleAlert])} />
+      <FactList items={groups.map(([title, notes]) => [title, { points: notes }, Info])} />
     </Topic>
   );
 }
@@ -185,7 +185,7 @@ export default function LivingStandardsMethod() {
           <ul className="method-list method-list-icons method-list-caveats">
             {caveats.map((c) => (
               <li key={c}>
-                <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
+                <Info aria-hidden="true" strokeWidth={1.75} />
                 <span>{linkNote(text(c))}</span>
               </li>
             ))}

@@ -12,6 +12,13 @@ describe("measure modelling, read from the published wording", () => {
     expect(modellingFacts("A plain measure.")).toEqual({ facts: [], limits: [] });
   });
 
+  it("gives no Great Britain only chip where the text takes the measure across the UK later", () => {
+    const vat = "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027.";
+    expect(modellingFacts(vat).facts).not.toContain("Great Britain only");
+    expect(modellingFacts("Paid in Great Britain; Northern Ireland follows in April.").facts).not.toContain("Great Britain only");
+    expect(modellingFacts("Paid to each household in Great Britain.").facts).toContain("Great Britain only");
+  });
+
   it("leaves out what the card's own text already states", () => {
     const text = "Paid in Great Britain, so households in Scotland are approximate. The data identify no apprentices.";
     const { facts, limits } = modellingFacts(text, "Paid to households in Great Britain; eligibility in Scotland is approximate.");

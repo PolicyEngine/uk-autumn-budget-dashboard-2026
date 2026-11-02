@@ -1,5 +1,6 @@
 measure_id,source_id,row_id,scale,year_offset,status,reason,reviewer,not_comparable_years
 household_energy_payment_2026,AB2026-T6.1,1,1,0,,,,
+bus_fare_cap_2027,AB2026-T6.1,4,1,0,,"The cap runs from 1 January to 31 December 2027 and is funded by reprioritising DESNZ budgets; the Treasury's 2028-29 and 2029-30 figures (+£65m, +£170m) are that reprioritisation after the cap has ended, where the static model scores nothing. Our figure is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of spending at £3 fares (£230m / 0.9 operator participation / £2,557m), so it is above the official figure by about the participation adjustment. Table 6.1 row 4.",vahid-ahmadi,2028-29;2029-30
 domestic_electricity_zero_vat,AB2026-T6.1,2,1,0,,,,
 fuel_duty_rise_deferral,AB2026-T6.1,3,1,0,,,,
 carers_allowance_earnings_taper,AB2026-T6.1,7,1,0,,,,

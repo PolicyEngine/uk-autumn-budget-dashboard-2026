@@ -22,6 +22,7 @@ export const MEASURE_CATEGORIES = [
   { label: "National Insurance", icon: "briefcase", pattern: /national insurance|\bnics?\b|\bni\b|salary sacrifice/ },
   { label: "Student loans", icon: "cap", pattern: /student|\bplan [12345]\b|postgraduate loan|tuition/ },
   { label: "Childcare", icon: "users", pattern: /childcare|child care|nursery|free hours/ },
+  { label: "Transport", icon: "compass", pattern: /\bbus(es)?\b|bus fares?|\brail\b|\btrain\b/ },
   { label: "Energy", icon: "flame", pattern: /warm home|energy|electricity|\bgas\b|heating|\bheat\b|ofgem|\bwhd\b/ },
   { label: "Income tax", icon: "wallet", pattern: /income tax|personal allowance|basic rate|higher rate|additional rate|dividend|savings allowance|marriage allowance|\btax allowance\b/ },
   { label: "Pensions", icon: "armchair", pattern: /pension|triple lock|annuit/ },

@@ -3,6 +3,7 @@ import {
   LOCAL_AUTHORITIES,
   exactLocalAuthority,
   foldText,
+  localAuthorityKey,
   localAuthorityRegion,
   searchLocalAuthorities,
 } from "./localAuthorities";
@@ -75,29 +76,44 @@ describe("searching local authorities", () => {
 });
 
 describe("the request the form sends", () => {
-  it("carries the region only: the council picked changes nothing else", () => {
+  it("carries the council picked as its policyengine-uk key, and changes nothing else", () => {
     const options = { year: 2027, policies: ["a", "b"] };
     const plain = buildHouseholdRequest(WIZARD_DEFAULTS, options);
     const picked = buildHouseholdRequest({ ...WIZARD_DEFAULTS, council: "Manchester", region: "NORTH_WEST" }, options);
-    expect(requestKey(picked)).toBe(requestKey(plain));
-    expect(JSON.stringify(picked)).not.toMatch(/council"|Manchester|local_authority/);
+    expect(picked.household.local_authority).toBe("MANCHESTER");
+    const { local_authority: _key, ...rest } = picked.household;
+    expect(rest).toEqual(plain.household);
+    expect(requestKey(picked)).not.toBe(requestKey(plain));
+    // The name is never sent, only the key
+    expect(JSON.stringify(picked)).not.toMatch(/"council"|Manchester"/);
+  });
+
+  it("sends no local authority until a council is picked", () => {
+    const request = buildHouseholdRequest(WIZARD_DEFAULTS, { year: 2027, policies: ["a"] });
+    expect(WIZARD_DEFAULTS.council).toBeNull();
+    expect("local_authority" in request.household).toBe(false);
+    // A name the table does not know sends none either
+    const unknown = buildHouseholdRequest({ ...WIZARD_DEFAULTS, council: "Atlantis" }, { year: 2027, policies: ["a"] });
+    expect("local_authority" in unknown.household).toBe(false);
   });
 
   it.each([
-    ["Glasgow City", "SCOTLAND"],
-    ["Cardiff", "WALES"],
-    ["Belfast", "NORTHERN_IRELAND"],
-    ["Manchester", "NORTH_WEST"],
-    ["Cornwall", "SOUTH_WEST"],
-    ["Westminster", "LONDON"],
-    ["Isle of Wight", "SOUTH_EAST"],
-  ])("sends %s's region, %s, as the household's region", (name, region) => {
+    ["Glasgow City", "SCOTLAND", "GLASGOW_CITY"],
+    ["Cardiff", "WALES", "CARDIFF"],
+    ["Belfast", "NORTHERN_IRELAND", "BELFAST"],
+    ["Manchester", "NORTH_WEST", "MANCHESTER"],
+    ["Cornwall", "SOUTH_WEST", "CORNWALL"],
+    ["Westminster", "LONDON", "WESTMINSTER"],
+    ["Isle of Wight", "SOUTH_EAST", "ISLE_OF_WIGHT"],
+  ])("sends %s's region, %s, and its key, %s", (name, region, key) => {
     const council = exactLocalAuthority(name);
     expect(council?.name).toBe(name);
+    expect(localAuthorityKey(name)).toBe(key);
     // As the form's picker does on choosing a council
     const inputs = { ...WIZARD_DEFAULTS, council: council.name, region: council.region };
     const request = buildHouseholdRequest(inputs, { year: 2027, policies: ["a"] });
     expect(request.household.region).toBe(region);
+    expect(request.household.local_authority).toBe(key);
   });
 
   it("leaves the examples' precomputed requests as they were", () => {

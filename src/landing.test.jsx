@@ -11,7 +11,7 @@ import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture"
 beforeAll(preloadAllViews, 60_000);
 
 const INTRO =
-  /^Estimates from PolicyEngine UK( \(opens in a new tab\))? of how Autumn Budget 2026 policies affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own; the economic forecast is the OBR’s Economic and fiscal outlook, October 2026( \(opens in a new tab\))?\.$/;
+  /^Estimates from PolicyEngine UK( \(opens in a new tab\))? of how Autumn Budget 2026 policies affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own except the bus fare cap’s, which is the Treasury’s; the economic forecast is the OBR’s Economic and fiscal outlook, October 2026( \(opens in a new tab\))?\.$/;
 
 const BOXES = {
   society: /^The Budget and society/,
@@ -209,7 +209,7 @@ describe("the mark beside the title", () => {
   });
 });
 
-describe("the About pill in the tab row, and its overview drawer", () => {
+describe("the About side tab on the window's edge, and its overview drawer", () => {
   const edge = () => screen.queryByRole("button", { name: "About this dashboard" });
   const drawer = () => screen.queryByRole("dialog", { name: "About this dashboard" });
   const openDrawer = async () => {
@@ -226,24 +226,60 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(drawer()).toBeNull();
   });
 
-  it("is a tab-styled button with no hover card", async () => {
+  it("is a side tab outside the tab rows, with no hover card", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
-    // Styled as the tabs are, with no logo; a button, never a chosen tab
-    expect(edge()).toHaveClass("view-tab");
+    // Its own side tab (HomeButton.css), with no logo; a button, never a
+    // chosen tab
+    expect(edge()).toHaveClass("edge-about");
+    expect(edge()).not.toHaveClass("view-tab");
     expect(edge()).toHaveTextContent(/^About$/);
     expect(edge().querySelector("img")).toBeNull();
     expect(edge()).not.toHaveAttribute("role");
     expect(edge()).not.toHaveAttribute("aria-selected");
-    // At the start of the view tabs row, before the tabs, outside them
-    const bar = edge().closest(".view-tabs-bar");
-    expect(bar).not.toBeNull();
-    expect(bar.firstElementChild.contains(edge())).toBe(true);
+    // On the window's edge, not in the view tabs row: the row leads with
+    // its first tab
+    expect(edge().closest(".view-tabs-bar")).toBeNull();
     expect(edge().closest('[role="tablist"]')).toBeNull();
+    expect(document.querySelector(".view-tabs-bar.has-leading")).toBeNull();
     expect(edge()).toHaveAttribute("aria-expanded", "false");
     fireEvent.focus(edge());
     fireEvent.mouseEnter(edge());
     expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  // A phone's 16px margin has no room for a side tab (HomeButton.css), so
+  // there About leads the view tabs row, styled as its tabs are
+  it("leads the view tabs row on a phone, still one button", async () => {
+    const original = window.matchMedia;
+    window.matchMedia = (query) => ({
+      matches: query === "(max-width: 768px)",
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    });
+    try {
+      window.history.replaceState({}, "", "/?tab=methodology");
+      await renderApp();
+      await waitFor(() => expect(edge()).toHaveClass("is-row"));
+      expect(screen.getAllByRole("button", { name: "About this dashboard" })).toHaveLength(1);
+      expect(edge()).toHaveClass("view-tab", "edge-about");
+      expect(edge()).not.toHaveClass("is-side");
+      expect(edge()).toHaveTextContent(/^About$/);
+      expect(edge()).not.toHaveAttribute("role");
+      expect(edge()).not.toHaveAttribute("aria-selected");
+      // First in the bar, before the row, outside the tablist
+      const bar = edge().closest(".view-tabs-bar");
+      expect(bar).toHaveClass("has-leading");
+      expect(bar.firstElementChild).toBe(edge());
+      expect(edge().closest('[role="tablist"]')).toBeNull();
+      // It opens the drawer as the side tab does
+      fireEvent.click(edge());
+      expect(drawer()).not.toBeNull();
+      expect(edge()).toHaveAttribute("aria-expanded", "true");
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   it("opens a modal drawer with the overview, focus inside and the page locked", async () => {

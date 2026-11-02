@@ -52,7 +52,7 @@ const LINES = {
   },
   fuels: {
     name: "Fuels",
-    inSentence: "fuels",
+    inSentence: "fuel",
     colour: SERIES_COLOURS[2],
     meaning: "Petrol and diesel for vehicles.",
   },

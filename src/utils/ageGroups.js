@@ -70,29 +70,28 @@ export function ageWindow(key, year) {
  * The group's change in every year with each measure's part (groupMeasureSeries' shape).
  * With `packageRun` (the published combined run of exactly the selection,
  * selectionPackageKey) and its rows loaded, `net` is that run's own figure,
- * never the singles summed; each policy's own part is kept only when every
- * single has the group's row in every published year, else no year has parts.
+ * never the singles summed. Each policy's own part is kept in a year where
+ * every member has the group's row, and in a year whose package net is
+ * withheld (there the others' parts are drawn with no net, so nothing can
+ * be worked out by difference); only beside a published net with a member
+ * missing are the parts dropped (`partsShown` false).
  */
 export function groupSeries(rows, policies, selected, years, key, packageRun = null) {
   const singles = key === PENSIONERS
     ? pensionerMeasureSeries(rows, policies, selected, years)
     : groupMeasureSeries(rows, policies, selected, years, key);
   if (!packageRun || !(rows ?? []).some((row) => row.reform_id === packageRun)) return singles;
-  // Each policy's part only where every published year has them all, so a
-  // stack never sits under a net it does not add up to
-  const partsShown = singles.every((point) => point.net !== null || !(rows ?? []).some((row) => row.year === Number(point.year)));
-  const withParts = partsShown
-    ? singles
-    : singles.map((point) => {
-        const next = { ...point, parts: [] };
-        for (const part of point.parts) delete next[part.key];
-        return next;
-      });
-  return withParts.map((point) => {
+  return singles.map((point) => {
     const row = key === PENSIONERS
       ? pensionerRow(rows, packageRun, point.year)
       : (rows ?? []).find((each) => each.reform_id === packageRun && each.year === Number(point.year) && each.age_band === key);
     const usable = row && Number.isFinite(row.mean_change) && (key === PENSIONERS || row.sample_size >= MIN_SAMPLE_SIZE);
-    return { ...point, published: Boolean(usable), net: usable ? row.mean_change : null, fromPackage: true, partsShown };
+    const partsShown = point.net !== null || !usable;
+    const next = { ...point, published: Boolean(usable), net: usable ? row.mean_change : null, fromPackage: true, partsShown };
+    if (!partsShown) {
+      next.parts = [];
+      for (const part of point.parts) delete next[part.key];
+    }
+    return next;
   });
 }
