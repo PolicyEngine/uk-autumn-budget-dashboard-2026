@@ -391,7 +391,7 @@ const PREFILL_HINTS = {
   partner_state_pension_per_year: (year) =>
     `We prefill this with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
   monthly_rent: (year, inputs) =>
-    `We prefill this with the average private rent in ${regionName(inputs.region)} (Source: ONS, ${
+    `Prefilled with the average private rent in ${regionName(inputs.region)} (Source: ONS, ${
       inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
     } 2026); change it if yours differs.`,
 };
