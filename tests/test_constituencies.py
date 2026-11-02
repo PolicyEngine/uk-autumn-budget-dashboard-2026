@@ -1050,9 +1050,16 @@ def test_a_regional_table_not_on_record_is_refused_before_simulating(
     elif broken == "other bytes":
         regional.write_bytes(regional.read_bytes() + b"\n")
     else:
-        # As if made under an earlier approval of alpha
+        # As if made under an approval of another definition of alpha
         document = json.loads(record.read_text())
-        document["reforms"]["alpha"]["outputs_sha256"] = "f" * 64
+        alpha = document["reforms"]["alpha"]
+        alpha["reform"] = {
+            "kind": "reform",
+            "representation": "policyengine-uk.scenario/v1",
+            "reform_sha256": "f" * 64,
+            "binding": "content",
+        }
+        alpha["definition"]["reform"] = "f" * 64
         record.write_text(json.dumps(document))
     assert published(world) == 1
     assert world.steps == [] and world.simulated == []
@@ -1060,6 +1067,28 @@ def test_a_regional_table_not_on_record_is_refused_before_simulating(
     out = printed(capsys)
     assert message.format(world.tmp) in out
     assert "run its area run again first" in out
+
+
+def test_a_regional_table_from_an_earlier_approval_of_the_same_definition_is_carried(
+    world, monkeypatch, capsys
+):
+    """A national rerun between the regional run and this one leaves the
+    definitions as they were: the regional table is carried, with its own
+    run's commit, years and dataset, and this run's record of each reform."""
+    regional_run(world, monkeypatch)
+    record = world.tmp / "area_provenance.json"
+    document = json.loads(record.read_text())
+    document["reforms"]["alpha"]["outputs_sha256"] = "f" * 64
+    regional_run_record = document["runs"]["regional.csv"]
+    record.write_text(json.dumps(document))
+    assert published(world) == 0, printed(capsys)
+    written = json.loads(record.read_text())
+    assert set(written["files"]) == {"regional.csv", "constituency.csv"}
+    assert written["runs"]["regional.csv"] == regional_run_record
+    assert written["runs"]["constituency.csv"]["dataset"]["kind"] == (
+        "local_area_cut"
+    )
+    assert written["reforms"]["alpha"]["outputs_sha256"] != "f" * 64
 
 
 def test_a_regional_table_replaced_during_the_run_stops_the_release(
