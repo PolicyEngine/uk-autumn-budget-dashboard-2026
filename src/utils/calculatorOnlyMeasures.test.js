@@ -11,14 +11,15 @@ import {
 import { policyRows } from "./singleYear";
 
 const CASH_ISA_LIMIT_ID = "cash_isa_limit_kept";
+const MACHINE_GAMES_DUTY_ID = "machine_games_duty_rise";
 
 describe("calculator-only measures", () => {
   it("always go after the selected measures, once, and come off for the national figures", () => {
-    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID]);
-    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID]);
+    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID, MACHINE_GAMES_DUTY_ID]);
+    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID, MACHINE_GAMES_DUTY_ID]);
     // Nothing selected: no request, so nothing added
     expect(withCalculatorOnly([])).toEqual([]);
-    expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID])).toEqual(["a"]);
+    expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID, MACHINE_GAMES_DUTY_ID])).toEqual(["a"]);
   });
 
   it("show an assumption's note where the household's figure rests on it", () => {
@@ -59,11 +60,11 @@ describe("the result card's measures (resultPolicies)", () => {
     const seven = ["a", "b", "c", "d", "e", "f", "g"];
     expect(resultPolicies(withCalculatorOnly(seven))).toEqual({
       count: 7,
-      named: ["the savings income tax rise", "the cash ISA limit kept at £20,000"],
-      text: "7 policies, the savings income tax rise and the cash ISA limit kept at £20,000",
+      named: ["the savings income tax rise", "the cash ISA limit kept at £20,000", "the rise in Machine Games Duty"],
+      text: "7 policies, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty",
     });
     expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe(
-      "1 policy, the savings income tax rise and the cash ISA limit kept at £20,000",
+      "1 policy, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty",
     );
     // Without the calculator's own measures, just the count
     expect(resultPolicies(["a", "b"]).text).toBe("2 policies");
