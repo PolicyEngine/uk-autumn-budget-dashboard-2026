@@ -24,6 +24,7 @@ from datetime import date
 from pathlib import Path
 
 OUT = Path("public/data/household_presets.json")
+PUBLISHED = json.loads(Path("public/data/policy_parameters.json").read_text())["measures"]
 
 
 def _run(entry: dict) -> dict:
@@ -69,7 +70,15 @@ def main() -> None:
         ),
         "generated_on": date.today().isoformat(),
         "engine": engine,
-        "policies": done[0]["request"]["policies"],
+        # The published measures only (householdPresets.js: the file's
+        # `policies` stay the published ones; every request also carries
+        # the calculator-only savings rise), as policy_parameters.json
+        # lists them and household-preset-requests.mjs reads them
+        "policies": [
+            policy
+            for policy in done[0]["request"]["policies"]
+            if policy in PUBLISHED
+        ],
         "years": sorted({entry["year"] for entry in done}),
         "entries": done,
     }

@@ -329,11 +329,14 @@ export function policyRows(byPolicy, total, policies, year = null) {
             : outOfForceReason(policies.find((policy) => policy.id === row.id), year),
       })),
     // Notes on a measure's figure: an employer cost always, "if received"
-    // where the household gets the amount
+    // where the household gets the amount, and an assumption where the
+    // figure rests on it
     notes: byPolicy.measures
       .filter(
         (row) =>
-          row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
+          row.note &&
+          (row.noteKind === "employer_cost" ||
+            ((row.noteKind === "if_received" || row.noteKind === "assumption") && row.change !== 0)),
       )
       .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),

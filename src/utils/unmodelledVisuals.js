@@ -15,16 +15,6 @@
  */
 
 export const UNMODELLED_VISUALS = {
-  // "capped at £2, down from £3", from 1 Jan 2027 to Dec 2027
-  "bus-fare-cap": {
-    kind: "columns",
-    caption: "Single bus fare cap",
-    columns: [
-      { label: "Until 1 Jan 2027", value: 3, text: "£3" },
-      { label: "1 Jan to Dec 2027", value: 2, text: "£2", tone: "gain" },
-    ],
-    alt: "Single bus fare cap: £3 until 1 January 2027, then £2 from 1 January to December 2027.",
-  },
   // "rise by 2 points across the UK, to 24%, 44% and 49%"
   "savings-income-tax": {
     kind: "bars",
@@ -188,10 +178,11 @@ export const UNMODELLED_VISUALS = {
     ],
     alt: "First Time Buyer ISA: the government adds a 25% bonus to the savings, paid when they buy a first home.",
   },
-  // "two weeks' pay after a birth, now up to £194 a week"
+  // "two weeks' pay after a birth, now up to £194 a week": a father's or
+  // partner's two weeks (adopters get up to 39, said in the card's point)
   "parental-allowance": {
     kind: "weeks",
-    caption: "After a birth, from April 2029",
+    caption: "A father or partner, after a birth, from April 2029",
     weeks: ["First week", "Second week"],
     amount: "Up to £194",
     alt: "Parental pay for a self-employed father or partner from April 2029: two weeks' pay after a birth, each week up to £194.",

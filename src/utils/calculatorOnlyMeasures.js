@@ -8,8 +8,10 @@
  * The savings income tax rise is held back from the national results while
  * the savings data are corrected (María, #290, 28 October 2026); Vahid and
  * María agreed it goes in the calculator only, and it is always included
- * there (Vahid, 28 October). This is the one place the page names it
- * outside the measure catalogue.
+ * there (Vahid, 28 October). The cash ISA limit kept at £20,000 joined it
+ * on 29 October (María): its effect rests on what a household pays into
+ * cash ISAs, which our survey data do not hold yet. This is the one place
+ * the page names them outside the measure catalogue.
  */
 export const SAVINGS_INCOME_RATES_ID = "savings_income_rates_up";
 
@@ -19,6 +21,11 @@ export const CALCULATOR_ONLY_MEASURES = {
     name: "Savings income tax up",
     // As the result card names it after the count ("with 7 policies and …")
     phrase: "the savings income tax rise",
+  },
+  cash_isa_limit_kept: {
+    id: "cash_isa_limit_kept",
+    name: "Cash ISA limit kept at £20,000",
+    phrase: "the cash ISA limit kept at £20,000",
   },
 };
 

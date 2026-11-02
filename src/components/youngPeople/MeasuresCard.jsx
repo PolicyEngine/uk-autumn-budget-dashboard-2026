@@ -69,7 +69,7 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
   const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;
   // The group's dot by direction and size: a gain in the teal ramp, a loss
   // in the amber, the largest darkest (magnitudeColours)
-  const dotColours = magnitudeColours(rows.map((row) => row.group));
+  const dotColours = magnitudeColours(rows.map((row) => row.group ?? 0));
   return (
     <div
       className="measure-dumbbell"
@@ -78,13 +78,18 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
       style={height ? { "--md-height": `${height}px` } : undefined}
     >
       {rows.map((row, index) => {
-        const gap = row.group - row.all;
+        // A figure withheld for one of the two groups is null: the row
+        // shows the other alone, with no link, gap or ratio
+        const hasGroup = row.group !== null && row.group !== undefined;
+        const hasAll = !single && row.all !== null && row.all !== undefined;
+        const half = !hasGroup || (!single && !hasAll);
+        const gap = half ? 0 : row.group - row.all;
         // With nothing to compare (all ages against all ages) the row has
         // the dot and its value only
-        const close = single || Math.abs(gap) < 1;
+        const close = single || half || Math.abs(gap) < 1;
         const tone = close ? "flat" : gap > 0 ? "more" : "less";
         const ratio =
-          !single && row.all !== 0 && Math.sign(row.all) === Math.sign(row.group)
+          !single && !half && row.all !== 0 && Math.sign(row.all) === Math.sign(row.group)
             ? Math.round((row.group / row.all - 1) * 100)
             : null;
         const ratioText =
@@ -95,8 +100,12 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
               : // Against what Compare with names, by size (both figures have
                 // one sign): for two losses "more" would read as a gain
                 `${Math.abs(ratio)}% ${ratio > 0 ? "larger" : "smaller"} than the ${compareName.toLowerCase()} figure`;
-        const left = Math.min(row.group, row.all);
-        const right = Math.max(row.group, row.all);
+        const left = half ? 0 : Math.min(row.group, row.all);
+        const right = half ? 0 : Math.max(row.group, row.all);
+        const parts = [
+          hasGroup && `${groupName} ${signedPounds(row.group)}`,
+          hasAll && `${compareName.toLowerCase()} ${signedPounds(row.all)}`,
+        ].filter(Boolean);
         return (
           <div
             key={row.id}
@@ -107,11 +116,7 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
             onMouseLeave={() => setActive(null)}
             onFocus={() => setActive(row.id)}
             onBlur={() => setActive(null)}
-            aria-label={
-              single
-                ? `${row.name}: ${groupName} ${signedPounds(row.group)} a year`
-                : `${row.name}: ${groupName} ${signedPounds(row.group)}, ${compareName.toLowerCase()} ${signedPounds(row.all)} a year`
-            }
+            aria-label={`${row.name}: ${parts.join(", ")} a year`}
           >
             {/* The row's one tip is its tooltip below (full name as its
                 heading): no title or name tip of its own */}
@@ -125,14 +130,19 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
               {!close && (
                 <span className={`measure-dumbbell-link ${tone}`} style={{ left: pos(left), width: `calc(${pos(right)} - ${pos(left)})` }} />
               )}
-              {!single && <span className="measure-dumbbell-ring" style={{ left: pos(row.all) }} />}
-              <span className="measure-dumbbell-dot" style={{ left: pos(row.group), background: dotColours[index] }} />
+              {hasAll && <span className="measure-dumbbell-ring" style={{ left: pos(row.all) }} />}
+              {hasGroup && <span className="measure-dumbbell-dot" style={{ left: pos(row.group), background: dotColours[index] }} />}
             </span>
             <span className="measure-dumbbell-values" role="cell">
-              <strong className="row-band-value">{money(row.group)}</strong>
-              {!single && (
+              {hasGroup && <strong className="row-band-value">{money(row.group)}</strong>}
+              {!single && !half && (
                 <span className={`measure-dumbbell-gap ${tone}`}>
                   {close ? `≈ ${compareName.toLowerCase()}` : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs ${compareName.toLowerCase()}`}
+                </span>
+              )}
+              {!hasGroup && hasAll && (
+                <span className="measure-dumbbell-gap flat">
+                  {compareName}: {money(row.all)}
                 </span>
               )}
             </span>
@@ -143,10 +153,12 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
                 </strong>
                 {/* The category, which a compact row leaves out of its name */}
                 <span className="measure-dumbbell-tip-category">{measureCategory(byId.get(row.id) ?? { id: row.id, name: row.name })}</span>
-                <span>
-                  {groupName}: {money(row.group)} a year
-                </span>
-                {!single && <span>{compareName}: {money(row.all)} a year</span>}
+                {hasGroup && (
+                  <span>
+                    {groupName}: {money(row.group)} a year
+                  </span>
+                )}
+                {hasAll && <span>{compareName}: {money(row.all)} a year</span>}
                 {ratioText && <span>{ratioText}</span>}
               </span>
             )}
@@ -189,7 +201,7 @@ const UNIT = "Average change in household income, per person (£ a year)";
  * chosen age group (16 to 24 at first) beside its all-ages figure, in the
  * selected year. Every bar is one policy's own run, so nothing is added up.
  */
-function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [] }) {
+function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [], defaultCompare = ALL_BAND }) {
   const { byId } = useMeasureCatalogue();
   const chartRef = useRef(null);
   // The section's age group (By age), which the card's Compare can override
@@ -198,8 +210,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   useEffect(() => {
     setBand(group);
   }, [group]);
-  // What the group is compared with: all ages, or another age band
-  const [compareWith, setCompareWith] = useState(ALL_BAND);
+  // What the group is compared with: all ages, or another age band (By age
+  // opens on 25 to 34, defaultCompare; all ages when that is the group)
+  const [compareWith, setCompareWith] = useState(defaultCompare);
   const compareKey = compareWith === band ? ALL_BAND : compareWith;
   // All ages chosen as the group: nothing to compare it with
   const single = band === compareKey;
@@ -210,11 +223,12 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     : measuresDescription(band, compareKey);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const { shown, noEffect, suppressed } =
+  // A policy withheld for the group is left out, with no note (Vahid, 29 Oct)
+  const { shown, noEffect } =
     band === "pensioners"
       ? pensionerMeasures(rows, policies, selectedPolicies, selectedYear, compareKey)
       : measureComparison(rows, policies, selectedPolicies, selectedYear, band, compareKey);
-  const values = shown.flatMap((point) => [point.group, point.all]);
+  const values = shown.flatMap((point) => [point.group, point.all]).filter(Number.isFinite);
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values), {
     maxSteps: DUMBBELL_MAX_STEPS,
   });
@@ -227,7 +241,6 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     reservedLegendHeight: 0,
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
-  const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
   // No effect: in the card's About this chart, each by its short name, and
   // when it is in force where that is not this year
   const noEffectItems = noEffect.map((policy) => ({
@@ -245,7 +258,6 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         { key: "all", label: compareName, decimals: 2 },
       ],
       rows: published ? shown : [],
-      notes,
     });
   const download = {
     chartRef,
@@ -339,7 +351,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
           <NoEffectList
             items={noEffectItems}
             title={`No effect in ${yearLabel}`}
-            info={{ ...MEASURES_INFO, caveats: [...(MEASURES_INFO.caveats || []), ...notes.map((note) => `${note}.`)] }}
+            info={MEASURES_INFO}
           />
         </div>
       )}

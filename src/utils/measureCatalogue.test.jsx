@@ -260,6 +260,10 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   // - EXPLAINERS: the titles of our published posts on this Budget, linked
   //   from Methodology; a post stays whether or not its measure is
   //   published, so a title decides nothing the page shows of a measure.
+  // - IMPROVEMENTS_NOTE: "What we're improving", the next update's plans in
+  //   the words Max approved (28 October), less the dated poverty item (30 October)
+  //   (ImprovementsNote.test.jsx); prose only, it decides nothing about any
+  //   measure, and it goes when that update lands.
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
@@ -274,6 +278,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "utils/householdPolicyFields.js": [/export const POLICY_FIELDS = \{[\s\S]*?\n\};/],
     "utils/calculatorOnlyMeasures.js": [/export const SAVINGS_INCOME_RATES_ID = "[a-z_]+";/, /export const CALCULATOR_ONLY_MEASURES = \{[\s\S]*?\n\};/],
     "utils/explainers.js": [/export const EXPLAINERS = \[[\s\S]*?\n\];/],
+    "components/methodology/improvementsText.js": [/export const IMPROVEMENTS_NOTE = \{[\s\S]*?\n\};/],
     "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/, /export const OBR_DIFFERENCE_POINTS = \{[\s\S]*?\n\};/, /export const OBR_PANEL_BASES = \{[\s\S]*?\n\};/, /export const NOT_COMPARABLE_SHORT = \{[\s\S]*?\n\};/],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
