@@ -132,8 +132,8 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       label: `Salary in ${yearLabel}`,
       value: data.partnerSalaryUsed !== null ? `${money(own)}, partner ${money(partner)}` : money(own),
       detail: salarySource
-        ? `${salarySource}; grown from ${data.salaryYear} with OBR earnings`
-        : `grown from ${data.salaryYear} with OBR earnings`,
+        ? `${salarySource}; we apply OBR earnings growth from ${data.salaryYear}`
+        : `we apply OBR earnings growth from ${data.salaryYear}`,
     });
   }
   if (renting && data.area?.brmaDefault && data.area.brma) {
