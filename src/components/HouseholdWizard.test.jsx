@@ -953,7 +953,10 @@ describe("monthly pay, for the Universal Credit surplus earnings threshold", () 
     expect(parseAmount(month("Your pay in April 2027").value)).toBe(DEFAULT_SALARY / 12);
     expect(month("Your pay in March 2028")).toBeInTheDocument();
     expect(months).toHaveTextContent("These months add up to £34,200 a year");
-    expect(months).toHaveTextContent(/every other figure comes from your yearly salary/i);
+    // In 2027-28 the months' total is the year's pay in every figure
+    expect(months).toHaveTextContent(
+      "Prefilled with your 2026 salary spread evenly: change them to what you expect to be paid. Your 2027-28 figures use what these months add up to as your pay, in place of your salary grown to 2027-28.",
+    );
     fireEvent.change(month("Your pay in September 2027"), { target: { value: "6,000" } });
     expect(parseAmount(month("Your pay in September 2027").value)).toBe(6000);
     expect(months).toHaveTextContent("These months add up to £37,350 a year");

@@ -129,17 +129,20 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
   const own = data.salaryUsed ?? 0;
   const partner = data.partnerSalaryUsed ?? 0;
   if (own > 0 || partner > 0) {
+    // With monthly pay entered, the year's pay is the months' total (#356)
     items.push({
       id: "salary",
-      label: `Salary in ${yearLabel}`,
+      label: data.salaryFromMonths ? `Pay in ${yearLabel}` : `Salary in ${yearLabel}`,
       value: data.partnerSalaryUsed !== null ? `${money(own)}, partner ${money(partner)}` : money(own),
-      detail: salarySource
-        ? `${salarySource}; grown from ${data.salaryYear} with OBR earnings`
-        : `grown from ${data.salaryYear} with OBR earnings`,
+      detail: data.salaryFromMonths
+        ? `the 12 months you entered, in place of your salary grown from ${data.salaryYear}`
+        : salarySource
+          ? `${salarySource}; grown from ${data.salaryYear} with OBR earnings`
+          : `grown from ${data.salaryYear} with OBR earnings`,
     });
   }
-  // Monthly pay, read only by the Universal Credit surplus earnings
-  // threshold measure
+  // Monthly pay, read month by month only by the Universal Credit surplus
+  // earnings threshold measure
   const months = data.surplusEarnings?.months;
   if (months) {
     const total = months.reduce((sum, month) => sum + month.pay + (month.partnerPay ?? 0), 0);

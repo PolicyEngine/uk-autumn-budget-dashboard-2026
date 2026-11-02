@@ -234,6 +234,17 @@ describe("consistentRound", () => {
 });
 
 describe("normaliseHouseholdImpact", () => {
+  it("reads whether the year's pay is the months' total, not the salary grown", () => {
+    const fromMonths = normaliseHouseholdImpact({
+      ...HOUSEHOLD_FIXTURE,
+      salary_used: { ...HOUSEHOLD_FIXTURE.salary_used, employment_income: 22500, from_months: true },
+    });
+    expect(fromMonths.salaryFromMonths).toBe(true);
+    expect(fromMonths.salaryUsed).toBe(22500);
+    // An answer from before the field, or without months: the salary grown
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).salaryFromMonths).toBe(false);
+  });
+
   it("reads the API's answer: baseline and reform, the salary used, and each part", () => {
     const data = normaliseHouseholdImpact(HOUSEHOLD_FIXTURE);
     expect(data.net).toEqual({ before: 65370.9, after: 69135.74, change: 3764.84 });

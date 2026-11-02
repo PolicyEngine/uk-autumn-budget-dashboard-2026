@@ -1,4 +1,5 @@
 import { fiscalYearTick } from "../../utils/chartTheme";
+import { SALARY_YEAR } from "../../utils/householdImpactApi";
 import { money } from "../../utils/singleYear";
 import { monthlyPay, policyYearMonths } from "../../utils/surplusEarnings";
 import { NumberField } from "./FormControls";
@@ -12,8 +13,9 @@ const MAX_MONTH = 100000;
  * Pay before tax in each month of the year shown, April to March, for the
  * Universal Credit surplus earnings threshold measure: one £ box a month
  * (and one for a partner), prefilled with the yearly salary spread evenly,
- * with what the months add up to. Only that measure reads them; every
- * other figure comes from the yearly salary.
+ * with what the months add up to. Only that measure reads them month by
+ * month; in 2027-28 every other figure takes their total as the year's
+ * pay, in place of the salary grown to the year.
  *
  * @param {Object} props
  * @param {number} props.year - The policy year shown (April `year` to March)
@@ -63,10 +65,11 @@ export default function MonthlyPayField({
         Pay before tax in each month of {yearLabel}
       </p>
       <p className="field-hint" id="monthly-pay-hint">
-        As paid in each month, such as a month with a bonus. Prefilled with your yearly salary spread evenly. Only the Universal
-        Credit surplus earnings threshold uses these months: every other figure comes from your yearly salary.
-        {year !== MEASURE_YEAR &&
-          ` The Budget keeps the £2,500 threshold only for claims from April 2027 to March 2028, so in ${yearLabel} these months change nothing.`}
+        As paid in each month, such as a month with a bonus. Prefilled with your {SALARY_YEAR} salary spread evenly: change them
+        to what you expect to be paid.
+        {year === MEASURE_YEAR
+          ? ` Your ${yearLabel} figures use what these months add up to as your pay, in place of your salary grown to ${yearLabel}.`
+          : ` The Budget keeps the £2,500 threshold only for claims from April 2027 to March 2028, so in ${yearLabel} these months change nothing.`}
       </p>
       <table className={`monthly-pay-table${partner ? " has-partner" : ""}`}>
         <thead>

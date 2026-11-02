@@ -635,6 +635,9 @@ export function normaliseHouseholdImpact(raw) {
     salaryUsed: numOrNull(salary.employment_income),
     partnerSalaryUsed: numOrNull(salary.partner_employment_income),
     salaryYear: salary.salary_year ?? SALARY_YEAR,
+    // In 2027-28 with monthly pay entered, the year's pay is the months'
+    // total, not the salary grown (#356)
+    salaryFromMonths: Boolean(salary.from_months),
     net: {
       before: num(raw.net_income?.baseline),
       after: num(raw.net_income?.reform),
