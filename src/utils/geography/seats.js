@@ -26,7 +26,7 @@ import { regionForBoundary } from "./regions";
 import { lookupRow } from "./rows";
 import { CHART_COLOURS } from "../chartTheme";
 
-export const NO_DATA_NOTE = "No figure is published for this constituency.";
+export const NO_DATA_NOTE = "We publish no figure for this constituency.";
 
 /** The seat's ONS code, from the boundary file. */
 export const seatCode = (feature) => feature?.properties?.GSScode ?? "";
@@ -246,7 +246,7 @@ export const UNCERTAIN_SEAT_NOTE = "No data on the map: too uncertain to place o
 /** A By policy row for a measure withheld in this seat, and its tooltip. */
 export const WITHHELD_MEASURE_NOTE = "Not published";
 export const WITHHELD_MEASURE_TITLE =
-  "Not published for this constituency, to protect survey respondents' confidentiality.";
+  "We do not publish a figure for this constituency, to protect survey respondents' confidentiality.";
 
 /** The By policy heading: the package's parts, or the other selected measures. */
 export const PACKAGE_PARTS_HEADING = "Of which";
@@ -256,7 +256,7 @@ export const OTHER_POLICIES_HEADING = "Other selected policies";
 export const unchangedLine = (count) => `+${count} with no change`;
 
 /** The card's line for an approximate figure: the map draws it plain, so the card says so. */
-export const APPROXIMATE_SEAT_NOTE = "Approximate: based on fewer than 30 survey households";
+export const APPROXIMATE_SEAT_NOTE = "Approximate: it rests on fewer than 30 survey households";
 
 /**
  * The card's one muted line on how firm a figure is, or null when there is
