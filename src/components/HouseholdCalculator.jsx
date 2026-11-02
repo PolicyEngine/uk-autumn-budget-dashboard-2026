@@ -102,7 +102,7 @@ export const FORM_GROUPS = [
   {
     key: "pensions",
     title: "Pensions and student loan",
-    hint: "Pensions paid to you before tax, pension paid by salary sacrifice, and any student loan.",
+    hint: "Pensions you receive before tax, salary sacrifice pension, and any student loan.",
     fields: [
       "state_pension_per_year",
       "private_pension_per_year",
@@ -132,7 +132,7 @@ export const REGION_OPTIONS = [
 // The "region" question asks for a local authority (council), which sets
 // the region the calculation reads and is sent for its own Council Tax
 const LOCAL_AUTHORITY_HINT =
-  "Your council sets your region: Scotland has its own income tax rates, and the rent estimate and housing support follow the region, not your council. Council Tax is estimated from your band and your council's Band D.";
+  "Your council sets your region: Scotland has its own income tax rates, and the rent estimate and housing support follow the region, not your council. We estimate Council Tax from your band and your council's Band D.";
 
 const YES_NO = [
   { value: false, label: "No" },
@@ -196,7 +196,7 @@ const CHOICE_CONFIGS = {
     summary: (value) => `Band ${value}`,
     layout: "segmented",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
-    hint: "Estimated from your band and your council's Band D for 2026-27 (your region's average until you pick your council), grown with the OBR's forecast (Source: MHCLG, Welsh and Scottish governments, via policyengine-uk). Choose Band D if you are not sure.",
+    hint: "We estimate Council Tax from your band and your council's Band D for 2026-27 (your region's average until you pick your council), and grow it with the OBR's forecast (Source: MHCLG, Welsh and Scottish governments, via policyengine-uk). Choose Band D if you are not sure.",
   },
   claims_universal_credit: {
     label: "Universal Credit",
@@ -228,13 +228,13 @@ const NUMBER_CONFIGS = {
   monthly_rent: { label: "Rent", min: 0, max: 10000, step: 25, money: true, suffix: "a month" },
   savings_interest_per_year: { label: "Savings interest", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   cash_isa_payments_per_year: {
-    label: "Paid into cash ISAs",
+    label: "Cash ISA payments",
     min: 0,
     max: 20000,
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "New money you pay into cash ISAs each year, up to the £20,000 ISA limit. If you are under 65, the planned £12,000 cash limit would have left the rest outside an ISA, where its interest is taxed.",
+    hint: "New money you pay into cash ISAs each year, up to the £20,000 ISA limit. If you are under 65, the planned £12,000 cash limit would have left the rest outside an ISA, where you pay tax on its interest.",
   },
   dividends_per_year: { label: "Dividends", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   property_income_per_year: { label: "Property income", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
@@ -245,7 +245,7 @@ const NUMBER_CONFIGS = {
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Your private or workplace pension: pensions you are paid, before tax, not counting the State Pension.",
+    hint: "Your private or workplace pension: pensions you receive, before tax, not counting the State Pension.",
   },
   partner_private_pension_per_year: {
     label: "Partner's private or workplace pension",
@@ -271,7 +271,7 @@ const NUMBER_CONFIGS = {
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Enter your salary above after the sacrifice, as your payslip shows it. From April 2029 its National Insurance relief is capped at £2,000 a year; before then it changes no figure here.",
+    hint: "Enter your salary above after the sacrifice, as your payslip shows it. From April 2029 its National Insurance relief has a cap of £2,000 a year; before then it changes no figure here.",
   },
   petrol_spending_per_year: {
     label: "Petrol",
@@ -280,7 +280,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
+    hint: "We prefill this with the average household's spending (Source: ONS Family Spending, 2024-25).",
   },
   diesel_spending_per_year: {
     label: "Diesel",
@@ -289,7 +289,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
+    hint: "We prefill this with the average household's spending (Source: ONS Family Spending, 2024-25).",
   },
   electricity_spending_per_year: {
     label: "Electricity",
@@ -298,7 +298,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
+    hint: "Including VAT. We prefill this with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
   bus_fare_spending_per_year: {
     label: "Bus fares",
@@ -385,13 +385,13 @@ const regionName = (region) => REGION_OPTIONS.find(([value]) => value === region
 // The prefilled fields' notes: what the prefill is
 const PREFILL_HINTS = {
   state_pension_per_year: (year) =>
-    `Prefilled with the full new State Pension for ${fiscalYearTick(year)} (£${d3.format(",.0f")(
+    `We prefill this with the full new State Pension for ${fiscalYearTick(year)} (£${d3.format(",.0f")(
       statePensionFor(year).full,
     )}); change it if yours differs.`,
   partner_state_pension_per_year: (year) =>
-    `Prefilled with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
+    `We prefill this with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
   monthly_rent: (year, inputs) =>
-    `Prefilled with the average private rent in ${regionName(inputs.region)} (Source: ONS, ${
+    `We prefill this with the average private rent in ${regionName(inputs.region)} (Source: ONS, ${
       inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
     } 2026); change it if yours differs.`,
 };
@@ -1175,7 +1175,7 @@ function HouseholdCalculator({
         label: "You",
         note:
           placed.notModelled.length > 0
-            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
+            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} we do not model for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
             : submitted.policies.length !== withoutCalculatorOnly(submitted.policies).length
               ? `Your change includes ${joinedPhrases(resultPolicies(submitted.policies).named)}, which the dots leave out.`
               : null,
@@ -1298,8 +1298,8 @@ function HouseholdCalculator({
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
           {selectionUnavailable ? (
             <UnavailableNotice reason="Household calculator is unavailable for this selection">
-              <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
-              <p>Select policies that can all be calculated to see your household&apos;s results.</p>
+              <p>We cannot calculate these measures for one household: {unavailableNames.join(", ")}.</p>
+              <p>Select only policies we can calculate to see your household&apos;s results.</p>
             </UnavailableNotice>
           ) : (
             <SingleYearHeadline

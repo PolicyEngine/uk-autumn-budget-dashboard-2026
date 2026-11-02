@@ -245,7 +245,7 @@ describe("the personal impact form", () => {
     fireEvent.keyDown(document, { key: "Tab" });
     fireEvent.focus(petrolInfo);
     expect(screen.getByRole("tooltip")).toHaveClass("tip");
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Including VAT. We prefill this with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("tooltip")).toBeNull();
     expect(document.querySelector(".info-icon, .info-icon-wrapper, .info-tooltip")).toBeNull();
@@ -305,7 +305,7 @@ describe("the personal impact form", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Children are 0 to 19.");
     fireEvent.blur(box("Child 1's age"));
     expect(value("Child 1's age")).toBe(19);
-    expect(screen.getByRole("alert")).toHaveTextContent("21 was changed to 19.");
+    expect(screen.getByRole("alert")).toHaveTextContent("We changed 21 to 19.");
   });
 
   it("asks private pensions, the partner's only with a partner, and hides the Council Tax band in Northern Ireland", () => {
@@ -336,7 +336,7 @@ describe("the personal impact form", () => {
     expect(field("state_pension_per_year")).toBeNull();
     fireEvent.change(box("Age"), { target: { value: "72" } });
     expect(value("Your State Pension")).toBe(13817);
-    expect(screen.getByText(/Prefilled with the full new State Pension for 2029-30 \(£13,817\)/)).toBeInTheDocument();
+    expect(screen.getByText(/We prefill this with the full new State Pension for 2029-30 \(£13,817\)/)).toBeInTheDocument();
     fireEvent.change(box("Your State Pension"), { target: { value: "9000" } });
     expect(value("Your State Pension")).toBe(9000);
   });

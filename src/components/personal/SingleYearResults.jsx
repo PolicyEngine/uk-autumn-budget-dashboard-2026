@@ -144,7 +144,7 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       id: "council-tax",
       label: "Council Tax",
       value: `${money(data.councilTax.amount)} · band ${data.councilTax.band}`,
-      detail: data.councilTax.source === "estimated" ? "region average" : "as entered",
+      detail: data.councilTax.source === "estimated" ? "region average" : "your entry",
     });
   }
   // The spending the fuel and electricity measures act on: prefilled with
@@ -179,7 +179,7 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
     items.push({
       id: "children",
       label: "Children 16 to 19",
-      value: "counted only in school or college",
+      value: "count only in school or college",
       detail: null,
     });
   }
