@@ -876,14 +876,34 @@ def earnings_growth(from_year: int, to_year: int) -> float:
     return float(index(f"{to_year}-01-01") / index(f"{from_year}-01-01"))
 
 
+def months_are_the_pay(answers: HouseholdAnswers, year: int) -> bool:
+    """Whether the head's twelve months are their pay in ``year``: in the
+    months' year (April 2027 to March 2028, the measure's year), so every
+    figure that year agrees with the months."""
+    return (
+        answers.monthly_employment_income is not None
+        and year in surplus_rule.MEASURE_YEARS
+    )
+
+
 def salaries_in(answers: HouseholdAnswers, year: int) -> tuple[float, float]:
     """The head's and partner's employment income in ``year``: as entered
-    for ``salary_year``, grown with average earnings."""
+    for ``salary_year``, grown with average earnings. In the months' year
+    (``months_are_the_pay``) each adult with months is paid their total
+    instead, so the yearly figures and the months cannot disagree."""
     growth = earnings_growth(answers.salary_year, year)
-    return (
-        answers.employment_income * growth,
-        answers.partner_employment_income * growth,
-    )
+    salary = answers.employment_income * growth
+    partner_salary = answers.partner_employment_income * growth
+    if months_are_the_pay(answers, year):
+        salary = float(sum(answers.monthly_employment_income))
+        if (
+            answers.has_partner
+            and answers.partner_monthly_employment_income is not None
+        ):
+            partner_salary = float(
+                sum(answers.partner_monthly_employment_income)
+            )
+    return salary, partner_salary
 
 
 def month_salaries(
@@ -2390,8 +2410,15 @@ def calculate_household_impact(
                 _money(partner_salary) if answers.has_partner else None
             ),
             "growth": round(earnings_growth(answers.salary_year, year), 6),
+            # Whether the head's pay is their twelve months' total
+            # (``months_are_the_pay``), not the salary grown
+            "from_months": months_are_the_pay(answers, year),
             "note": (
-                f"Salary as entered for {answers.salary_year}, grown to "
+                f"The 12 months' pay entered for {fiscal_year(year)}, in "
+                f"place of the salary entered for {answers.salary_year} "
+                f"grown to {fiscal_year(year)}."
+                if months_are_the_pay(answers, year)
+                else f"Salary as entered for {answers.salary_year}, grown to "
                 f"{fiscal_year(year)} with the OBR average earnings index."
             ),
         },
@@ -2576,8 +2603,9 @@ SURPLUS_METHOD = (
     "the nil UC threshold plus the threshold. Calendar months stand for "
     "assessment periods; the household starts April on an award with "
     "nothing carried in, and claims after March are not counted. "
-    "Self-employment profit and other income are spread evenly. Every "
-    "other figure comes from the yearly salary. Surplus earnings do not "
+    "Self-employment profit and other income are spread evenly. In "
+    "2027-28 every other figure takes the months' total as the year's pay, "
+    "in place of the salary grown to 2027-28. Surplus earnings do not "
     "apply to someone recently a victim of domestic violence, for whom "
     "the measure changes nothing."
 )

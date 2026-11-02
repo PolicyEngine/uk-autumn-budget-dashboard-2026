@@ -243,6 +243,63 @@ def test_the_bonus_month_is_taxed_as_cumulative_paye_takes_it():
     )
 
 
+def test_in_2027_28_the_months_total_is_the_years_pay():
+    """The months and the yearly salary cannot disagree: in 2027-28, the
+    months' year, each adult with months is paid their total in every
+    figure, in place of the salary grown to 2027-28. A partner without
+    months keeps their salary; other years keep the salary."""
+    answers = household_impact.HouseholdAnswers(
+        employment_income=18_000,
+        monthly_employment_income=tuple(BONUS_MONTHS),
+    )
+    assert household_impact.salaries_in(answers, 2027) == (22_500, 0)
+    growth_to_2028 = household_impact.earnings_growth(
+        answers.salary_year, 2028
+    )
+    assert household_impact.salaries_in(answers, 2028) == (
+        pytest.approx(18_000 * growth_to_2028),
+        0,
+    )
+    couple = household_impact.HouseholdAnswers(
+        has_partner=True,
+        employment_income=18_000,
+        partner_employment_income=12_000,
+        monthly_employment_income=tuple(MONTHS),
+        partner_monthly_employment_income=tuple(BONUS_MONTHS),
+    )
+    assert household_impact.salaries_in(couple, 2027) == (18_000, 22_500)
+    no_partner_months = household_impact.HouseholdAnswers(
+        has_partner=True,
+        partner_employment_income=12_000,
+        monthly_employment_income=tuple(MONTHS),
+    )
+    growth_to_2027 = household_impact.earnings_growth(
+        no_partner_months.salary_year, 2027
+    )
+    assert household_impact.salaries_in(no_partner_months, 2027) == (
+        18_000,
+        pytest.approx(12_000 * growth_to_2027),
+    )
+
+
+def test_the_answer_says_the_2027_28_pay_is_the_months_total():
+    household = {**SINGLE_PARENT, "monthly_employment_income": BONUS_MONTHS}
+    answer = client.post(ROUTE, json=_request(household)).json()
+    used = answer["salary_used"]
+    assert used["employment_income"] == 22_500
+    assert used["from_months"] is True
+    assert used["note"] == (
+        "The 12 months' pay entered for 2027-28, in place of the salary "
+        "entered for 2026 grown to 2027-28."
+    )
+    assert (
+        "In 2027-28 every other figure takes the months' total as the "
+        "year's pay" in answer["surplus_earnings"]["method"]
+    )
+    plain = client.post(ROUTE, json=_request(SINGLE_PARENT)).json()
+    assert plain["salary_used"]["from_months"] is False
+
+
 def test_a_bonus_month_on_universal_credit_gains_from_the_2500_threshold():
     """Through the route, in stages as the page asks: the headline, then
     the split by policy. Each stage's net income carries the measure's
@@ -256,8 +313,15 @@ def test_a_bonus_month_on_universal_credit_gains_from_the_2500_threshold():
     )
     assert detail.status_code == 200, detail.text
     detail = detail.json()
+    # The same household paid the months' total as a 2027-28 salary: in
+    # 2027-28 the months are the year's pay in every other figure
+    plain_household = {
+        **SINGLE_PARENT,
+        "employment_income": sum(BONUS_MONTHS),
+        "salary_year": 2027,
+    }
     plain = client.post(
-        ROUTE, json=_request(SINGLE_PARENT, include=["by_policy"])
+        ROUTE, json=_request(plain_household, include=["by_policy"])
     ).json()
 
     surplus = headline["surplus_earnings"]
@@ -378,7 +442,20 @@ def test_a_household_the_measure_cannot_reach_has_its_reason_and_no_change(
             year=year,
         ),
     ).json()
-    without = client.post(ROUTE, json=_request(household, year=year)).json()
+    # In 2027-28 the months are the year's pay (months_are_the_pay), so the
+    # household to compare with is paid their total as a 2027-28 salary
+    paid_the_total = (
+        {
+            **household,
+            "employment_income": sum(BONUS_MONTHS),
+            "salary_year": 2027,
+        }
+        if year == 2027
+        else household
+    )
+    without = client.post(
+        ROUTE, json=_request(paid_the_total, year=year)
+    ).json()
     surplus = with_months["surplus_earnings"]
     assert surplus["status"] == "not_affected"
     assert surplus["reason"] == reason
