@@ -1368,7 +1368,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             <SectionHeading
               icon="fileText"
               title="Policies we model"
-              subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how it is modelled.`}
+              subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how we model it.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards

@@ -36,7 +36,7 @@ import { PENSIONERS, ageWindow } from "../../utils/ageGroups";
 
 const AGE_UNIT = "Average change in household income, per person (£ a year)";
 const CSV_UNITS =
-  "£ per person per year; each person counts their household's change in net income (not equivalised)";
+  "£ per person per year; each person counts their household's change in net income (without equivalisation)";
 const SHOW_OPTIONS = [
   { value: "net", label: "Net change", summary: "Net change" },
   { value: "measures", label: "Each policy", summary: "By policy" },
@@ -258,7 +258,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
         // Not "the sum of each policy's own effect": with a published run of
         // the whole selection (the default), Net change is that run's own row
         // (singleAgeSelection)
-        units: `${CSV_UNITS}; the five-year average is centred on each age`,
+        units: `${CSV_UNITS}; the five-year average centres on each age`,
         columns: [
           { key: "label", label: "Age" },
           ...measureIds.map((id) => ({ key: id, label: nameOf(id), decimals: 2 })),
@@ -427,9 +427,9 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
             info={{
               how: [
                 `One bar per single year of age, ${agesText(window)}.`,
-                "The line averages the five ages centred on each one, as single ages rest on few survey records.",
+                "At each age, the line averages the five ages with that age in the middle, as single ages rest on few survey records.",
                 showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}), where pensioners start.`,
-                partsOffered && "With Show set to Each policy, each selected policy's part is stacked at each age.",
+                partsOffered && "When Show is Each policy, each age's bar stacks each selected policy's part.",
               ],
               method: AGE_METHOD,
             }}
