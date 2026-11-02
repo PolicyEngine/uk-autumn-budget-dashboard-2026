@@ -64,7 +64,7 @@ export const OBR_DIFFERENCE_POINTS = {
     // OBR policy Table 1.1: £4.92m and £10.16m of block grant (#290, 6479807374)
     { reason: "Scope", text: "Official includes Scotland's block grant (£5m, £10m)" },
     // Before tax, ours £39m and £79m against £33m and £69m of spending
-    { reason: "Scope", text: "Before income tax, ours is about a sixth above" },
+    { reason: "Scope", text: "Before income tax, ours exceeds official spending by about a sixth" },
     { reason: "Behaviour", text: "Official adds people working more" },
   ],
   property_income_rates_up: [
@@ -142,7 +142,7 @@ export const OBR_DEVIATION_NOTES = {
  */
 export const OBR_COMPARISON_BASES = {
   bus_fare_cap_2027:
-    "Official: grant to bus operators. Ours: a static share of that costing by households' bus fare spending.",
+    "Official: grant to bus operators. Ours: households' shares of that costing, by their bus fare spending, static.",
   household_energy_payment_2026:
     "Official: the £100 payments in England, devolved funding and a £100m fund for councils. Ours: the £100 payments in England.",
   domestic_electricity_zero_vat:
