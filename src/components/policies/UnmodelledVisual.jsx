@@ -115,7 +115,7 @@ function Bill({ spec }) {
       <p className="umv-key">
         <span className="umv-key-item">
           <span className="umv-swatch is-whole" />
-          The rest of the bill is paid
+          The pub pays the rest
         </span>
       </p>
     </div>
@@ -287,7 +287,7 @@ function Mileage({ spec }) {
         <rect className={`umv-area is-${spec.tone}`} x={split} width={x1 - split} y={y(after)} height={y(before) - y(after)} />
         <path className="umv-line is-before" d={`M${split},${y(before)}H${x1}`} />
         <path className={`umv-line is-${spec.tone}`} d={`M${x0},${y(spec.first)}H${split}V${y(after)}H${x1}`} />
-        <text className={`umv-svg-value is-${spec.tone}`} x={(x0 + split) / 2} y={y(spec.first) - 6} textAnchor="middle">{`${spec.first}p, made permanent`}</text>
+        <text className={`umv-svg-value is-${spec.tone}`} x={(x0 + split) / 2} y={y(spec.first) - 6} textAnchor="middle">{`${spec.first}p, now permanent`}</text>
         <text className={`umv-svg-value is-${spec.tone}`} x={x1} y={y(after) - 6} textAnchor="end">{`${after}p`}</text>
         <text className="umv-svg-value" x={x1} y={y(before) + 14} textAnchor="end">{`was ${before}p`}</text>
         <text className="umv-svg-tick" x={split} y={height - 6} textAnchor="middle">{spec.threshold.label}</text>
