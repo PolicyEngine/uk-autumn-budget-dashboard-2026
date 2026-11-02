@@ -139,7 +139,6 @@ describe("the personal impact form", () => {
       "electricity_spending_per_year",
       // In the North West (the default), where the £2 bus fare cap applies
       "bus_fare_spending_per_year",
-      "higher_stake_machine_losses_per_year",
       "savings_interest_per_year",
       "cash_isa_payments_per_year",
       "dividends_per_year",
@@ -694,13 +693,8 @@ describe("the selected policies' questions", () => {
     // Pension age: all of them, with no Other questions
     expect(asked("Pensions and student loan")).toEqual(["private_pension_per_year", "salary_sacrifice_per_year", "student_loan_plan"]);
     expect(otherToggle("Pensions and student loan")).toBeNull();
-    // The rest, collapsed in their own step until opened: in Spending, the
-    // losses on higher-stake gaming machines (the Machine Games Duty rise,
-    // which no row moves first)
-    const spendingOther = otherToggle("Spending");
-    expect(spendingOther).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(spendingOther);
-    expect(asked("Spending").at(-1)).toBe("higher_stake_machine_losses_per_year");
+    // The rest, collapsed in their own step until opened
+    expect(otherToggle("Spending")).toBeNull();
     const savingsOther = otherToggle("Savings and other income");
     expect(savingsOther).toHaveTextContent("Other questions");
     expect(savingsOther).toHaveAttribute("aria-expanded", "false");
@@ -885,7 +879,7 @@ describe("the selected policies' questions", () => {
       const yours = () => bodies.find((body) => body.household.petrol_spending === 900 && body.include.length === 0);
       await waitFor(() => expect(yours()).toBeDefined());
       const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, council_tax_band: "B" };
-      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: [...ALL_SEVEN, "cash_isa_limit_kept", "machine_games_duty_rise"] }));
+      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: [...ALL_SEVEN, "cash_isa_limit_kept"] }));
       expect(yours().household).toMatchObject({ petrol_spending: 900, council_tax_band: "B", diesel_spending: DEFAULT_SPENDING.diesel });
     } finally {
       vi.unstubAllGlobals();
@@ -976,11 +970,11 @@ describe("the selected policies' questions", () => {
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
-      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up", "cash_isa_limit_kept", "machine_games_duty_rise"]);
+      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up", "cash_isa_limit_kept"]);
       // Every example card's figures are asked with them too
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
       expect(cards.length).toBeGreaterThan(0);
-      expect(cards.every((body) => body.policies.slice(-3).join() === "savings_income_rates_up,cash_isa_limit_kept,machine_games_duty_rise")).toBe(true);
+      expect(cards.every((body) => body.policies.slice(-2).join() === "savings_income_rates_up,cash_isa_limit_kept")).toBe(true);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

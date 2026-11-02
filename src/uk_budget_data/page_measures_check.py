@@ -8,6 +8,10 @@ refuses a measure it doesn't register ("Unknown measures: …"), so the
 Household impact tab shows an error. The example cards read
 ``public/data/household_presets.json`` instead, so stale presets show the
 previous measures' answers without any error. Drill 5 hit both (#144).
+The household request also carries the calculator-only measures
+(``src/utils/calculatorOnlyMeasures.js``), which no manifest lists, so the
+probe sends those too: a page that adds one before its API is deployed
+breaks every calculation (#377).
 
 Run it against every household API the build will call, Cloud Run's and
 Modal's, after they are deployed and ``publish index`` has written the
@@ -33,6 +37,8 @@ from typing import Optional
 from uk_budget_data.publication import manifest as m
 
 PRESETS_FILE = Path("public/data/household_presets.json")
+# The measures the Household calculator adds to every request
+CALCULATOR_ONLY_FILE = Path("src/utils/calculatorOnlyMeasures.js")
 HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
 VERSION_ROUTE = "/api/version"
 # The packages whose versions decide a household's answer
@@ -46,6 +52,32 @@ def page_measure_ids(data_root: Path = m.DATA_ROOT) -> list[str]:
     return sorted(
         key for key, entry in measures.items() if entry.status in m.DISPLAYABLE
     )
+
+
+def calculator_only_ids(path: Path = CALCULATOR_ONLY_FILE) -> list[str]:
+    """The ids in the page's CALCULATOR_ONLY_MEASURES, in order: each
+    entry's ``id``, a string or a constant the file exports. None if the
+    file is missing (a run outside the repository)."""
+    path = Path(path)
+    if not path.exists():
+        return []
+    text = path.read_text()
+    block = re.search(
+        r"export const CALCULATOR_ONLY_MEASURES = \{(.*?)\n\};", text, re.S
+    )
+    if block is None:
+        raise ValueError(f"{path}: no CALCULATOR_ONLY_MEASURES")
+    constants = dict(
+        re.findall(r'export const ([A-Z0-9_]+) = "([a-z0-9_]+)";', text)
+    )
+    ids = []
+    for value in re.findall(
+        r'^\s+id: ("[a-z0-9_]+"|[A-Z0-9_]+),', block.group(1), re.M
+    ):
+        ids.append(
+            value.strip('"') if value.startswith('"') else constants[value]
+        )
+    return ids
 
 
 def probe(year: int, ids: list[str]) -> dict:
@@ -157,8 +189,11 @@ def check(
     presets_file: Path = PRESETS_FILE,
     year: int = 2027,
     timeout: float = TIMEOUT_S,
+    calculator_only_file: Path = CALCULATOR_ONLY_FILE,
 ) -> list[str]:
-    """Every problem across the APIs and the presets."""
+    """Every problem across the APIs and the presets. The APIs are probed
+    with the page's measures and the calculator-only ones; the presets are
+    compared with the page's measures (their file lists those only)."""
     ids = page_measure_ids(data_root)
     if not ids:
         return [
@@ -167,8 +202,11 @@ def check(
         ]
     problems: list[str] = []
     packages = None
+    requested = ids + [
+        i for i in calculator_only_ids(calculator_only_file) if i not in ids
+    ]
     for url in base_urls:
-        found, reported = api_problems(url, ids, year, timeout)
+        found, reported = api_problems(url, requested, year, timeout)
         problems += found
         packages = packages or reported
     problems += preset_problems(presets_file, ids, packages)

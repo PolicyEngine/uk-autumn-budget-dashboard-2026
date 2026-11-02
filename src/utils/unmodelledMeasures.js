@@ -190,7 +190,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "Businesses pay; any household effect comes via stakes, prizes, owners or staff." },
       { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
-      { label: "Why we leave it out", text: "Household calculator only: our data hold no gambling or machine types." },
+      { label: "Why we leave it out", text: "Our data hold no household spending on gambling." },
     ],
     costings: [
       {

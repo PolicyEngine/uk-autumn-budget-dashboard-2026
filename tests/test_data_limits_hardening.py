@@ -15,7 +15,11 @@ from tests import template_measures
 from tests.data_limit_stand_ins import STAND_IN_DATA_LIMITS
 from tests.test_data_limits import BY_KEY, simulation
 from uk_budget_data import data_limits
-from uk_budget_data.reforms import get_all_reforms
+from uk_budget_data.reforms import (
+    AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
+    get_all_reforms,
+    get_reform,
+)
 
 # Written around the purchase limits, registered as stand-ins.
 pytestmark = pytest.mark.usefixtures("stand_in_data_limits")
@@ -389,6 +393,18 @@ def test_every_template_stays_computable_without_purchase_inputs(name):
 CALCULATOR_ONLY_LIMITS = {
     "machine_games_duty_rise": ["machine_games_standard_rate"],
 }
+
+
+def test_the_data_limit_exemptions_end_with_the_hold_back():
+    """A measure may touch a data limit only while it is registered and
+    held back from the package: once it joins the package, its exemption
+    must go, so the national run cannot carry a figure the data can't
+    cost (María, #377)."""
+    for measure_id in CALCULATOR_ONLY_LIMITS:
+        assert get_reform(measure_id) is not None, measure_id
+        assert (
+            measure_id not in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+        ), measure_id
 
 
 @pytest.mark.parametrize(

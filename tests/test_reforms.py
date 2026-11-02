@@ -10,6 +10,7 @@ import inspect
 import math
 from importlib import import_module
 
+import numpy as np
 import pytest
 from policyengine_uk import Simulation
 
@@ -1126,6 +1127,71 @@ def test_cash_isa_limit_needs_the_calculators_answer():
     pre-Budget side changes nothing."""
     before, after = cash_isa_tax(2031, employment_income=150_000)
     assert before == pytest.approx(after, abs=PENNY)
+
+
+def test_cash_isa_limit_on_survey_data_taxes_a_share_at_the_deposit_rate():
+    """Survey data that store cash ISA payments (policyengine-uk 2.164.1 has
+    the variable; defined here first, as it is there) and other investment
+    income: the interest goes into taxable savings interest, 46% of the
+    excess at the OBR's deposit rate. One under-65 paying £20,000 in
+    2031-32: £8,000 a year over the planned limit, held 4.5 years, 3.01%
+    and 46%, is £498.46. Adjusted net income moves with it; market income
+    does not (María, #377)."""
+    from policyengine_core.reforms import Reform as CoreReform
+    from policyengine_uk.model_api import Variable
+    from policyengine_uk.utils.scenario import _apply_reform_class
+
+    from uk_budget_data.budget_measures.planned_cash_isa_limit import (
+        planned_cash_isa_limit,
+    )
+
+    year = 2031
+
+    def built(modify: bool):
+        sim = Simulation(
+            situation=situation(
+                {
+                    "p": _person(
+                        year,
+                        employment_income=70_000,
+                        other_investment_income=0,
+                    )
+                }
+            )
+        )
+        person_entity = sim.tax_benefit_system.get_variable("age").entity
+
+        class cash_isa_subscriptions(Variable):
+            value_type = float
+            entity = person_entity
+            definition_period = "year"
+            label = "Cash ISA subscriptions"
+
+        class Define(CoreReform):
+            def apply(self):
+                self.add_variable(cash_isa_subscriptions)
+
+        _apply_reform_class(Define, sim)
+        sim.set_input("cash_isa_subscriptions", year, np.array([20_000.0]))
+        if modify:
+            planned_cash_isa_limit(sim)
+        return sim
+
+    before, after = built(True), built(False)
+
+    def moved(variable):
+        return float(
+            before.calculate(variable, year)[0]
+            - after.calculate(variable, year)[0]
+        )
+
+    expected = 0.46 * 0.0301 * 4.5 * 8_000
+    assert expected == pytest.approx(498.46, abs=PENNY)
+    assert moved("taxable_savings_interest_income") == pytest.approx(
+        expected, abs=0.05
+    )
+    assert moved("adjusted_net_income") == pytest.approx(expected, abs=0.05)
+    assert moved("market_income") == pytest.approx(0, abs=PENNY)
 
 
 # --- Every year the policy differs is covered ---------------------------------
