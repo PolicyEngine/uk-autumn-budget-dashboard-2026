@@ -518,18 +518,19 @@ class HouseholdAnswersRequest(BaseModel):
             "receipts less expenses"
         ),
     )
-    gas_use_kwh: float = Field(
-        default=gas.TYPICAL_GAS_USE_KWH,
+    gas_use_kwh: Optional[float] = Field(
+        default=None,
         ge=0,
         le=100_000,
         description=(
             "The home's gas use, kWh a year, as its bill or annual "
             f"statement gives it, for {gas.GAS_STANDING_CHARGES_ID}, the "
             "only answer that measure reads besides the region (it covers "
-            "Great Britain only). 0 is a home with no mains gas. Left out: "
-            "Ofgem's typical use from 1 July 2026, "
-            f"{gas.TYPICAL_GAS_USE_KWH:,} kWh. At the mean, "
-            f"{gas.MEAN_GAS_USE_KWH:,} kWh, the change is a calculated £0."
+            "Great Britain only). 0 is a home with no mains gas. Left out "
+            "(or null), no gas use is entered: no typical use is assumed, "
+            "and the measure changes nothing, with that reason. At the "
+            f"mean, {gas.MEAN_GAS_USE_KWH:,} kWh, the change is a "
+            "calculated £0."
         ),
     )
 

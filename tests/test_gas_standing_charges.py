@@ -111,13 +111,25 @@ def test_no_change_says_why(case):
     assert result.reason
 
 
+def test_no_gas_use_entered_changes_nothing_and_says_so():
+    """With no gas use given the measure has nothing to act on: it assumes
+    no typical use, so a home without mains gas that leaves the answer out
+    gets no change."""
+    result = change_for(None)
+    assert result.change == 0
+    assert not result.applies
+    assert result.reason == gas.NO_GAS_USE_ENTERED
+    assert result.gas_use_kwh is None
+
+
 def test_the_reasons_are_distinct():
     reasons = {
         change_for(9_500, year=2026).reason,
         change_for(0).reason,
+        change_for(None).reason,
         change_for(9_500, region="NORTHERN_IRELAND").reason,
     }
-    assert len(reasons) == 3
+    assert len(reasons) == 4
     assert "0 kWh" in change_for(0).reason
 
 

@@ -829,10 +829,11 @@ class HouseholdAnswers:
     self_employment_receipts: float = 0
     self_employment_expenses: float = 0
     # The home's gas use, kWh a year, read only for the gas standing charge
-    # abolition (gas_standing_charges); 0 is a home with no mains gas. The
-    # default is Ofgem's typical use. No engine variable reads it, so it
-    # changes no policyengine-uk run.
-    gas_use_kwh: float = gas.TYPICAL_GAS_USE_KWH
+    # abolition (gas_standing_charges); 0 is a home with no mains gas. None
+    # (the default) is no gas use entered: no typical use is assumed, so the
+    # measure changes nothing. No engine variable reads it, so it changes no
+    # policyengine-uk run.
+    gas_use_kwh: Optional[float] = None
 
     @property
     def self_employed(self) -> bool:
@@ -2125,7 +2126,8 @@ def gas_bill_used(answers: HouseholdAnswers, year: int) -> dict:
             f"({gas.PRICE_PERIOD}), the same for every home, is recovered "
             "through the unit rate, which rises by it over DESNZ's mean use "
             f"per domestic meter ({gas.MEAN_GAS_USE_KWH:,} kWh). 0 kWh is a "
-            "home with no mains gas. The start is assumed: "
+            "home with no mains gas; with no gas use entered there is no "
+            "change, since no typical use is assumed. The start is assumed: "
             f"{gas.ABOLISHED_FROM.day} January {gas.ABOLISHED_FROM.year}."
         ),
     }

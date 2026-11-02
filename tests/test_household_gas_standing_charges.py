@@ -46,9 +46,11 @@ def _fresh_runs():
 
 def answers(**values):
     """A landlord on £35,000 with £5,000 of property income, salary
-    entered for the year calculated; otherwise the form's typical home."""
+    entered for the year calculated, and Ofgem's typical gas use entered;
+    otherwise the form's default home."""
     values.setdefault("salary_year", YEAR)
     values.setdefault("property_income", 5_000)
+    values.setdefault("gas_use_kwh", 9_500)
     return household_impact.HouseholdAnswers(**values)
 
 
@@ -127,11 +129,13 @@ def test_the_calculation_accepts_the_measure_and_the_registry_does_not_hold_it()
         household_impact.measure_sides([GAS])
 
 
-def test_one_answer_starting_at_ofgems_typical_use():
+def test_one_answer_and_no_gas_use_until_one_is_entered():
     """The household is asked its gas use alone: no mains-gas question (0
-    kWh is no mains gas) and no payment method (one standing charge)."""
+    kWh is no mains gas) and no payment method (one standing charge).
+    Left out, there is no gas use: the measure assumes no typical use."""
     household = household_impact.HouseholdAnswers()
-    assert household.gas_use_kwh == 9_500
+    assert household.gas_use_kwh is None
+    assert api.HouseholdAnswersRequest().answers().gas_use_kwh is None
     assert not hasattr(household, "has_mains_gas")
     assert not hasattr(household, "gas_payment_method")
 
@@ -250,6 +254,7 @@ def test_every_sweep_point_moves_by_the_change_and_no_rate_moves(
         ({"gas_use_kwh": 3_000}, YEAR, -79.72, "affected"),
         ({"gas_use_kwh": 20_000}, YEAR, 82.41, "affected"),
         ({"gas_use_kwh": 0}, YEAR, 0.0, "not_affected"),
+        ({"gas_use_kwh": None}, YEAR, 0.0, "not_affected"),
         ({"region": "NORTHERN_IRELAND"}, YEAR, 0.0, "not_affected"),
         ({"salary_year": 2026}, 2026, 0.0, "not_affected"),
     ],
@@ -258,6 +263,7 @@ def test_every_sweep_point_moves_by_the_change_and_no_rate_moves(
         "light use",
         "heavy use",
         "0 kWh, no mains gas",
+        "no gas use entered",
         "Northern Ireland",
         "2026-27, before the start",
     ],

@@ -87,6 +87,11 @@ QUARTER_USE_SHARES = ((4, 0.125), (7, 0.125), (10, 0.375), (1, 0.375))
 REGIONS_NOT_COVERED = frozenset({"NORTHERN_IRELAND"})
 
 NO_MAINS_GAS = "0 kWh, no mains gas: no gas standing charge to remove."
+# No gas use given: no typical use is assumed, so a home without mains gas
+# that leaves the answer out is not charged a change
+NO_GAS_USE_ENTERED = (
+    "No gas use entered: the change needs the home's gas use in kWh a year."
+)
 # Each reason reads after a dash with its first letter in lower case
 # (the page's list of measures with no effect), so none starts with a
 # proper noun
@@ -167,7 +172,7 @@ class GasBillChange:
     change: float
     applies: bool
     reason: Optional[str]
-    gas_use_kwh: float
+    gas_use_kwh: Optional[float]
     standing_charge: float
     unit_rate_rise_pence: float
     day_share: float
@@ -175,21 +180,24 @@ class GasBillChange:
 
 
 def bill_change(
-    *, gas_use_kwh: float, region: str, year: int
+    *, gas_use_kwh: Optional[float], region: str, year: int
 ) -> GasBillChange:
     """The household's change in its gas bill in policy year ``year``, £:
-    S × (use share × U / Ū − day share), or nothing with no gas use (no
-    mains gas), in Northern Ireland or before the start.
+    S × (use share × U / Ū − day share), or nothing with no gas use entered
+    (None), no gas use (0 kWh, no mains gas), in Northern Ireland or before
+    the start.
 
     Raises:
         ValueError: for a negative use.
     """
-    if gas_use_kwh < 0:
+    if gas_use_kwh is not None and gas_use_kwh < 0:
         raise ValueError("Gas use can't be negative.")
     standing = annual_standing_charge()
     covered = in_force(year)
     if region in REGIONS_NOT_COVERED:
         reason = NOT_GREAT_BRITAIN
+    elif gas_use_kwh is None:
+        reason = NO_GAS_USE_ENTERED
     elif gas_use_kwh == 0:
         reason = NO_MAINS_GAS
     elif covered.days == 0:
