@@ -227,6 +227,58 @@ def test_a_higher_rate_employee_gains_200():
     assert result["net_income"]["change"] == pytest.approx(200, abs=0.01)
 
 
+def test_a_plan_2_borrower_also_repays_45_less():
+    """policyengine-uk works out student loan repayments from net income
+    (SI 2009/470 reg. 29), which the relief lowers: £500 less, so £100 less
+    income tax and 9% of £500, £45, less repaid, £145 in all."""
+    result = calculate(
+        Answers(
+            employment_income=40_000,
+            student_loan_plan="PLAN_2",
+            business_miles=15_000,
+        )
+    )
+    assert row(result, "income_tax")["change"] == pytest.approx(-100, abs=0.01)
+    assert row(result, "student_loan_repayments")["change"] == pytest.approx(
+        -45, abs=0.01
+    )
+    assert result["net_income"]["change"] == pytest.approx(145, abs=0.01)
+
+
+def test_the_note_says_what_the_employer_is_taken_to_pay_and_every_tax_it_lowers():
+    employee = household_impact.mileage_used(
+        Answers(employment_income=40_000, business_miles=15_000),
+        2027,
+        applied=True,
+    )
+    assert employee["employer_assumed_rates"] == {
+        "first_miles": 0.55,
+        "further_miles": 0.25,
+    }
+    assert (
+        "The employer is taken to pay 55p a mile for the first 10,000 "
+        "business miles and 25p above, before and after the Budget"
+    ) in employee["note"]
+    assert "income tax and any student loan repayments" in employee["note"]
+    assert "income tax only" not in employee["note"]
+
+    self_employed = household_impact.mileage_used(
+        Answers(
+            employment_income=0,
+            self_employment_receipts=30_000,
+            business_miles=15_000,
+            business_miles_role=SELF_EMPLOYED,
+        ),
+        2027,
+        applied=True,
+    )
+    assert self_employed["employer_assumed_rates"] is None
+    assert (
+        "income tax, Class 4 National Insurance and any student loan "
+        "repayments"
+    ) in self_employed["note"]
+
+
 @pytest.mark.parametrize("miles", [6_000, 10_000])
 def test_up_to_10000_miles_the_budget_changes_nothing(miles):
     """Current law already gives 55p for the first 10,000 miles."""

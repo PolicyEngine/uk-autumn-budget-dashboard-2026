@@ -24,23 +24,25 @@ exactly the taxes they reduce:
 
 - an employee's Mileage Allowance Relief (ITEPA ss. 231 and 232) as
   ``employment_deductions``, which comes off ``taxable_employment_income``
-  only: income tax falls, Class 1 National Insurance (which reads
-  ``employment_income``) does not, and Universal Credit, which does not
-  deduct the relief (UC Regulations 2013 reg. 55), sees only the lower
-  income tax. The employer is taken to pay the current-law approved
-  amount and to keep paying it, so before the Budget there is no relief
-  and after it the relief is the rise. For any employer rate the income
-  tax base falls by the same rise, provided the relief is claimed; the
-  Class 1 disregard uses the 55p rate for every mile, before and after.
+  only: income tax falls, and so does any student loan repayment, which
+  policyengine-uk works out from net income (SI 2009/470 reg. 29); Class 1
+  National Insurance (which reads ``employment_income``) does not, and
+  Universal Credit, which does not deduct the relief (UC Regulations 2013
+  reg. 55), sees only the lower income tax. The employer is taken to pay
+  the current-law approved amount and to keep paying it, so before the
+  Budget there is no relief and after it the relief is the rise. For any
+  employer rate the income tax base falls by the same rise, provided the
+  relief is claimed; the Class 1 disregard uses the 55p rate for every
+  mile, before and after.
 - a self-employed driver's flat rate deduction (ITTOIA ss. 94D to 94F) in
   two parts. Universal Credit has its own flat rate, unchanged by the
   Budget (reg. 59: 45p for the first 833 miles of an assessment period,
   25p after); that much comes off the profit given to policyengine-uk
   (``self_employment_income``), which Universal Credit reads, and stops at
   a nil profit. The tax rates' excess over it goes in
-  ``capital_allowances``, which comes off profit for income tax and
-  Class 4 only, and which the trading allowance replaces as it replaces
-  expenses.
+  ``capital_allowances``, which comes off profit for income tax, Class 4
+  and student loan repayments only, and which the trading allowance
+  replaces as it replaces expenses.
 
 The miles are the head's, driven all as an employee or all as
 self-employed.

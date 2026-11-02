@@ -1947,6 +1947,11 @@ def _money(value: float) -> float:
     return round(float(value), 2)
 
 
+def _pence(pounds: float) -> str:
+    """A rate a mile in £ as whole pence: 0.55 is "55p"."""
+    return f"{round(pounds * 100)}p"
+
+
 def fiscal_year(year: int) -> str:
     return f"{year}-{(year + 1) % 100:02d}"
 
@@ -2110,14 +2115,24 @@ def mileage_used(
             "further_miles": chosen.further_miles,
         }
 
+    employee = answers.business_miles_role == EMPLOYEE
+    # An employee's employer pays current law's approved amount on both
+    # sides (``mileage_rates.mileage_inputs``)
+    employer_rates = rates(budget=False) if employee else None
+    # Student loan repayments are worked out from net income, which both
+    # deductions lower (SI 2009/470 reg. 29)
     how = (
-        "Mileage Allowance Relief, from income tax only. The employer is "
-        "taken to pay current law's rates, unchanged"
-        if answers.business_miles_role == EMPLOYEE
+        "Mileage Allowance Relief on what the Budget's rates add, which "
+        "lowers income tax and any student loan repayments. The employer "
+        f"is taken to pay {_pence(employer_rates['first_miles'])} a mile "
+        "for the first 10,000 business miles and "
+        f"{_pence(employer_rates['further_miles'])} above, before and after "
+        "the Budget"
+        if employee
         else (
             "the flat rate deduction from self-employment profit, for "
-            "income tax and Class 4 National Insurance. Universal Credit "
-            "keeps its own 45p and 25p (reg. 59)"
+            "income tax, Class 4 National Insurance and any student loan "
+            "repayments. Universal Credit keeps its own 45p and 25p (reg. 59)"
         )
     )
     return {
@@ -2126,6 +2141,9 @@ def mileage_used(
         "applied": applied,
         "current_law_rates": rates(budget=False),
         "budget_rates": rates(budget=True),
+        # What an employee's employer is taken to pay a mile; None for a
+        # self-employed driver, who has no employer payment
+        "employer_assumed_rates": employer_rates,
         "deduction_change": _money(
             deduction_change(answers.business_miles, year)
         ),
