@@ -891,10 +891,11 @@ def month_salaries(
 ) -> Optional[list[list[float]]]:
     """Each month's employment income for the head (and any partner), as
     the yearly amount a policyengine-uk simulation of that month is run on:
-    twelve times the month's pay, so the year's income tax, National
-    Insurance and Universal Credit, divided by twelve, are the month's.
-    A partner without months of their own has their yearly salary, grown
-    to ``year``, in every month. None without the head's months."""
+    twelve times the month's pay, so the year's National Insurance and
+    Universal Credit, divided by twelve, are the month's. Income tax is
+    the month's cumulative PAYE instead (``paye_by_month``). A partner
+    without months of their own has their yearly salary, grown to
+    ``year``, in every month. None without the head's months."""
     if answers.monthly_employment_income is None:
         return None
     if not answers.has_partner:
@@ -916,6 +917,46 @@ def month_salaries(
             answers.monthly_employment_income, partner_months
         )
     ]
+
+
+def pay_to_date_at_a_yearly_rate(
+    months: list[list[float]],
+) -> list[list[float]]:
+    """Each adult's pay to date in each month, at a yearly rate: for month
+    m (1 for April), twelve times the pay from April to month m, over m.
+    ``months`` is ``month_salaries``' rows, a year of each month's pay."""
+    to_date = [0.0] * len(months[0])
+    rows = []
+    for number, row in enumerate(months, start=1):
+        to_date = [
+            so_far + yearly / surplus_rule.MONTHS_IN_YEAR
+            for so_far, yearly in zip(to_date, row)
+        ]
+        rows.append(
+            [
+                surplus_rule.MONTHS_IN_YEAR * so_far / number
+                for so_far in to_date
+            ]
+        )
+    return rows
+
+
+def paye_by_month(yearly_tax: list[list[float]]) -> list[list[float]]:
+    """Each adult's income tax deducted in each month under cumulative
+    PAYE, £: the tax due on pay to date less the tax deducted in the months
+    before. ``yearly_tax`` is the yearly income tax on each month's pay to
+    date at a yearly rate (``pay_to_date_at_a_yearly_rate``); PAYE gives a
+    twelfth of the year's allowance and bands each month, so the tax due to
+    month m is m / 12 of it."""
+    deducted = [0.0] * len(yearly_tax[0])
+    by_month = []
+    for number, row in enumerate(yearly_tax, start=1):
+        due = [number / surplus_rule.MONTHS_IN_YEAR * tax for tax in row]
+        by_month.append(
+            [due_now - before for due_now, before in zip(due, deducted)]
+        )
+        deducted = due
+    return by_month
 
 
 def full_new_state_pension(year: int) -> float:
@@ -1533,18 +1574,32 @@ def monthly_situation(
     household: dict,
     year: int,
     months: list,
+    income_tax_on_earnings: Optional[list] = None,
 ) -> dict:
     """One policyengine-uk situation holding the household once per month:
     each copy as entered, but for its adults' employment income, the
     month's (``month_salaries``), each built and checked as
-    ``household_situation`` builds one household. Ids are prefixed by the
-    month, so the people come month by month, in the order entered."""
+    ``household_situation`` builds one household. With
+    ``income_tax_on_earnings`` (a yearly amount for each adult in each
+    month), each adult's income tax on earnings for Universal Credit is
+    set to it. Ids are prefixed by the month, so the people come month by
+    month, in the order entered."""
     merged: dict = {"people": {}, "benunits": {}, "households": {}}
     for index, salaries in enumerate(months):
         month_people = [dict(person) for person in people]
         for person, salary in zip(month_people, salaries):
             person["employment_income"] = salary
         situation = household_situation(month_people, benunit, household, year)
+        if income_tax_on_earnings is not None:
+            # Set after the situation is built and checked: it replaces a
+            # formula, which the household input check does not take
+            adult_ids = list(situation["people"])[: len(salaries)]
+            for person_id, tax in zip(
+                adult_ids, income_tax_on_earnings[index]
+            ):
+                situation["people"][person_id]["uc_income_tax_on_earnings"] = {
+                    str(year): tax
+                }
         prefix = f"month_{index}_"
         for person_id, values in situation["people"].items():
             merged["people"][prefix + person_id] = values
@@ -1584,14 +1639,46 @@ def _run_months(
     surplus earnings, from one simulation of one side holding a household
     per month (``monthly_situation``): policyengine-uk's yearly figures, a
     year of each month's pay, which ``uc_surplus_earnings`` divides by
-    twelve. Also the side's Universal Credit taper rate."""
+    twelve. Also the side's Universal Credit taper rate.
+
+    The income tax each month's Universal Credit takes off (UC Regulations
+    2013 reg. 55(5)) is what cumulative PAYE deducts that month, not a
+    twelfth of the tax on a year of that month's pay: a first simulation
+    gives the yearly tax on each month's pay to date at a yearly rate, and
+    ``paye_by_month`` turns it into each month's deduction."""
     from policyengine_uk import Simulation
 
     from uk_budget_data.forecast import with_forecast
 
+    scenario = with_forecast(side_scenario(side))
+    adults = len(months[0])
+    to_date = Simulation(
+        situation=monthly_situation(
+            people,
+            benunit,
+            household,
+            year,
+            pay_to_date_at_a_yearly_rate(months),
+        ),
+        scenario=scenario,
+    )
+    yearly_tax = np.asarray(
+        to_date.calculate("uc_income_tax_on_earnings", year), dtype=float
+    ).reshape(len(months), -1)[:, :adults]
+    paye = paye_by_month(yearly_tax.tolist())
     simulation = Simulation(
-        situation=monthly_situation(people, benunit, household, year, months),
-        scenario=with_forecast(side_scenario(side)),
+        situation=monthly_situation(
+            people,
+            benunit,
+            household,
+            year,
+            months,
+            income_tax_on_earnings=[
+                [surplus_rule.MONTHS_IN_YEAR * tax for tax in row]
+                for row in paye
+            ],
+        ),
+        scenario=scenario,
     )
     values = {
         field_name: [float(v) for v in simulation.calculate(variable, year)]
@@ -2480,8 +2567,9 @@ def _dependants(answers: HouseholdAnswers, before: dict) -> list:
 SURPLUS_METHOD = (
     "Worked out month by month, April to March, from the monthly pay "
     "entered: each month's Universal Credit from a policyengine-uk "
-    "simulation of a year of that month's pay (so income tax and National "
-    "Insurance as if that pay came every month), then the surplus earnings "
+    "simulation of a year of that month's pay (so National Insurance as if "
+    "that pay came every month), with income tax as cumulative PAYE "
+    "deducts it, on pay to date, then the surplus earnings "
     "rule (Universal Credit Regulations 2013 reg. 54A) at the current-law "
     "threshold and at the Budget's. An award ends in a month whose earnings "
     "take it to nil; the next five monthly claims count the earnings above "

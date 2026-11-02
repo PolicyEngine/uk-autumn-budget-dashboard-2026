@@ -178,6 +178,71 @@ def test_each_month_is_twelve_times_its_pay_with_the_partner_spread_evenly():
     )
 
 
+def test_pay_to_date_at_a_yearly_rate_is_twelve_times_the_pay_so_far_over_the_months():
+    """Cumulative PAYE works on pay to date: month m's row is each
+    adult's pay from April to month m, at a yearly rate (12 / m of it)."""
+    months = household_impact.month_salaries(
+        household_impact.HouseholdAnswers(
+            monthly_employment_income=tuple(BONUS_MONTHS)
+        ),
+        2027,
+    )
+    to_date = household_impact.pay_to_date_at_a_yearly_rate(months)
+    assert [row[0] for row in to_date[:5]] == [pytest.approx(18_000)] * 5
+    # September: £7,500 to August plus £6,000, over six months
+    assert to_date[SEPTEMBER][0] == pytest.approx(13_500 * 12 / 6)
+    assert to_date[-1][0] == pytest.approx(22_500)
+
+
+def test_paye_takes_the_tax_due_on_pay_to_date_less_the_tax_already_deducted():
+    """With a yearly tax of 20% above £12,570 on pay to date at a yearly
+    rate, each £1,500 month pays £90.50 and the £6,000 month £990.50: the
+    £4,500 more at 20%, as cumulative PAYE takes it, not at the higher
+    rate a year of £6,000 months would pay."""
+    months = household_impact.month_salaries(
+        household_impact.HouseholdAnswers(
+            monthly_employment_income=tuple(BONUS_MONTHS)
+        ),
+        2027,
+    )
+
+    def basic_rate_tax(yearly_pay):
+        return 0.2 * max(0.0, yearly_pay - 12_570)
+
+    yearly_tax = [
+        [basic_rate_tax(pay) for pay in row]
+        for row in household_impact.pay_to_date_at_a_yearly_rate(months)
+    ]
+    deducted = [row[0] for row in household_impact.paye_by_month(yearly_tax)]
+    assert deducted == pytest.approx(
+        [90.5] * 5 + [990.5] + [90.5] * 6, abs=0.005
+    )
+    assert sum(deducted) == pytest.approx(basic_rate_tax(22_500))
+
+
+def test_the_bonus_month_is_taxed_as_cumulative_paye_takes_it():
+    """Each month's Universal Credit takes the income tax PAYE deducts that
+    month, on pay to date (UC Regulations 2013 reg. 55(5)), not a year of
+    that month's pay: September's £6,000 pays £990.50, so its earned income
+    is £4,721.95 (less £287.55 National Insurance), and the Budget's
+    £2,500 threshold is worth £681.21 to this household in 2027-28."""
+    household = {**SINGLE_PARENT, "monthly_employment_income": BONUS_MONTHS}
+    response = client.post(ROUTE, json=_request(household))
+    assert response.status_code == 200, response.text
+    surplus = response.json()["surplus_earnings"]
+    september = surplus["months"][SEPTEMBER]
+    assert september["total_earned_income"] == pytest.approx(4_721.95)
+    assert surplus["months"][0]["total_earned_income"] == pytest.approx(
+        1_373.30
+    )
+    assert surplus["change"] == pytest.approx(681.21)
+    # The method the page shows says so
+    assert (
+        "income tax as cumulative PAYE deducts it, on pay to date"
+        in surplus["method"]
+    )
+
+
 def test_a_bonus_month_on_universal_credit_gains_from_the_2500_threshold():
     """Through the route, in stages as the page asks: the headline, then
     the split by policy. Each stage's net income carries the measure's
