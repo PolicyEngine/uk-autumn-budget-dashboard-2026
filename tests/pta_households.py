@@ -71,13 +71,16 @@ contributions = st.lists(
 )
 
 
-def rule_for(year):
+def rule_for(year, weekly=None):
     """The Budget's amounts, in whole pence so no float rounding enters: the
-    weekly rate down to 5p x 52 (F), and 20% of F above the personal
-    allowance, up to the pound (A)."""
+    weekly rate to the nearest 5p x 52 (F), and 20% of F above the personal
+    allowance, up to the pound (A). ``paid`` is the full new State Pension
+    the engine pays, 52 x the unrounded weekly rate. ``weekly`` replaces the
+    engine's weekly rate."""
     on = system.parameters(f"{year}-04-06").gov
-    weekly = float(on.dwp.state_pension.new_state_pension.amount)
-    pence = math.floor(round(weekly * 100, 6) / 5) * 5 * 52
+    if weekly is None:
+        weekly = float(on.dwp.state_pension.new_state_pension.amount)
+    pence = math.floor(round(weekly * 100, 6) / 5 + 0.5) * 5 * 52
     personal_allowance = float(
         on.hmrc.income_tax.allowances.personal_allowance.amount
     )
@@ -90,6 +93,7 @@ def rule_for(year):
         personal_allowance=personal_allowance,
         allowance=allowance,
         top=full_state_pension + 3 * allowance,
+        paid=weekly * 52,
     )
 
 

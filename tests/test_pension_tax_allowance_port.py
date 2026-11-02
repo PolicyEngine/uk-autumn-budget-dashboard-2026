@@ -2,13 +2,16 @@
 the template before it (tests/pension_tax_allowance_before_port.py) and
 against the engine's own allowance where it has one.
 
-The port means to differ from the template in two places. People reaching
+The port means to differ from the template in three places. People reaching
 State Pension age between 6 October and 5 April now qualify, as the explainer
 says. The allowance no longer offsets the annual allowance charge, which comes
-at Step 7, after the Step 6 reductions. Everyone else matches.
+at Step 7, after the Step 6 reductions. The weekly rate rounds to the nearest
+5p, not down, so the differentials run at rates already on a 5p step.
+Everyone else matches.
 """
 
 import json
+import math
 from functools import lru_cache
 
 import numpy as np
@@ -78,11 +81,39 @@ def test_the_old_template_is_refused():
         pension_tax_allowance_before_port(Simulation(situation=_pensioner()))
 
 
+def _down_to_5p(weekly):
+    """The old template's rounding of the weekly rate."""
+    return math.floor(round(float(weekly) * 100, 6) / 5) * 5 / 100
+
+
+def _template_rate(year):
+    return _down_to_5p(
+        system.parameters(
+            f"{year}-04-06"
+        ).gov.dwp.state_pension.new_state_pension.amount
+    )
+
+
+def _on_a_5p_step():
+    """Intended: the port rounds the weekly rate to the nearest 5p, where the
+    template rounded down, so on 2.151.0 the band starts £2.60 higher in
+    2028-29. The template's own rate, already on a 5p step, gives both the
+    same band."""
+    return Scenario(
+        parameter_changes={
+            STATE_PENSION_RATE: {
+                f"{year}-01-01.{year}-12-31": _template_rate(year)
+                for year in YEARS
+            }
+        }
+    )
+
+
 @lru_cache(maxsize=None)
 def _old_and_ported():
-    old = Simulation(situation=_pensioner())
+    old = Simulation(situation=_pensioner(), scenario=_on_a_5p_step())
     pension_tax_allowance_before_port(old)
-    ported = Simulation(situation=_pensioner())
+    ported = Simulation(situation=_pensioner(), scenario=_on_a_5p_step())
     pension_tax_allowance(ported)
     return old, ported
 
@@ -96,8 +127,9 @@ def _old_and_ported():
 def test_the_port_matches_the_old_template(
     year, positions, mix, age, months_since_birthday
 ):
+    rule = rule_for(year, _template_rate(year))
     inputs = {
-        **split(in_band(rule_for(year), positions), mix),
+        **split(in_band(rule, positions), mix),
         "age": age,
         "months_since_last_birthday": months_since_birthday,
     }
@@ -114,7 +146,6 @@ def test_the_port_matches_the_old_template(
     # year get the allowance, which the template gave them none of.
     reaching = (since < 0) & (since > -6)
     assert new_tax[~reaching] == pytest.approx(old_tax[~reaching], abs=PENNY)
-    rule = rule_for(year)
     excess = np.maximum(0, total - rule.full_state_pension)
     reduction = np.maximum(0, rule.allowance - excess / 3)
     assert new_tax[reaching] == pytest.approx(
@@ -133,7 +164,7 @@ def test_the_port_keeps_the_annual_allowance_charge_the_template_offset(year):
     """Intended: income at the personal allowance leaves no tax at Step 5, so
     the template took its whole allowance off the charge. The port leaves the
     charge whole."""
-    rule = rule_for(year)
+    rule = rule_for(year, _template_rate(year))
     inputs = {
         "state_pension": [rule.personal_allowance] * SLOTS,
         ANNUAL_ALLOWANCE_INPUT: [70_000.0] * SLOTS,
@@ -155,8 +186,9 @@ def test_the_port_keeps_the_annual_allowance_charge_the_template_offset(year):
 @pytest.mark.parametrize("year", YEARS)
 def test_the_port_gives_what_the_old_template_gave_on_2_151_0(year):
     """Households the old template ran on 2.151.0, against the port on this
-    engine, at the State Pension rates of 2.151.0: later engines carry the
-    October 2026 forecast, which moves the band. The reduction matches
+    engine, at the State Pension rates of 2.151.0 down to 5p, as the
+    template took them (see _on_a_5p_step): later engines carry the October
+    2026 forecast, which moves the band. The reduction matches
     everywhere. Tax matches too wherever the Winter Fuel Payment charge does
     not apply, outside Scotland: later engines move Scotland's starter and
     basic bands (the first ends £4,102.67 above the personal allowance, not
@@ -166,9 +198,9 @@ def test_the_port_gives_what_the_old_template_gave_on_2_151_0(year):
     at_those_rates = Scenario(
         parameter_changes={
             STATE_PENSION_RATE: {
-                f"{year}-01-01.{year + 1}-12-31": fixture["weekly_rates"][
-                    str(year)
-                ]
+                f"{year}-01-01.{year + 1}-12-31": _down_to_5p(
+                    fixture["weekly_rates"][str(year)]
+                )
             }
         }
     )

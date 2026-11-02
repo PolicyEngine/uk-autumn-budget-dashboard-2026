@@ -114,6 +114,20 @@ def test_the_rule_gives_the_explainers_amounts(
     assert rule.top == pytest.approx(top)
 
 
+@pytest.mark.parametrize("year", YEARS)
+def test_the_full_new_state_pension_pays_no_income_tax(year):
+    """The Budget's aim (6.182): pensioners "whose total income is up to the
+    value of the full new State Pension" pay no income tax, in Scotland
+    too. The engine pays 52 x its unrounded weekly rate, which can sit
+    above the band's bottom, and the allowance still clears the tax on
+    it."""
+    rule = rule_for(year)
+    paid = np.full(SLOTS, rule.paid)
+    ([without], [with_allowance]) = _both(year, {"state_pension": paid})
+    assert (without > 1).all()
+    assert with_allowance == pytest.approx(0, abs=PENNY)
+
+
 @examples
 @given(years, band_positions, mixes)
 def test_tax_with_the_allowance_never_exceeds_tax_without(
@@ -208,8 +222,10 @@ def test_the_models_allowance_is_within_a_pound_of_the_budgets_formula(
 @pytest.mark.parametrize(
     "weekly, full_state_pension, allowance",
     [
-        # A 5p step down, then £93.28 rounded up to the pound
-        (250.74, 13_036.40, 94),
+        # Down to the nearest 5p, then £93.28 rounded up to the pound
+        (250.71, 13_036.40, 94),
+        # Up to the nearest 5p, then £93.80 rounded up to the pound
+        (250.73, 13_039.00, 94),
         # 20% of the gap is a whole pound, so it stays that pound
         (250.00, 13_000.00, 86),
         (255.00, 13_260.00, 138),
@@ -382,6 +398,50 @@ def test_the_allowance_comes_off_only_the_tax_before_the_charges(
     assert (with_allowance >= charged - PENNY).all()
 
 
+def test_the_allowance_never_offsets_the_child_benefit_charge():
+    """A pensioner on the full new State Pension, claiming Child Benefit for
+    a child of 10, with the charge's thresholds moved into the band so the
+    two meet, as they cannot at the Budget's amounts (the charge starts at
+    £60,000 of adjusted net income). The allowance clears the £93.28 of tax
+    and leaves the charge whole."""
+    year = 2027
+    situation = {
+        "people": {
+            "p": {"age": {year: 70}, "state_pension": {year: 13_036.40}},
+            "c": {"age": {year: 10}},
+        },
+        "benunits": {
+            "b": {
+                "members": ["p", "c"],
+                "would_claim_child_benefit": {year: True},
+            }
+        },
+        "households": {
+            "h": {"members": ["p", "c"], "region": {year: "LONDON"}}
+        },
+    }
+    path = "gov.hmrc.income_tax.charges.CB_HITC"
+    changes = {
+        f"{path}.phase_out_start": {str(year): 12_000},
+        f"{path}.phase_out_end": {str(year): 20_000},
+    }
+    baseline = Simulation(
+        situation=situation, scenario=Scenario(parameter_changes=changes)
+    )
+    reformed = Simulation(
+        situation=situation, scenario=Scenario(parameter_changes=changes)
+    )
+    pension_tax_allowance(reformed)
+    charge = float(reformed.calculate("CB_HITC", year)[0])
+    assert charge > 0
+    assert float(baseline.calculate("income_tax", year)[0]) == pytest.approx(
+        93.28 + charge, abs=PENNY
+    )
+    assert float(reformed.calculate("income_tax", year)[0]) == pytest.approx(
+        charge, abs=PENNY
+    )
+
+
 def test_the_step_7_charges_are_the_engines():
     """The cap takes these off the engine's tax, so a new charge among the
     engine's additions has to join them."""
@@ -533,6 +593,43 @@ def test_the_means_tests_see_the_tax_after_the_allowance(
         - baseline.calculate(variable, year)[0]
     )
     assert change == pytest.approx(used, abs=PENNY)
+
+
+def test_universal_credit_takes_the_allowance_off_the_employment_first():
+    """A pensioner in 2029-30 with £12,800 of pay and £1,100 of trade. The
+    engine takes the pay as the lowest slice, so the tax on it is small, and
+    the allowance used exceeds it. The allowance clears the tax on the pay
+    and the rest comes off the tax on the trade."""
+    year = 2029
+    situation = {
+        "people": {
+            "p": {
+                "age": {year: 70},
+                "employment_income": {year: 12_800},
+                "self_employment_income": {year: 1_100},
+            }
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {year: "LONDON"}}},
+    }
+    baseline = Simulation(situation=situation)
+    reformed = Simulation(situation=situation)
+    pension_tax_allowance(reformed)
+
+    def split_of(sim):
+        earnings = float(sim.calculate("uc_income_tax_on_earnings", year)[0])
+        trade = float(sim.calculate("uc_income_tax_on_trade", year)[0])
+        return earnings - trade, trade
+
+    used = float(
+        baseline.calculate("income_tax", year)[0]
+        - reformed.calculate("income_tax", year)[0]
+    )
+    employment, trade = split_of(baseline)
+    employment_after, trade_after = split_of(reformed)
+    assert 0 < employment < used < employment + trade
+    assert employment_after == pytest.approx(0, abs=PENNY)
+    assert trade_after == pytest.approx(trade - (used - employment), abs=PENNY)
 
 
 class PastTheRefusal(Exception):

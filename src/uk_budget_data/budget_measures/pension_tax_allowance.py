@@ -55,12 +55,23 @@ def pension_tax_allowance(
 
     Both amounts are read at run time, so they follow the forecast the
     run uses: the full new State Pension is the engine's weekly rate on
-    6 April, rounded down to ``weekly_rounding`` (5p, as DWP's rates have
-    been: £230.25, £241.30, £250.70), x 52; the personal allowance is the
-    engine's. Total income is ``total_income`` (Income Tax Act 2007 s. 23,
-    savings interest included). The explainer's 2027-28 cases: £13,036.40
-    pays nothing (£93.28 cancelled); £12,970 pays nothing (£80);
-    £13,186.40 gets £44 (£94 - £150 / 3); £13,400 gets nothing.
+    6 April, rounded to the nearest ``weekly_rounding`` (5p), x 52; the
+    personal allowance is the engine's. DWP rounds that way: each rate
+    from 2017-18 to 2026-27 equals the year before's, uprated by the
+    engine's triple lock growth and rounded to the nearest 5p, and rounding
+    down misses five of the ten. The engine's forecast rates carry no
+    rounding, so this rounds the engine's own rate, which keeps the band's
+    bottom within £1.30 a year of what the engine pays someone on the full
+    rate. At policyengine-uk 2.164.2's rates the allowance clears all their
+    tax, every year, in Scotland too. Chaining DWP's rounding from the
+    2027-28 rate instead would put 2028-29's at £259.20, below the engine's
+    £259.24, and leave them 67p of tax. Once the engine rounds its forecast
+    rates (policyengine-uk#2751), this rounding changes nothing.
+
+    Total income is ``total_income`` (Income Tax Act 2007 s. 23, savings
+    interest included). The explainer's 2027-28 cases: £13,036.40 pays
+    nothing (£93.28 cancelled); £12,970 pays nothing (£80); £13,186.40 gets
+    £44 (£94 - £150 / 3); £13,400 gets nothing.
 
     People qualify if over State Pension age "or reach State Pension age
     within the tax year" (the explainer's FAQ): attaining it by 5 April, not
@@ -116,7 +127,7 @@ def pension_tax_allowance(
         current = _call_formula(native, person, period, parameters)
         on = parameters(f"{year}-04-06").gov
         weekly = on.dwp.state_pension.new_state_pension.amount
-        steps = np.floor(weekly / weekly_rounding + 1e-9)
+        steps = np.floor(round(weekly / weekly_rounding, 6) + 0.5)
         full_state_pension = round(float(steps * weekly_rounding) * 52, 2)
         personal_allowance = (
             on.hmrc.income_tax.allowances.personal_allowance.amount
