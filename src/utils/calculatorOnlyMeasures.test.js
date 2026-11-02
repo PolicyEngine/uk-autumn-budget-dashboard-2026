@@ -7,18 +7,28 @@ import {
   isCalculatorOnly,
   resultPolicies,
   withCalculatorOnly,
+  withEveryCalculatorOnly,
   withoutCalculatorOnly,
 } from "./calculatorOnlyMeasures";
 import { policyRows } from "./singleYear";
 import { UNMODELLED_MEASURES } from "./unmodelledMeasures";
 
 describe("calculator-only measures", () => {
-  it("always go after the selected measures, once, and come off for the national figures", () => {
-    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID]);
-    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID]);
+  it("go after the selected measures, once, and come off for the national figures; gas standing charges only with a gas use", () => {
+    // No answers (the examples) or no gas use: only the savings rise
+    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID]);
+    expect(withCalculatorOnly(["a", "b"], { gas_use_kwh_per_year: 0 })).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID]);
+    expect(withCalculatorOnly(["a", "b"], { gas_use_kwh_per_year: 14000 })).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID]);
+    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID], { gas_use_kwh_per_year: 14000 })).toEqual(["a", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID]);
     // Nothing selected: no request, so nothing added
-    expect(withCalculatorOnly([])).toEqual([]);
+    expect(withCalculatorOnly([], { gas_use_kwh_per_year: 14000 })).toEqual([]);
     expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID])).toEqual(["a"]);
+  });
+
+  it("ask the questions of every calculator-only measure, whether or not it is in the request yet", () => {
+    // So the gas use is asked before any is entered
+    expect(withEveryCalculatorOnly(["a"])).toEqual(["a", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID]);
+    expect(withEveryCalculatorOnly([])).toEqual([]);
   });
 
   it("include gas standing charges abolished, named, with its Policies card", () => {
@@ -29,6 +39,7 @@ describe("calculator-only measures", () => {
       name: "Gas standing charges abolished",
       phrase: "the gas standing charge abolition",
       card: "gas-standing-charges",
+      appliesTo: expect.any(Function),
     });
     expect(UNMODELLED_MEASURES.map((card) => card.id)).toContain(CALCULATOR_ONLY_MEASURES[GAS_STANDING_CHARGES_ID].card);
   });
@@ -55,14 +66,17 @@ describe("the result card's measures (resultPolicies)", () => {
     { minLength: 1, maxLength: 12 },
   );
 
+  // Answers with a gas use, so every calculator-only measure is in the request
+  const WITH_GAS_USE = { gas_use_kwh_per_year: 14000 };
+
   it("counts the selection and names each calculator-only measure", () => {
     const seven = ["a", "b", "c", "d", "e", "f", "g"];
-    expect(resultPolicies(withCalculatorOnly(seven))).toEqual({
+    expect(resultPolicies(withCalculatorOnly(seven, WITH_GAS_USE))).toEqual({
       count: 7,
       named: ["the savings income tax rise", "the gas standing charge abolition"],
       text: "7 policies, the savings income tax rise and the gas standing charge abolition",
     });
-    expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe(
+    expect(resultPolicies(withCalculatorOnly(["a"], WITH_GAS_USE)).text).toBe(
       "1 policy, the savings income tax rise and the gas standing charge abolition",
     );
     // Without the calculator's own measures, just the count
@@ -75,7 +89,7 @@ describe("the result card's measures (resultPolicies)", () => {
   it("for any selection, counts exactly the selection and names every calculator-only measure", () => {
     fc.assert(
       fc.property(selection, (selected) => {
-        const { count, named, text } = resultPolicies(withCalculatorOnly(selected));
+        const { count, named, text } = resultPolicies(withCalculatorOnly(selected, WITH_GAS_USE));
         expect(count).toBe(selected.length);
         expect(text.startsWith(`${selected.length} ${selected.length === 1 ? "policy" : "policies"}`)).toBe(true);
         for (const id of CALCULATOR_ONLY_IDS) {

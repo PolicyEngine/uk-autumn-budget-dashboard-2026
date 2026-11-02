@@ -22,7 +22,7 @@
  */
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
-import { DEFAULT_SPENDING, TYPICAL_GAS_USE_KWH, regionalRent } from "./householdDefaults";
+import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
 import { localAuthorityKey } from "./localAuthorities";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
@@ -301,9 +301,11 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       petrol_spending: inputs.petrol_spending_per_year,
       diesel_spending: inputs.diesel_spending_per_year,
       electricity_spending: inputs.electricity_spending_per_year ?? DEFAULT_SPENDING.electricity,
-      // Gas use for gas standing charges abolished (0: no mains gas), sent
-      // whatever is selected, so an edited use is an edited answer
-      gas_use_kwh: inputs.gas_use_kwh_per_year ?? TYPICAL_GAS_USE_KWH,
+      // Gas use for gas standing charges abolished, only once one is
+      // entered (whatever is selected, so an edited use is an edited
+      // answer); none or 0 sends nothing, so every other request, and every
+      // example's precomputed answer, is as before
+      ...(gasUse(inputs) > 0 ? { gas_use_kwh: gasUse(inputs) } : {}),
       salary_sacrifice_pension_contributions: inputs.salary_sacrifice_per_year,
       student_loan_plan: inputs.student_loan_plan,
       // The API estimates Council Tax from the band and the council's own
@@ -337,6 +339,15 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
     include: [...include],
   };
 }
+
+/**
+ * The home's gas use, kWh a year, as the API takes it: 0 for none, an
+ * empty box or anything that is not a positive number.
+ */
+export const gasUse = (inputs) => {
+  const use = inputs.gas_use_kwh_per_year;
+  return typeof use === "number" && Number.isFinite(use) && use > 0 ? use : 0;
+};
 
 /** The rent a month: as entered, else the region's average private rent. */
 export const monthlyRent = (inputs) =>

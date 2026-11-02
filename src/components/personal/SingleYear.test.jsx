@@ -340,11 +340,12 @@ describe("the household calculation, from the fixture", () => {
         const tile = headlineCard().querySelector(".result-tiles .forecast-tile");
         const unit = ids.length === 1 ? "policy" : "policies";
         expect(tile.querySelector(".result-policies-link")).toHaveTextContent(
-          new RegExp(`^${ids.length} ${unit}, the savings income tax rise and the gas standing charge abolition$`),
+          new RegExp(`^${ids.length} ${unit} and the savings income tax rise$`),
         );
-        // The request carries both, so the card must name them
+        // The request carries the savings rise, so the card must name it; with
+        // no gas use entered, not gas standing charges abolished
         expect(household.at(-1).policies).toContain("savings_income_rates_up");
-        expect(household.at(-1).policies).toContain("gas_standing_charges_abolition");
+        expect(household.at(-1).policies).not.toContain("gas_standing_charges_abolition");
       }),
       { numRuns: 8 },
     );
@@ -369,9 +370,10 @@ describe("the household calculation, from the fixture", () => {
       "Income percentile",
     ]);
     // The selected policies, counted as the header counts them, and the
-    // measures the calculator always adds, named
+    // measure the calculator always adds, named (no gas use is entered, so
+    // not gas standing charges abolished)
     expect(tiles[0]).toHaveTextContent(
-      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies, the savings income tax rise and the gas standing charge abolition`,
+      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies and the savings income tax rise`,
     );
     expect(changeValue()).toBe("+£3,765");
     // All three figures in the tiles' one headline class, the change not

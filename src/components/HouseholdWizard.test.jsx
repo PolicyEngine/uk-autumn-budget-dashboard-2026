@@ -127,10 +127,10 @@ describe("the personal impact form", () => {
     const spending = groupToggle("Spending");
     expect(spending).toHaveAttribute("aria-expanded", "true");
     expect(document.getElementById(spending.getAttribute("aria-controls"))).toBeVisible();
-    // No selected policy reads anything; the savings rise and gas standing
-    // charges abolished, always in the request, read savings interest and
-    // gas use, so only those two steps split their answers, each asked
-    // first in its step
+    // No selected policy reads anything; the savings rise, always in the
+    // request, and gas standing charges abolished, whose gas use is asked
+    // before it joins the request, read savings interest and gas use, so
+    // only those two steps split their answers, each asked first in its step
     expect([...document.querySelectorAll(".household-step-optional-toggle")].map((toggle) => toggle.getAttribute("aria-controls"))).toEqual([
       "household-step-spending-panel-optional",
       "household-step-savings-panel-optional",
@@ -804,17 +804,17 @@ describe("the selected policies' questions", () => {
     expect(document.querySelectorAll('[data-row="is_carer"]')).toHaveLength(1);
   });
 
-  it("asks gas use first for gas standing charges abolished, in kWh, Ofgem's typical 9,500 until changed", () => {
-    // The calculator adds the measure to any selection
+  it("asks gas use first for gas standing charges abolished, in kWh, with none until one is entered", () => {
+    // Asked with any selection, before the measure is in the request
     form(["fuel_duty_rise_deferral"]);
     fireEvent.click(stepToggle("Spending"));
     expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "gas_use_kwh_per_year"]);
-    expect(value("Gas use")).toBe(9500);
-    // Its note: where to find it, 0 for no mains gas, the default, and the
+    expect(value("Gas use")).toBe(0);
+    // Its note: where to find it, Ofgem's typical use, what 0 does, and the
     // calculated £0 at average use
     const note = box("Gas use").getAttribute("aria-describedby");
     expect(document.getElementById(note)).toHaveTextContent(
-      "Your gas use in a year, from your bill or annual statement; 0 if your home has no mains gas. Prefilled with Ofgem's typical use, 9,500 kWh. For gas standing charges abolished: at the average, 11,359 kWh, your bill does not change, so £0 is the result, not a missing figure.",
+      "Your home's gas use in a year, from your bill or annual statement (Ofgem's typical use is 9,500 kWh). Leave it at 0 if your home has no mains gas: gas standing charges abolished is then left out of your result. At the average, 11,359 kWh, your bill does not change, so £0 is the result, not a missing figure.",
     );
     fireEvent.change(box("Gas use"), { target: { value: "14000" } });
     fireEvent.blur(box("Gas use"));
@@ -827,7 +827,7 @@ describe("the selected policies' questions", () => {
     expect(field("gas_use_kwh_per_year")).toBeNull();
   });
 
-  it("sends the gas use entered, and 0 for a home with no mains gas", async () => {
+  it("sends the gas use, and the measure, once a gas use is entered", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
@@ -841,12 +841,21 @@ describe("the selected policies' questions", () => {
     try {
       form(["fuel_duty_rise_deferral"], { year: 2028 });
       fireEvent.click(stepToggle("Spending"));
+      fireEvent.change(box("Gas use"), { target: { value: "14000" } });
+      fireEvent.blur(box("Gas use"));
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      const yours = () => bodies.find((body) => body.household.gas_use_kwh === 14000 && body.include.length === 0);
+      await waitFor(() => expect(yours()).toBeDefined());
+      expect(yours().policies).toContain("gas_standing_charges_abolition");
+      // Back to 0, no mains gas: neither the gas use nor the measure
+      bodies.length = 0;
       fireEvent.change(box("Gas use"), { target: { value: "0" } });
       fireEvent.blur(box("Gas use"));
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
-      const yours = () => bodies.find((body) => body.household.gas_use_kwh === 0 && body.include.length === 0);
-      await waitFor(() => expect(yours()).toBeDefined());
-      expect(yours().policies).toContain("gas_standing_charges_abolition");
+      const without = () => bodies.find((body) => body.include.length === 0 && body.policies.includes("fuel_duty_rise_deferral"));
+      await waitFor(() => expect(without()).toBeDefined());
+      expect(without().household).not.toHaveProperty("gas_use_kwh");
+      expect(without().policies).not.toContain("gas_standing_charges_abolition");
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();
@@ -947,7 +956,7 @@ describe("the selected policies' questions", () => {
     }
   });
 
-  it("always adds the savings income tax rise and gas standing charges abolished to a household's request, the cards' too", async () => {
+  it("always adds the savings income tax rise to a household's request, the cards' too, and gas standing charges abolished only with a gas use", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
@@ -968,12 +977,22 @@ describe("the selected policies' questions", () => {
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
-      const added = ["savings_income_rates_up", "gas_standing_charges_abolition"];
-      expect(headline()[0].policies).toEqual([...published, ...added]);
-      // Every example card's figures are asked with them too
+      // No gas use entered: the savings rise only
+      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up"]);
+      // Every example card's figures are asked with it too, and none has a
+      // gas use, so none asks for gas standing charges abolished
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
       expect(cards.length).toBeGreaterThan(0);
-      expect(cards.every((body) => JSON.stringify(body.policies.slice(-2)) === JSON.stringify(added))).toBe(true);
+      expect(cards.every((body) => body.policies.at(-1) === "savings_income_rates_up")).toBe(true);
+      expect(cards.some((body) => body.policies.includes("gas_standing_charges_abolition"))).toBe(false);
+      // With a gas use entered, both
+      bodies.length = 0;
+      fireEvent.change(box("Gas use"), { target: { value: "14000" } });
+      fireEvent.blur(box("Gas use"));
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      const withGas = () => bodies.filter((body) => body.household.gas_use_kwh === 14000 && body.include.length === 0);
+      await waitFor(() => expect(withGas()).toHaveLength(1));
+      expect(withGas()[0].policies).toEqual([...published, "savings_income_rates_up", "gas_standing_charges_abolition"]);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

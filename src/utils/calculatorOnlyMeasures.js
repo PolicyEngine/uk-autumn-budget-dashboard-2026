@@ -1,9 +1,11 @@
+import { gasUse } from "./householdImpactApi";
+
 /**
- * Measures the Household calculator always adds to a household's request
- * that are not in the national results: not in the manifest, the page
- * header's policy selector, the charts, the maps or the combined package.
- * The household API still knows them (its reform registry), so one
- * household can be calculated with them.
+ * Measures the Household calculator adds to a household's request that are
+ * not in the national results: not in the manifest, the page header's
+ * policy selector, the charts, the maps or the combined package. The
+ * household API still knows them, so one household can be calculated with
+ * them.
  *
  * The savings income tax rise is held back from the national results while
  * the savings data are corrected (María, #290, 28 October 2026); Vahid and
@@ -14,8 +16,10 @@
  * Gas standing charges abolished (#355) is a household-only measure: the
  * household API works out the household's gas bill change from its gas use
  * (gas_standing_charges.py) and counts it in net income. It is no
- * registered measure, so no national figure can have it. `card` is its
- * card on the Policies tab (unmodelledMeasures.js).
+ * registered measure, so no national figure can have it. The page adds it
+ * to a request only when the answers have a gas use (`appliesTo`), so every
+ * other household's request, and every example's precomputed answer, is as
+ * before. `card` is its card on the Policies tab (unmodelledMeasures.js).
  */
 export const SAVINGS_INCOME_RATES_ID = "savings_income_rates_up";
 export const GAS_STANDING_CHARGES_ID = "gas_standing_charges_abolition";
@@ -32,6 +36,9 @@ export const CALCULATOR_ONLY_MEASURES = {
     name: "Gas standing charges abolished",
     phrase: "the gas standing charge abolition",
     card: "gas-standing-charges",
+    // Only for a home with a gas use entered: without one it has nothing
+    // to act on
+    appliesTo: (inputs) => gasUse(inputs) > 0,
   },
 };
 
@@ -39,12 +46,31 @@ const CALCULATOR_ONLY_IDS = Object.keys(CALCULATOR_ONLY_MEASURES);
 
 export const isCalculatorOnly = (id) => Object.hasOwn(CALCULATOR_ONLY_MEASURES, id);
 
+// Whether a calculator-only measure goes in a request with these answers:
+// always, unless it reads them (`appliesTo`); never then without answers
+const appliesFor = (id, inputs) => {
+  const { appliesTo } = CALCULATOR_ONLY_MEASURES[id];
+  return !appliesTo || (inputs != null && appliesTo(inputs));
+};
+
 /**
  * A household request's measures: the header's selection, then every
- * calculator-only measure not already in it. With nothing selected, nothing
- * (no request is made then).
+ * calculator-only measure not already in it that applies to the answers
+ * `inputs` (with none given, as for the examples, only those that always
+ * apply). With nothing selected, nothing (no request is made then).
  */
-export const withCalculatorOnly = (policies) =>
+export const withCalculatorOnly = (policies, inputs = null) =>
+  policies.length === 0
+    ? []
+    : [...policies, ...CALCULATOR_ONLY_IDS.filter((id) => !policies.includes(id) && appliesFor(id, inputs))];
+
+/**
+ * The measures whose questions the form asks: the selection, then every
+ * calculator-only measure, including one that joins a request only once its
+ * answers are given (the gas use is asked before any is entered). With
+ * nothing selected, nothing.
+ */
+export const withEveryCalculatorOnly = (policies) =>
   policies.length === 0 ? [] : [...policies, ...CALCULATOR_ONLY_IDS.filter((id) => !policies.includes(id))];
 
 /** "a", "a and b", "a, b and c". */

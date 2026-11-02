@@ -18,6 +18,7 @@ import {
   asksEducation,
   atStatePensionAge,
   buildHouseholdRequest,
+  gasUse,
   isRenting,
   parseChildrenAges,
   requestKey,
@@ -38,7 +39,7 @@ export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
-import { calculatorOnlyNote, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { calculatorOnlyNote, withCalculatorOnly, withEveryCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -301,15 +302,16 @@ const NUMBER_CONFIGS = {
     suffix: "a year",
     hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
-  // Gas standing charges abolished (#355): its one answer. 0 is a home
-  // with no mains gas
+  // Gas standing charges abolished (#355): its one answer. 0, the default,
+  // is none entered or a home with no mains gas: then neither the gas use
+  // nor the measure is sent
   gas_use_kwh_per_year: {
     label: "Gas use",
     min: 0,
     max: 100000,
     step: 100,
     suffix: "kWh a year",
-    hint: `Your gas use in a year, from your bill or annual statement; 0 if your home has no mains gas. Prefilled with Ofgem's typical use, ${d3.format(",")(TYPICAL_GAS_USE_KWH)} kWh. For gas standing charges abolished: at the average, ${d3.format(",")(MEAN_GAS_USE_KWH)} kWh, your bill does not change, so £0 is the result, not a missing figure.`,
+    hint: `Your home's gas use in a year, from your bill or annual statement (Ofgem's typical use is ${d3.format(",")(TYPICAL_GAS_USE_KWH)} kWh). Leave it at 0 if your home has no mains gas: gas standing charges abolished is then left out of your result. At the average, ${d3.format(",")(MEAN_GAS_USE_KWH)} kWh, your bill does not change, so £0 is the result, not a missing figure.`,
   },
   self_employment_receipts_per_year: {
     label: "Self-employment or side income",
@@ -699,10 +701,14 @@ function HouseholdCalculator({
   );
   const noneSelected = householdPolicies.length === 0;
   // What the household's own request asks for: the selected measures, then
-  // any calculator-only one turned on. With none on it is the selection
-  // itself, so the examples' precomputed answers (keyed to exactly the
-  // published measures) still answer at once
-  const requestPolicies = useMemo(() => withCalculatorOnly(householdPolicies), [householdPolicies]);
+  // the calculator-only ones that apply to these answers (gas standing
+  // charges abolished only with a gas use, so the examples' precomputed
+  // answers still answer at once)
+  const gasUsed = gasUse(inputs);
+  const requestPolicies = useMemo(
+    () => withCalculatorOnly(householdPolicies, { gas_use_kwh_per_year: gasUsed }),
+    [householdPolicies, gasUsed],
+  );
   const requestKeyPolicies = requestPolicies.join(",");
   // The cards' figures are for every measure: shown only while every
   // measure is selected
@@ -740,7 +746,9 @@ function HouseholdCalculator({
     if (householdPolicies.length > 0) {
       // Another household: its own result or a clean loading state, never
       // the previous card's (useHouseholdImpact's `household`)
-      setSubmitted({ inputs: next, year, policies: requestPolicies, at: Date.now(), household: preset.id });
+      // The example's own answers decide the calculator-only measures (it
+      // has no gas use, so not gas standing charges abolished)
+      setSubmitted({ inputs: next, year, policies: withCalculatorOnly(householdPolicies, next), at: Date.now(), household: preset.id });
     }
   };
   // The results for the answers sent with Calculate, never the ones being
@@ -919,8 +927,10 @@ function HouseholdCalculator({
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
   // The answers the selected policies read (utils/householdPolicyFields.js),
   // first in their step, in the table's order; the step's other answers
-  // wait under "Other questions"
-  const policyAsks = noneSelected ? [] : policyQuestions(requestPolicies, { inputs, year, applies: fieldApplies });
+  // wait under "Other questions". Every calculator-only measure's answers
+  // are asked, so the gas use is asked before one puts its measure in the
+  // request
+  const policyAsks = noneSelected ? [] : policyQuestions(withEveryCalculatorOnly(householdPolicies), { inputs, year, applies: fieldApplies });
 
   // The children's ages, kept as the text the household request reads
   // ("5, 3")
