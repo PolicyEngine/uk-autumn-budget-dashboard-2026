@@ -381,6 +381,16 @@ def test_every_template_stays_computable_without_purchase_inputs(name):
     )
 
 
+# Registered for the Household calculator only, never run nationally on
+# today's data: the limits each one touches, which a national run would
+# report as not computable (reforms.py, calculatorOnlyMeasures.js). The
+# Machine Games Duty rise raises the standard rate, whose takings the
+# certified data do not record (2 November 2026).
+CALCULATOR_ONLY_LIMITS = {
+    "machine_games_duty_rise": ["machine_games_standard_rate"],
+}
+
+
 @pytest.mark.parametrize(
     "reform", get_all_reforms(), ids=lambda reform: reform.id
 )
@@ -403,4 +413,6 @@ def test_registered_measures_do_not_set_limited_inputs(reform):
                 )
                 == {}
             )
-    assert data_limits.limits_touched(*sides) == []
+    assert [
+        limit["key"] for limit in data_limits.limits_touched(*sides)
+    ] == CALCULATOR_ONLY_LIMITS.get(reform.id, [])
