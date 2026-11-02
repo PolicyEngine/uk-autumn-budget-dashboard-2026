@@ -320,6 +320,16 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES, pub
  * Never a figure of ours: only the Treasury's costing. Nothing when there
  * are none, so the tab reads as it did before the class.
  */
+/**
+ * A household-only card's last point says what leaves the measure out: the
+ * national results, not the model (its words stay the entry's own).
+ */
+export const HOUSEHOLD_ONLY_WHY_LABEL = "Why the national results leave it out";
+const withHouseholdOnlyLabel = (measure) => ({
+  ...measure,
+  points: measure.points?.map((point) => (point.label === "Why we leave it out" ? { ...point, label: HOUSEHOLD_ONLY_WHY_LABEL } : point)),
+});
+
 export function HouseholdOnlyMeasures({ measures = UNMODELLED_MEASURES, published = [], onShowTab = null }) {
   const items = splitUnmodelled(measures, { published }).household;
   if (!items.length) return null;
@@ -336,7 +346,7 @@ export function HouseholdOnlyMeasures({ measures = UNMODELLED_MEASURES, publishe
       <div className="report-section policy-details-content">
         <ul className="policy-cards umm-list" aria-label={HOUSEHOLD_ONLY_TITLE}>
           {items.map((measure) => {
-            const { policy, parameters } = unmodelledCard(measure, {
+            const { policy, parameters } = unmodelledCard(withHouseholdOnlyLabel(measure), {
               anchor: "household-only",
               lead: (
                 <p className="umm-calculator">

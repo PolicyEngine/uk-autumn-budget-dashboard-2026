@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import UnmodelledMeasures, { CERTIFIED_CAPTION, CERTIFIED_TITLE, COSTING_CAPTION, HouseholdOnlyMeasures, costingRows, UNMODELLED_TITLE, formatMillions, groupsOf, unmodelledSubtitle } from "./UnmodelledMeasures";
+import UnmodelledMeasures, { CERTIFIED_CAPTION, CERTIFIED_TITLE, COSTING_CAPTION, HOUSEHOLD_ONLY_WHY_LABEL, HouseholdOnlyMeasures, costingRows, UNMODELLED_TITLE, formatMillions, groupsOf, unmodelledSubtitle } from "./UnmodelledMeasures";
 import { WHY_NOT_MODELLED } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
@@ -409,6 +409,16 @@ describe("HouseholdOnlyMeasures", () => {
     // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
     expect(card.querySelector(".policy-card-points")).toHaveTextContent(/Held back: calibrated on another basis/);
     expect(why(held[0])).not.toMatch(/miss(?:es)? ISA interest/);
+  });
+
+  it("labels each card's last point by what leaves it out: the national results", () => {
+    render(<HouseholdOnlyMeasures />);
+    for (const item of items()) {
+      const labels = [...item.querySelectorAll(".policy-card-points > li > .policy-card-point-label")].map((label) => label.textContent);
+      expect(labels, item.id).toEqual([...UNMODELLED_POINT_LABELS.slice(0, -1), HOUSEHOLD_ONLY_WHY_LABEL]);
+    }
+    // The not-modelled cards keep the list's label
+    expect(HOUSEHOLD_ONLY_WHY_LABEL).not.toBe(UNMODELLED_POINT_LABELS.at(-1));
   });
 
   it("says the cash ISA limit is in the Household calculator only, not the national results", () => {
