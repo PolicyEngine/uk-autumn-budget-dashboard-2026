@@ -626,6 +626,28 @@ function normaliseSweep(raw) {
   };
 }
 
+const mileageRates = (rates) =>
+  rates ? { firstMiles: num(rates.first_miles), furtherMiles: num(rates.further_miles) } : null;
+
+/**
+ * The business miles the calculation read (#357): the miles and role, both
+ * sides' rates a mile, what an employee's employer is taken to pay (null
+ * for the self-employed) and how much the Budget raises the deduction.
+ * Null with no business miles.
+ */
+function normaliseMileage(used) {
+  if (!used) return null;
+  return {
+    miles: num(used.business_miles),
+    role: used.role,
+    applied: Boolean(used.applied),
+    currentLawRates: mileageRates(used.current_law_rates),
+    budgetRates: mileageRates(used.budget_rates),
+    employerRates: mileageRates(used.employer_assumed_rates),
+    deductionChange: num(used.deduction_change),
+  };
+}
+
 /**
  * The page's own shape for an answer. Parts a stage did not compute are
  * null, so the page can tell "not yet" from "none".
@@ -665,6 +687,7 @@ export function normaliseHouseholdImpact(raw) {
           source: raw.council_tax_used.source ?? null,
         }
       : null,
+    mileage: normaliseMileage(raw.mileage_used),
     area: area
       ? {
           region: area.region ?? null,

@@ -199,6 +199,34 @@ describe("consistentRound", () => {
 });
 
 describe("normaliseHouseholdImpact", () => {
+  it("reads the business miles the calculation used, with what an employee's employer is taken to pay", () => {
+    const rates = (first, further) => ({ first_miles: first, further_miles: further });
+    const mileageUsed = (role, employerRates) => ({
+      business_miles: 15000,
+      role,
+      applied: true,
+      current_law_rates: rates(0.55, 0.25),
+      budget_rates: rates(0.55, 0.35),
+      employer_assumed_rates: employerRates,
+      deduction_change: 500,
+      note: "The deduction is …",
+    });
+    const employee = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, mileage_used: mileageUsed("EMPLOYEE", rates(0.55, 0.25)) });
+    expect(employee.mileage).toEqual({
+      miles: 15000,
+      role: "EMPLOYEE",
+      applied: true,
+      currentLawRates: { firstMiles: 0.55, furtherMiles: 0.25 },
+      budgetRates: { firstMiles: 0.55, furtherMiles: 0.35 },
+      employerRates: { firstMiles: 0.55, furtherMiles: 0.25 },
+      deductionChange: 500,
+    });
+    const selfEmployed = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, mileage_used: mileageUsed("SELF_EMPLOYED", null) });
+    expect(selfEmployed.mileage).toMatchObject({ role: "SELF_EMPLOYED", employerRates: null });
+    // No business miles: the API sends null
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).mileage).toBeNull();
+  });
+
   it("reads the API's answer: baseline and reform, the salary used, and each part", () => {
     const data = normaliseHouseholdImpact(HOUSEHOLD_FIXTURE);
     expect(data.net).toEqual({ before: 65370.9, after: 69135.74, change: 3764.84 });

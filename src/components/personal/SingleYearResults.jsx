@@ -117,6 +117,36 @@ export function showDependantsNote(data) {
   );
 }
 
+/** A rate a mile in £ as whole pence: 0.55 is "55p". */
+const pence = (pounds) => `${Math.round(pounds * 100)}p`;
+
+/**
+ * How the calculation counted the business miles (#357), for their "Based
+ * on" tip: what an employee's employer is taken to pay a mile and the
+ * relief on what the Budget adds, or the self-employed flat rate
+ * deduction, and what each lowers.
+ */
+function businessMilesDetail(mileage, yearLabel) {
+  const { currentLawRates: current, budgetRates: budget } = mileage;
+  const rise = (from, to) => (to - from > 0.0001 ? pence(to - from) : null);
+  const rises = [
+    rise(current.firstMiles, budget.firstMiles) && `${rise(current.firstMiles, budget.firstMiles)} a mile on the first 10,000`,
+    rise(current.furtherMiles, budget.furtherMiles) && `${rise(current.furtherMiles, budget.furtherMiles)} a mile above 10,000`,
+  ].filter(Boolean);
+  const noChange = `The Budget does not change the rates in ${yearLabel}.`;
+  if (mileage.role === "SELF_EMPLOYED") {
+    const rates = `${pence(current.firstMiles)} a mile for the first 10,000 and ${pence(current.furtherMiles)} above`;
+    return rises.length > 0
+      ? `The flat rate deduction comes off your self-employment profit: ${rates}, with the Budget's ${pence(budget.furtherMiles)} above 10,000. It lowers income tax, Class 4 National Insurance and any student loan repayments; Universal Credit keeps its own 45p and 25p.`
+      : `The flat rate deduction comes off your self-employment profit: ${rates}. ${noChange}`;
+  }
+  const employer = mileage.employerRates ?? current;
+  const pays = `Your employer is taken to pay ${pence(employer.firstMiles)} a mile for the first 10,000 and ${pence(employer.furtherMiles)} above, before and after the Budget.`;
+  return rises.length > 0
+    ? `${pays} You claim Mileage Allowance Relief on the Budget's extra ${rises.join(" and ")}, which lowers income tax and any student loan repayments.`
+    : `${pays} ${noChange}`;
+}
+
 /**
  * What the figures assume, as short items (label, value, how it was
  * chosen) for one line under the headline. The full explanations are in
@@ -173,6 +203,15 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
           : assumed
             ? "Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household."
             : "petrol, diesel and electricity, from the Spending step",
+    });
+  }
+  // The business miles the mileage measure acted on (#357)
+  if (data.mileage?.applied) {
+    items.push({
+      id: "business-miles",
+      label: "Business miles",
+      value: `${data.mileage.miles.toLocaleString("en-GB")} a year, ${data.mileage.role === "SELF_EMPLOYED" ? "self-employed" : "as an employee"}`,
+      detail: businessMilesDetail(data.mileage, yearLabel),
     });
   }
   if (showDependantsNote(data)) {

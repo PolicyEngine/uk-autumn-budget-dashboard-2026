@@ -218,7 +218,7 @@ const CHOICE_CONFIGS = {
       { value: "EMPLOYEE", label: "Employee" },
       { value: "SELF_EMPLOYED", label: "Self-employed" },
     ],
-    hint: "As an employee, the calculation counts Mileage Allowance Relief on what the higher rate adds, which comes off income tax, with what your employer pays per mile unchanged. Self-employed, the miles come off your self-employment profit for income tax and Class 4 National Insurance: enter your receipts in step 4, leaving your car or van out of its expenses.",
+    hint: "As an employee, your employer is taken to pay current law's 55p a mile for the first 10,000 and 25p above, before and after the Budget, and you claim Mileage Allowance Relief on what the Budget adds: it lowers income tax and any student loan repayments. Self-employed, the miles come off your self-employment profit for income tax, Class 4 National Insurance and any student loan repayments: enter your receipts in step 4, leaving your car or van out of its expenses.",
     hintAs: "tooltip",
   },
   is_carer: {

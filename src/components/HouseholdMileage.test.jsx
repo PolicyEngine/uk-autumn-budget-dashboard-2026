@@ -60,6 +60,14 @@ describe("business miles in the Household calculator", () => {
     expect(roleGroup()).toBeNull();
   });
 
+  it("says under Driven as what the employer is taken to pay and every tax the miles lower", () => {
+    renderForm();
+    typeMiles("15000");
+    expect(roleGroup()).toHaveAccessibleDescription(
+      /^As an employee, your employer is taken to pay current law's 55p a mile for the first 10,000 and 25p above, before and after the Budget, and you claim Mileage Allowance Relief on what the Budget adds: it lowers income tax and any student loan repayments\. Self-employed, the miles come off your self-employment profit for income tax, Class 4 National Insurance and any student loan repayments/,
+    );
+  });
+
   it("rounds a fraction to whole miles on leaving the box, and says so", () => {
     renderForm();
     fireEvent.change(milesBox(), { target: { value: "15000.6" } });
