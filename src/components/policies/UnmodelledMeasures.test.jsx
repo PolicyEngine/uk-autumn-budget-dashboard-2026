@@ -21,6 +21,7 @@ const entryText = (measure) =>
     measure.household,
     measure.noCosting,
     measure.notModelled,
+    measure.inCalculator,
     ...measure.costings.map((costing) => costing.note),
     ...measure.sources.map((source) => source.label),
   ]
@@ -306,6 +307,20 @@ describe("UnmodelledMeasures", () => {
     for (const text of [held[0].heldBack, held[0].notModelled]) expect(text).not.toMatch(/miss(?:es)? ISA interest/);
     fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
     expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
+  });
+
+  it("says on the mileage card, in one muted line, that the Household calculator includes it", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const inCalculator = UNMODELLED_MEASURES.filter(({ inCalculator }) => inCalculator);
+    expect(inCalculator.map(({ id }) => id)).toEqual(["mileage-rates"]);
+    const card = document.getElementById("unmodelled-mileage-rates");
+    expect(card.querySelector(".umm-in-calculator")).toHaveTextContent(
+      "In the Household calculator: enter your business miles to see what the 35p rate above 10,000 miles changes for you.",
+    );
+    expect(inCalculator[0].notModelled).toBe(
+      "The Household calculator includes it, from the business miles you enter. National figures would need business mileage, which the data lack.",
+    );
   });
 
   it("keeps At a glance short and the summary one sentence, and shows every change a card names", () => {

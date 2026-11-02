@@ -151,6 +151,15 @@ describe("MethodologyTab", () => {
     expect(card.textContent).not.toMatch(/£|\d+(\.\d+)?%/);
   });
 
+  it("says under Not modelled that the Household calculator includes the mileage rates, from the miles entered", () => {
+    renderTab();
+    const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
+    expect(card).toHaveTextContent(
+      "The tax-free mileage rates rise has no national figure, because the survey data have no business mileage, but the Household calculator includes it for the business miles you enter.",
+    );
+    expect(card).not.toHaveTextContent("ISAs or business mileage");
+  });
+
   it("compares with the Budget's post-behavioural costings, with the wider band where they include behaviour", () => {
     const { container } = renderTab();
     const finances = document.getElementById(METHOD_ANCHORS.publicFinances);

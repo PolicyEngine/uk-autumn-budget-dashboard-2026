@@ -370,8 +370,11 @@ function MethodologyTab({ onShowTab }) {
           <Topic title="Not modelled" preview="Why some Budget policies have no figures here">
             <p className="method-more">
               Some Budget policies act on something the model or its survey data do not hold, such as
-              prices, ISAs or business mileage, or have rules not yet published, so they cannot be
-              costed household by household. The rise in income tax rates on savings income is
+              prices or ISAs, or have rules not yet published, so they cannot be costed household by
+              household. The tax-free mileage rates rise has no national figure, because the survey
+              data have no business mileage, but the{" "}
+              <ViewLink tab="household" onShowTab={onShowTab}>Household calculator</ViewLink>{" "}
+              includes it for the business miles you enter. The rise in income tax rates on savings income is
               modelled but held back from this release, because the data miss ISA interest and some
               other savings income.{" "}
               <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>

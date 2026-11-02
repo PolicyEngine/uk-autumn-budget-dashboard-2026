@@ -194,8 +194,10 @@
   }
 }
 
-/* A measure the model covers but this release holds back */
-.umm-held-back {
+/* A measure the model covers but this release holds back, or one the
+   Household calculator includes though the national figures leave it out */
+.umm-held-back,
+.umm-in-calculator {
   margin: 0;
   font-size: var(--fs-caption);
   line-height: 1.5;

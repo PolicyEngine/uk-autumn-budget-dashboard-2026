@@ -45,6 +45,8 @@ const obr = (part) => ({
  * `noCosting` instead, saying what the documents give in its place.
  * `heldBack`, a short muted line, marks a measure the model covers but this
  * release holds back.
+ * `inCalculator`, a short muted line, marks a measure the national figures
+ * leave out but the Household calculator includes.
  * `seeAlso` links PolicyEngine's own published work that models the
  * measure, after the reason this dashboard does not.
  */
@@ -286,7 +288,10 @@ export const UNMODELLED_MEASURES = [
     household:
       "Less income tax for those driving for work: £120 a year for 6,000 miles, £300 for 15,000 (Treasury).",
     costings: [{ row: 5, values: [-30, -200, -220, -225, -235, -245] }],
-    notModelled: "The model has no business mileage.",
+    notModelled:
+      "The Household calculator includes it, from the business miles you enter. National figures would need business mileage, which the data lack.",
+    inCalculator:
+      "In the Household calculator: enter your business miles to see what the 35p rate above 10,000 miles changes for you.",
     sources: [budget("paragraphs 3.14 and 6.213")],
   },
   {

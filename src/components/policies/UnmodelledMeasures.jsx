@@ -133,6 +133,7 @@ export function unmodelledCard(measure) {
       footExtra: (
         <>
         {measure.heldBack && <p className="umm-held-back">{measure.heldBack}</p>}
+        {measure.inCalculator && <p className="umm-in-calculator">{measure.inCalculator}</p>}
         <div className="policy-card-modelling">
           <Disclosure
             compact
