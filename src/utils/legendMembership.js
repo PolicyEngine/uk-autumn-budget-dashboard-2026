@@ -168,7 +168,7 @@ const PRICE_TYPES = new Set(["VAT", "Fuel duty"]);
  * ("no one crosses the poverty line").
  */
 export function noPovertyEffectReason(measure, year, fallback = "no one crosses the poverty line") {
-  if (zeroForHouseholds(measure)) return "changes employers' costs; we hold wages fixed";
+  if (zeroForHouseholds(measure)) return "changes employers' costs; the model keeps wages fixed";
   const policy = policyDetailsFor(measure);
   // Short: "in force from April 2031", without inForceText's "(2031-32 only)"
   if (policy && !inForceIn(policy, year)) return inForceText(policy).replace(/ \(\d{4}-\d{2} only\)$/, "");

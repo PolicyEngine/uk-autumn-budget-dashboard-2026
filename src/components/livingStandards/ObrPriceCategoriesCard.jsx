@@ -61,7 +61,7 @@ const LINES = {
     short: "Tradables",
     inSentence: "other tradables",
     colour: SERIES_COLOURS[3],
-    meaning: "Other goods that are traded internationally, such as clothing, cars and household goods.",
+    meaning: "Other goods in international trade, such as clothing, cars and household goods.",
   },
   other_non_tradables: {
     name: "Other non-tradables",
