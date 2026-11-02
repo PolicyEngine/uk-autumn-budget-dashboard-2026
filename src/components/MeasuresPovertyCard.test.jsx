@@ -13,7 +13,9 @@ import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measur
 import { parseDashboardCsv } from "../utils/loadDashboard";
 
 const PUBLIC = join(__dirname, "..", "..", "public");
-const published = (file) => parseDashboardCsv(readFileSync(join(PUBLIC, "data", file), "utf8"));
+// The pre-Budget candidate run's flat CSVs (moved out of public/data by #339)
+const CANDIDATE_RUN = join(__dirname, "..", "test", "fixtures", "candidate-run");
+const published = (file) => parseDashboardCsv(readFileSync(join(CANDIDATE_RUN, file), "utf8"));
 
 // A catalogue built from the flat files' own measures, as a manifest with
 // every one approved and every artifact verified (test only, as in
@@ -175,7 +177,10 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^The selected policies together move about [\d,]+ people out of poverty\. On its own, unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
+    // The total is the poverty rate card's sentence and the last bar, not
+    // this headline too (each fact once)
+    expect(headline).toHaveTextContent(/^Of the policies on their own, unfreezing the student loan threshold moves the most: about [\d,]+ people out of poverty\.$/);
+    expect(headline.textContent).not.toMatch(/together/);
     expect(measures.textContent).not.toMatch(/package/i);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 

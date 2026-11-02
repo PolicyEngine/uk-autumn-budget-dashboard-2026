@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import UnmodelledMeasures, { CERTIFIED_CAPTION, CERTIFIED_TITLE, COSTING_CAPTION, HouseholdOnlyMeasures, costingRows, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions, groupsOf } from "./UnmodelledMeasures";
+import UnmodelledMeasures, { CERTIFIED_CAPTION, CERTIFIED_TITLE, COSTING_CAPTION, HouseholdOnlyMeasures, costingRows, UNMODELLED_TITLE, formatMillions, groupsOf, unmodelledSubtitle } from "./UnmodelledMeasures";
 import { WHY_NOT_MODELLED } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
@@ -8,6 +8,7 @@ import {
   COSTING_YEARS,
   OBR_POLICY_TABLE,
   UNMODELLED_MEASURES,
+  UNMODELLED_POINT_LABELS,
   UNMODELLED_REASONS,
 } from "../../utils/unmodelledMeasures";
 import { HOUSEHOLD_ONLY_TITLE, householdOnlyLine, splitUnmodelled } from "../../utils/measureClass";
@@ -22,11 +23,9 @@ const entryText = (measure) =>
   [
     measure.name,
     measure.starts,
-    measure.changes,
-    measure.reaches,
-    measure.household,
+    measure.summary,
+    ...(measure.points ?? []).map((point) => point.text),
     measure.noCosting,
-    measure.notModelled,
     ...measure.costings.map((costing) => costing.note),
     ...measure.sources.map((source) => source.label),
   ]
@@ -36,9 +35,12 @@ const entryText = (measure) =>
 describe("the unmodelled measures (unmodelledMeasures.js)", () => {
   it("give every measure each part of an entry, under a unique id", () => {
     for (const measure of UNMODELLED_MEASURES) {
-      for (const field of ["id", "name", "starts", "changes", "reaches", "household", "notModelled"]) {
+      for (const field of ["id", "name", "starts", "summary"]) {
         expect(measure[field], `${measure.id} ${field}`).toBeTruthy();
       }
+      // What changes, who it reaches and why we leave it out, as three labelled points
+      expect(measure.points.map((point) => point.label), measure.id).toEqual(UNMODELLED_POINT_LABELS);
+      for (const point of measure.points) expect(point.text, `${measure.id} ${point.label}`).toBeTruthy();
       expect(measure.sources.length, measure.id).toBeGreaterThan(0);
       // A Table 6.1 row, or a line saying why there is none
       expect(measure.costings.length > 0 || Boolean(measure.noCosting), measure.id).toBe(true);
@@ -109,13 +111,38 @@ describe("UnmodelledMeasures", () => {
     const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
     const heading = within(section).getByRole("heading", { level: 2, name: UNMODELLED_TITLE });
     expect(heading.closest(".section-heading")).toBeTruthy();
-    expect(section).toHaveTextContent(UNMODELLED_SUBTITLE);
     const button = toggle();
     expect(heading).toContainElement(button);
     expect(button.tagName).toBe("BUTTON");
     expect(button).toHaveAttribute("type", "button");
     expect(button).toHaveAttribute("aria-expanded", "false");
     expect(cards()).toHaveLength(0);
+  });
+
+  it("says, while closed, how many policies it holds, as the button's description; open, no line (Vahid, 29 Oct)", () => {
+    render(<UnmodelledMeasures />);
+    // Its own cards only: the household-only ones have their section
+    const line = unmodelledSubtitle(NOT_MODELLED.length);
+    expect(line).toBe(`${NOT_MODELLED.length} policies · what each changes and why we leave it out`);
+    expect(document.querySelector(".umm-subtitle")).toHaveTextContent(line);
+    expect(toggle()).toHaveAccessibleDescription(line);
+    open();
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(document.querySelector(".umm-subtitle")).toBeNull();
+    expect(toggle()).not.toHaveAttribute("aria-describedby");
+    fireEvent.click(toggle());
+    expect(toggle()).toHaveAccessibleDescription(line);
+  });
+
+  it("counts the policies it is given", () => {
+    render(<UnmodelledMeasures measures={NOT_MODELLED.slice(0, 1)} />);
+    expect(toggle()).toHaveAccessibleDescription("1 policy · what each changes and why we leave it out");
+  });
+
+  it("opens from its line too", () => {
+    render(<UnmodelledMeasures />);
+    fireEvent.click(document.querySelector(".umm-subtitle"));
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
   });
 
   it("opens and closes its cards from the heading", () => {
@@ -141,17 +168,19 @@ describe("UnmodelledMeasures", () => {
       const measure = NOT_MODELLED[index];
       expect(item.id).toBe(`unmodelled-${measure.id}`);
       expect(item.querySelector(".policy-card-type"), measure.id).toBeTruthy();
-      // What changes as the summary line
-      expect(item.querySelector(".policy-card-summary")).toHaveTextContent(measure.changes);
-      // At a glance: Starts, Ends, Affects
+      // The change as the summary line
+      expect(item.querySelector(".policy-card-summary")).toHaveTextContent(measure.summary);
+      // At a glance: Starts and Ends only; who it reaches is a point (each fact once)
       expect(item.querySelector(".policy-card-glance-title")).toHaveTextContent("At a glance");
       expect(item.querySelector(".policy-card-start")).toHaveTextContent(measure.starts);
-      expect(item.querySelector(".policy-card-affects")).toHaveTextContent(measure.reaches);
-      expect(within(item).getByText("For a household")).toBeInTheDocument();
-      expect(item).toHaveTextContent(measure.household);
-      // No "Why we don't model it": the section title says so
+      expect(item.querySelector(".policy-card-affects")).toBeNull();
+      // The three points, labelled, as a real list; no For a household box
+      const points = item.querySelector("ul.policy-card-points.is-labelled");
+      expect([...points.querySelectorAll(":scope > li > .policy-card-point-label")].map((label) => label.textContent)).toEqual(UNMODELLED_POINT_LABELS);
+      for (const point of measure.points) expect(points).toHaveTextContent(point.text);
+      expect(item.querySelector(".policy-card-example")).toBeNull();
+      // No "Why we don't model it" block: the reason is a point
       expect(within(item).queryByText(WHY_NOT_MODELLED)).toBeNull();
-      expect(item).not.toHaveTextContent(measure.notModelled);
       // Treasury costing: one disclosure, closed, last in the footer, holding the strip and the sources
       const costing = within(item).getByRole("button", { name: "Treasury costing" });
       expect(costing).toHaveAttribute("aria-expanded", "false");
@@ -161,8 +190,8 @@ describe("UnmodelledMeasures", () => {
       expect(within(item).getByRole("region", { name: `Treasury costing: ${measure.name}` })).toBeInTheDocument();
       for (const source of measure.sources) expect(item).toHaveTextContent(source.label);
       expect(item.querySelector("details")).toBeNull();
-      // Summary, At a glance, What changes, For a household, costing: in that order
-      const order = [".policy-card-summary", ".policy-card-when", ".pchg", ".policy-card-example", ".umm-costing-disclosure"]
+      // Summary, At a glance, What changes, the points, costing: in that order
+      const order = [".policy-card-summary", ".policy-card-when", ".pchg", ".policy-card-points", ".umm-costing-disclosure"]
         .map((selector) => item.querySelector(selector))
         .filter(Boolean);
       for (let i = 1; i < order.length; i += 1) {
@@ -288,14 +317,13 @@ describe("UnmodelledMeasures", () => {
     for (const measure of UNMODELLED_MEASURES) expect(measure.name.split(/\s+/).length, measure.id).toBeLessThanOrEqual(10);
   });
 
-  it("renders only short text on every card: summary and For a household in 20 words, who it affects in 12, nothing over 30", () => {
+  it("renders only short text on every card: a summary of 15 words, points of 12, nothing over 30", () => {
     render(<UnmodelledMeasures />);
     open();
     const words = (node) => node.textContent.trim().split(/\s+/).length;
     for (const item of cards()) {
-      expect(words(item.querySelector(".policy-card-summary")), item.id).toBeLessThanOrEqual(20);
-      expect(words(item.querySelector(".policy-card-affects dd")), item.id).toBeLessThanOrEqual(12);
-      expect(words(item.querySelector(".policy-card-example-text")), item.id).toBeLessThanOrEqual(20);
+      expect(words(item.querySelector(".policy-card-summary")), item.id).toBeLessThanOrEqual(15);
+      for (const point of item.querySelectorAll(".policy-card-point-text")) expect(words(point), `${item.id}: ${point.textContent}`).toBeLessThanOrEqual(12);
       // What changes is said once: the summary line, then only the values
       expect(item.querySelector(".pchg-lead")).toBeNull();
       for (const block of item.querySelectorAll("p, dd, li")) {
@@ -330,21 +358,18 @@ describe("UnmodelledMeasures", () => {
 });
 
 describe("the section's text", () => {
-  it("has only its heading and subtitle above the cards: no intro, no closing note", () => {
+  it("has only its heading and, while closed, its line above the cards: no intro, no closing note", () => {
     render(<UnmodelledMeasures />);
     const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
     expect(section.querySelector(".umm-intro")).toBeNull();
     expect(section.querySelector(".umm-note")).toBeNull();
   });
 
-  it("keeps each card's What changes, For a household and Why we don't model it to 30 words, and who it affects to 15", () => {
+  it("keeps each card's summary to 15 words and each point to 12", () => {
     for (const measure of UNMODELLED_MEASURES) {
-      expect(measure.reaches.split(/\s+/).length, `${measure.id} reaches`).toBeLessThanOrEqual(12);
-      for (const field of ["changes", "household"]) {
-        expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(20);
-      }
-      for (const field of ["notModelled"]) {
-        expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(30);
+      expect(measure.summary.split(/\s+/).length, `${measure.id} summary`).toBeLessThanOrEqual(15);
+      for (const point of measure.points) {
+        expect(point.text.split(/\s+/).length, `${measure.id} ${point.label}`).toBeLessThanOrEqual(12);
       }
     }
   });
@@ -361,24 +386,40 @@ describe("HouseholdOnlyMeasures", () => {
         <UnmodelledMeasures />
       </>,
     );
-    expect(HOUSEHOLD_ONLY.map(({ id }) => id)).toEqual(["savings-income-tax"]);
+    expect(HOUSEHOLD_ONLY.map(({ id }) => id)).toEqual(["savings-income-tax", "cash-isa-limit"]);
     const heading = within(section()).getByRole("heading", { level: 2, name: HOUSEHOLD_ONLY_TITLE });
     expect(heading.closest(".section-heading")).toBeTruthy();
-    expect(section()).toHaveTextContent(householdOnlyLine(1));
-    expect(items().map((item) => item.id)).toEqual(["household-only-savings-income-tax"]);
-    expect(within(items()[0]).getByRole("heading", { level: 3 })).toHaveTextContent("Tax on savings interest up 2 points");
+    expect(section()).toHaveTextContent(householdOnlyLine(2));
+    expect(items().map((item) => item.id)).toEqual(["household-only-savings-income-tax", "household-only-cash-isa-limit"]);
+    expect(items().map((item) => within(item).getByRole("heading", { level: 3 }).textContent)).toEqual([
+      "Tax on savings interest up 2 points",
+      "Cash ISA limit kept at £20,000",
+    ]);
     open();
     expect(document.getElementById("unmodelled-savings-income-tax")).toBeNull();
+    expect(document.getElementById("unmodelled-cash-isa-limit")).toBeNull();
   });
 
-  it("marks the savings measure held back from the national figures in one muted line", () => {
+  it("says the savings measure is held back from this release in its Why we leave it out point", () => {
     render(<HouseholdOnlyMeasures />);
-    const held = UNMODELLED_MEASURES.filter(({ heldBack }) => heldBack);
+    const why = (measure) => measure.points.find((point) => point.label === "Why we leave it out").text;
+    const held = UNMODELLED_MEASURES.filter((measure) => /^Held back\b/.test(why(measure)));
     expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
     const card = document.getElementById("household-only-savings-income-tax");
     // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
-    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: we calibrated savings interest to HMRC's figures on a different basis/);
-    for (const text of [held[0].heldBack, held[0].notModelled]) expect(text).not.toMatch(/miss(?:es)? ISA interest/);
+    expect(card.querySelector(".policy-card-points")).toHaveTextContent(/Held back: calibrated on another basis/);
+    expect(why(held[0])).not.toMatch(/miss(?:es)? ISA interest/);
+  });
+
+  it("says the cash ISA limit is in the Household calculator only, not the national results", () => {
+    render(<HouseholdOnlyMeasures />);
+    const measure = UNMODELLED_MEASURES.find(({ id }) => id === "cash-isa-limit");
+    // Not in our data yet (#368): the survey data hold no payments into ISAs
+    expect(measure.reason).toBe("data");
+    const card = document.getElementById("household-only-cash-isa-limit");
+    expect(card.querySelector(".policy-card-points")).toHaveTextContent(
+      /Household calculator only, not the national results: our data lack ISA payments\./,
+    );
   });
 
   // Max, 28 Oct: cite the primary source, the OBR's certified breakdown
@@ -402,11 +443,28 @@ describe("HouseholdOnlyMeasures", () => {
     expect(card).toHaveTextContent("Budget 2026, Table 6.1, row 62 (opens in a new tab) gives the total to the nearest £5m.");
   });
 
+  it("shows the cash ISA's costing as the OBR certifies it, income tax only, with Table 6.1 as context", () => {
+    render(<HouseholdOnlyMeasures />);
+    const card = document.getElementById("household-only-cash-isa-limit");
+    fireEvent.click(within(card).getByRole("button", { name: CERTIFIED_TITLE }));
+    const table = within(card).getByRole("table", { name: CERTIFIED_CAPTION });
+    const rows = within(table).getAllByRole("row").slice(1);
+    // OBR detailed forecast tables (policy), Table 1.1, measure 11, to the nearest £1m
+    expect(rows.map((row) => [within(row).getByRole("rowheader").textContent, ...within(row).getAllByRole("cell").map((cell) => cell.textContent)])).toEqual([
+      ["Income tax", "0", "\u22124", "\u221220", "\u221235", "\u221252", "\u221272"],
+    ]);
+    expect(within(card).getByRole("link", { name: /Table 1\.1, measure 11/ })).toHaveAttribute("href", OBR_POLICY_TABLE.href);
+    expect(card).toHaveTextContent("Budget 2026, Table 6.1, row 11 (opens in a new tab) gives the total to the nearest £5m.");
+  });
+
   it("holds Table 6.1's row to the OBR breakdown's total, to the nearest £5m, wherever an entry has both", () => {
     const both = UNMODELLED_MEASURES.filter(({ certified }) => certified);
-    expect(both.map(({ id }) => id)).toEqual(["savings-income-tax"]);
+    expect(both.map(({ id }) => id)).toEqual(["savings-income-tax", "cash-isa-limit"]);
     for (const measure of both) {
-      const total = costingRows(measure).find(({ key }) => key === "total").values;
+      const total = COSTING_YEARS.map((_, index) => measure.certified.heads.reduce((sum, { values }) => sum + values[index], 0));
+      // The table's last row is that total, named "Total" only where there are several taxes
+      expect(costingRows(measure).at(-1).values, measure.id).toEqual(total);
+      expect(costingRows(measure).some(({ key }) => key === "total"), measure.id).toBe(measure.certified.heads.length > 1);
       expect(measure.costings).toHaveLength(1);
       expect(measure.costings[0].values, measure.id).toEqual(total.map((value) => Math.round(value / 5) * 5));
       for (const { values } of measure.certified.heads) expect(values).toHaveLength(COSTING_YEARS.length);
@@ -420,8 +478,8 @@ describe("HouseholdOnlyMeasures", () => {
     const line = card.querySelector(".umm-calculator");
     // Always: every household request carries it (calculatorOnlyMeasures.js, #306)
     expect(line).toHaveTextContent(/^The Household calculator always includes it\.$/);
-    // First in the footer, before the held-back line
-    expect(line.compareDocumentPosition(card.querySelector(".umm-held-back")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // First in the footer, before the costing
+    expect(line.compareDocumentPosition(card.querySelector(".policy-card-modelling")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const link = within(card).getByRole("link", { name: "Household calculator" });
     expect(link).toHaveAttribute("href", "?tab=household");
     // A modified click opens a new tab or window, as the browser does
@@ -438,14 +496,13 @@ describe("HouseholdOnlyMeasures", () => {
     const text = section().textContent;
     // Every comparison of ours with the official costing (obrDeviationNotes.js),
     // which hold our national figures, stays off it
-    const id = "savings_income_rates_up";
-    const notes = [
+    const notes = ["savings_income_rates_up", "cash_isa_limit_kept"].flatMap((id) => [
       OBR_DEVIATION_NOTES[id],
       NOT_COMPARABLE_SHORT[id],
       OBR_COMPARISON_BASES[id],
       ...(OBR_DIFFERENCE_POINTS[id] ?? []).map((point) => point.text),
       ...Object.values(OBR_PANEL_BASES[id] ?? {}),
-    ].filter(Boolean);
+    ]).filter(Boolean);
     expect(notes.length).toBeGreaterThan(0);
     for (const note of notes) expect(text).not.toContain(note);
     expect(text).not.toMatch(/£\d+m against|ours is \d+%/);
@@ -456,7 +513,9 @@ describe("HouseholdOnlyMeasures", () => {
   });
 
   it("shows nothing once we publish the measure, or with no household-only card, and the not-modelled section then has no copy either", () => {
-    const { container } = render(<HouseholdOnlyMeasures published={["savings_income_rates_up"]} />);
+    const { container: one } = render(<HouseholdOnlyMeasures published={["savings_income_rates_up"]} />);
+    expect([...one.querySelectorAll(".umm-list > .policy-card")].map((item) => item.id)).toEqual(["household-only-cash-isa-limit"]);
+    const { container } = render(<HouseholdOnlyMeasures published={["savings_income_rates_up", "cash_isa_limit_kept"]} />);
     expect(container).toBeEmptyDOMElement();
     const { container: none } = render(<HouseholdOnlyMeasures measures={NOT_MODELLED} />);
     expect(none).toBeEmptyDOMElement();

@@ -55,6 +55,22 @@ export function choiceMeasureNames(choice, policies) {
 export const selectionNotPublished = (subject) =>
   `${subject} results for this combination of policies are not published yet.`;
 
+const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+const numberWord = (count) => NUMBER_WORDS[count] ?? String(count);
+
+/**
+ * A card drawn from one published run at a time (a policy's own, or the
+ * full package's) when some but not all policies are selected: no run is
+ * published for that set, and its figures cannot be added up (the
+ * household scatter's cells lose which household is which). Not "yet":
+ * such a run is never published. `count`: every policy the page offers.
+ */
+export const oneRunAtATime = (count) =>
+  `This chart shows one policy at a time, or all ${numberWord(count)} together.`;
+/** The notice's buttons: every policy, or the first selected alone. */
+export const showAllLabel = (count) => `Show all ${numberWord(count)}`;
+export const showAloneLabel = (name) => `Show ${name} alone`;
+
 /** The constituency card's notice when a selection has no area result. */
 export const SELECTION_NOT_PUBLISHED = selectionNotPublished("Constituency");
 

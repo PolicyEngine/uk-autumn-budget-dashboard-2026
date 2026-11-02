@@ -58,8 +58,8 @@
   }
 }
 
-/* Anything leading the view tabs row (ViewTabs' `leading`; nothing at
-   present) sits before it */
+/* What leads the view tabs row (ViewTabs' `leading`: About, on a phone)
+   sits before it */
 .view-tabs-bar.has-leading {
   display: flex;
   align-items: center;
@@ -70,13 +70,17 @@
   min-width: 0;
 }
 
-/* "About" (EdgeAboutTab): a side tab on the window's left edge, the edge
-   the overview drawer slides out from. The title band's teal with its
-   white ink, square on the window's edge and rounded on the other, the
-   panel icon over the label written upwards. It sits halfway down the
-   space under the sticky bars, above the page's content and below the
-   bars, their menus and dialogs, and slides out a little on hover. */
-.edge-about {
+/* "About" (EdgeAboutTab), placement "side": a side tab on the window's
+   left edge, the edge the overview drawer slides out from. The title
+   band's teal with its white ink, square on the window's edge and rounded
+   on the other, the panel icon over the label written upwards. It sits
+   halfway down the space under the sticky bars, above the page's content
+   and below the bars, their menus and dialogs, and slides out a little on
+   hover. It stays in the page's margin, clear of the content: 31px wide
+   where the margin is 40px or more, 20px where it is 24px (1024px and
+   narrower). A phone's margin is 16px, too narrow for it, so there About
+   leads the tab row instead (placement "row", below; App.jsx). */
+.edge-about.is-side {
   position: fixed;
   left: 0;
   top: calc(var(--sticky-offset) + (100dvh - var(--sticky-offset)) / 2);
@@ -103,12 +107,12 @@
     padding-left var(--motion-fast) ease;
 }
 
-.edge-about:hover {
+.edge-about.is-side:hover {
   padding-left: 10px;
   background: var(--pe-teal-700);
 }
 
-.edge-about:focus-visible {
+.edge-about.is-side:focus-visible {
   outline: 2px solid var(--pe-teal-500);
   outline-offset: 2px;
 }
@@ -123,21 +127,52 @@
   transform: rotate(180deg);
 }
 
-/* A phone: a slimmer tab, so it covers less of the page's margin */
-@media (max-width: 768px) {
-  .edge-about {
+/* A 24px margin: a slimmer tab, 20px wide, so 4px of the margin stays
+   clear between it and the content */
+@media (max-width: 1024px) {
+  .edge-about.is-side {
     gap: 6px;
-    padding: 10px 5px 12px 4px;
-    font-size: 0.75rem;
+    padding: 10px 4px 12px;
+    font-size: 0.6875rem;
   }
 
-  .edge-about:hover {
-    padding-left: 4px;
+  .edge-about.is-side:hover {
+    padding-left: 6px;
   }
 
-  .edge-about-icon {
-    width: 14px;
-    height: 14px;
+  .edge-about.is-side .edge-about-icon {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* "About", placement "row" (a phone): a .view-tab like the rest
+   (globals.css), the row's height, first in the row, pulled a tab's
+   padding into the margin so its icon starts on PolicyEngine's mark; the
+   row itself is then not pulled. A gray-300 divider half the row's height
+   follows it, midway in the three tab gaps before the first tab. The
+   loading placeholder's copy keeps the same room (publication.css). */
+.view-tabs-bar.has-leading .edge-about.is-row {
+  flex: none;
+  height: var(--view-tabs-height);
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
+  margin-right: calc(3 * var(--tab-gap, 8px));
+}
+
+.view-tabs-bar.has-leading .edge-about.is-row::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: calc(-1.5 * var(--tab-gap, 8px) - 0.5px);
+  width: 1px;
+  height: calc(var(--view-tabs-height) / 2);
+  background: var(--pe-gray-300);
+  transform: translateY(-50%);
+}
+
+@media (max-width: 768px) {
+  .view-tabs-bar.has-leading > .view-tabs {
+    margin-left: 0;
   }
 }
 
@@ -147,9 +182,14 @@
   visibility: hidden;
 }
 
-/* Once a session: two soft pulses of a ring, so it is seen */
-.edge-about.is-cue {
+/* Once a session: two soft pulses, so it is seen (a ring round the side
+   tab, a tint in the row) */
+.edge-about.is-side.is-cue {
   animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
+}
+
+.edge-about.is-row.is-cue {
+  animation: edge-about-row-cue 1.4s ease-in-out 0.8s 2;
 }
 
 @keyframes edge-about-cue {
@@ -162,8 +202,18 @@
   }
 }
 
+@keyframes edge-about-row-cue {
+  0%,
+  100% {
+    background: transparent;
+  }
+  50% {
+    background: var(--pe-teal-50);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .edge-about {
+  .edge-about.is-side {
     transition: none;
   }
 

@@ -23,6 +23,10 @@ import { withholdingProblems } from "./withholding";
 /** The tables the national charts and headline statistics read. */
 export const DEFAULT_TABLES = [
   "budgetary_impact",
+  // Optional: a measure's figure on its official costing's basis, for the
+  // comparison with the official costings, where the generator's
+  // calculators.OFFICIAL_BASES names one (#297)
+  "official_basis",
   "distributional_impact",
   "winners_losers",
   "metrics",

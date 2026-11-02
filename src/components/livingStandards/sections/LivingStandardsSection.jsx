@@ -118,7 +118,14 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
       // Real or cash said in the sentence, so a figure quoted alone is not
       // read as cash (W6 G1); the price base is in About this chart
       const who = adjustment === "real" ? `real ${income} (adjusted for household size)` : `${income} in cash terms (adjusted for household size)`;
-      summary = verb ? (
+      // A change too small to move the rounded figure ("from about £41,500
+      // to £41,500") says the level once, with the change
+      summary = verb && poundsFull(a) === poundsFull(b) ? (
+        <>
+          Under current law, {who} <strong>{verb}</strong> from {fyDash(first.year)} to {fyDash(last.year)}, staying at about{" "}
+          {poundsFull(a)} a year.
+        </>
+      ) : verb ? (
         <>
           Under current law, {who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
           {poundsFull(b)} in {fyDash(last.year)}.

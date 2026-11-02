@@ -13,12 +13,14 @@ SCRIPT = (
     Path(__file__).resolve().parents[1] / "scripts" / "draft_attestation.py"
 )
 HAND_WRITTEN = (
+    reforms.BUS_FARE_CAP_ID,
     reforms.PLAN_2_ID,
     reforms.STATE_PENSION_ALLOWANCE_ID,
 )
 # The Budget-day measures that carry a simulation modifier: the drafter
 # refuses a receipt with no reason
 BUDGET_MODIFIERS = (
+    reforms.BUS_FARE_CAP_ID,
     reforms.CARERS_ALLOWANCE_TAPER_ID,
     reforms.ELECTRICITY_VAT_ID,
     reforms.FUEL_DUTY_DEFERRAL_ID,
@@ -95,19 +97,21 @@ def test_a_package_reason_names_every_hand_written_member(drafted):
     )
 
 
-def test_the_seven_package_reason_names_its_hand_written_members(
+def test_the_eight_package_reason_names_its_hand_written_members(
     drafted,
 ):
     from uk_budget_data.publication.combine import combined_key
 
     members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
     key = combined_key(members)
-    # Seven released on Budget day: savings rates held back
-    assert key == "combined--f91fe847275730cb"
+    # Seven released on Budget day (savings rates held back), and the £2 bus
+    # fare cap from 29 October 2026
+    assert key == "combined--7baf4e89377bcc9c"
     record = drafted(key, members)
     assert record["measure_id"] == key
     assert (
-        "hand-written carers_allowance_earnings_taper and "
+        "hand-written bus_fare_cap_2027 and "
+        "carers_allowance_earnings_taper and "
         "domestic_electricity_zero_vat and fuel_duty_rise_deferral and "
         "household_energy_payment_2026 and " in record["reason"]
     )

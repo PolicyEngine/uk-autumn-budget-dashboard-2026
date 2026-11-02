@@ -41,12 +41,15 @@ MEASURE_YEARS = {
     "carers_allowance_earnings_taper": 2030,
     "household_energy_payment_2026": 2026,
     "trading_allowance_raise": 2027,
+    "bus_fare_cap_2027": 2027,
 }
 # Every measure the calculator shows moves some probe household (employer
 # NI, which moved none, is withdrawn).
 # The trading allowance moves only self-employed income, which no probe
 # household has.
-NO_HOUSEHOLD_EFFECT: set[str] = {"trading_allowance_raise"}
+NO_HOUSEHOLD_EFFECT: set[str] = {
+    "trading_allowance_raise",
+}
 HOUSEHOLDS = {
     "employee_30k": personal_impact.HouseholdInput(employment_income=30_000),
     "employee_60k": personal_impact.HouseholdInput(employment_income=60_000),
@@ -87,6 +90,10 @@ EXTRA_PEOPLE = {
     # A private renter on Universal Credit (EXTRA_HOMES), whose rent is
     # above the frozen Local Housing Allowance rate
     "renter": {"age": 30, "employment_income": 8_000},
+    # Bus fares in England outside London, which the £2 bus fare cap
+    # credits a share of; the same fares in London (EXTRA_HOMES) get £0
+    "bus_rider": {"age": 40, "employment_income": 25_000},
+    "london_bus_rider": {"age": 40, "employment_income": 25_000},
     "founder": {
         "age": 55,
         "employment_income": 100_000,
@@ -104,6 +111,14 @@ EXTRA_HOMES = {
             "region": "NORTH_WEST",
         },
         {"would_claim_uc": True},
+    ),
+    "bus_rider": (
+        {"region": "NORTH_WEST", "bus_fare_spending": 500},
+        {},
+    ),
+    "london_bus_rider": (
+        {"region": "LONDON", "bus_fare_spending": 500},
+        {},
     ),
 }
 
@@ -222,6 +237,49 @@ def test_each_measure_the_calculator_shows_moves_households_alike(reform):
 
 def test_every_measure_the_calculator_shows_has_a_year():
     assert set(MEASURE_YEARS) == set(personal_impact.POLICY_IDS)
+
+
+@pytest.mark.parametrize("year", [2026, 2027])
+def test_the_bus_fare_cap_credits_bus_fares_outside_london_only(year):
+    """£500 a year of bus fares: about £13 in 2026-27 and £40 in 2027-28
+    in the North West (the policy card's example), £0 in London, by both
+    routes; every probe household without bus fares gets £0."""
+    reform = next(
+        reform
+        for reform in get_autumn_budget_2026_reforms()
+        if reform.id == "bus_fare_cap_2027"
+    )
+    names = list(situation(year)["households"])
+    household = dict(zip(names, household_route(reform, year)))
+    national = dict(zip(names, national_route(reform, year)))
+    share = {2026: 95 / 365, 2027: 270 / 366}[year]
+    step = 0.10 * share
+    assert household["bus_rider"] == pytest.approx(
+        500 * step / (1 - step), abs=0.01
+    )
+    assert round(household["bus_rider"]) == {2026: 13, 2027: 40}[year]
+    assert household["london_bus_rider"] == 0
+    assert all(
+        change == 0
+        for name, change in household.items()
+        if name != "bus_rider"
+    )
+    assert same(list(household.values()), list(national.values()))
+
+
+def test_the_calculator_passes_bus_fares_only_when_entered():
+    """No bus fares sets nothing, so every other situation is as before."""
+    built = personal_impact.build_situation(
+        personal_impact.HouseholdInput(employment_income=30_000), 2027
+    )
+    assert "bus_fare_spending" not in built["households"]["household"]
+    built = personal_impact.build_situation(
+        personal_impact.HouseholdInput(
+            employment_income=30_000, bus_fare_spending=500
+        ),
+        2027,
+    )
+    assert built["households"]["household"]["bus_fare_spending"] == {2027: 500}
 
 
 def _national(probe, changes, modifier):

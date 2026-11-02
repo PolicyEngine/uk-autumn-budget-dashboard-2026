@@ -24,9 +24,9 @@ describe("a view's loading placeholder", () => {
 
   // Before any code runs the real row's --view-tab-x is unset, so the
   // placeholder's row starts under the chosen tab by itself: an unseen copy
-  // of the tabs before the chosen one (publication.css). About is a side
-  // tab on the window's edge, in neither row
-  it("starts its sub-tab row under the chosen view tab, after an unseen copy of the tabs before it", () => {
+  // of About (a phone's; wider, About is a side tab and publication.css
+  // hides the copies) and the tabs before the chosen one
+  it("starts its sub-tab row under the chosen view tab, after an unseen copy of About and the tabs before it", () => {
     const viewTabs = [
       { value: "dashboard", label: "Population impact" },
       { value: "household", label: "Household calculator" },
@@ -38,7 +38,8 @@ describe("a view's loading placeholder", () => {
     const band = outlook.querySelector(".skeleton-sub-tabs");
     expect(band).toHaveClass("has-tab-lead");
     const lead = band.querySelector(".skeleton-tab-lead");
-    expect(labels(lead)).toEqual(["Population impact", "Household calculator"]);
+    expect(labels(lead)).toEqual(["About", "Population impact", "Household calculator"]);
+    expect(lead.firstElementChild).toHaveClass("edge-about", "is-row");
     // Then an unseen copy of the chosen tab, which the lead gives way to
     // where the bar scrolls; a tab follows it, so 24px of room after it
     const ghost = band.querySelector(".skeleton-tab-ghost");
@@ -46,12 +47,20 @@ describe("a view's loading placeholder", () => {
     expect(ghost.nextElementSibling).toHaveClass("sub-tabs");
     expect(labels(ghost)).toEqual(["Current law"]);
     expect(ghost).not.toHaveClass("is-last");
-    expect(outlook.querySelector(".edge-about")).toBeNull();
-    expect(outlook.querySelector(".boot-view-tabs")).not.toHaveClass("has-leading");
+    // The copy of the bar leads with About too, outside its row
+    const bar = outlook.querySelector(".boot-view-tabs");
+    expect(bar).toHaveClass("has-leading");
+    expect(bar.firstElementChild).toHaveClass("edge-about", "is-row");
     expect(band.closest('[aria-hidden="true"]')).toBe(band);
-    // The first view: an empty lead, which takes no room (:empty)
+    // The first view: About alone, which takes no room wider than a phone
     const dashboard = render(<ViewSkeleton view="dashboard:finances" viewTabs={viewTabs} />).container;
-    expect(dashboard.querySelector(".skeleton-tab-lead").childNodes).toHaveLength(0);
+    expect(labels(dashboard.querySelector(".skeleton-tab-lead"))).toEqual(["About"]);
+    // Wider than a phone the copies of About are hidden, and a lead of
+    // About alone takes no room; on a phone the lead starts in the margin
+    // as About does, and the ghost and the row take no step back
+    const css = readFileSync(join(process.cwd(), "src", "components", "publication", "publication.css"), "utf8");
+    expect(css).toMatch(/@media \(min-width: 769px\) \{\s*\.boot-view-tabs > \.edge-about,\s*\.skeleton-tab-lead > \.edge-about \{\s*display: none;\s*\}\s*\.skeleton-tab-lead:not\(:has\(> :not\(\.edge-about\)\)\) \{\s*margin-right: 0;\s*\}/);
+    expect(css).toMatch(/@media \(max-width: 768px\) \{\s*\.skeleton-tab-lead \{\s*margin-left: calc\(-1 \* var\(--tab-pad-x, 12px\)\);\s*\}/);
     // With no copy of the bar (the real one is on the page), the row takes
     // the real bar's --view-tab-x as before
     const bare = render(<ViewSkeleton view="outlook:living" />).container;

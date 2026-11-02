@@ -14,11 +14,15 @@ from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
 from uk_budget_data.cli import main
 from uk_budget_data.forecast import forecast_parameters
 from uk_budget_data.policy_table import (
+    BUILDERS,
     OUTPUT_FILE,
     YEAR_WEIGHTS,
+    _check_electricity_where,
     build,
+    constants,
     in_force_rate_change,
     render,
+    zero_vat_on_domestic_electricity,
 )
 
 PUBLISHED = (
@@ -219,20 +223,18 @@ def test_electricity_says_where_and_what_it_is_scored_against(document):
     """#290 (Max, 19:32): Great Britain from October 2026, Northern Ireland
     from April 2027 only as the Budget expects; and current law's 5% for
     October to March is the scoring baseline, the zero rate already being
-    law (SI 2026/987)."""
-    note = rows(document, "domestic_electricity_zero_vat")[
+    law (SI 2026/987). The card's words are its points in
+    src/utils/policyDetails.js (Vahid, 29 Oct: bullets, not a note), so the
+    row carries no card_note, and the table is not written for a measure
+    applied anywhere else."""
+    row = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity"
-    ]["card_note"]
-    assert note.startswith(
-        "0% instead of 5% in Great Britain from 1 October 2026."
-    )
-    assert (
-        "expects the zero rate to apply in Northern Ireland too from April 2027"
-        in note
-    )
-    assert "SI 2026/987" in note
-    assert "scores the whole period against 5%" in note
-    assert "UK-wide from April" not in note
+    ]
+    assert "card_note" not in row
+    values = constants(zero_vat_on_domestic_electricity)
+    _check_electricity_where(values)
+    with pytest.raises(ValueError, match="Great Britain"):
+        _check_electricity_where({**values, "geography_2027": "GB"})
 
 
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
@@ -241,7 +243,7 @@ def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
         in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
-def test_the_table_covers_the_seven_package_measures_only(document):
+def test_the_table_covers_the_eight_package_measures_only(document):
     # BADR, employer NI relief and the road fuel VAT cut are withdrawn
     # (27 October 2026)
     assert list(document["measures"]) == list(
@@ -249,8 +251,10 @@ def test_the_table_covers_the_seven_package_measures_only(document):
     )
     # Seven on Budget day: the savings and property rates split in two
     # (Table 6.1 rows 61 and 62), and the savings rates held back until the
-    # corrected savings data are in (e151a865)
-    assert len(document["measures"]) == 7
+    # corrected savings data are in (e151a865); eight with the £2 bus fare
+    # cap (29 October 2026)
+    assert len(document["measures"]) == 8
+    assert registry.BUS_FARE_CAP_ID in document["measures"]
     assert registry.SAVINGS_INCOME_RATES_ID not in document["measures"]
     assert registry.UNEARNED_INCOME_RATES_ID not in document["measures"]
     assert registry.CARERS_ALLOWANCE_TAPER_ID in document["measures"]
@@ -301,7 +305,31 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "carers_allowance_earnings_taper": "path",
         "household_energy_payment_2026": "switch",
         "trading_allowance_raise": "before-after",
+        "bus_fare_cap_2027": "switch",
     }
+
+
+def test_bus_fare_cap():
+    rows = {
+        row["label"]: row
+        for row in BUILDERS[registry.BUS_FARE_CAP_ID](
+            registry.get_reform(registry.BUS_FARE_CAP_ID)
+        )
+    }
+    (cap,) = rows["Single bus fare cap"]["points"]
+    assert (cap["key"], cap["year"], cap["before"], cap["after"]) == (
+        "2027-01-01/2027-12-31",
+        2026,
+        3,
+        2,
+    )
+    assert rows["Single bus fare cap"]["source"]["before"]["kind"] == (
+        "documented"
+    )
+    note = rows["Single bus fare cap"]["note"]
+    assert "10.0% of spending at £3 fares" in note
+    assert "bus_fare_cap_2027(fall)" in note
+    assert "London residents get £0" in note
 
 
 def test_lha_unfreeze():
@@ -423,7 +451,7 @@ def test_current_law_thresholds_are_the_engine_alone(document):
 def test_carers_allowance_shows_the_cliff_it_removes(document):
     """#290 (Anthony, 19:20): the measure does not move the earnings limit,
     so the card shows the allowance £1 over it, nothing in current law and
-    the weekly rate less £1 with the taper, and the note gives the limit
+    the weekly rate less £1 with the taper, and the row's figures give the limit
     (16 hours at the OBR's National Living Wage, rounded up to the pound,
     as efcda9c5) and where the allowance runs out."""
     from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
@@ -451,11 +479,14 @@ def test_carers_allowance_shows_the_cliff_it_removes(document):
         228,
         234,
     )
-    note = row["card_note"]
-    assert "£228 a week in 2030-31 and £234 in 2031-32" in note
-    ends = [
-        f"£{228 + rate('2030-04-06'):,.0f} a week in 2030-31",
-        f"£{234 + rate('2031-04-06'):,.0f} in 2031-32",
-    ]
-    assert f"runs out at {ends[0]} and {ends[1]}" in note
+    # The visual draws the limit and where the allowance runs out
+    assert row["figures"] == {
+        "earnings_limit": {"2030-31": 228, "2031-32": 234},
+        "runs_out": {
+            "2030-31": round(228 + rate("2030-04-06")),
+            "2031-32": round(234 + rate("2031-04-06")),
+        },
+    }
+    # The card's words are its points (src/utils/policyDetails.js)
+    assert "card_note" not in row
     assert "Earnings limit" not in row["label"]

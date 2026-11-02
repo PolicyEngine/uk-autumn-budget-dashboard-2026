@@ -63,7 +63,7 @@ function rendered(fixture, element) {
 
 describe("no chart can grow its plot without end", () => {
   it.each([
-    ["the decile change, nothing withheld (the withheld note's line is kept, hidden)", WaterfallChart, "winnersLosers", null],
+    ["the decile change, nothing withheld", WaterfallChart, "winnersLosers", null],
     ["the decile change, a decile withheld", WaterfallChart, "winnersLosers", ["avg_change", "1"]],
     ["the relative decile change, nothing withheld", DistributionalChart, "distributional", null],
     ["the relative decile change, a decile withheld", DistributionalChart, "distributional", ["value", "1st"]],

@@ -101,6 +101,12 @@
   font-weight: 500;
 }
 
+/* A reason over two or more lines: room above and below, so it never
+   meets the next row's */
+.wf-none > .wf-value {
+  padding-block: 6px;
+}
+
 .wf-reason {
   color: var(--pe-gray-500);
   font-size: var(--fs-micro);

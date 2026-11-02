@@ -142,12 +142,17 @@ describe("the page's own lists", () => {
     for (const card of cards) expect(ids(UNMODELLED_MEASURES), card).toContain(card);
   });
 
-  it("show the savings income tax rise as household-only, on its card, until we publish it", () => {
+  it("show the savings income tax rise and the cash ISA limit as household-only, on their cards, until we publish them", () => {
     const split = splitUnmodelled();
-    expect(split.household.map(({ id, measure }) => [id, measure])).toEqual([["savings-income-tax", "savings_income_rates_up"]]);
+    expect(split.household.map(({ id, measure }) => [id, measure])).toEqual([
+      ["savings-income-tax", "savings_income_rates_up"],
+      ["cash-isa-limit", "cash_isa_limit_kept"],
+    ]);
     expect(ids(split.none)).not.toContain("savings-income-tax");
-    expect(split.none).toHaveLength(UNMODELLED_MEASURES.length - 1);
-    expect(splitUnmodelled(undefined, { published: ["savings_income_rates_up"] }).household).toEqual([]);
+    expect(ids(split.none)).not.toContain("cash-isa-limit");
+    expect(split.none).toHaveLength(UNMODELLED_MEASURES.length - 2);
+    expect(ids(splitUnmodelled(undefined, { published: ["savings_income_rates_up"] }).household)).toEqual(["cash-isa-limit"]);
+    expect(splitUnmodelled(undefined, { published: ["savings_income_rates_up", "cash_isa_limit_kept"] }).household).toEqual([]);
   });
 
   // No household-only measure in any national figure: the manifest, its

@@ -25,10 +25,13 @@ The gates, in order:
    known fix lands (``uk_budget_data.model_limits``, recorded in its
    receipt) may be staged or provisional, with its figure, but is never
    approved.
-4c. **Hand-written modifiers.** While a data limit is active, an artifact
-   whose receipt binds a hand-written modifier on either side is held at
-   every figure level until two people attest its exact receipt
-   (``attestations``); a release never waives any other check.
+4c. **Hand-written modifiers.** While sign-off is on
+   (``uk_budget_data.sign_off``, off since 28 October 2026) and a data
+   limit is active, an artifact whose receipt binds a hand-written modifier
+   on either side is held at every figure level until two people attest
+   its exact receipt (``attestations``); a release never waives any other
+   check. With sign-off off nothing is held, and an attestation an entry
+   recorded earlier is kept but not checked.
 4d. **The floor of survey households** (``disclosure_floor``). A
    provisional or approved artifact with household tables must have been
    held to it: its receipt records the check, so one generated before the
@@ -58,6 +61,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from uk_budget_data import sign_off
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import (
     COMBINED_PREFIX,
@@ -205,7 +209,7 @@ def binding_problems(
             )
     elif entry.measures is not None or entry.member_outputs_sha256 is not None:
         problems.append("a measure's entry names combined-run members")
-    if entry.attestation is not None:
+    if entry.attestation is not None and sign_off.REQUIRED:
         try:
             validate_attestation(document, entry.attestation.model_dump())
         except (ValueError, TypeError) as error:
@@ -905,8 +909,12 @@ def check(
     data_root: Path,
     inputs: Path = TREASURY_INPUTS,
     check_flat_index: bool = True,
+    code_root: Optional[Path] = None,
 ) -> list[str]:
     """Re-run every gate over every entry the page lists.
+
+    ``code_root``, a checkout with full history, adds the area code and
+    dataset checks ``publish index`` makes (``release_index.area_problems``).
 
     Returns one line per failure; an empty list means the manifest may be
     published as it stands.
@@ -922,7 +930,9 @@ def check(
         data_root
     )
     if check_flat_index:
-        failures += release_index_problems(data_root, manifest)
+        failures += release_index_problems(
+            data_root, manifest, code_root=code_root
+        )
     for key, entry in sorted(manifest.entries().items()):
         if entry.status not in m.LISTED:
             continue

@@ -23,6 +23,7 @@ import MarginalRateChart from "./MarginalRateChart";
 import "./SingleYear.css";
 import { scrollBelowBars } from "../../utils/pageScroll";
 import { policyDetailsFor } from "../../utils/policyDetails";
+import { resultPolicies } from "../../utils/calculatorOnlyMeasures";
 
 /** True once `active` has held for `delay` ms (no flash of a loading line). */
 function useDelayed(active, delay = 300) {
@@ -483,7 +484,7 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [], catalogue = [] }) {
+function ResultCard({ totals, yearLabel, requestPolicies = [], items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [], catalogue = [] }) {
   const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   return (
@@ -502,7 +503,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           <>
             {`In ${yearLabel}, with `}
             <a className="result-policies-link" href="#change-by-policy" onClick={(event) => scrollToSection(event, "change-by-policy")}>
-              {policyCount} {policyCount === 1 ? "policy" : "policies"}
+              {resultPolicies(requestPolicies).text}
             </a>
           </>
         }
@@ -544,7 +545,7 @@ export function SingleYearHeadline({
   spending = null,
   submitted = true,
   changed = false,
-  policyCount = 0,
+  requestPolicies = [],
   startedAt = null,
   salarySource = null,
   spendingSource = null,
@@ -602,7 +603,7 @@ export function SingleYearHeadline({
           <ResultCard
             totals={totals}
             yearLabel={yearLabel}
-            policyCount={policyCount}
+            requestPolicies={requestPolicies}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
             requestHousehold={requestHousehold}

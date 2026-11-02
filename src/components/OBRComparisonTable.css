@@ -106,44 +106,10 @@
   margin-top: 2px;
 }
 
-/* Why the estimates differ: the general statement, then each policy's
-   note, in view under the chart or table (a phone has no hover) */
-.obr-deviation {
-  margin-top: 16px;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
+/* Why the estimates differ: the general statement, in the chart's
+   description */
 .obr-deviation-statement {
   margin: 0;
-}
-
-.obr-deviation-title {
-  margin: 12px 0 4px;
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-700);
-}
-
-.obr-deviation-list {
-  margin: 0;
-  padding-left: 18px;
-}
-
-.obr-deviation-list li + li {
-  margin-top: 4px;
-}
-
-.obr-deviation-list strong {
-  font-weight: 600;
-  color: var(--pe-gray-700);
-}
-
-/* A policy's note under the line saying what each side counts */
-.obr-deviation-note {
-  display: block;
-  margin-top: 2px;
 }
 
 /* In a Difference cell's tip: what each side counts, on its own line

@@ -171,6 +171,8 @@ describe("the Pre-measures forecast view", () => {
     // The incomes sentence says real or cash, so a figure quoted alone is
     // not read as cash (W6 G1)
     expect(incomes.querySelector(".chart-description").textContent).toMatch(/^Under current law, real median income \(adjusted for household size\) /);
+    // Never the same rounded figure twice, as "from about £41,500 … to £41,500"
+    expect(incomes.querySelector(".chart-description").textContent).not.toMatch(/from about (£[\d,]+) a year in \S+ to \1 /);
     choose(incomes, "Prices", "Cash terms");
     fireEvent.keyDown(within(incomes).getByRole("dialog"), { key: "Escape" });
     expect(incomes.querySelector(".chart-description").textContent).toMatch(/^Under current law, median income in cash terms \(adjusted for household size\) /);

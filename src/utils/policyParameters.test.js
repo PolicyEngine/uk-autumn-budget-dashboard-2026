@@ -144,6 +144,9 @@ describe("each measure's scored years", () => {
     expect(windows.carers_allowance_earnings_taper).toEqual({ first: 2030, last: 2031 });
     expect(windows.household_energy_payment_2026).toEqual({ first: 2026, last: 2026 });
     expect(windows.state_pension_income_tax_protection).toEqual({ first: 2027, last: 2029 });
+    // A dated span counts in every fiscal year it touches: January to
+    // December 2027 is in 2026-27 and 2027-28
+    expect(windows.bus_fare_cap_2027).toEqual({ first: 2026, last: 2027 });
     expect(measureWindows(null)).toEqual({});
   });
 

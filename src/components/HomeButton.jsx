@@ -29,10 +29,14 @@ function Mark({ className, hidden = false }) {
 const CUE_KEY = "ab2026-about-cue";
 
 /**
- * "About", a side tab on the window's left edge (App.jsx; it is not on the
- * landing page): the title band's teal, its label written upwards under a
- * panel icon, with no hover card. A click opens the overview drawer
- * (OverviewDrawer.jsx), which slides out from the same edge; hidden while
+ * "About" (App.jsx; it is not on the landing page), in one of two places:
+ * - "side": a side tab on the window's left edge, wider than a phone: the
+ *   title band's teal, its label written upwards under a panel icon;
+ * - "row": on a phone, whose 16px margin has no room for a side tab, first
+ *   in the view tabs row and styled as its tabs are (ViewTabs' `leading`),
+ *   but a button, never a chosen tab.
+ * Either way it has no hover card. A click opens the overview drawer
+ * (OverviewDrawer.jsx), which slides out from the left edge; hidden while
  * the drawer is open. It pulses softly once per session (not under
  * reduced motion).
  *
@@ -40,8 +44,10 @@ const CUE_KEY = "ab2026-about-cue";
  * @param {boolean} props.open - Whether the overview drawer is open
  * @param {() => void} props.onToggle - Open or close it
  * @param {{current: HTMLElement|null}} [props.buttonRef] - The button, for focus to come back to
+ * @param {"side"|"row"} [props.placement] - Where it is (above)
  */
-export function EdgeAboutTab({ open, onToggle, buttonRef }) {
+export function EdgeAboutTab({ open, onToggle, buttonRef, placement = "side" }) {
+  const row = placement === "row";
   const [cue, setCue] = useState(false);
   useEffect(() => {
     let seen = true;
@@ -58,14 +64,14 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
     <button
       ref={buttonRef}
       type="button"
-      className={`edge-about${cue ? " is-cue" : ""}`}
+      className={`${row ? "view-tab edge-about is-row" : "edge-about is-side"}${cue ? " is-cue" : ""}`}
       aria-label="About this dashboard"
       aria-expanded={open}
       aria-controls="overview-drawer"
       onClick={onToggle}
     >
-      <PanelLeftOpen className="edge-about-icon" size={16} strokeWidth={2} aria-hidden="true" />
-      <span className="edge-about-label" aria-hidden="true">About</span>
+      <PanelLeftOpen className={row ? "view-tab-icon" : "edge-about-icon"} size={row ? 18 : 16} strokeWidth={row ? 1.8 : 2} aria-hidden="true" />
+      <span className={row ? "view-tab-label" : "edge-about-label"} aria-hidden="true">About</span>
     </button>
   );
 }

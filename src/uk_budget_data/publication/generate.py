@@ -121,6 +121,8 @@ def result_tables(
     """
     return {
         "budgetary_impact": result.budgetary_impact,
+        # Only where calculators.OFFICIAL_BASES names a basis (#297)
+        "official_basis": result.official_basis,
         "distributional_impact": result.distributional_impact,
         "winners_losers": result.winners_losers,
         # The flat metrics.csv carries the poverty and inequality measures
@@ -339,6 +341,11 @@ class ArtifactRun:
     # revision each is bound at (``receipt.approved_revision``).
     member_revisions: Optional[dict] = None
     member_withheld_cells: Optional[dict] = None
+    # A combined run's members' thin age groups, by year
+    # (``disclosure_floor.recorded_thin_age_groups``): the package leaves
+    # out the age rows they leave out, and those that would give them back
+    # by difference (#340).
+    member_thin_age_groups: Optional[dict] = None
     # Whether a thin "all" group refuses the run, or is written with a
     # warning (``disclosure_floor.refuses_thin_deciles``), as the process
     # that planned the runs reads it: a worker or a Modal container does not
@@ -592,8 +599,8 @@ def _apply_disclosure_floor(
     """Hold a run's household tables to the floor of survey households
     (``disclosure_floor``): withhold thin decile cells and their totals,
     including those withheld by a combined run's members, and withhold the
-    age table's thin cells. Return a warning when the whole measure is thin
-    (or, when the run was planned under
+    age table's thin cells and its members' (#340). Return a warning when
+    the whole measure is thin (or, when the run was planned under
     ``UK_BUDGET_THIN_DECILES=refuse``, ``job.refuse_thin_deciles`` True,
     refuse the run), and make the binned scatter count survey households
     rather than records. Only for simulations built from a
@@ -613,7 +620,8 @@ def _apply_disclosure_floor(
     receipt lacks it (#208 review, finding 9)."""
 
     def withhold(found):
-        """Blank this run's own and inherited decile cells."""
+        """Blank this run's own and inherited decile cells, and leave out
+        its own and inherited withheld age rows (#340)."""
         inherited = {
             cell: labels
             for cell, labels in (
@@ -631,7 +639,20 @@ def _apply_disclosure_floor(
                         getattr(result, table), table, cells
                     ),
                 )
-        return cells
+        ages = {
+            year: labels
+            for year, labels in (
+                getattr(job, "member_thin_age_groups", None) or {}
+            ).items()
+            if year in job.config.years
+        }
+        rows = getattr(result, "age_impact", None) or []
+        age_cells = disclosure_floor.withheld_age_cells(rows, found, ages)
+        if hasattr(result, "age_impact"):
+            result.age_impact = disclosure_floor.withhold_thin_age_rows(
+                rows, found, ages
+            )
+        return {**cells, **age_cells}
 
     if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
         return [], disclosure_floor.floor_record(
@@ -674,9 +695,6 @@ def _apply_disclosure_floor(
             "nor shown, and publish review-rows deletes it: never commit it"
         )
     withheld = withhold(found)
-    result.age_impact = disclosure_floor.withhold_thin_age_rows(
-        result.age_impact, found
-    )
     household_ids = baseline.calculate(
         "household_id", period=years[0], map_to="household"
     ).values
@@ -807,8 +825,9 @@ def generate_artifacts(
     )
     checked_commits: dict = {}
 
-    def member_records(key: str, ids: list[str]) -> tuple[dict, dict]:
-        """Read members' revisions and withholding from their receipts.
+    def member_records(key: str, ids: list[str]) -> tuple[dict, dict, dict]:
+        """Read members' revisions and withholding from their receipts: the
+        decile cells they withhold, and their thin age groups by year.
 
         A manifest member is bound at its receipt's commit so staging can
         compare its identity exactly. A member written in this run was
@@ -816,6 +835,7 @@ def generate_artifacts(
         """
         revisions = {}
         withheld = {}
+        ages: dict[int, set] = {}
         for member in ids:
             try:
                 if member in written_artifacts:
@@ -832,18 +852,24 @@ def generate_artifacts(
                     )
                 else:
                     continue
-                cells = disclosure_floor.recorded_withheld_cells(
-                    document["dashboard"].get("disclosure_floor") or {}
-                )
+                record = document["dashboard"].get("disclosure_floor") or {}
+                cells = disclosure_floor.recorded_withheld_cells(record)
                 for cell, labels in cells.items():
                     withheld.setdefault(cell, []).extend(labels)
+                thin = disclosure_floor.recorded_thin_age_groups(record)
+                for year, labels in thin.items():
+                    ages.setdefault(year, set()).update(labels)
             except (ArtifactError, OSError, ValueError, KeyError) as error:
                 raise ReceiptUnavailable(
                     key,
                     f"member {member}: {error}; regenerate {member} and stage "
                     "it before its combined runs",
                 ) from error
-        return revisions, disclosure_floor.withheld_decile_cells({}, withheld)
+        return (
+            revisions,
+            disclosure_floor.withheld_decile_cells({}, withheld),
+            {year: sorted(labels) for year, labels in sorted(ages.items())},
+        )
 
     def run_all(slots: list) -> None:
         """Run the jobs among ``slots`` (a job, or an outcome already
@@ -950,7 +976,7 @@ def generate_artifacts(
         )
 
         def prepare():
-            revisions, withheld = member_records(key, ids)
+            revisions, withheld, ages = member_records(key, ids)
             combined = combine.combine_measures(ordered, config)
             # Before the consistency check builds its parameter snapshots.
             _refuse_wealth_tax_base(
@@ -976,6 +1002,7 @@ def generate_artifacts(
                 combined,
                 revisions,
                 withheld,
+                ages,
                 _combined_run_identities(
                     combined,
                     ordered,
@@ -991,6 +1018,7 @@ def generate_artifacts(
                 combined,
                 revisions,
                 withheld,
+                ages,
                 (
                     baseline_identity,
                     reform_identity,
@@ -1024,6 +1052,7 @@ def generate_artifacts(
                     uses_config_baseline=uses_config,
                     member_revisions=revisions,
                     member_withheld_cells=withheld,
+                    member_thin_age_groups=ages,
                     modifier_templates=combined_templates_proof(
                         ordered, config, revision
                     ),
