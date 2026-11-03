@@ -83,7 +83,7 @@ export const POLICY_DETAILS = [
     summary: "Holds fuel duty at 52.95p a litre to 30 June 2027.",
     points: [
       { label: "Skips rises", text: "January, March and April 2027's rises do not happen." },
-      { label: "From July 2027", text: "The OBR's 60.59p, which we assume current law reaches in April 2027." },
+      { label: "From July 2027", text: "The OBR's 60.59p, which we take as current law's April 2027 rate." },
       { label: "From 2028", text: "RPI rises resume each April." },
     ],
     details: [
@@ -93,7 +93,7 @@ export const POLICY_DETAILS = [
       "The end date is the Budget document's.",
       "From 1 July 2027, back at current law's rate, the measure costs nothing.",
       "We leave out fuel for vans, lorries and business use of cars, so the figure covers households' own fuel.",
-      "The official estimate also covers business fuel, but includes duty only, without VAT.",
+      "The official estimate also covers business fuel, but includes only the duty, not VAT.",
     ],
     starts: "Jan 2027",
     affects: "Households buying petrol or diesel",
