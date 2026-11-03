@@ -16,6 +16,18 @@ def test_committed_contract_is_the_generated_one():
     assert COMMITTED.read_text() == contract_json()
 
 
+def test_contract_lists_every_official_basis_variable_and_no_measure():
+    """#297: the page has words for every variable a ring can count; the
+    contract names no measure (measureCatalogue.test.jsx's guard)."""
+    from uk_budget_data.calculators import OFFICIAL_BASES
+
+    exported = contract()["official_basis_variables"]
+    assert exported == sorted(
+        {name for names in OFFICIAL_BASES.values() for name in names}
+    )
+    assert not set(exported) & set(OFFICIAL_BASES)
+
+
 def test_contract_covers_every_table_and_status():
     exported = contract()
     assert set(exported["tables"]) == set(TABLES)

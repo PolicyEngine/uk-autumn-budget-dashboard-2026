@@ -16,7 +16,9 @@
   /* The tab panel's top padding is the band's place: it sits flush under
      the view tabs, and the content keeps its distance below it */
   margin: -32px calc(50% - 50vw) 32px;
-  padding: 0 max(40px, calc((100vw - 1120px) / 2));
+  /* The bar's own padding (globals.css), so --view-tab-x, measured from
+     the bar's content edge, lines the row up under the chosen view tab */
+  padding: 0 var(--bar-pad-x);
   background: var(--pe-surface);
   border-bottom: 1px solid var(--card-border);
 }

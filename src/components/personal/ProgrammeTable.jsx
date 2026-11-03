@@ -148,8 +148,8 @@ export default function ProgrammeTable({
     salaryUsed,
   });
   // The chart's split by policy, with the rows each policy moves: the
-  // first tab once the split is in, so the table under the chart opens on
-  // the chart's own figures (chart and table audit, 28 October)
+  // By policy tab, second once the split is in. The table opens on Summary
+  // until a tab is chosen.
   const bridge = split ? policyBridge({ split, tabs: policyTabList, groups, totals }) : null;
   const [chosen, setTab] = useState(null);
   const tab = chosen ?? "summary";

@@ -222,5 +222,8 @@ def test_the_public_data_check_accepts_the_file_unreviewed(tmp_path, routing):
     path.write_text(area_routing.render(routing))
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
-    report = check_public_data.check(tmp_path, today=date(2026, 10, 24))
+    # Even with sign-off on, when every other public file needs a review.
+    report = check_public_data.check(
+        tmp_path, today=date(2026, 10, 24), sign_off_required=True
+    )
     assert report.problems == []

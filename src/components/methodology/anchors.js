@@ -13,6 +13,7 @@ export const METHOD_ANCHORS = {
   personal: "method-personal",
   incomePosition: "method-income-position",
   householdCalc: "method-household-calc",
+  householdPolicies: "method-household-policies",
   living: "method-living",
   forecastFeed: "method-forecast-feed",
   lsNotes: "method-ls-notes",

@@ -166,8 +166,11 @@ export function modifierTemplatesProblems(receipt) {
   return problems;
 }
 
+// Only while sign-off is on (uk_budget_data/sign_off.py, carried by the
+// contract): off, a hand-written modifier needs no attestation.
 function isHeld(receipt) {
   return (
+    contract.sign_off_required &&
     contract.data_limits_active &&
     ["baseline", "reform"].some((side) =>
       receipt?.dashboard?.modifier_templates?.[side]?.includes(null),
@@ -282,9 +285,10 @@ export async function receiptProblems(receipt, key, entry) {
         "cannot be shown as approved",
     );
   }
-  // Pure template proofs are recorded at generation time. Any hand-written
-  // modifier, on either side or in a combined run, needs an attestation of
-  // this complete receipt, including its generation timestamp and id.
+  // Pure template proofs are recorded at generation time. While sign-off is
+  // on, any hand-written modifier, on either side or in a combined run,
+  // needs an attestation of this complete receipt, including its generation
+  // timestamp and id.
   const templateProblems = modifierTemplatesProblems(receipt);
   problems.push(...templateProblems);
   if (templateProblems.length === 0 && isHeld(receipt)) {

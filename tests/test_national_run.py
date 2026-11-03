@@ -484,6 +484,7 @@ def test_a_failed_container_keeps_the_others_and_writes_no_flat_file(
 # --- the command -----------------------------------------------------------
 
 PACKAGE = [
+    "bus_fare_cap_2027",
     "carers_allowance_earnings_taper",
     "domestic_electricity_zero_vat",
     "fuel_duty_rise_deferral",
@@ -492,8 +493,9 @@ PACKAGE = [
     "state_pension_income_tax_protection",
     "trading_allowance_raise",
 ]
-# The release's seven (savings rates held back), and their package.
-RELEASE_KEY = "combined--f91fe847275730cb"
+# The release's eight (savings rates held back; the £2 bus fare cap from
+# 29 October 2026), and their package.
+RELEASE_KEY = "combined--7baf4e89377bcc9c"
 MANIFEST_FIXTURE = (
     Path(__file__).resolve().parents[1]
     / "src/test/fixtures/publication/manifest.json"
@@ -523,7 +525,7 @@ def test_dry_run_prints_the_plan_and_runs_nothing(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert code == 0
     assert key == RELEASE_KEY
-    assert f"7 measures and their package {key}" in out
+    assert f"8 measures and their package {key}" in out
     assert "prime the dataset cache" in out and "30 min limit" in out
     assert "total: about 13-17 min" in out
     assert "Dry run: nothing was run." in out
@@ -591,7 +593,7 @@ def test_without_reforms_the_measures_are_the_manifests_published_set(
     out = capsys.readouterr().out
     assert code == 0 and seen == [Path("release/manifest.json")]
     assert "Measures from the publication manifest's published measures" in out
-    assert f"7 measures and their package {RELEASE_KEY}" in out
+    assert f"8 measures and their package {RELEASE_KEY}" in out
 
 
 def test_the_national_flags_need_national(capsys):

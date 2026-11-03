@@ -144,12 +144,15 @@ describe("ConstituencyMap on Budget day", () => {
     const states = [...container.querySelectorAll("path.constituency-path[data-state]")].map(
       (path) => path.getAttribute("data-state"),
     );
-    // A seat the table has no row for is drawn as no data
-    expect(new Set(states)).toEqual(new Set(["withheld", "reported", "no-data"]));
+    // Its published seats are all exactly zero while others are withheld,
+    // so the zeros say nothing about where it lands: they are drawn as
+    // withheld too, never as "no change" (Vahid, 28 Oct). A seat the table
+    // has no row for is drawn as no data
+    expect(new Set(states)).toEqual(new Set(["withheld", "no-data"]));
     const categories = [...container.querySelectorAll("path.constituency-path[data-category]")]
       .map((path) => path.getAttribute("data-category"))
       .filter(Boolean);
-    expect(categories.every((category) => category === "no_change")).toBe(true);    // One line under the map says why every seat is grey or No data
+    expect(categories).toEqual([]);    // One line under the map says why every seat is grey or No data
     expect(
       screen.getByText(/^Rail fares freeze: no constituency shows a change large enough to publish for this policy in 2029-30\./),
     ).toBeInTheDocument();

@@ -171,6 +171,8 @@ export default function useExampleFigures({
     const supportedKey = `${STORE_PREFIX}supported:${publicationKey}|${selectionKey}`;
     let used = readStoredList(supportedKey, policies) ?? policies;
     let figures = {};
+    // Measures the API refused, the calculator-only ones among them
+    const refused = new Set();
     const pending = new Set();
     const failed = new Set();
     const put = (id, y, net) => {
@@ -197,9 +199,9 @@ export default function useExampleFigures({
       const asks = [];
       for (const y of years) {
         for (const example of examples) {
-          // An example that turns on a calculator-only measure (the saver)
-          // is asked with it, as choosing it asks
-          const own = withCalculatorOnly(used, example.calculatorOnly ?? []);
+          // With the calculator-only measures, as choosing it asks, but
+          // any the API refused
+          const own = withCalculatorOnly(used).filter((id) => !refused.has(id));
           const key = exampleKey(example.inputs, { year: y, policies: own, publicationKey });
           const net = peekHouseholdImpact(key, expectedEngine)?.net ?? readStoredHeadline(key, expectedEngine)?.net ?? null;
           if (net) put(example.id, y, net);
@@ -251,6 +253,7 @@ export default function useExampleFigures({
         } catch (error) {
           if (!(error instanceof UnknownMeasuresError)) return;
           used = used.filter((id) => !error.unknown.includes(id));
+          for (const id of error.unknown) refused.add(id);
           storeList(supportedKey, used);
           if (used.length === 0) {
             for (const { example, year: y } of asks) failed.add(`${example.id}:${y}`);

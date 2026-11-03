@@ -1,6 +1,6 @@
 import { CATEGORY_BREAKS } from "../utils/geography/classify";
 import { formatFigure } from "../utils/geography/format";
-import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, Target, TriangleAlert } from "lucide-react";
+import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, Target, Info } from "lucide-react";
 import FactList from "./methodology/FactList";
 import { ExternalLink } from "./methodology/MethodUi";
 import "./GeographyMethodology.css";
@@ -62,7 +62,7 @@ function GeographyMethodology() {
               interval understates the uncertainty, so read it as a rough
               guide.
             </>,
-            TriangleAlert,
+            Info,
           ],
           [
             "Not published",

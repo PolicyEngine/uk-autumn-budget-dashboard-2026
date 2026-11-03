@@ -45,8 +45,14 @@
   transform: rotate(180deg);
 }
 
+/* Shown only while closed: a hairline as wide as the line's text, not the
+   section, which goes with the line when the section opens */
 .umm-subtitle {
   cursor: pointer;
+  width: fit-content;
+  max-width: 100%;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--c-grid);
 }
 
 /* The Treasury's six years as one strip of small cells */

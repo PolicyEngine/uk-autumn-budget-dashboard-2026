@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useWidth } from "../utils/useWidth";
 import { ArrowRightLeft, Table } from "lucide-react";
 import {
   FIRST_YEAR,
@@ -41,24 +42,6 @@ const TONES = { cost: "gain", revenue: "loss" };
 
 const HEIGHT = 140;
 const MARGIN = { top: 22, right: 10, bottom: 24, left: 58 };
-const DEFAULT_WIDTH = 520;
-
-/** The width of an element, followed as it changes. */
-function useWidth(ref) {
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element || typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(([entry]) => {
-      const next = Math.round(entry.contentRect.width);
-      if (next > 0) setWidth(next);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-  return width;
-}
-
 const YEAR_LABELS = Array.from({ length: MONTHS / 12 }, (_, i) => {
   const year = FIRST_YEAR + i;
   return { year, full: `${year}-${String((year + 1) % 100).padStart(2, "0")}`, short: `${String(year % 100)}-${String((year + 1) % 100).padStart(2, "0")}` };
@@ -259,8 +242,10 @@ function Reveal({ show, hide, children }) {
  * button where there are several, and the main row's card_note. No "Current law → With the
  * policy" tiles (Vahid, 28 Oct, on #290): a single change of value is said
  * in the card's own words, so a block with nothing else is left out.
+ * `figure`: whether the measure's own visual is drawn in the block, which
+ * is then never empty.
  */
-export function changeView(entry, lead) {
+export function changeView(entry, lead, figure = false) {
   const main = mainRow(entry);
   const first = main?.points?.find(differs);
   if (!main || !first) return null;
@@ -283,14 +268,19 @@ export function changeView(entry, lead) {
   const periods = [...new Set(lines.map((line) => line.period))];
   const everyChange = others.length > 0;
   const note = main.card_note ?? null;
-  if (!lead && !note && !plotted && !varies && !everyChange) return null;
+  if (!lead && !note && !figure && !plotted && !varies && !everyChange) return null;
   return { main, schedule, varies, segments, plotted, lines, others, everyChange, periods, note };
 }
 
-export default function PolicyChange({ entry, direction, onHighlight, name, lead }) {
+/**
+ * `figure`, where given, is the measure's own visual
+ * (policies/PolicyVisual.jsx): it takes the place of the plot and of the
+ * main row's note, which it shows in its own caption where it needs it.
+ */
+export default function PolicyChange({ entry, direction, onHighlight, name, lead, figure }) {
   const id = useId();
   const tone = TONES[direction] ?? "neutral";
-  const view = changeView(entry, lead);
+  const view = changeView(entry, lead, Boolean(figure));
   if (!view) return null;
   const { main, schedule, varies, segments, plotted, lines, everyChange, periods, note } = view;
   return (
@@ -305,8 +295,9 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
       </div>
       {/* A card's own words for the change, where it has them, before the values */}
       {lead && <p className="pchg-lead">{lead}</p>}
-      {note && <p className="pchg-caption pchg-note">{note}</p>}
-      {plotted && (
+      {figure}
+      {!figure && note && <p className="pchg-caption pchg-note">{note}</p>}
+      {!figure && plotted && (
         <>
           <div className="pchg-head is-plot">
             <p className="pchg-caption">{plotCaption(main)}</p>

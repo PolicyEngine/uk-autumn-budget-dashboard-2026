@@ -127,14 +127,20 @@ describe("the personal impact form", () => {
     const spending = groupToggle("Spending");
     expect(spending).toHaveAttribute("aria-expanded", "true");
     expect(document.getElementById(spending.getAttribute("aria-controls"))).toBeVisible();
-    // No policy selected reads anything: each step shows all its answers
-    expect(document.querySelector(".household-step-optional-toggle")).toBeNull();
+    // No selected policy reads anything; the savings rise, always in the
+    // request, reads savings interest, so only that step splits its answers
+    expect([...document.querySelectorAll(".household-step-optional-toggle")].map((toggle) => toggle.getAttribute("aria-controls"))).toEqual([
+      "household-step-savings-panel-optional",
+    ]);
     expect(fields()).toEqual([
       ...essentials,
       "petrol_spending_per_year",
       "diesel_spending_per_year",
       "electricity_spending_per_year",
+      // In the North West (the default), where the £2 bus fare cap applies
+      "bus_fare_spending_per_year",
       "savings_interest_per_year",
+      "cash_isa_payments_per_year",
       "dividends_per_year",
       "property_income_per_year",
       "self_employment_receipts_per_year",
@@ -355,7 +361,7 @@ describe("the personal impact form", () => {
       "A family with high electricity use",
       "A landlord with savings",
       "A middle earner who lets a flat",
-      "A lone parent working part time",
+      "A bus commuter in the North West",
     ]);
     const examples = buttons.slice(1);
     expect(examples.every((item) => card(item).querySelector(".household-card-description").textContent.length > 0)).toBe(true);
@@ -505,7 +511,7 @@ describe("the personal impact form", () => {
       "Universal Credit family",
       "Landlord",
       "Small landlord",
-      "Lone parent",
+      "Bus commuter",
     ]);
     // The full name on hover, the short one cut if it runs out of room
     expect(chips[0]).toHaveAttribute("title", "A pensioner with a small private pension");
@@ -531,7 +537,7 @@ describe("the personal impact form", () => {
     // End: the last example; Home and Enter: Your household, chosen with
     // its tick, the form open
     fireEvent.keyDown(document.activeElement, { key: "End" });
-    expect(document.activeElement).toBe(exampleItem("A lone parent working part time"));
+    expect(document.activeElement).toBe(exampleItem("A bus commuter in the North West"));
     fireEvent.keyDown(document.activeElement, { key: "Home" });
     expect(document.activeElement).toBe(yoursCard());
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
@@ -560,7 +566,6 @@ describe("the personal impact form", () => {
   it("fills the household answers from each example", () => {
     const cases = [
       ["A carer working part time", { housing: "Mortgage", partner: "Yes", children: "0", caring: "Yes" }],
-      ["A lone parent working part time", { housing: "Rent", rent: REGIONAL_RENT.NORTH_WEST, partner: "No", children: "1", caring: "No" }],
     ];
     for (const [label, expected] of cases) {
       resetSavedWizard();
@@ -614,8 +619,8 @@ describe("the personal impact form", () => {
 });
 
 describe("the selected policies' questions", () => {
-  // The Budget's eight announced measures, by id and published name (the
-  // name SEVEN kept from the seven-measure package)
+  // The Budget's eight announced measures and the £2 bus fare cap, by id
+  // and published name (the name SEVEN kept from the seven-measure package)
   const SEVEN = [
     { id: "fuel_duty_rise_deferral", name: "Fuel duty cut extended" },
     { id: "state_pension_income_tax_protection", name: "Pension Tax Allowance" },
@@ -625,6 +630,7 @@ describe("the selected policies' questions", () => {
     { id: "carers_allowance_earnings_taper", name: "Carer's Allowance earnings taper" },
     { id: "household_energy_payment_2026", name: "Household energy payment" },
     { id: "trading_allowance_raise", name: "Trading allowance raised" },
+    { id: "bus_fare_cap_2027", name: "Single bus fares capped at £2" },
   ];
   const ALL_SEVEN = SEVEN.map((policy) => policy.id);
   const STEP_ORDER = ["you", "household", "spending", "savings", "home", "benefits", "pensions"];
@@ -664,11 +670,18 @@ describe("the selected policies' questions", () => {
     expect(groups()).toEqual(SEVEN_STEPS);
     expect(asked("You")).toEqual(["current_age", "current_salary", "region"]);
     expect(asked("Household")).toEqual(["has_partner", "children_count", "tenure", "rent_from", "monthly_rent"]);
-    expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
-    // Savings interest always first, then in the table's order: property,
-    // then the trading allowance's
+    expect(asked("Spending")).toEqual([
+      "petrol_spending_per_year",
+      "diesel_spending_per_year",
+      "electricity_spending_per_year",
+      "bus_fare_spending_per_year",
+    ]);
+    // Savings interest always first, then in the table's order: cash ISA
+    // payments (the cash ISA limit, always in the request, for an
+    // under-65), property, then the trading allowance's
     expect(asked("Savings and other income")).toEqual([
       "savings_interest_per_year",
+      "cash_isa_payments_per_year",
       "property_income_per_year",
       "self_employment_receipts_per_year",
       "self_employment_expenses_per_year",
@@ -796,7 +809,12 @@ describe("the selected policies' questions", () => {
     form(["trading_allowance_raise"]);
     fireEvent.click(stepToggle("Savings and other income"));
     // Savings interest is always first in its step
-    expect(asked("Savings and other income")).toEqual(["savings_interest_per_year", "self_employment_receipts_per_year", "self_employment_expenses_per_year"]);
+    expect(asked("Savings and other income")).toEqual([
+      "savings_interest_per_year",
+      "cash_isa_payments_per_year",
+      "self_employment_receipts_per_year",
+      "self_employment_expenses_per_year",
+    ]);
     expect(value("Self-employment or side income")).toBe(0);
     fireEvent.change(box("Self-employment or side income"), { target: { value: "3,000" } });
     fireEvent.blur(box("Self-employment or side income"));
@@ -861,35 +879,77 @@ describe("the selected policies' questions", () => {
       const yours = () => bodies.find((body) => body.household.petrol_spending === 900 && body.include.length === 0);
       await waitFor(() => expect(yours()).toBeDefined());
       const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, council_tax_band: "B" };
-      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: ALL_SEVEN }));
+      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: [...ALL_SEVEN, "cash_isa_limit_kept"] }));
       expect(yours().household).toMatchObject({ petrol_spending: 900, council_tax_band: "B", diesel_spending: DEFAULT_SPENDING.diesel });
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();
     }
   });
-  it("keeps the savings switch in the address, so a reload keeps it", async () => {
+  it("asks bus fares in England outside London only, and sends them only there", async () => {
+    const API = "https://api.test/api/household-impact";
+    const bodies = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url === API) bodies.push(JSON.parse(init.body));
+        return new Response("{}", { status: 404 });
+      }),
+    );
+    try {
+      const { unmount } = form(["bus_fare_cap_2027"], { year: 2027 });
+      openSteps();
+      // The North West, by default: asked first in Spending, with its note
+      expect(asked("Spending")[0]).toBe("bus_fare_spending_per_year");
+      expect(value("Bus fares")).toBe(0);
+      expect(field("bus_fare_spending_per_year")).toHaveTextContent("None with a free bus pass.");
+      fireEvent.change(box("Bus fares"), { target: { value: "500" } });
+      fireEvent.blur(box("Bus fares"));
+      expect(stepLine("Spending")).toBe("");
+      fireEvent.click(stepToggle("Spending"));
+      expect(stepLine("Spending")).toContain("Bus fares £500 a year");
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      const yours = () => bodies.find((body) => body.household.bus_fare_spending === 500 && body.include.length === 0);
+      await waitFor(() => expect(yours()).toBeDefined());
+      expect(yours().household).toEqual(
+        buildHouseholdRequest({ ...WIZARD_DEFAULTS, bus_fare_spending_per_year: 500 }, { year: 2027, policies: ["bus_fare_cap_2027"] }).household,
+      );
+      expect(yours().policies).toContain("bus_fare_cap_2027");
+      // Kept for the session, as every answer is
+      unmount();
+      form(["bus_fare_cap_2027"], { year: 2027 });
+      openSteps();
+      expect(value("Bus fares")).toBe(500);
+      // In London the cap does not apply: not asked, and not sent
+      pickCouncil("Camden");
+      expect(field("bus_fare_spending_per_year")).toBeNull();
+      expect(asked("Spending")).not.toContain("bus_fare_spending_per_year");
+      const london = buildHouseholdRequest({ ...WIZARD_DEFAULTS, region: "LONDON", bus_fare_spending_per_year: 500 }, { year: 2027, policies: ["bus_fare_cap_2027"] });
+      expect(london.household).not.toHaveProperty("bus_fare_spending");
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("has no savings switch, and ignores an old ?also= in the address", () => {
     const published = ALL_SEVEN.filter((id) => id !== "savings_income_rates_up");
     window.history.replaceState({}, "", "/?tab=household&also=savings_income_rates_up");
     try {
       form(published);
-      const toggle = () => screen.getByRole("checkbox", { name: /Also include: Savings income tax up/ });
-      await waitFor(() => expect(toggle()).toBeChecked());
-      // On, the savings interest question comes first in its step
+      expect(screen.queryByRole("checkbox", { name: /Savings income tax up/ })).toBeNull();
+      expect(document.body).not.toHaveTextContent(/Also include/);
+      expect(document.body).not.toHaveTextContent(/Held back from the national results/);
+      // The page keeps working; the savings interest question is first in its step
       openSteps();
-      expect(asked("Savings and other income")).toContain("savings_interest_per_year");
-      fireEvent.click(toggle());
-      expect(toggle()).not.toBeChecked();
-      await waitFor(() => expect(new URLSearchParams(window.location.search).get("also")).toBeNull());
-      expect(new URLSearchParams(window.location.search).get("tab")).toBe("household");
-      fireEvent.click(toggle());
-      await waitFor(() => expect(new URLSearchParams(window.location.search).get("also")).toBe("savings_income_rates_up"));
+      expect(asked("Savings and other income")[0]).toBe("savings_interest_per_year");
     } finally {
       window.history.replaceState({}, "", "/");
     }
   });
 
-  it("adds the savings income tax rise to this household's request only when its switch is on", async () => {
+  it("always adds the savings income tax rise to a household's request, the cards' too", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
@@ -904,27 +964,17 @@ describe("the selected policies' questions", () => {
     const published = ALL_SEVEN.filter((id) => id !== "savings_income_rates_up");
     try {
       form(published, { year: 2027 });
-      const toggle = screen.getByRole("checkbox", { name: /Also include: Savings income tax up \(not in the national results\)/ });
-      // Off at first: the request is the selection itself (the presets' key)
-      expect(toggle).not.toBeChecked();
-      // Savings interest is always first in its step, in view
       openSteps();
-      expect(asked("Savings and other income")[0]).toBe("savings_interest_per_year");
       fireEvent.change(box("Savings interest"), { target: { value: "12000" } });
       fireEvent.blur(box("Savings interest"));
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
-      expect(headline()[0].policies).toEqual(published);
-      // On: the calculation runs again, with it after the selected ones
-      fireEvent.click(toggle);
-      expect(toggle).toBeChecked();
-      await waitFor(() => expect(headline()).toHaveLength(2));
-      expect(headline()[1].policies).toEqual([...published, "savings_income_rates_up"]);
-      // The example cards' figures stay with the published measures, but
-      // the saver's (£10,000 of interest), which turns the rise on
+      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up", "cash_isa_limit_kept"]);
+      // Every example card's figures are asked with them too
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
-      expect(cards.filter((body) => body.household.savings_interest_income !== 10000).every((body) => !body.policies.includes("savings_income_rates_up"))).toBe(true);
+      expect(cards.length).toBeGreaterThan(0);
+      expect(cards.every((body) => body.policies.slice(-2).join() === "savings_income_rates_up,cash_isa_limit_kept")).toBe(true);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

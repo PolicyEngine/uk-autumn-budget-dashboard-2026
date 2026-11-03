@@ -148,7 +148,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
 
 ### Data files
 - Files under `public/data/` are written by `uk-budget-data` and served under `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/<file>`. Budget figures use verified artifacts through `src/utils/publication/load.js` and `loadVerifiedTable`, or verified flat files through `src/utils/publication/flat.js`; a raw Budget CSV is never publication authority. The Living standards baseline and March 2026 forecast use their independent outlook loader.
-- Every file under `public/` is a publication and needs a review row; see "Review and sign-off" in the README.
+- Every file under `public/` is a publication and must pass the automated disclosure checks. Review rows are needed only while sign-off is on (`src/uk_budget_data/sign_off.py`, off from 28 October 2026); see "Review and sign-off" in the README.
 - The Pre-measures forecast file's shape is in `docs/DATA_CONTRACT.md`.
 
 ## URL State Management

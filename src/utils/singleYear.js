@@ -12,7 +12,7 @@ import {
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
-import { CALCULATOR_ONLY_MEASURES, isCalculatorOnly } from "./calculatorOnlyMeasures";
+import { CALCULATOR_ONLY_MEASURES } from "./calculatorOnlyMeasures";
 import { CHART_COLOURS } from "./chartTheme";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { inForceIn } from "./legendMembership";
@@ -329,20 +329,16 @@ export function policyRows(byPolicy, total, policies, year = null) {
             : outOfForceReason(policies.find((policy) => policy.id === row.id), year),
       })),
     // Notes on a measure's figure: an employer cost always, "if received"
-    // where the household gets the amount
+    // where the household gets the amount, and an assumption where the
+    // figure rests on it
     notes: byPolicy.measures
       .filter(
         (row) =>
-          row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
+          row.note &&
+          (row.noteKind === "employer_cost" ||
+            ((row.noteKind === "if_received" || row.noteKind === "assumption") && row.change !== 0)),
       )
-      .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note }))
-      // A calculator-only measure (calculatorOnlyMeasures.js): why it is
-      // not in the national results
-      .concat(
-        byPolicy.measures
-          .filter((row) => isCalculatorOnly(row.id))
-          .map((row) => ({ id: row.id, name: nameOf(row), kind: "calculator_only", text: CALCULATOR_ONLY_MEASURES[row.id].note })),
-      ),
+      .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
   };
 }
@@ -617,7 +613,7 @@ export function areaName(brma) {
 export const SINGLE_YEAR_METHOD = [
   [
     "Engine and policies",
-    "The same engine (policyengine.py and policyengine-uk) and the same policies as the national figures, applied to one household's answers.",
+    "The calculator uses the same engine (policyengine.py and policyengine-uk) as the national figures to apply the policies selected in the header to one household's answers. It also adds the savings income tax rise, which the national figures leave out.",
   ],
   [
     "One year",

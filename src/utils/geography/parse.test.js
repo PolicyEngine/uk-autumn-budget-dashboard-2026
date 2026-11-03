@@ -289,3 +289,28 @@ describe("parseGeographyTable", () => {
     expect(yearsFor(table, "autumn_budget_2026_combined")).toEqual([2029, 2030]);
   });
 });
+
+describe("hideUninformativeZeros", () => {
+  const row = (reform, year, tier, value) =>
+    Object.freeze({
+      cells: Object.freeze({ reform, year: String(year), tier, value }),
+      reform, year, outcome: "average_change", tier,
+      value, lo: value, hi: value, direction: tier === "withheld" ? "" : "no_change",
+    });
+  it("shows a policy's zeros as withheld when its other seats are withheld", async () => {
+    const { hideUninformativeZeros } = await import("./parse");
+    const out = hideUninformativeZeros([row("trading", 2027, "reported", "0"), row("trading", 2027, "withheld", "")]);
+    expect(out.map((r) => r.tier)).toEqual(["withheld", "withheld"]);
+    expect(out[0].cells.value).toBe("");
+  });
+  it("keeps zeros when nothing is withheld (a measure not yet in force)", async () => {
+    const { hideUninformativeZeros } = await import("./parse");
+    const out = hideUninformativeZeros([row("carers", 2027, "reported", "0"), row("carers", 2027, "reported", "0")]);
+    expect(out.map((r) => r.tier)).toEqual(["reported", "reported"]);
+  });
+  it("keeps every seat when any published seat moves", async () => {
+    const { hideUninformativeZeros } = await import("./parse");
+    const out = hideUninformativeZeros([row("property", 2027, "reported", "0"), row("property", 2027, "reported", "-5"), row("property", 2027, "withheld", "")]);
+    expect(out.map((r) => r.tier)).toEqual(["reported", "reported", "withheld"]);
+  });
+});
