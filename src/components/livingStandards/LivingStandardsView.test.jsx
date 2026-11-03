@@ -167,7 +167,7 @@ describe("the Pre-measures forecast view", () => {
     expect(within(measureGroup).getAllByRole("radio").map((o) => o.textContent)).toEqual(["Gini", "90/10 ratio"]);
     fireEvent.keyDown(within(inequality).getByRole("dialog"), { key: "Escape" });
     // One short line on the card; the basis and years in About this chart
-    expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, income inequality, measured by the Gini coefficient, (rises|falls|stays)/);
+    expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, income inequality \(Gini coefficient\) (rises|falls|stays)/);
     // The incomes sentence says real or cash, so a figure quoted alone is
     // not read as cash (W6 G1)
     expect(incomes.querySelector(".chart-description").textContent).toMatch(/^Under current law, real median income \(adjusted for household size\) /);
@@ -472,7 +472,7 @@ describe("the Pre-measures forecast view", () => {
     expect(headline()).toMatch(/^Under current law, real incomes (grow|fall|barely) .+ \(second tenth: \S+% a year; top tenth: \S+%\)\.$/);
     expect(document.body.textContent).not.toMatch(/lowest tenth:/);
     fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));
-    expect(within(growth).getByText(/re-ranked each year/)).toBeInTheDocument();
+    expect(within(growth).getByText(/re-rank groups each year/)).toBeInTheDocument();
     expect(within(growth).queryByText(/twentieth/)).toBeNull();
     // One Options pill, the view first: no separate View pill, no groups
     expect(within(growth).queryByRole("button", { name: /^Growth view:/ })).toBeNull();
@@ -494,7 +494,7 @@ describe("the Pre-measures forecast view", () => {
     // Decile 1 is not shown (its survey incomes are often below spending):
     // said once, as a caveat, and no caution about it under the key
     expect(within(growth).queryByText(/swings from year to year/)).toBeNull();
-    expect(within(growth).getAllByText(/^The lowest tenth is not shown: /)).toHaveLength(1);
+    expect(within(growth).getAllByText(/^The chart leaves out the lowest tenth: /)).toHaveLength(1);
     // Whole period goes in the address; back to the defaults leaves nothing
     choose(growth, "View", "Whole period");
     expect(new URLSearchParams(window.location.search).get("ls_growth")).toBe("period");

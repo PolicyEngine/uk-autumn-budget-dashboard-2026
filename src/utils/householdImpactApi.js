@@ -339,6 +339,10 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       ...(busFares(inputs) ? { bus_fare_spending: busFares(inputs) } : {}),
       // Cash ISA payments only when answered, likewise
       ...(inputs.cash_isa_payments_per_year > 0 ? { cash_isa_subscriptions: inputs.cash_isa_payments_per_year } : {}),
+      // Losses on higher-stake gaming machines only when answered, likewise
+      ...(inputs.higher_stake_machine_losses_per_year > 0
+        ? { higher_stake_machine_losses: inputs.higher_stake_machine_losses_per_year }
+        : {}),
       // Self-employment only when answered, likewise
       ...(selfEmployed(inputs)
         ? {
@@ -412,7 +416,7 @@ export async function postHouseholdImpact(
   if (!url) {
     throw new HouseholdApiError(
       "config",
-      `${HOUSEHOLD_API_VAR} is not set, so this build cannot calculate a household.`,
+      `This build has no ${HOUSEHOLD_API_VAR}, so it cannot calculate a household.`,
     );
   }
   const doFetch = fetchImpl ?? globalThis.fetch;

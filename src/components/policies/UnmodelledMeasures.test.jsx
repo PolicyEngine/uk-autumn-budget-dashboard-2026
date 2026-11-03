@@ -358,7 +358,7 @@ describe("UnmodelledMeasures", () => {
     }
     // Two changes: both in the card's picture, and no table of the same values beside it
     const mileage = document.getElementById("unmodelled-mileage-rates");
-    expect(within(mileage).getByRole("img").getAttribute("aria-label")).toMatch(/55p a mile for the first 10,000 business miles, made permanent; above 10,000 miles the rate rises from 25p to 35p/);
+    expect(within(mileage).getByRole("img").getAttribute("aria-label")).toMatch(/55p a mile for the first 10,000 business miles becomes permanent; above 10,000 miles the rate rises from 25p to 35p/);
     const car = document.getElementById("unmodelled-company-car-tax");
     expect(within(car).getByRole("img").getAttribute("aria-label")).toMatch(/zero-emission cars 9% to 10%, cars emitting 1 to 50g CO2 a kilometre 19% to 20%/);
     for (const card of [mileage, car]) {

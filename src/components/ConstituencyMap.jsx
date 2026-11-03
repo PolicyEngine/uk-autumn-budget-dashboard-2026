@@ -143,20 +143,20 @@ function constituencyCsvText(table, { reform, year, yearLabel, packageChoice, la
  * constituency (stack.js; Vahid, 28 October).
  */
 export const STACK_ABOUT =
-  "With several policies selected, each constituency's figure is the sum of each policy's own effect, " +
-  "so interactions between policies are not included (nationally they come to under £1m a year). " +
+  "When you select several policies, each constituency's figure is the sum of each policy's own effect, " +
+  "so it leaves out interactions between policies (nationally they come to under £1m a year). " +
   "Its 90% interval adds up the policies' own intervals, so it is wider than a combined estimate's would be. " +
   "A figure a policy withholds for confidentiality counts as zero, and the constituency's figure is then approximate.";
 
 /** The exported map's description: what it shows, and how to read it. */
 const exportDescription = (label, outcome, stacked = false) =>
-  `${label}. Each constituency is coloured by the size of its average ` +
+  `${label}. The map colours each constituency by the size of its average ` +
   `change in household net income, in ${OUTCOME_LABELS[outcome]}. Blank ` +
-  "ones have no data: not published, to protect survey respondents' " +
-  "confidentiality, or too few survey households to estimate. " +
+  "ones have no data: we do not publish their figures, to protect survey respondents' " +
+  "confidentiality, or there are too few survey households to estimate them. " +
   (stacked
     ? STACK_ABOUT
-    : "Some figures are approximate, based on fewer than 30 survey households.");
+    : "Some figures are approximate, resting on fewer than 30 survey households.");
 
 /**
  * The card's "About this chart". Each rule is the generator's: the
@@ -171,28 +171,28 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
   const shows =
     `The average change in household net income in each of the 650 Westminster ` +
     `constituencies in ${yearLabel}, ${outcome === "average_change" ? "in £ a year per household" : "as a share of household income"}.` +
-    (label ? ` Shown: ${label}.` : "");
+    (label ? ` Selection: ${label}.` : "");
   if (notRouted) return { shows };
   return {
     shows,
     how: [
       releaseKind === "area_coded_national"
-        ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with 2025 constituency weights, scaled to each later year."
+        ? "We reweight households in the national dataset (the enhanced Family Resources Survey) to each constituency with 2025 constituency weights, which we scale to each later year."
         : "Each survey household in PolicyEngine's local-area dataset belongs to one constituency; its figure is their weighted average.",
       "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households.",
       // No data and approximate: said here once; the key has the No data swatch only
-      "No data: the figure is not published, to protect survey respondents' confidentiality (under 10 survey households, or one or two would make up too much of it), or there are too few survey households to estimate it (its 90% interval spans more than two of the map's size bands); hover a constituency for its interval.",
-      "Some figures are approximate, based on fewer than 30 survey households, so read them as a rough guide: they are coloured like the rest, and the constituency's card says so.",
+      "No data: we do not publish the figure, to protect survey respondents' confidentiality (under 10 survey households, or one or two would make up too much of it), or there are too few survey households to estimate it (its 90% interval spans more than two of the map's size bands); hover a constituency for its interval.",
+      "Some figures are approximate, resting on fewer than 30 survey households, so read them as a rough guide: the map colours them like the rest, and the constituency's card says so.",
       ...(stacked ? [STACK_ABOUT] : []),
     ],
     definitions: [
       { ref: "netIncome" },
-      { term: "Hex map", meaning: "One equal hexagon per seat, placed roughly where it lies; shapes are not geographic." },
+      { term: "Hex map", meaning: "One equal hexagon per seat, roughly where it lies; shapes are not geographic." },
       { term: "Map", meaning: "Each seat's real boundary, so large rural seats dominate." },
       { term: "No data", meaning: "Not published, or too few survey households to estimate." },
     ],
     caveats: [
-      "Survey weights are held fixed in the resampling, so the intervals understate the uncertainty.",
+      "The resampling holds survey weights fixed, so the intervals understate the uncertainty.",
       "Constituency figures do not add up exactly to the regional ones, and may use a different dataset.",
     ],
     sources: [
@@ -202,7 +202,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
         href: "https://github.com/open-innovations/constituencies",
       },
     ],
-    method: { anchor: METHOD_ANCHORS.area, label: "How the figures by area are estimated" },
+    method: { anchor: METHOD_ANCHORS.area, label: "How we estimate the figures by area" },
   };
 }
 
@@ -957,7 +957,7 @@ export default function ConstituencyMap({
           outcome,
           measures: cardMeasures,
           label: several
-            ? `${choice.all ? "All policies" : "Selected policies"}${stacked ? ", each policy's effect added up" : ""}`
+            ? `${choice.all ? "All policies" : "Selected policies"}${stacked ? ", the sum of each policy's effect" : ""}`
             : null,
         })
       : null;
@@ -1191,7 +1191,7 @@ export default function ConstituencyMap({
             <ChartDownloadMenu
               formats={{}}
               chartTitle={`${CHART_TITLE}, ${yearLabel}`}
-              disabledReason="Available when results are published"
+              disabledReason="Available when we publish results"
             />
           )}
         </div>

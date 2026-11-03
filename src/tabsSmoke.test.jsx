@@ -73,7 +73,7 @@ const NOT_YET_PUBLISHED = new Set([
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
-  /NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/,
+  /This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL/,
   /Results are not available here/,
   /API error/,
   /Application error/,
@@ -321,7 +321,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     fireEvent.click(await screen.findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await screen.findByRole("button", { name: /^Calculate/ }));
     await waitFor(() =>
-      expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
+      expect(document.body.textContent).toMatch(/This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL/),
     );
     expect(requests.some((r) => r.url.startsWith(API))).toBe(false);
   });

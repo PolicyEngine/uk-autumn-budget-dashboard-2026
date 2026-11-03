@@ -973,7 +973,11 @@ def test_the_combined_reform_names_every_other_budget_measure():
     # is held back from the release and the package (María, #290 6478987456),
     # and the cash ISA limit, the household calculator's only (María, 29
     # October 2026)
-    held_back = {"savings_income_rates_up", "cash_isa_limit_kept"}
+    held_back = {
+        "savings_income_rates_up",
+        "cash_isa_limit_kept",
+        "machine_games_duty_rise",
+    }
     assert sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == sorted(
         i
         for i in ids

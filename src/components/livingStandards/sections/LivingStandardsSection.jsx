@@ -53,7 +53,7 @@ function describeMetric(id, label) {
   const concept = equivalised
     ? "household net income adjusted for household size and composition (equivalised)"
     : "household net income";
-  if (/median/i.test(id)) return `${label} is the middle value when people are ranked by ${concept}.`;
+  if (/median/i.test(id)) return `${label} is the middle value of ${concept} across people.`;
   if (/mean/i.test(id)) return `${label} is the average of ${concept} across people.`;
   return "";
 }
@@ -159,7 +159,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     notes: [
       noOutturn &&
         (realOnlyOutturn
-          ? "Official incomes after housing costs are shown in real terms only."
+          ? "Official incomes after housing costs are in real terms only."
           : `${NO_OFFICIAL_SERIES}.`),
       units && `Incomes are in ${units}.`,
       meta.headline_end_year_note,
@@ -170,12 +170,12 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     info: {
       how: [
         OFFICIAL_VS_PE,
-        units && "Equivalised: incomes are adjusted for household size, shown as for a couple with no children.",
-        adjustment === "real" ? `Real terms, in ${priceBase} prices.` : "Cash terms, not adjusted for prices.",
+        units && "Equivalised: incomes adjusted for household size, as for a couple with no children.",
+        adjustment === "real" ? `Real terms, in ${priceBase} prices.` : "Cash terms, with no adjustment for prices.",
       ],
       caveats: [
         noOutturn &&
-          (realOnlyOutturn ? "Official incomes after housing costs are shown in real terms only." : `${NO_OFFICIAL_SERIES}.`),
+          (realOnlyOutturn ? "Official incomes after housing costs are in real terms only." : `${NO_OFFICIAL_SERIES}.`),
         /_ahc$/.test(metric) && "Real incomes after housing costs use a PolicyEngine CPI after housing costs, not an OBR series.",
       ],
       sources: [HBAI_SOURCE],

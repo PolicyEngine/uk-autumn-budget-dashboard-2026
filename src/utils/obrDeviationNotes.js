@@ -40,8 +40,8 @@ export const OBR_DIFFERENCE_POINTS = {
     {
       reason: "Coverage",
       byYear: {
-        2026: "Scaled to all fuel, ours would be about £450m",
-        2027: "Scaled to all fuel, ours would be about £760m",
+        2026: "If we scaled to all fuel, ours would be about £450m",
+        2027: "If we scaled to all fuel, ours would be about £760m",
       },
     },
     { reason: "Timing", text: "Government appears to assume 5p back on 1 Jan; law phases it", years: [2026] },
@@ -102,9 +102,9 @@ export const OBR_DIFFERENCE_POINTS = {
     { reason: null, text: "We are correcting the data" },
   ],
   bus_fare_cap_2027: [
-    { reason: "Scope", text: "Ours is the official costing shared out by bus spending" },
-    { reason: "Behaviour", text: "Ours holds spending fixed: no extra travel" },
-    { reason: "Timing", text: "Later official gains are the funding reprioritised", years: [2028, 2029] },
+    { reason: "Scope", text: "We share out the official costing by bus spending" },
+    { reason: "Behaviour", text: "We hold spending fixed: no extra travel" },
+    { reason: "Timing", text: "Government counts later gains from reprioritising budgets", years: [2028, 2029] },
   ],
 };
 
@@ -141,7 +141,7 @@ export const NOT_COMPARABLE_SHORT = {
  */
 export const OBR_DEVIATION_NOTES = {
   bus_fare_cap_2027:
-    "The official costing is the grant that pays bus operators to keep single fares at £2 instead of £3 in England outside London from January to December 2027 (-£50 million in 2026-27, -£180 million in 2027-28). Ours is that costing shared out across households by their bus fare spending in England outside London: 10.0% of spending at £3 fares while the cap runs, which is the £230 million divided by 0.9 for operator participation and by £2,557 million of spending. So ours exceeds the official figure by about the participation adjustment, and moves with the model's bus fare spending in each year. The official +£65 million in 2028-29 and +£170 million in 2029-30 are the reprioritised Department for Energy Security and Net Zero budgets that fund the cap, after it has ended, so those years are not compared.",
+    "The official costing covers the grant the government pays bus operators to keep single fares at £2 instead of £3 in England outside London from January to December 2027 (-£50 million in 2026-27, -£180 million in 2027-28). We share that costing out across households by their bus fare spending in England outside London: 10.0% of spending at £3 fares while the cap runs, which we calculate by dividing the £230 million by 0.9 for operator participation and by £2,557 million of spending. So ours exceeds the official figure by about the participation adjustment, and moves with the bus fare spending in our data each year. The government funds the cap by reprioritising Department for Energy Security and Net Zero budgets. It counts +£65 million in 2028-29 and +£170 million in 2029-30 from that reprioritisation, after the cap has ended, so we don't compare those years.",
   household_energy_payment_2026:
     "Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, which the OBR certified (the Treasury rounds it to £2,625 million in the Budget's Table 6.1). The gap arises because the costing also covers two things we don't model: the devolved governments' share of the funding (about £425 million, our estimate using the Barnett formula) and £100 million for councils in England for targeted support. Without them, about £2,100 million remains for the payment in England, and our estimate reaches 94% of it. The government spends up to £2,000 million of that on £100 payments to up to 20 million households, and neither the OBR nor the Treasury itemises the rest. Both estimates fall to zero from 2027-28.",
   domestic_electricity_zero_vat:
@@ -166,7 +166,7 @@ export const OBR_DEVIATION_NOTES = {
  */
 export const OBR_COMPARISON_BASES = {
   bus_fare_cap_2027:
-    "Official: grant to bus operators. Ours: that costing shared out by households' bus fare spending, static.",
+    "Official: grant to bus operators. Ours: households' shares of that costing, by their bus fare spending, static.",
   household_energy_payment_2026:
     "Official: the government's costing, which the OBR certified (its detailed policy table, Table 1.1, measure 1), covering the £100 payments in England, devolved funding and a £100m fund for councils. Ours: the £100 payments in England.",
   domestic_electricity_zero_vat:

@@ -340,7 +340,7 @@ describe("the household calculation, from the fixture", () => {
         const tile = headlineCard().querySelector(".result-tiles .forecast-tile");
         const unit = ids.length === 1 ? "policy" : "policies";
         expect(tile.querySelector(".result-policies-link")).toHaveTextContent(
-          new RegExp(`^${ids.length} ${unit}, the savings income tax rise and the cash ISA limit kept at £20,000$`),
+          new RegExp(`^${ids.length} ${unit}, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty$`),
         );
         // The request carries both, so the card must name them
         expect(household.at(-1).policies).toContain("savings_income_rates_up");
@@ -371,7 +371,7 @@ describe("the household calculation, from the fixture", () => {
     // The selected policies, counted as the header counts them, and the
     // savings rise the calculator always adds, named
     expect(tiles[0]).toHaveTextContent(
-      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies, the savings income tax rise and the cash ISA limit kept at £20,000`,
+      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty`,
     );
     expect(changeValue()).toBe("+£3,765");
     // All three figures in the tiles' one headline class, the change not
@@ -402,7 +402,7 @@ describe("the household calculation, from the fixture", () => {
         item.querySelector("dt").textContent.startsWith(label),
       );
     expect(box("Salary in 2029-30").querySelector("dd")).toHaveTextContent("£34,192, partner £12,822");
-    expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
+    expect(within(box("Salary in 2029-30")).getByRole("button", { name: /we apply OBR earnings growth from 2026/ })).toBeInTheDocument();
     expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
     // Each detail in a tip, shown on focus or hover
     const tipOf = (label) => {
@@ -998,7 +998,7 @@ describe("the household calculation's errors", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
-    expect(await screen.findByRole("alert")).toHaveTextContent("NEXT_PUBLIC_HOUSEHOLD_API_URL is not set");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL");
     expect(household).toEqual([]);
   });
 

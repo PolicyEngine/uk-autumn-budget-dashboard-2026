@@ -260,7 +260,7 @@ describe("young people cards", () => {
 
   it("shows a year with no rows as not yet published", () => {
     render(<MeasuresCard {...props} selectedYear={2031} />);
-    expect(screen.getByText("Results for 2031-32 are not yet published.")).toBeInTheDocument();
+    expect(screen.getByText("We have not yet published results for 2031-32.")).toBeInTheDocument();
   });
 
   it("takes its focus from By age's group: the compare option and the dumbbell follow it", () => {
