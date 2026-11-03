@@ -92,13 +92,11 @@ def _years(duty: str) -> list[int]:
 
 
 def _within(duty: str, year: int) -> int:
-    """``year`` within the series: a later year holds its last."""
+    """``year`` within the series: a later year holds its last, and an
+    earlier one its first (2024-25, index 1: the gambling inputs start
+    then, and a dataset of an earlier year holds them at that level)."""
     years = _years(duty)
-    if year < years[0]:
-        raise ValueError(
-            f"{duty}: no gambling base before {years[0]} (asked for {year})"
-        )
-    return min(year, years[-1])
+    return max(years[0], min(year, years[-1]))
 
 
 @lru_cache(maxsize=None)

@@ -265,12 +265,13 @@ def test_every_duty_and_input_is_covered():
         assert not system.variables[variable].adds
 
 
-def test_a_later_year_holds_the_last_base():
+def test_years_outside_the_series_hold_its_ends():
+    """After 2031-32 the base holds its last level; before 2024-25 (a
+    dataset of an earlier year) its first, index 1."""
     assert gambling.base_index("machine_games", 2035) == gambling.base_index(
         "machine_games", 2031
     )
-    with pytest.raises(ValueError, match="before 2024"):
-        gambling.base_index("machine_games", 2023)
+    assert gambling.base_index("machine_games", 2023) == 1.0
 
 
 def test_the_installed_engine_does_not_grow_the_gambling_bases():
