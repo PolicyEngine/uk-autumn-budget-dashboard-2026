@@ -236,7 +236,7 @@ describe("why our estimates differ from the official costings", () => {
     // households' fuel duty, to the nearest £10m. The OBR's receipts include
     // the deferral, so we take our households' fuel duty after it too: their
     // duty before it, which we don't publish in the release and took from a
-    // baseline run of #290 at 9b98370e on 28 October, less our duty cost
+    // baseline run of #290 at ad32af7f on 28 October, less our duty cost
     const receipts = { "2026-27": 23.95, "2027-28": 25.713 };
     const baselineDuty = { "2026-27": 13.3635, "2027-28": 14.6503 };
     const ourDuty = (year) => our("fuel_duty_rise_deferral", year) - fuelVat(year);
@@ -293,7 +293,7 @@ describe("why our estimates differ from the official costings", () => {
     const ptaGross = (year) => gross("state_pension_income_tax_protection", year);
     const pta = (year) => our("state_pension_income_tax_protection", year);
     for (const value of Object.values(t11.find((l) => l.measure === 52 && l.category === "Welfare inside cap").values)) expect(value).toBe(0);
-    // "about a quarter": 25.6% to 28.7% at revision 60
+    // "about a quarter": 25.5% to 28.7% at revision 60
     for (const year of PTA_YEARS) {
       expect(1 - pta(year) / ptaGross(year), year).toBeGreaterThanOrEqual(0.25);
       expect(1 - pta(year) / ptaGross(year), year).toBeLessThan(0.3);
