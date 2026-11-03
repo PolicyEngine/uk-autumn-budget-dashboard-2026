@@ -687,7 +687,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           // (changeByYear, groupSeries)
           units: cumulative
             ? "£ per person, running total from the first year"
-            : "£ per person per year; each person counts their household's change in net income (not equivalised)",
+            : "£ per person per year; each person counts their household's change in net income (without equivalisation)",
           columns: [
             { key: "yearLabel", label: "Year" },
             ...SERIES_LIST.map((series) => ({ key: series.key, label: series.label, decimals: 2 })),
@@ -920,7 +920,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           year={Number(selectedYear)}
           info={{
             shows: "Average change in household income per person in each age group, each year, with all ages for comparison.",
-            how: ["Running total adds up the years from the first one shown."],
+            how: ["Running total adds up the years from the first one we show."],
             caveats: [
               unpublished.length > 0 &&
                 `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
