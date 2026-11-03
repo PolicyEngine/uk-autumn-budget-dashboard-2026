@@ -56,7 +56,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     const same = fmt(a.value) === fmt(b.value);
     const what =
       measure === "gini"
-        ? "income inequality, measured by the Gini coefficient,"
+        ? "income inequality (Gini coefficient)"
         : "the gap between top and bottom incomes (90:10 ratio)";
     summary = same ? (
       <>
@@ -74,7 +74,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     period: rowsPeriod(rows),
     summary,
     // What it shows; the two measures are defined once, under Definitions
-    about: "How unequal household incomes are each year under current law. The shaded years are the ones compared.",
+    about: "How unequal household incomes are each year under current law. We compare the shaded years.",
     notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
@@ -86,7 +86,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
         { term: "Gini coefficient", meaning: "0 when everyone has the same income, 1 when one person has it all." },
         {
           term: "90:10 ratio",
-          meaning: "Income of someone 90% of the way up the income scale divided by that of someone 10% of the way up.",
+          meaning: "Income of someone 90% of the way up the income scale as a multiple of that of someone 10% of the way up.",
         },
       ],
       caveats: ["Our 2024-25 inequality sits below official figures, so read PolicyEngine's figures as a change, not a level."],

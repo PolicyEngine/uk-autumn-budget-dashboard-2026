@@ -112,7 +112,7 @@ it("has an entry written for each candidate measure's published description, byt
 
 // Every card the page publishes is complete and parallel: a plain one-line
 // summary, a start, when it is in force, the modelling details and a source.
-it("gives every published measure a summary, start, timeline, who it affects, how it is calculated and a source", () => {
+it("gives every published measure a summary, start, timeline, who it affects, points, About this result and a source", () => {
   const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
   for (const [id, measure] of Object.entries(file.measures)) {
     const fields = policyDetailsFor({ id, description: measure.description });
@@ -124,9 +124,65 @@ it("gives every published measure a summary, start, timeline, who it affects, ho
     if (fields.inForce.to) expect(fields.ends, id).toBeTruthy();
     expect(fields.summary.length, id).toBeLessThanOrEqual(200);
     expect(fields.affects, id).toBeTruthy();
-    expect(fields.howCalculated, id).toBeTruthy();
-    expect(fields.details, id).toBeTruthy();
+    expect(fields.points?.length, id).toBeGreaterThanOrEqual(2);
+    expect(fields.details?.length, id).toBeGreaterThan(0);
     expect(fields.source?.label, id).toBeTruthy();
     expect(fields.source?.href, id).toMatch(/^https:\/\/www\.(gov\.uk|legislation\.gov\.uk)\//);
   }
+});
+
+// Short card text (Vahid, 29 Oct: "bullets, not long paragraphs"): a
+// one-line summary, 2 to 4 short points, and About this result as bullets
+const words = (text) => text.trim().split(/\s+/).length;
+
+it("keeps every entry's card text short: summary in 15 words, 2 to 4 points of 12, details as bullets of 20", () => {
+  for (const entry of POLICY_DETAILS) {
+    expect(words(entry.summary), entry.id).toBeLessThanOrEqual(15);
+    expect(entry.points.length, entry.id).toBeGreaterThanOrEqual(2);
+    expect(entry.points.length, entry.id).toBeLessThanOrEqual(4);
+    for (const point of entry.points) {
+      const text = typeof point === "string" ? point : point.text;
+      expect(words(text), `${entry.id}: ${text}`).toBeLessThanOrEqual(12);
+      if (typeof point !== "string") expect(words(point.label), `${entry.id}: ${point.label}`).toBeLessThanOrEqual(3);
+    }
+    expect(Array.isArray(entry.details), entry.id).toBe(true);
+    for (const detail of entry.details) expect(words(detail), `${entry.id}: ${detail}`).toBeLessThanOrEqual(20);
+    // The old paragraph fields are gone: their facts are in points and details
+    expect(entry.howCalculated, entry.id).toBeUndefined();
+    expect(entry.caveats, entry.id).toBeUndefined();
+  }
+});
+
+it("repeats no At a glance fact in a card's points", () => {
+  for (const entry of POLICY_DETAILS) {
+    const glance = [entry.starts, entry.ends, entry.affects].filter(Boolean).map((text) => text.toLowerCase());
+    for (const point of entry.points) {
+      const text = (typeof point === "string" ? point : `${point.label} ${point.text}`).toLowerCase();
+      for (const fact of glance) expect(text.includes(fact), `${entry.id}: ${text} repeats ${fact}`).toBe(false);
+    }
+  }
+});
+
+describe("nounOf: a measure as a noun after 'the'", () => {
+  it("reads as a noun for every measure with a card, never a short name such as 'Fuel duty cut extended'", async () => {
+    const { POLICY_DETAILS, nounOf } = await import("./policyDetails");
+    const fuel = POLICY_DETAILS.find((entry) => entry.id === "fuel_duty_rise_deferral");
+    expect(nounOf({ id: fuel.id, description: fuel.writtenFor })).toBe("fuel duty cut");
+    const pta = POLICY_DETAILS.find((entry) => entry.id === "state_pension_income_tax_protection");
+    // A proper name keeps its capitals ("the Pension Tax Allowance", not "the pension Tax Allowance")
+    expect(nounOf({ id: pta.id, description: pta.writtenFor })).toBe("Pension Tax Allowance");
+  });
+  it("falls back to the short name with its first capital lowered", async () => {
+    const { nounOf } = await import("./policyDetails");
+    expect(nounOf({ id: "x", name: "Threshold freeze" })).toBe("threshold freeze");
+    expect(nounOf({ id: "y", name: "BADR cut" })).toBe("BADR cut");
+    // A proper name keeps its capitals when its entry no longer matches the publication
+    expect(nounOf({ id: "warm_home_discount_top_up", name: "Warm Home Discount top-up" })).toBe("Warm Home Discount top-up");
+    expect(nounOf({ id: "carers_allowance_earnings_taper", name: "Carer's Allowance earnings taper", description: "changed" })).toBe("Carer's Allowance earnings taper");
+  });
+  it("gives the savings income measure a noun, never 'the savings income tax up'", async () => {
+    const { POLICY_DETAILS, nounOf } = await import("./policyDetails");
+    const savings = POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up");
+    expect(nounOf({ id: savings.id, description: savings.writtenFor })).toBe("savings income tax rise");
+  });
 });

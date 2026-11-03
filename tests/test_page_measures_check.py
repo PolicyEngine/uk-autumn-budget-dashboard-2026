@@ -18,9 +18,13 @@ PACKAGES = {
 
 
 @contextmanager
-def api(known: set, packages: dict = PACKAGES):
+def api(known: set, packages: dict = PACKAGES, calculator_only: bool = True):
     """A household API stand-in that refuses measures it doesn't know, as
-    the real one does (HTTP 422, "Unknown measures: …")."""
+    the real one does (HTTP 422, "Unknown measures: …"). It knows the
+    page's calculator-only measures too unless ``calculator_only`` is
+    False."""
+    if calculator_only:
+        known = set(known) | set(check.calculator_only_ids())
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -141,6 +145,42 @@ def test_an_api_missing_a_measure_fails_and_names_it(tmp_path):
         )
     assert len(problems) == 1
     assert "gas, vat" in problems[0] and "deploy it" in problems[0]
+
+
+def test_reads_the_calculator_only_ids_from_the_page():
+    """Today's: the savings rise (a constant) and the cash ISA limit."""
+    ids = check.calculator_only_ids()
+    assert ids[:2] == ["savings_income_rates_up", "cash_isa_limit_kept"]
+    assert check.calculator_only_ids("no/such/file.js") == []
+
+
+def test_an_api_that_refuses_a_calculator_only_measure_fails(tmp_path):
+    """The page sends the calculator-only measures with every household,
+    so an API deployed before one was registered breaks every calculation
+    though it knows every measure the manifest lists (#377)."""
+    ids = ["fuel", "vat"]
+    extra = tmp_path / "calculatorOnlyMeasures.js"
+    extra.write_text(
+        'export const SAVINGS_ID = "savings_income_rates_up";\n'
+        "export const CALCULATOR_ONLY_MEASURES = {\n"
+        "  [SAVINGS_ID]: {\n    id: SAVINGS_ID,\n  },\n"
+        '  new_measure: {\n    id: "new_measure",\n  },\n};\n'
+    )
+    assert check.calculator_only_ids(extra) == [
+        "savings_income_rates_up",
+        "new_measure",
+    ]
+    with api(
+        {"fuel", "vat", "savings_income_rates_up"}, calculator_only=False
+    ) as url:
+        problems = check.check(
+            [url],
+            write_manifest(tmp_path, ids),
+            write_presets(tmp_path, ids),
+            timeout=10,
+            calculator_only_file=extra,
+        )
+    assert len(problems) == 1 and "new_measure" in problems[0]
 
 
 def test_every_api_is_checked(tmp_path):

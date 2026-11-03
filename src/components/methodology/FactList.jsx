@@ -56,7 +56,7 @@ const TERM_ICONS = {
   "Household scatter bands": ChartScatter,
   "Gain, loss, no change": ArrowUpDown,
   Disclosure: ShieldCheck,
-  "Sign-off": FileCheck,
+  Checks: FileCheck,
   "Age bands": Users,
   "Single year of age": Cake,
   "Who counts": UserCheck,

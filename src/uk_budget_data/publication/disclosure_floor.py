@@ -23,7 +23,12 @@ so the bands and "all" stay; a thin band leaves only "all"; a thin "all"
 leaves no row. The decile tables keep their identifying columns and
 withhold every value in a thin decile's row, plus the winners and losers
 "all" row that would give it back by difference. A combined run also
-withholds its members' withheld cells. When "all" itself is thin, the
+withholds its members' withheld cells, in the age table as in the decile
+tables (#340): the package's own rows less the other members' would give
+back a member's withheld age, so the package takes each member's thin age
+groups as its own (``recorded_thin_age_groups``) before choosing the rows
+to leave out. The receipt's ``withheld_cells`` names the age rows left
+out, which no file then holds. When "all" itself is thin, the
 whole measure and its costing rest on too few households: that run keeps
 the warning and publication refusal, or is refused before writing when
 THIN_DECILES_ENV is "refuse".
@@ -297,7 +302,9 @@ def withhold_decile_rows(
 
 
 def recorded_withheld_cells(record: dict) -> dict[tuple[str, int], list[str]]:
-    """Read a member's decile withholding, accepting older floor records."""
+    """Read a member's decile withholding, accepting older floor records.
+
+    Its age rows left out are read by ``recorded_thin_age_groups``."""
     if not isinstance(record, dict):
         raise ValueError("its disclosure floor is not an object")
     cells = record.get("withheld_cells", [])
@@ -312,6 +319,12 @@ def recorded_withheld_cells(record: dict) -> dict[tuple[str, int], list[str]]:
             cell.get("year"),
             cell.get("groups"),
         )
+        if table == AGE_TABLE:
+            if type(year) is not int or not valid_age_labels(labels):
+                raise ValueError(
+                    "its withheld cell has invalid table, year or groups"
+                )
+            continue
         allowed = {str(n) for n in range(1, 11)}
         if table == "winners_losers":
             allowed.add("all")
@@ -386,27 +399,109 @@ def withheld_age_labels(
     }
 
 
-def withhold_thin_age_rows(
-    rows: list[dict], found: dict[tuple[str, int], list[str]]
-) -> list[dict]:
-    """The age table's rows without its thin cells, nor any row that would
-    give one back (``withheld_age_labels``), year by year."""
+def age_labels_in_order(labels) -> list[str]:
+    """Age table labels in the calculator's row order: the bands, "all",
+    then the single years of age, youngest first."""
+    bands = [label for label, _, _ in AGE_BANDS]
+
+    def key(label):
+        if label in bands:
+            return (0, bands.index(label))
+        if label == AGE_BAND_ALL:
+            return (1, 0)
+        return (2, int(label.rstrip("+")))
+
+    return sorted(set(labels), key=key)
+
+
+def valid_age_labels(labels) -> bool:
+    """Whether ``labels`` is a non-empty list of the age table's row
+    labels (a band, "all", "0" to "89" or "90+"), each once."""
+    if not isinstance(labels, list) or not labels:
+        return False
+    allowed = {label for label, _, _ in AGE_BANDS} | {AGE_BAND_ALL}
+    allowed |= {str(age) for age in range(90)} | {"90+"}
+    return len(set(labels)) == len(labels) and all(
+        isinstance(label, str) and label in allowed for label in labels
+    )
+
+
+def recorded_thin_age_groups(record: dict) -> dict[int, list[str]]:
+    """A member's age groups the package must treat as thin, by year: the
+    age table's thin cells in its receipt (``floor_record``), which every
+    receipt since the floor records, and the age rows its ``withheld_cells``
+    names. Either set, given to ``withheld_age_labels``, leaves out the
+    rows the member left out and whatever would give them back (#340)."""
+    if not isinstance(record, dict):
+        raise ValueError("its disclosure floor is not an object")
+    found: dict[int, set[str]] = {}
+    for field in ("thin_cells", "withheld_cells"):
+        cells = record.get(field) or []
+        if not isinstance(cells, list):
+            raise ValueError(f"its {field} are not a list")
+        for cell in cells:
+            if not isinstance(cell, dict):
+                raise ValueError(f"its {field} cell is not an object")
+            if cell.get("table") != AGE_TABLE:
+                continue
+            year, labels = cell.get("year"), cell.get("groups")
+            if (
+                type(year) is not int
+                or not isinstance(labels, list)
+                or any(not isinstance(label, str) for label in labels)
+            ):
+                raise ValueError(
+                    f"its {field} cell has invalid year or groups"
+                )
+            found.setdefault(year, set()).update(labels)
+    return {year: sorted(labels) for year, labels in sorted(found.items())}
+
+
+def withheld_age_cells(
+    rows: list[dict],
+    found: dict[tuple[str, int], list[str]],
+    inherited: Optional[dict[int, list[str]]] = None,
+) -> dict[tuple[str, int], list[str]]:
+    """The labels of the age table's rows to leave out, by (AGE_TABLE,
+    year), in row order: its thin cells and any row that would give one
+    back (``withheld_age_labels``), year by year.
+
+    ``inherited`` names, by year, a combined run's members' thin age
+    groups (``recorded_thin_age_groups``): the package leaves out what each
+    member left out, and what its own rows less the other members' would
+    give back (#340)."""
     labels: dict[int, list[str]] = {}
     for row in rows:
         labels.setdefault(row["year"], []).append(row["age_band"])
-    withheld = {
-        year: withheld_age_labels(found[(AGE_TABLE, year)], year_labels)
-        for year, year_labels in labels.items()
-        if (AGE_TABLE, year) in found
-    }
-    kept = []
-    for row in rows:
-        if row["year"] in withheld:
-            dropped = withheld[row["year"]]
-            if dropped is None or row["age_band"] in dropped:
-                continue
-        kept.append(row)
-    return kept
+    thin: dict[int, set[str]] = {}
+    for (table, year), groups in found.items():
+        if table == AGE_TABLE:
+            thin.setdefault(year, set()).update(groups)
+    for year, groups in (inherited or {}).items():
+        thin.setdefault(year, set()).update(groups)
+    withheld = {}
+    for year, year_labels in sorted(labels.items()):
+        if not thin.get(year):
+            continue
+        dropped = withheld_age_labels(sorted(thin[year]), year_labels)
+        dropped = set(year_labels) if dropped is None else dropped
+        if dropped:
+            withheld[(AGE_TABLE, year)] = age_labels_in_order(dropped)
+    return withheld
+
+
+def withhold_thin_age_rows(
+    rows: list[dict],
+    found: dict[tuple[str, int], list[str]],
+    inherited: Optional[dict[int, list[str]]] = None,
+) -> list[dict]:
+    """The age table's rows without those ``withheld_age_cells`` names."""
+    withheld = withheld_age_cells(rows, found, inherited)
+    return [
+        row
+        for row in rows
+        if row["age_band"] not in withheld.get((AGE_TABLE, row["year"]), [])
+    ]
 
 
 def survey_scatter_rows(rows: list[dict], household_ids, survey) -> list[dict]:

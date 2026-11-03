@@ -17,13 +17,53 @@
     "id": "uk-autumn-budget-2026"
   },
   "combined": {
-    "combined--f91fe847275730cb": {
+    "combined--7baf4e89377bcc9c": {
       "approval": {
-        "artifact_sha256": "4faed20984703c7d149a09b10e03d891130d06f4981764e856e3ff9f8077cef0",
-        "at": "2026-10-28T18:58:19.461552+00:00",
+        "artifact_sha256": "dd5d4843f7f767825032972a6ad556b49e45282298b66c0c4f10d5ab3031c82b",
+        "at": "2026-10-29T19:22:38.418299+00:00",
         "by": "vahid-ahmadi",
-        "outputs_sha256": "da5ba9c7a41f2ffdc97dfd9896eb357e3b22feaff54ded9264a8dd44569d1650"
+        "outputs_sha256": "db793665fa105d54471ee3c5b1159dee0bcf12dd0dae01cc02916c6dbfc37914"
       },
+      "artifact": "artifacts/combined--7baf4e89377bcc9c/dd5d4843f7f76782",
+      "artifact_sha256": "dd5d4843f7f767825032972a6ad556b49e45282298b66c0c4f10d5ab3031c82b",
+      "data_limits": [],
+      "description": "One simulation of: bus_fare_cap_2027, carers_allowance_earnings_taper, domestic_electricity_zero_vat, fuel_duty_rise_deferral, household_energy_payment_2026, property_income_rates_up, state_pension_income_tax_protection, trading_allowance_raise",
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "measures": [
+        "bus_fare_cap_2027",
+        "carers_allowance_earnings_taper",
+        "domestic_electricity_zero_vat",
+        "fuel_duty_rise_deferral",
+        "household_energy_payment_2026",
+        "property_income_rates_up",
+        "state_pension_income_tax_protection",
+        "trading_allowance_raise"
+      ],
+      "member_outputs_sha256": {
+        "bus_fare_cap_2027": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
+        "carers_allowance_earnings_taper": "51d582bd4f867fa6701a20a36bf3bcacc450081e5cbe1f8614232125d57d9083",
+        "domestic_electricity_zero_vat": "d3f98c42345216cd32b61d73da718f16a156dd6cca277e803006afb366ff28fe",
+        "fuel_duty_rise_deferral": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6",
+        "household_energy_payment_2026": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
+        "property_income_rates_up": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd",
+        "state_pension_income_tax_protection": "fd6fea536a7ef66adfc7e4236dc7365ebd966d606e513d57cddb08c022f123d5",
+        "trading_allowance_raise": "01be7471631868f3e4c73c9e82b15be1c07e391a973c9c025d99521e9f47cd3a"
+      },
+      "name": "Combined: Single bus fares capped at \u00a32, Carer's Allowance earnings taper, Zero VAT on domestic electricity, Fuel duty cut extended, Household Energy Payment, Property income tax rates up, Pension Tax Allowance, Trading allowance raised to \u00a33,000",
+      "outputs_sha256": "db793665fa105d54471ee3c5b1159dee0bcf12dd0dae01cc02916c6dbfc37914",
+      "receipt_sha256": "ce31453e074622d95fd39443757ea61e4e66b1a40287a25219610ba89152e89c",
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "combined--f91fe847275730cb": {
       "artifact": "artifacts/combined--f91fe847275730cb/4faed20984703c7d",
       "artifact_sha256": "4faed20984703c7d149a09b10e03d891130d06f4981764e856e3ff9f8077cef0",
       "attestation": {
@@ -57,8 +97,9 @@
       },
       "name": "Combined: Carer's Allowance earnings taper, Zero VAT on domestic electricity, Fuel duty cut extended, Household Energy Payment, Property income tax rates up, Pension Tax Allowance, Trading allowance raised to \u00a33,000",
       "outputs_sha256": "da5ba9c7a41f2ffdc97dfd9896eb357e3b22feaff54ded9264a8dd44569d1650",
+      "reason": "member trading_allowance_raise changed",
       "receipt_sha256": "cfcf475b7080c197c94a08bf81eabb27bc5d9b57616d3a29fab64f3816c10258",
-      "status": "approved",
+      "status": "stale",
       "unsupported_years": [],
       "years": [
         2026,
@@ -113,33 +154,56 @@
   },
   "flat_aliases": {},
   "flat_files": {
-    "constituency.csv": "793cb52b5f01cffd12b74b61bfd4d528c0a84cddbe1e7695f66587f92be9a05d"
+    "constituency.csv": "56b55f1460ff9f56ac1b89be08da910fc9f28c5eeb3e958be72b8dd754e81b40"
   },
-  "flat_provenance_sha256": "58a2e5425363e189a89afd960d59ec10ca41122d66be5b702b17df7763599d5d",
+  "flat_provenance_sha256": "e928d7870b1607712efda731ec143a39fb43ac8aff8fa1f7451dbc6c576dbb20",
   "measures": {
+    "bus_fare_cap_2027": {
+      "approval": {
+        "artifact_sha256": "f2a6a66839d4331c48ed383588a35d44d2f632fc61bee58051644feaadb4eb20",
+        "at": "2026-10-29T16:32:29.008140+00:00",
+        "by": "vahid-ahmadi",
+        "carried_from_receipt": "627e1664cc4b4c31b0b2aad5dcdb4eee9f06a3919200cf46593544cb97cad7fc",
+        "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220"
+      },
+      "artifact": "artifacts/bus_fare_cap_2027/f2a6a66839d4331c",
+      "artifact_sha256": "f2a6a66839d4331c48ed383588a35d44d2f632fc61bee58051644feaadb4eb20",
+      "data_limits": [],
+      "description": "Single bus fares on participating services in England outside London are capped at \u00a32 instead of \u00a33 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at \u00a33 fares (\u00a3230m, divided by 0.9 for operator participation, over \u00a32,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get \u00a30. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "name": "Single bus fares capped at \u00a32",
+      "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
+      "receipt_sha256": "368483a62fd281af002442214ab492107cde412b792dbb46be72e7b45f9bddf0",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
     "carers_allowance_earnings_taper": {
       "approval": {
-        "artifact_sha256": "9458905cefca3e88fa6aed96196d6d621b3d577fd0759e081e79dab4fd6abf54",
-        "at": "2026-10-28T18:28:52.574007+00:00",
+        "artifact_sha256": "302ddb4d9fccbdf18ec2e910daa8edcc8a46e3f83e8efc620b82935765535da2",
+        "at": "2026-10-29T19:22:33.444241+00:00",
         "by": "vahid-ahmadi",
-        "outputs_sha256": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc"
+        "outputs_sha256": "51d582bd4f867fa6701a20a36bf3bcacc450081e5cbe1f8614232125d57d9083"
       },
-      "artifact": "artifacts/carers_allowance_earnings_taper/9458905cefca3e88",
-      "artifact_sha256": "9458905cefca3e88fa6aed96196d6d621b3d577fd0759e081e79dab4fd6abf54",
-      "attestation": {
-        "checker": "vahid-ahmadi",
-        "measure_id": "carers_allowance_earnings_taper",
-        "reason": "Checked budget_measures.carers_allowance_earnings_taper: from 2030-31 it replaces carers_allowance_pre_overlap for carers whose weekly net earnings are above the Weekly Earnings Limit, 16 hours at the OBR's National Living Wage for that April, rounded up to the pound (\u00a3212 at April 2027's \u00a313.21), not the engine's earnings limit, with the weekly rate less \u00a31 for each \u00a31 of earnings above the limit, floored at zero. 2030-31 counts half of the year's change (first_year_share=0.5). At or below the limit, before 2030-31, in Scotland (Carer Support Payment) and in Northern Ireland the native amount stands, and it adds no take-up draw of its own. The receipt's outputs were compared with the hand-computed cases in tests/test_carers_allowance_earnings_taper.py.",
-        "receipt_sha256": "52678adb78880ec01cd66f7af152d5e66570fc19e972dce075dd28b83ba4f5ce",
-        "released_at": "2026-10-28T17:15:49+00:00",
-        "second": "juaristi22"
-      },
+      "artifact": "artifacts/carers_allowance_earnings_taper/302ddb4d9fccbdf1",
+      "artifact_sha256": "302ddb4d9fccbdf18ec2e910daa8edcc8a46e3f83e8efc620b82935765535da2",
       "data_limits": [],
       "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (\u00a3212 a week at April 2027's \u00a313.21, rounded up to the pound): it is reduced by \u00a31 for each \u00a31 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "name": "Carer's Allowance earnings taper",
-      "outputs_sha256": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc",
-      "receipt_sha256": "792fb4c051af0402aa02d5bd4055d8497c742fbdfb6795643a79ab44f6d9ba3e",
+      "outputs_sha256": "51d582bd4f867fa6701a20a36bf3bcacc450081e5cbe1f8614232125d57d9083",
+      "receipt_sha256": "6fa24117eeff0f24c347d07821a1ff431a53688a6ee53732c22f0933b66208dd",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -157,19 +221,20 @@
     },
     "domestic_electricity_zero_vat": {
       "approval": {
-        "artifact_sha256": "2d9c65726915303e22758fe87e8d66e9b20049b4433f0bbc47d3754aeb56c081",
-        "at": "2026-10-28T18:28:42.406464+00:00",
+        "artifact_sha256": "d03dc51164c1bb2ad2e82e96d40284b320bc835a7e8987d69ba4e77612048971",
+        "at": "2026-10-29T16:32:32.652303+00:00",
         "by": "vahid-ahmadi",
-        "outputs_sha256": "86bbb52bc9100cd479e56d7baaf785aeee74027e2e59d50bb0ade667977ee0a2"
+        "carried_from_receipt": "3cce2d1f60652f37c8dcc0b1376543d957d546eddce78b35681241c65324c907",
+        "outputs_sha256": "d3f98c42345216cd32b61d73da718f16a156dd6cca277e803006afb366ff28fe"
       },
-      "artifact": "artifacts/domestic_electricity_zero_vat/2d9c65726915303e",
-      "artifact_sha256": "2d9c65726915303e22758fe87e8d66e9b20049b4433f0bbc47d3754aeb56c081",
+      "artifact": "artifacts/domestic_electricity_zero_vat/d03dc51164c1bb2a",
+      "artifact_sha256": "d03dc51164c1bb2ad2e82e96d40284b320bc835a7e8987d69ba4e77612048971",
       "data_limits": [],
       "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "name": "Zero VAT on domestic electricity",
-      "outputs_sha256": "86bbb52bc9100cd479e56d7baaf785aeee74027e2e59d50bb0ade667977ee0a2",
-      "receipt_sha256": "5b09acd80d3adad51228cb8d74933dd4a658a21cf4de2df456945666304ba258",
+      "outputs_sha256": "d3f98c42345216cd32b61d73da718f16a156dd6cca277e803006afb366ff28fe",
+      "receipt_sha256": "c7640d10c3c165e08e08858d50917c7d5d772efde67fa279960ee45f9c27eceb",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -187,19 +252,20 @@
     },
     "fuel_duty_rise_deferral": {
       "approval": {
-        "artifact_sha256": "e077f8d4b70440c8286cf2ebe85853cbc2e98fbf44e24ea688ebc9e559e8c79a",
-        "at": "2026-10-28T18:28:47.369791+00:00",
+        "artifact_sha256": "984f32607d94695dbadf3175937afdca36e607a5db07c2d70791934c29d000ad",
+        "at": "2026-10-29T16:43:27.693225+00:00",
         "by": "vahid-ahmadi",
-        "outputs_sha256": "4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079"
+        "carried_from_receipt": "add8120b965275ecee20b3717ec8bae5c9e78eceee85ef8e568acf16a3c46f9a",
+        "outputs_sha256": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6"
       },
-      "artifact": "artifacts/fuel_duty_rise_deferral/e077f8d4b70440c8",
-      "artifact_sha256": "e077f8d4b70440c8286cf2ebe85853cbc2e98fbf44e24ea688ebc9e559e8c79a",
+      "artifact": "artifacts/fuel_duty_rise_deferral/984f32607d94695d",
+      "artifact_sha256": "984f32607d94695dbadf3175937afdca36e607a5db07c2d70791934c29d000ad",
       "data_limits": [],
       "description": "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "name": "Fuel duty cut extended",
-      "outputs_sha256": "4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079",
-      "receipt_sha256": "02762ce13b98a5c3930f8864607725dda04cb569aa583743a6c1c99027d99035",
+      "outputs_sha256": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6",
+      "receipt_sha256": "1da86a4e8233faa91854d0c8934c0cf7d1e8ed5bd7a69efe60814068f7be7697",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "accepted"
@@ -217,27 +283,20 @@
     },
     "household_energy_payment_2026": {
       "approval": {
-        "artifact_sha256": "101a07dc7238a10e5811cfc0e8e7938ef213d483d2019d05871671c4b889eba3",
-        "at": "2026-10-28T18:28:37.462684+00:00",
+        "artifact_sha256": "220d79f0f70e26792e219ea62c1c5d34da7312a4bd4430928141ebdccfd7585f",
+        "at": "2026-10-29T16:43:33.403500+00:00",
         "by": "vahid-ahmadi",
-        "outputs_sha256": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215"
+        "carried_from_receipt": "66416dbf0a5fd98d24671ff696efadf2099026b9c8270dd6a68757cc55115d3c",
+        "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba"
       },
-      "artifact": "artifacts/household_energy_payment_2026/101a07dc7238a10e",
-      "artifact_sha256": "101a07dc7238a10e5811cfc0e8e7938ef213d483d2019d05871671c4b889eba3",
-      "attestation": {
-        "checker": "vahid-ahmadi",
-        "measure_id": "household_energy_payment_2026",
-        "reason": "Checked budget_measures.household_energy_payment_2026: in 2026-27 only it adds the payment to ebr_council_tax_rebate for households in England whose council tax band is A, B, C or D, leaving every other household and year at the native amount. The receipt's outputs were compared with the hand-computed households in tests/test_reforms.py.",
-        "receipt_sha256": "a2d04be4a38d368fbcaf5c4709966c65ef91b90e4f69f9899f26ffb149a8bb6d",
-        "released_at": "2026-10-28T17:15:49+00:00",
-        "second": "juaristi22"
-      },
+      "artifact": "artifacts/household_energy_payment_2026/220d79f0f70e2679",
+      "artifact_sha256": "220d79f0f70e26792e219ea62c1c5d34da7312a4bd4430928141ebdccfd7585f",
       "data_limits": [],
       "description": "A one-off \u00a3100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "name": "Household Energy Payment",
-      "outputs_sha256": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215",
-      "receipt_sha256": "50a581145fbd0abf3fcb9a0870c2a624ba6cb3427701ca0f61daf474590e8256",
+      "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
+      "receipt_sha256": "a1af6e4022f0653f7692d70085bae5e561c167dc8e7432feac8e18e530b9032b",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "accepted"
@@ -255,19 +314,20 @@
     },
     "property_income_rates_up": {
       "approval": {
-        "artifact_sha256": "7bf77b35e33233e0f8174f4be78c7bd6e4eca46f95f1f72b100a68f19280dcfd",
-        "at": "2026-10-28T18:29:07.541217+00:00",
+        "artifact_sha256": "02718faa790c7f771c1ff8d8c3eb05657e052407325b34d58b49caff5ac54127",
+        "at": "2026-10-29T16:32:38.146319+00:00",
         "by": "vahid-ahmadi",
-        "outputs_sha256": "6748d5ee971f1b8428186ca778b4bd01ee1320c4e9f7cc67f34b5fc398330d47"
+        "carried_from_receipt": "0dad9121342537de582feaff91550f11545c9e430d2b9ba016e9f9d31e9b5ddc",
+        "outputs_sha256": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd"
       },
-      "artifact": "artifacts/property_income_rates_up/7bf77b35e33233e0",
-      "artifact_sha256": "7bf77b35e33233e0f8174f4be78c7bd6e4eca46f95f1f72b100a68f19280dcfd",
+      "artifact": "artifacts/property_income_rates_up/02718faa790c7f77",
+      "artifact_sha256": "02718faa790c7f771c1ff8d8c3eb05657e052407325b34d58b49caff5ac54127",
       "data_limits": [],
       "description": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "name": "Property income tax rates up",
-      "outputs_sha256": "6748d5ee971f1b8428186ca778b4bd01ee1320c4e9f7cc67f34b5fc398330d47",
-      "receipt_sha256": "777e8839f0f7c541229eb281de5fd497819c34c07ebad865456bbb639d4806e6",
+      "outputs_sha256": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd",
+      "receipt_sha256": "0dad9121342537de582feaff91550f11545c9e430d2b9ba016e9f9d31e9b5ddc",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -285,27 +345,19 @@
     },
     "state_pension_income_tax_protection": {
       "approval": {
-        "artifact_sha256": "1bfeed3c27a3c9b9e433b9fa7ce1de4d30bce2b237d78c349d4540747997e12e",
-        "at": "2026-10-28T18:29:02.529032+00:00",
+        "artifact_sha256": "c4654db0818550540d4f280c4b0af4dae78f5cd088c11fb6797d44103b125a04",
+        "at": "2026-10-29T19:22:35.924563+00:00",
         "by": "vahid-ahmadi",
-        "outputs_sha256": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5"
+        "outputs_sha256": "fd6fea536a7ef66adfc7e4236dc7365ebd966d606e513d57cddb08c022f123d5"
       },
-      "artifact": "artifacts/state_pension_income_tax_protection/1bfeed3c27a3c9b9",
-      "artifact_sha256": "1bfeed3c27a3c9b9e433b9fa7ce1de4d30bce2b237d78c349d4540747997e12e",
-      "attestation": {
-        "checker": "vahid-ahmadi",
-        "measure_id": "state_pension_income_tax_protection",
-        "reason": "Checked budget_measures.pension_tax_allowance: from 2027-28 to 2029-30 it reduces income_tax, never below zero, for people over State Pension age by the year's allowance (20% of the full new State Pension above \u00a312,570, rounded up) less \u00a31 for every \u00a33 of total_income above the full new State Pension; other years and people keep the native liability. In those years it also replaces uc_income_tax_on_earnings and uc_income_tax_on_trade, so Universal Credit deducts the tax after the allowance (the allowance used comes off the tax on employment first, then on trade). The receipt's outputs were compared with the explainer's cases in tests/test_pension_tax_allowance.py.",
-        "receipt_sha256": "3446d35bb91f3eb3ce74750ae9f997578094ab3be53d89cf26ae7069f54c0d9f",
-        "released_at": "2026-10-28T17:15:49+00:00",
-        "second": "juaristi22"
-      },
+      "artifact": "artifacts/state_pension_income_tax_protection/c4654db081855054",
+      "artifact_sha256": "c4654db0818550540d4f280c4b0af4dae78f5cd088c11fb6797d44103b125a04",
       "data_limits": [],
       "description": "From 6 April 2027 to 5 April 2030, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (\u00a313,036.40 in 2027-28) get a Pension Tax Allowance: a non-refundable reduction in their income tax, worth up to \u00a394 in 2027-28. It falls by \u00a31 for every \u00a33 of income above the full new State Pension, so it is gone at about \u00a313,319 in 2027-28. The personal allowance is unchanged.",
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "name": "Pension Tax Allowance",
-      "outputs_sha256": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5",
-      "receipt_sha256": "639abc7f6560dab736da0d59e4c1bb272312e5500d1c94f33fc208145d039e65",
+      "outputs_sha256": "fd6fea536a7ef66adfc7e4236dc7365ebd966d606e513d57cddb08c022f123d5",
+      "receipt_sha256": "8d0d477f5d3852a241edcc2fbd1b9de133eb5a4bc77afb370faf6aed90f8af33",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -323,19 +375,20 @@
     },
     "trading_allowance_raise": {
       "approval": {
-        "artifact_sha256": "eddde823a65b7be434b88e127a4bfde6203df9a0b47d5046a6eb1ebf1a36b3e7",
-        "at": "2026-10-28T18:28:57.595483+00:00",
+        "artifact_sha256": "411e68c2da8830e779053f1bf0088c2fb50ac63b5bdb001b15f0eafe1012926b",
+        "at": "2026-10-29T16:43:39.690305+00:00",
         "by": "vahid-ahmadi",
-        "outputs_sha256": "1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc"
+        "carried_from_receipt": "65b2d75d12831487d4743c928b9f274604e9bae0b5af5f6aa73b5f18299d69c3",
+        "outputs_sha256": "01be7471631868f3e4c73c9e82b15be1c07e391a973c9c025d99521e9f47cd3a"
       },
-      "artifact": "artifacts/trading_allowance_raise/eddde823a65b7be4",
-      "artifact_sha256": "eddde823a65b7be434b88e127a4bfde6203df9a0b47d5046a6eb1ebf1a36b3e7",
+      "artifact": "artifacts/trading_allowance_raise/411e68c2da8830e7",
+      "artifact_sha256": "411e68c2da8830e779053f1bf0088c2fb50ac63b5bdb001b15f0eafe1012926b",
       "data_limits": [],
       "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from \u00a31,000 to \u00a33,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to \u00a33,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "name": "Trading allowance raised to \u00a33,000",
-      "outputs_sha256": "1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc",
-      "receipt_sha256": "6bcce622b86c3da3f36df52a1ef30a4ec4fbc2d050531f716bb679bb2039962f",
+      "outputs_sha256": "01be7471631868f3e4c73c9e82b15be1c07e391a973c9c025d99521e9f47cd3a",
+      "receipt_sha256": "65b2d75d12831487d4743c928b9f274604e9bae0b5af5f6aa73b5f18299d69c3",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "accepted"
@@ -353,8 +406,588 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 17,
+  "revision": 60,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
-  "superseded": [],
-  "updated_at": "2026-10-28T19:24:46.179205+00:00"
+  "superseded": [
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "9458905cefca3e88fa6aed96196d6d621b3d577fd0759e081e79dab4fd6abf54",
+          "at": "2026-10-28T18:28:52.574007+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc"
+        },
+        "artifact": "artifacts/carers_allowance_earnings_taper/9458905cefca3e88",
+        "artifact_sha256": "9458905cefca3e88fa6aed96196d6d621b3d577fd0759e081e79dab4fd6abf54",
+        "attestation": {
+          "checker": "vahid-ahmadi",
+          "measure_id": "carers_allowance_earnings_taper",
+          "reason": "Checked budget_measures.carers_allowance_earnings_taper: from 2030-31 it replaces carers_allowance_pre_overlap for carers whose weekly net earnings are above the Weekly Earnings Limit, 16 hours at the OBR's National Living Wage for that April, rounded up to the pound (\u00a3212 at April 2027's \u00a313.21), not the engine's earnings limit, with the weekly rate less \u00a31 for each \u00a31 of earnings above the limit, floored at zero. 2030-31 counts half of the year's change (first_year_share=0.5). At or below the limit, before 2030-31, in Scotland (Carer Support Payment) and in Northern Ireland the native amount stands, and it adds no take-up draw of its own. The receipt's outputs were compared with the hand-computed cases in tests/test_carers_allowance_earnings_taper.py.",
+          "receipt_sha256": "52678adb78880ec01cd66f7af152d5e66570fc19e972dce075dd28b83ba4f5ce",
+          "released_at": "2026-10-28T17:15:49+00:00",
+          "second": "juaristi22"
+        },
+        "data_limits": [],
+        "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (\u00a3212 a week at April 2027's \u00a313.21, rounded up to the pound): it is reduced by \u00a31 for each \u00a31 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Carer's Allowance earnings taper",
+        "outputs_sha256": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc",
+        "receipt_sha256": "792fb4c051af0402aa02d5bd4055d8497c742fbdfb6795643a79ab44f6d9ba3e",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "carers_allowance_earnings_taper",
+      "superseded_at": "2026-10-29T16:32:07.143876+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "2d9c65726915303e22758fe87e8d66e9b20049b4433f0bbc47d3754aeb56c081",
+          "at": "2026-10-28T18:28:42.406464+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "86bbb52bc9100cd479e56d7baaf785aeee74027e2e59d50bb0ade667977ee0a2"
+        },
+        "artifact": "artifacts/domestic_electricity_zero_vat/2d9c65726915303e",
+        "artifact_sha256": "2d9c65726915303e22758fe87e8d66e9b20049b4433f0bbc47d3754aeb56c081",
+        "data_limits": [],
+        "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Zero VAT on domestic electricity",
+        "outputs_sha256": "86bbb52bc9100cd479e56d7baaf785aeee74027e2e59d50bb0ade667977ee0a2",
+        "receipt_sha256": "5b09acd80d3adad51228cb8d74933dd4a658a21cf4de2df456945666304ba258",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "domestic_electricity_zero_vat",
+      "superseded_at": "2026-10-29T16:32:09.039280+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "e077f8d4b70440c8286cf2ebe85853cbc2e98fbf44e24ea688ebc9e559e8c79a",
+          "at": "2026-10-28T18:28:47.369791+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079"
+        },
+        "artifact": "artifacts/fuel_duty_rise_deferral/e077f8d4b70440c8",
+        "artifact_sha256": "e077f8d4b70440c8286cf2ebe85853cbc2e98fbf44e24ea688ebc9e559e8c79a",
+        "data_limits": [],
+        "description": "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Fuel duty cut extended",
+        "outputs_sha256": "4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079",
+        "receipt_sha256": "02762ce13b98a5c3930f8864607725dda04cb569aa583743a6c1c99027d99035",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "accepted"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "fuel_duty_rise_deferral",
+      "superseded_at": "2026-10-29T16:32:10.871393+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "101a07dc7238a10e5811cfc0e8e7938ef213d483d2019d05871671c4b889eba3",
+          "at": "2026-10-28T18:28:37.462684+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215"
+        },
+        "artifact": "artifacts/household_energy_payment_2026/101a07dc7238a10e",
+        "artifact_sha256": "101a07dc7238a10e5811cfc0e8e7938ef213d483d2019d05871671c4b889eba3",
+        "attestation": {
+          "checker": "vahid-ahmadi",
+          "measure_id": "household_energy_payment_2026",
+          "reason": "Checked budget_measures.household_energy_payment_2026: in 2026-27 only it adds the payment to ebr_council_tax_rebate for households in England whose council tax band is A, B, C or D, leaving every other household and year at the native amount. The receipt's outputs were compared with the hand-computed households in tests/test_reforms.py.",
+          "receipt_sha256": "a2d04be4a38d368fbcaf5c4709966c65ef91b90e4f69f9899f26ffb149a8bb6d",
+          "released_at": "2026-10-28T17:15:49+00:00",
+          "second": "juaristi22"
+        },
+        "data_limits": [],
+        "description": "A one-off \u00a3100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Household Energy Payment",
+        "outputs_sha256": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215",
+        "receipt_sha256": "50a581145fbd0abf3fcb9a0870c2a624ba6cb3427701ca0f61daf474590e8256",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "accepted"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "household_energy_payment_2026",
+      "superseded_at": "2026-10-29T16:32:12.706055+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "7bf77b35e33233e0f8174f4be78c7bd6e4eca46f95f1f72b100a68f19280dcfd",
+          "at": "2026-10-28T18:29:07.541217+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "6748d5ee971f1b8428186ca778b4bd01ee1320c4e9f7cc67f34b5fc398330d47"
+        },
+        "artifact": "artifacts/property_income_rates_up/7bf77b35e33233e0",
+        "artifact_sha256": "7bf77b35e33233e0f8174f4be78c7bd6e4eca46f95f1f72b100a68f19280dcfd",
+        "data_limits": [],
+        "description": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Property income tax rates up",
+        "outputs_sha256": "6748d5ee971f1b8428186ca778b4bd01ee1320c4e9f7cc67f34b5fc398330d47",
+        "receipt_sha256": "777e8839f0f7c541229eb281de5fd497819c34c07ebad865456bbb639d4806e6",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "property_income_rates_up",
+      "superseded_at": "2026-10-29T16:32:14.579374+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "1bfeed3c27a3c9b9e433b9fa7ce1de4d30bce2b237d78c349d4540747997e12e",
+          "at": "2026-10-28T18:29:02.529032+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5"
+        },
+        "artifact": "artifacts/state_pension_income_tax_protection/1bfeed3c27a3c9b9",
+        "artifact_sha256": "1bfeed3c27a3c9b9e433b9fa7ce1de4d30bce2b237d78c349d4540747997e12e",
+        "attestation": {
+          "checker": "vahid-ahmadi",
+          "measure_id": "state_pension_income_tax_protection",
+          "reason": "Checked budget_measures.pension_tax_allowance: from 2027-28 to 2029-30 it reduces income_tax, never below zero, for people over State Pension age by the year's allowance (20% of the full new State Pension above \u00a312,570, rounded up) less \u00a31 for every \u00a33 of total_income above the full new State Pension; other years and people keep the native liability. In those years it also replaces uc_income_tax_on_earnings and uc_income_tax_on_trade, so Universal Credit deducts the tax after the allowance (the allowance used comes off the tax on employment first, then on trade). The receipt's outputs were compared with the explainer's cases in tests/test_pension_tax_allowance.py.",
+          "receipt_sha256": "3446d35bb91f3eb3ce74750ae9f997578094ab3be53d89cf26ae7069f54c0d9f",
+          "released_at": "2026-10-28T17:15:49+00:00",
+          "second": "juaristi22"
+        },
+        "data_limits": [],
+        "description": "From 6 April 2027 to 5 April 2030, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (\u00a313,036.40 in 2027-28) get a Pension Tax Allowance: a non-refundable reduction in their income tax, worth up to \u00a394 in 2027-28. It falls by \u00a31 for every \u00a33 of income above the full new State Pension, so it is gone at about \u00a313,319 in 2027-28. The personal allowance is unchanged.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Pension Tax Allowance",
+        "outputs_sha256": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5",
+        "receipt_sha256": "639abc7f6560dab736da0d59e4c1bb272312e5500d1c94f33fc208145d039e65",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "state_pension_income_tax_protection",
+      "superseded_at": "2026-10-29T16:32:16.414393+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "eddde823a65b7be434b88e127a4bfde6203df9a0b47d5046a6eb1ebf1a36b3e7",
+          "at": "2026-10-28T18:28:57.595483+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc"
+        },
+        "artifact": "artifacts/trading_allowance_raise/eddde823a65b7be4",
+        "artifact_sha256": "eddde823a65b7be434b88e127a4bfde6203df9a0b47d5046a6eb1ebf1a36b3e7",
+        "data_limits": [],
+        "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from \u00a31,000 to \u00a33,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to \u00a33,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Trading allowance raised to \u00a33,000",
+        "outputs_sha256": "1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc",
+        "receipt_sha256": "6bcce622b86c3da3f36df52a1ef30a4ec4fbc2d050531f716bb679bb2039962f",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "accepted"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "trading_allowance_raise",
+      "superseded_at": "2026-10-29T16:32:18.314483+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "9a0f984fc189f42ca7213f791c13c3b0332b495697f35d040d3b7ffd316e83c1",
+          "at": "2026-10-29T16:32:29.008140+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220"
+        },
+        "artifact": "artifacts/bus_fare_cap_2027/9a0f984fc189f42c",
+        "artifact_sha256": "9a0f984fc189f42ca7213f791c13c3b0332b495697f35d040d3b7ffd316e83c1",
+        "data_limits": [],
+        "description": "Single bus fares on participating services in England outside London are capped at \u00a32 instead of \u00a33 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at \u00a33 fares (\u00a3230m, divided by 0.9 for operator participation, over \u00a32,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get \u00a30. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Single bus fares capped at \u00a32",
+        "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
+        "receipt_sha256": "627e1664cc4b4c31b0b2aad5dcdb4eee9f06a3919200cf46593544cb97cad7fc",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "bus_fare_cap_2027",
+      "superseded_at": "2026-10-29T18:50:57.288593+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "3ad33823c1d31284244b32a1e37f632558f975845cf4608b66e6d0a8c71fca3f",
+          "at": "2026-10-29T16:32:30.827602+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "8cea5169ff945832d5a00539152c7fae26216fb9478a1613946edf30387080a1"
+        },
+        "artifact": "artifacts/carers_allowance_earnings_taper/3ad33823c1d31284",
+        "artifact_sha256": "3ad33823c1d31284244b32a1e37f632558f975845cf4608b66e6d0a8c71fca3f",
+        "data_limits": [],
+        "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (\u00a3212 a week at April 2027's \u00a313.21, rounded up to the pound): it is reduced by \u00a31 for each \u00a31 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Carer's Allowance earnings taper",
+        "outputs_sha256": "8cea5169ff945832d5a00539152c7fae26216fb9478a1613946edf30387080a1",
+        "receipt_sha256": "05e89d470da0b8f1d50a1fcbad9658c77b02dc4f5e30fde8f9280fffc409cad7",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "carers_allowance_earnings_taper",
+      "superseded_at": "2026-10-29T18:50:59.442547+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "1227444eb2a699e3b79ecfa809f70a2d3622bca07424f95296774c10ff4d755b",
+          "at": "2026-10-29T16:32:32.652303+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "d3f98c42345216cd32b61d73da718f16a156dd6cca277e803006afb366ff28fe"
+        },
+        "artifact": "artifacts/domestic_electricity_zero_vat/1227444eb2a699e3",
+        "artifact_sha256": "1227444eb2a699e3b79ecfa809f70a2d3622bca07424f95296774c10ff4d755b",
+        "data_limits": [],
+        "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Zero VAT on domestic electricity",
+        "outputs_sha256": "d3f98c42345216cd32b61d73da718f16a156dd6cca277e803006afb366ff28fe",
+        "receipt_sha256": "3cce2d1f60652f37c8dcc0b1376543d957d546eddce78b35681241c65324c907",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "domestic_electricity_zero_vat",
+      "superseded_at": "2026-10-29T18:51:01.560210+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "a8ed470c6cbb0c6b13beeec468fc628d60ae5d5e8bca159c53b6e0652431315d",
+          "at": "2026-10-29T16:43:27.693225+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6"
+        },
+        "artifact": "artifacts/fuel_duty_rise_deferral/a8ed470c6cbb0c6b",
+        "artifact_sha256": "a8ed470c6cbb0c6b13beeec468fc628d60ae5d5e8bca159c53b6e0652431315d",
+        "data_limits": [],
+        "description": "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Fuel duty cut extended",
+        "outputs_sha256": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6",
+        "receipt_sha256": "add8120b965275ecee20b3717ec8bae5c9e78eceee85ef8e568acf16a3c46f9a",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "accepted"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "fuel_duty_rise_deferral",
+      "superseded_at": "2026-10-29T18:51:03.665840+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "d075f337702895129b77e76345697101b1dd815776e578bbd60fd696b70787fd",
+          "at": "2026-10-29T16:43:33.403500+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba"
+        },
+        "artifact": "artifacts/household_energy_payment_2026/d075f33770289512",
+        "artifact_sha256": "d075f337702895129b77e76345697101b1dd815776e578bbd60fd696b70787fd",
+        "data_limits": [],
+        "description": "A one-off \u00a3100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Household Energy Payment",
+        "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
+        "receipt_sha256": "66416dbf0a5fd98d24671ff696efadf2099026b9c8270dd6a68757cc55115d3c",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "accepted"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "household_energy_payment_2026",
+      "superseded_at": "2026-10-29T18:51:05.779569+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "43282342c67c663ac373e2e4f5c5307ff2b0cfe4089b7165736fbb17a553d784",
+          "at": "2026-10-29T16:32:38.146319+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd"
+        },
+        "artifact": "artifacts/property_income_rates_up/43282342c67c663a",
+        "artifact_sha256": "43282342c67c663ac373e2e4f5c5307ff2b0cfe4089b7165736fbb17a553d784",
+        "data_limits": [],
+        "description": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Property income tax rates up",
+        "outputs_sha256": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd",
+        "receipt_sha256": "0dad9121342537de582feaff91550f11545c9e430d2b9ba016e9f9d31e9b5ddc",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "property_income_rates_up",
+      "superseded_at": "2026-10-29T18:51:07.883912+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "be1ec16f2c7a704020eb3c0709f3228db09e988d1c7c4bd56088e8d783e79646",
+          "at": "2026-10-29T16:32:39.990855+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "2d00d34b2f4b883194cd1c84c9467380e3049f53762b56ec6689369d5d832a51"
+        },
+        "artifact": "artifacts/state_pension_income_tax_protection/be1ec16f2c7a7040",
+        "artifact_sha256": "be1ec16f2c7a704020eb3c0709f3228db09e988d1c7c4bd56088e8d783e79646",
+        "data_limits": [],
+        "description": "From 6 April 2027 to 5 April 2030, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (\u00a313,036.40 in 2027-28) get a Pension Tax Allowance: a non-refundable reduction in their income tax, worth up to \u00a394 in 2027-28. It falls by \u00a31 for every \u00a33 of income above the full new State Pension, so it is gone at about \u00a313,319 in 2027-28. The personal allowance is unchanged.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Pension Tax Allowance",
+        "outputs_sha256": "2d00d34b2f4b883194cd1c84c9467380e3049f53762b56ec6689369d5d832a51",
+        "receipt_sha256": "2a69205d5d54a06aa02aa83d18766c40ab1ace8fba5e89df716da0ffdd0a6239",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "state_pension_income_tax_protection",
+      "superseded_at": "2026-10-29T18:51:09.833176+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "de3bc85dd76f46a2c3fb44539498c6c8e236e1162c7b0a1d605ecb795cce9790",
+          "at": "2026-10-29T16:43:39.690305+00:00",
+          "by": "vahid-ahmadi",
+          "outputs_sha256": "01be7471631868f3e4c73c9e82b15be1c07e391a973c9c025d99521e9f47cd3a"
+        },
+        "artifact": "artifacts/trading_allowance_raise/de3bc85dd76f46a2",
+        "artifact_sha256": "de3bc85dd76f46a2c3fb44539498c6c8e236e1162c7b0a1d605ecb795cce9790",
+        "data_limits": [],
+        "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from \u00a31,000 to \u00a33,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to \u00a33,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "name": "Trading allowance raised to \u00a33,000",
+        "outputs_sha256": "01be7471631868f3e4c73c9e82b15be1c07e391a973c9c025d99521e9f47cd3a",
+        "receipt_sha256": "65b2d75d12831487d4743c928b9f274604e9bae0b5af5f6aa73b5f18299d69c3",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "accepted"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "trading_allowance_raise",
+      "superseded_at": "2026-10-29T19:04:48.810171+00:00"
+    },
+    {
+      "entry": {
+        "artifact": "artifacts/combined--7baf4e89377bcc9c/b753a6b797bf759b",
+        "artifact_sha256": "b753a6b797bf759b1342300f55841ee348a7699bc9209372e51a02f1f125d96c",
+        "data_limits": [],
+        "description": "One simulation of: bus_fare_cap_2027, carers_allowance_earnings_taper, domestic_electricity_zero_vat, fuel_duty_rise_deferral, household_energy_payment_2026, property_income_rates_up, state_pension_income_tax_protection, trading_allowance_raise",
+        "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+        "measures": [
+          "bus_fare_cap_2027",
+          "carers_allowance_earnings_taper",
+          "domestic_electricity_zero_vat",
+          "fuel_duty_rise_deferral",
+          "household_energy_payment_2026",
+          "property_income_rates_up",
+          "state_pension_income_tax_protection",
+          "trading_allowance_raise"
+        ],
+        "member_outputs_sha256": {
+          "bus_fare_cap_2027": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
+          "carers_allowance_earnings_taper": "8cea5169ff945832d5a00539152c7fae26216fb9478a1613946edf30387080a1",
+          "domestic_electricity_zero_vat": "d3f98c42345216cd32b61d73da718f16a156dd6cca277e803006afb366ff28fe",
+          "fuel_duty_rise_deferral": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6",
+          "household_energy_payment_2026": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
+          "property_income_rates_up": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd",
+          "state_pension_income_tax_protection": "2d00d34b2f4b883194cd1c84c9467380e3049f53762b56ec6689369d5d832a51",
+          "trading_allowance_raise": "01be7471631868f3e4c73c9e82b15be1c07e391a973c9c025d99521e9f47cd3a"
+        },
+        "name": "Combined: Single bus fares capped at \u00a32, Carer's Allowance earnings taper, Zero VAT on domestic electricity, Fuel duty cut extended, Household Energy Payment, Property income tax rates up, Pension Tax Allowance, Trading allowance raised to \u00a33,000",
+        "outputs_sha256": "db793665fa105d54471ee3c5b1159dee0bcf12dd0dae01cc02916c6dbfc37914",
+        "reason": "member state_pension_income_tax_protection changed",
+        "receipt_sha256": "ee03cbcfaa2718a3c2b4a1b3a4f6b30fa3e2bb730222cce6afef1b0753f4c116",
+        "status": "stale",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "combined--7baf4e89377bcc9c",
+      "superseded_at": "2026-10-29T19:21:49.193488+00:00"
+    }
+  ],
+  "updated_at": "2026-10-29T21:34:54.527268+00:00"
 }

@@ -29,6 +29,7 @@ from datetime import date
 from pathlib import Path
 
 OUT = Path("public/data/household_presets.json")
+PUBLISHED = json.loads(Path("public/data/policy_parameters.json").read_text())["measures"]
 
 
 def _run(entry: dict) -> dict:
@@ -123,10 +124,15 @@ def main() -> None:
         ),
         "generated_on": date.today().isoformat(),
         "engine": engine,
-        # The published measures, whose definitions the page checks; not a
-        # calculator-only one the publication does not name, which every
-        # request still carries (its answers include it)
-        "policies": [key for key in requested if key in recorded],
+        # The published measures only, whose definitions the page checks
+        # (householdPresets.js: the file's `policies` stay the published
+        # ones, as policy_parameters.json lists them and
+        # household-preset-requests.mjs reads them); not a calculator-only
+        # one the publication does not name, which every request still
+        # carries (its answers include it)
+        "policies": [
+            key for key in requested if key in PUBLISHED and key in recorded
+        ],
         # Each measure's, as the API reports them beside a live answer
         "definitions": recorded,
         "years": sorted({entry["year"] for entry in done}),

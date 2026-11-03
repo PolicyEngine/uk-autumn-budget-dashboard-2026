@@ -137,9 +137,9 @@ describe("withStack", () => {
     expect(withStack(table, [members[0]])).toBe(table);
   });
 
-  it("is labelled as each policy's effect added up", () => {
+  it("labels the stack as the sum of each policy's effect", () => {
     const choice = { kind: "stack", reform: "stack:a+b", members: ["a", "b"], all: false };
-    expect(choiceLabel(choice, members)).toBe("Selected policies (each policy's effect added up)");
+    expect(choiceLabel(choice, members)).toBe("Selected policies (the sum of each policy's effect)");
     expect(choiceMeasureNames(choice, members)).toEqual(["A", "B"]);
   });
 });

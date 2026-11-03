@@ -51,7 +51,7 @@ function ucHealthElementFix({ fix, engine }) {
     ),
     more: [
       `policyengine-uk ${engine} ends the protection of pre-2026 claimants' UC health element after ${last}, so every claimant falls to the new-claimant rate; the fix is in ${fix.fixed_in}.`,
-      "Here, protected claimants keep the protected amount and new claimants the new-claimant amount, both uprated with benefits.",
+      "Here, protected claimants keep the protected amount and new claimants the new-claimant amount, and both rise in line with benefits.",
       `${Math.round(fix.new_claimant_share * 100)}% of claimants count as new, as in ${last}.`,
     ],
   };

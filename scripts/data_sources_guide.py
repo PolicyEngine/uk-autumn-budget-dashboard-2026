@@ -435,8 +435,8 @@ class DataSources:
             4. Compare static and post-behavioural estimates
 
             For the project's OBR comparison:
-            - Project data in: public/data/obr_comparison.csv
-            - Already extracted from Budget 2024 documents
+            - Official costings in: public/data/official_costings.json
+            - Built from the Budget's Table 6.1 (data_inputs/treasury/)
             """,
             notes="""
             - Official government estimates
@@ -565,7 +565,7 @@ def print_full_guide():
 
     2. BUDGETARY VALIDATION (National Level):
        - Compare project budgetary_impact.csv with OBR costings
-       - Check obr_comparison.csv for pre-extracted comparisons
+       - Check official_costings.json for the Budget's own costings
        - Expected: Within 30% of OBR estimates
 
     3. POVERTY IMPACT VALIDATION:

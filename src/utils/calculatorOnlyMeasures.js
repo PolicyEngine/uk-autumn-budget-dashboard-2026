@@ -8,8 +8,17 @@
  * The savings income tax rise is held back from the national results while
  * the savings data are corrected (María, #290, 28 October 2026); Vahid and
  * María agreed it goes in the calculator only, and it is always included
- * there (Vahid, 28 October). This is the one place the page names it
- * outside the measure catalogue.
+ * there (Vahid, 28 October). The cash ISA limit kept at £20,000 joined it
+ * on 29 October (María): its effect rests on what a household pays into
+ * cash ISAs, which our survey data do not hold yet. The Machine Games
+ * Duty rise joined them on 2 November: our survey data hold no gambling
+ * yet, and the model cannot tell higher-stake machines from the rest. On
+ * the next certified national (policyengine.py#731) both have data, but
+ * stay here: the cash ISA figure rests on where savers would have put the
+ * excess, and the duty's on machines the Budget leaves at 20%. To publish
+ * one, take it out of this list and add it to the package
+ * (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS in reforms.py). This is the one
+ * place the page names them outside the measure catalogue.
  */
 export const SAVINGS_INCOME_RATES_ID = "savings_income_rates_up";
 
@@ -19,6 +28,16 @@ export const CALCULATOR_ONLY_MEASURES = {
     name: "Savings income tax up",
     // As the result card names it after the count ("with 7 policies and …")
     phrase: "the savings income tax rise",
+  },
+  cash_isa_limit_kept: {
+    id: "cash_isa_limit_kept",
+    name: "Cash ISA limit kept at £20,000",
+    phrase: "the cash ISA limit kept at £20,000",
+  },
+  machine_games_duty_rise: {
+    id: "machine_games_duty_rise",
+    name: "Machine Games Duty up to 25% on higher-stake machines",
+    phrase: "the rise in Machine Games Duty",
   },
 };
 

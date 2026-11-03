@@ -34,27 +34,38 @@ describe("the ui-kit shell's sticky site nav", () => {
     expect(app).toContain(`'${SELECTOR}'`);
   });
 
-  it("is fixed and hidden above the window by default, and the bars sit under it once shown", () => {
+  it("is in the page's flow at its top on load, waits above the window once scrolled away, and the bars sit under it once shown", () => {
     const sheet = css();
-    // In the flow (relative) only on a touch-only device, where it scrolls
-    // away with the page and never covers the top of a view (Budget day)
+    // Sticky, in the flow: on load it is in view at the page's top, as on
+    // every policyengine.org page (app-v2's app-zone shell audit wants its
+    // links in the window's top 140px), and a scroll down takes it away
+    // with the page. Once scrolled away it sticks at minus its own height,
+    // just above the window; never hidden by a transform
+    expect(sheet).toMatch(
+      /position: sticky !important;\s*top: calc\(0px - var\(--site-nav-height, var\(--spacing-header, 58px\)\)\) !important;/,
+    );
+    expect(sheet).not.toMatch(/translateY\(-100%\)/);
+    expect(sheet).not.toMatch(/position: fixed !important;\s*top: 0 !important;/);
+    // On a touch-only device it stays relative, in the flow, and is never
+    // laid over the page, even with focus in it (Budget day)
     const touch = sheet.indexOf("@media (hover: none) and (pointer: coarse) {\n  html[data-site-nav-shown]");
     expect(touch).toBeGreaterThan(-1);
-    expect(sheet.indexOf("position: relative !important")).toBeGreaterThan(touch);
+    expect(sheet.indexOf("position: relative !important;\n    top: 0 !important;")).toBeGreaterThan(touch);
     expect(sheet.slice(touch, touch + 200)).toMatch(/--nav-offset: 0px;/);
-    expect(sheet).toMatch(/position: fixed !important;\s*top: 0 !important;/);
-    expect(sheet).toContain(`:root:not([data-site-nav-shown]) ${SELECTOR} {\n  transform: translateY(-100%);`);
     expect(sheet).toMatch(/:root \{\s*--nav-offset: 0px;\s*\}/);
-    // Shown, the nav moves the band and tab rows down by its height, so it
-    // never covers the Year and Policies pills (Pavel's review, HDR1)
+    // Shown, the nav sticks at the window's top and moves the band and tab
+    // rows down by its height, so it never covers the Year and Policies
+    // pills (Pavel's review, HDR1)
     // (html[...], not :root[...]: the CSS build folds a :root[attr] custom
     // property rule into :root and drops it)
     expect(sheet).toMatch(/html\[data-site-nav-shown\] \{\s*--nav-offset: var\(--site-nav-height, 0px\);/);
-    expect(sheet).toMatch(/:root\[data-site-nav-shown\] \.min-h-screen\.flex\.flex-col > div:first-child\[style\*="sticky"\] \{\s*box-shadow/);
+    expect(sheet).toMatch(
+      /:root\[data-site-nav-shown\] \.min-h-screen\.flex\.flex-col > div:first-child\[style\*="sticky"\] \{\s*top: 0 !important;\s*box-shadow/,
+    );
     expect(sheet).toMatch(/\.title-row \{\s*position: sticky;\s*top: var\(--nav-offset\);/);
     expect(sheet).toMatch(/\.view-tabs-bar \{\s*position: sticky;\s*top: calc\(var\(--nav-offset\) \+ var\(--title-row-height\)\);/);
     expect(sheet).toContain("--sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));");
-    expect(sheet).toMatch(/transition: transform var\(--motion-slide\) var\(--ease-out\)/);
+    expect(sheet).toMatch(/z-index: 1110 !important;\s*transition: top var\(--motion-slide\) var\(--ease-out\);/);
     // The band tucks away only on a phone on its side
     const landscape = sheet.indexOf("@media (orientation: landscape) and (max-height: 500px) {");
     expect(landscape).toBeGreaterThan(-1);
@@ -134,7 +145,7 @@ describe("showing the site nav", () => {
     return { root, scrollTo, shift, wait, shown, nav, move, rest, moveOver, leave, touchScroll };
   };
 
-  it("is hidden on load, and never shows on a scroll up, by any input", () => {
+  it("is not laid over the page on load (it is in its place at the top), and never shows on a scroll up, by any input", () => {
     const { scrollTo, shift, wait, shown } = setup(true);
     expect(shown()).toBe(false);
     scrollTo(2_000);
@@ -150,7 +161,7 @@ describe("showing the site nav", () => {
     expect(shown()).toBe(false);
   });
 
-  it("is hidden within its own height of the page's top, so the top looks as on load", () => {
+  it("goes back to its place in the flow within its own height of the page's top, so the top looks as on load", () => {
     const { scrollTo, wait, shown, nav, move, rest } = setup(true);
     Object.defineProperty(nav(), "offsetHeight", { configurable: true, value: 58 });
     scrollTo(800);

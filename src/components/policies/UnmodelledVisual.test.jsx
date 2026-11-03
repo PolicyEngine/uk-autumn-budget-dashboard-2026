@@ -22,9 +22,8 @@ function figuresOf(id) {
   const words = [
     measure.name,
     measure.starts,
-    measure.changes,
-    measure.reaches,
-    measure.household,
+    measure.summary,
+    ...(measure.points ?? []).map((point) => point.text),
     measure.noCosting,
     ...measure.costings.map((costing) => costing.note),
     ...(card.parameters?.rows ?? []).map((row) => row.label),
@@ -94,15 +93,6 @@ describe("the unmodelled measures' pictures (unmodelledVisuals.js)", () => {
 });
 
 describe("each kind of picture", () => {
-  it("bus fare cap: £3 then £2 as columns, the cap's dates under them", () => {
-    const { container } = renderVisual("bus-fare-cap");
-    const columns = container.querySelectorAll(".umv-column");
-    expect([...columns].map((c) => c.textContent)).toEqual(["£3Until 1 Jan 2027", "£21 Jan to Dec 2027"]);
-    const heights = [...container.querySelectorAll(".umv-column-bar")].map((bar) => parseFloat(bar.style.height));
-    expect(heights[1] / heights[0]).toBeCloseTo(2 / 3, 1);
-    expect(container.querySelector(".umv-column-bar.is-gain")).not.toBeNull();
-  });
-
   it("savings tax: each rate's ladder rung, the old rate grey and 2 points in amber", () => {
     const { container } = renderVisual("savings-income-tax");
     const rows = container.querySelectorAll(".umv-bar-row");
@@ -113,15 +103,17 @@ describe("each kind of picture", () => {
       expect(add).toHaveClass("is-loss");
       expect(parseFloat(add.style.width)).toBeCloseTo((100 * 2) / 55, 5);
     }
-    expect(container.querySelector(".umv-key").textContent).toBe("Until 6 Apr 20272 points more");
+    // The grey rates are the ones already set for 6 April 2027 (Budget
+    // 2025), never in force before it
+    expect(container.querySelector(".umv-key").textContent).toBe("Already set for 6 Apr 20272 points more");
   });
 
-  it("cash ISA: £20,000 kept against the planned £12,000, the gap outlined as the cut not made", () => {
+  it("cash ISA: £20,000 kept against the planned £12,000, the gap outlined and labelled no cut", () => {
     const { container } = renderVisual("cash-isa-limit");
     const ghost = container.querySelector(".umv-ghost");
     expect(parseFloat(ghost.style.left)).toBeCloseTo((100 * 12000) / 24000, 5);
     expect(parseFloat(ghost.style.width)).toBeCloseTo((100 * 8000) / 24000, 5);
-    expect(container.querySelector(".umv-ghost-text")).toHaveTextContent("cut not made");
+    expect(container.querySelector(".umv-ghost-text")).toHaveTextContent("no cut");
     expect(container.querySelector(".umv-fill.is-dashed")).not.toBeNull();
   });
 
@@ -145,14 +137,14 @@ describe("each kind of picture", () => {
       return { text, lines };
     };
     expect(labels("bank-surcharge")).toEqual({ text: ["3%", "6% for 15 months", "Jan 2027", "Mar 2028"], lines: 2 });
-    expect(labels("mileage-rates")).toEqual({ text: ["55p, made permanent", "35p", "was 25p", "10,000 miles"], lines: 2 });
-    expect(labels("gas-standing-charges")).toEqual({ text: ["£108 standing charge", "Less gas used: bill falls", "More gas used: bill rises"], lines: 2 });
+    expect(labels("mileage-rates")).toEqual({ text: ["55p, now permanent", "35p", "was 25p", "10,000 miles"], lines: 2 });
+    expect(labels("gas-standing-charges")).toEqual({ text: ["£108 standing charge", "Less gas use: bill falls", "More gas use: bill rises"], lines: 2 });
   });
 
   it("pubs relief: the relief as a share of the bill, 15% then 35%", () => {
     const { container } = renderVisual("pubs-business-rates-relief");
     expect([...container.querySelectorAll(".umv-fill")].map((fill) => fill.style.width)).toEqual(["15%", "35%"]);
-    expect(container.querySelector(".umv-key")).toHaveTextContent("The rest of the bill is paid");
+    expect(container.querySelector(".umv-key")).toHaveTextContent("Pubs and venues pay the rest");
   });
 
   it("online marketplaces: the seller pays HMRC, then the marketplace collects and pays", () => {

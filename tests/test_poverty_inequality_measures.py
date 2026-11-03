@@ -148,6 +148,7 @@ def _result(metrics):
     class Result:
         budgetary_impact = distributional_impact = winners_losers = []
         income_curve = household_scatter = age_impact = []
+        official_basis = []
 
     Result.metrics = metrics
     return Result()

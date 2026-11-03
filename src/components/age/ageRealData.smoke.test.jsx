@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import AgeSection from "../AgeSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
-import { COMBINATION_NOT_PUBLISHED } from "../../utils/ageImpact";
 import { parseTable } from "../../utils/publication/csv";
 
 // A smoke test of By age on the real publication staged locally
@@ -81,7 +80,9 @@ const KEYS = ["netChange", "net", ...BANDS, "all"];
 // The winners and losers charts draw shares; a thin single age is left out
 // on its own, so shares count as drawn but are not checked for half drawing
 const SHARES = ["pct_better_off", "pct_unchanged", "pct_worse_off"];
-const drawnValue = (point) => [...KEYS, ...SHARES].some((key) => Number.isFinite(point[key]));
+const drawnValue = (point) =>
+  [...KEYS, ...SHARES].some((key) => Number.isFinite(point[key])) ||
+  Object.entries(point).some(([key, value]) => key.startsWith("measure:") && Number.isFinite(value));
 
 const ids = loaded ? Object.keys(loaded.manifest.measures) : [];
 // Two fixed pairs: one with the policy that withholds its age bands from
@@ -109,29 +110,12 @@ describe.skipIf(!STAGED)("By age on the staged publication", () => {
     }
     expect(errors).not.toHaveBeenCalled();
     expect(container.textContent).not.toMatch(/NaN|undefined|£null/);
-    const reason = /not published|not yet published|too few survey records|no published results|changes no household|No effect|unavailable/i;
+    const reason = /not published|not yet published|No figures for this selection|no published results|changes no household|No effect|unavailable/i;
     for (const rows of chartRows(container)) {
       if (!rows.some(drawnValue)) expect(container.textContent).toMatch(reason);
     }
-    if (selected.length > 1) {
-      // A combination is drawn whole or said as not published
-      expect(container.textContent).not.toMatch(/Not drawn in/);
-      for (const rows of chartRows(container)) {
-        const points = rows.filter((point) => point.year === undefined || point.year === YEAR);
-        for (const key of KEYS) {
-          const present = points.filter((point) => key in point);
-          if (present.length < 2) continue;
-          const drawn = present.filter((point) => Number.isFinite(point[key])).length;
-          expect([0, present.length]).toContain(drawn);
-        }
-      }
-    }
-    // Every measure together: drawn when the release publishes their
-    // combined run (catalogue.combinedId), else said as not published
-    // (the 7-measure release of 28 October publishes none)
-    if (selected === ids) {
-      if (catalogue.combinedId) expect(screen.queryByText(COMBINATION_NOT_PUBLISHED)).toBeNull();
-      else expect(screen.getAllByText(COMBINATION_NOT_PUBLISHED).length).toBeGreaterThan(0);
-    }
+    // No disclosure text anywhere (Vahid, 29 Oct): a withheld policy is
+    // left out, the rest drawn
+    expect(container.textContent).not.toMatch(/Not drawn in|too few survey records|split by policy is not shown/i);
   });
 });

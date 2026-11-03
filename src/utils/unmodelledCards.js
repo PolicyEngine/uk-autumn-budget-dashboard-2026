@@ -3,10 +3,10 @@
  * Policies card (components/policies/UnmodelledMeasures.jsx): its category
  * chip, its months on the card's timeline, when it ends, and, where the
  * entry's own text gives the values before and after, the "What changes"
- * tiles. The words and figures are María's entries
- * (utils/unmodelledMeasures.js), from the Budget documents; nothing here
- * adds a fact they do not state. Each value below names the entry's text it
- * comes from.
+ * tiles. The figures are María's entries (utils/unmodelledMeasures.js),
+ * from the Budget documents they cite; nothing here adds a fact they do
+ * not state. Each value below quotes the wording it comes from, which the
+ * entries' shorter summaries and points (29 Oct) still carry in figures.
  *
  * Fields, all optional:
  * - category: { label, icon } for the card's chip (TitleIcon names);
@@ -76,19 +76,6 @@ export const UNMODELLED_CARDS = {
         row("First 10,000 business miles", "pence", "pence a mile", [{ key: "2026", label: "2026-27", year: 2026, before: 45, after: 55 }]),
         row("Above 10,000 business miles", "pence", "pence a mile", yearly(2027, 2031, 25, 35), false),
       ],
-    },
-  },
-  // "capped at £2 for one year from 1 January 2027. Until then most single
-  // fares there are capped at £3": the cap after the year is not stated, so
-  // tiles only
-  "bus-fare-cap": {
-    category: { label: "Transport", icon: "compass" },
-    inForce: { from: "2027-01", to: "2027-12" },
-    ends: "Dec 2027",
-    duration: "One year",
-    parameters: {
-      display: "table",
-      rows: [row("Single bus fare cap", "gbp", "£ a fare", [{ key: "2027", label: "From 1 January 2027", year: 2026, before: 3, after: 2 }])],
     },
   },
   // No start date set ("by the end of 2027, or as soon as possible after")

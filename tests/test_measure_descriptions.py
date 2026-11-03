@@ -145,6 +145,7 @@ TAX_PARAMETERS = {
     "gov.local_authorities.domestic_rates": ("domestic rates",),
     "gov.hmrc.alcohol_duty": ("alcohol duty",),
     "gov.hmrc.tobacco_duty": ("tobacco duty",),
+    "gov.hmrc.gambling_duty": ("gambling duties",),
     "gov.dft.vehicle_excise_duty": ("vehicle excise duty",),
     "gov.hmrc.business_rates": ("business rates",),
     "gov.contrib.ubi_center.carbon_tax": ("carbon tax",),
@@ -160,9 +161,13 @@ DECLARED = {
     "domestic_electricity_zero_vat": {"VAT"},
     "carers_allowance_earnings_taper": set(),
     "household_energy_payment_2026": set(),
+    "bus_fare_cap_2027": set(),
     "trading_allowance_raise": {"income tax", "National Insurance"},
     "property_income_rates_up": {"income tax"},
     "savings_income_rates_up": {"income tax"},
+    # The tax on the interest the planned limit's excess would have earned
+    "cash_isa_limit_kept": {"income tax"},
+    "machine_games_duty_rise": {"gambling duties"},
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(
