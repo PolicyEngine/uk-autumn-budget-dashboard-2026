@@ -340,7 +340,7 @@ export function NumberField({
         <p className="field-error" id={errorId} role="alert">
           {outOfRangeMessage}
           {clampedFrom !== null && !outOfRange(parse(draft), min, max)
-            ? ` ${clampedFrom.toLocaleString("en-GB")} was changed to ${shown.toLocaleString("en-GB")}.`
+            ? ` We changed ${clampedFrom.toLocaleString("en-GB")} to ${shown.toLocaleString("en-GB")}.`
             : ""}
         </p>
       )}

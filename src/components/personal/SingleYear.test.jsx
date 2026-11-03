@@ -402,7 +402,7 @@ describe("the household calculation, from the fixture", () => {
         item.querySelector("dt").textContent.startsWith(label),
       );
     expect(box("Salary in 2029-30").querySelector("dd")).toHaveTextContent("£34,192, partner £12,822");
-    expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
+    expect(within(box("Salary in 2029-30")).getByRole("button", { name: /we apply OBR earnings growth from 2026/ })).toBeInTheDocument();
     expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
     // Each detail in a tip, shown on focus or hover
     const tipOf = (label) => {
@@ -998,7 +998,7 @@ describe("the household calculation's errors", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
-    expect(await screen.findByRole("alert")).toHaveTextContent("NEXT_PUBLIC_HOUSEHOLD_API_URL is not set");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL");
     expect(household).toEqual([]);
   });
 
