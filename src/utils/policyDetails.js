@@ -83,7 +83,7 @@ export const POLICY_DETAILS = [
     summary: "Holds fuel duty at 52.95p a litre to 30 June 2027.",
     points: [
       { label: "Rises skipped", text: "January, March and April 2027's rises do not happen." },
-      { label: "From July 2027", text: "Current law's 60.59p a litre, with April 2027's RPI rise." },
+      { label: "From July 2027", text: "The OBR's 60.59p, which we assume current law reaches in April 2027." },
       { label: "From 2028", text: "RPI rises resume each April." },
     ],
     details: [
@@ -92,8 +92,8 @@ export const POLICY_DETAILS = [
       "Fuel spending is held fixed.",
       "The end date is the Budget document's.",
       "From 1 July 2027, back at current law's rate, the measure costs nothing.",
-      "Fuel for vans, lorries and business use of cars is not modelled: the figure is households' own fuel.",
-      "The Treasury's figure also covers business fuel, but counts duty only, without VAT.",
+      "The model leaves out fuel for vans, lorries and business use of cars, so the figure covers households' own fuel.",
+      "The official estimate also covers business fuel, but counts duty only, without VAT.",
     ],
     starts: "Jan 2027",
     affects: "Households buying petrol or diesel",
@@ -537,7 +537,7 @@ export const POLICY_DETAILS = [
     ],
     details: [
       "Adds £100 to the 2026-27 income of each household in England in council tax bands A to D.",
-      "The Treasury's cost also covers the devolved governments' Barnett share (about £425 million, our estimate), which the model leaves out.",
+      "The official costing also covers the devolved governments' Barnett share (about £425 million, our estimate), which the model leaves out.",
       "It also covers £100 million for councils in England for targeted support, also not modelled.",
     ],
     starts: "Jan 2027",
@@ -598,7 +598,7 @@ export const POLICY_DETAILS = [
     ],
     details: [
       "Raises the trading allowance parameter to £3,000 from 2027-28.",
-      "The Treasury's costing starts in 2028-29, when self-assessment payments fall due; ours starts in 2027-28.",
+      "The official costing's income tax and NICs start in 2028-29, when self-assessment payments fall due; ours starts in 2027-28.",
     ],
     starts: "Apr 2027",
     affects: "Sole traders with trading income or expenses under £3,000",

@@ -109,6 +109,16 @@ describe("why our estimates differ from the official costings", () => {
     }
     expect(text("domestic_electricity_zero_vat")).not.toMatch(/within about 4%/);
     expect(text("property_income_rates_up")).not.toMatch(/within 1\.5%/);
+    // The page shows the not-comparable reasons from official_costings.json
+    // (written from data_inputs/treasury/mapping.csv), so the Table 6.1
+    // comparison can't come back there either (Pavel, 29 October)
+    const reasons = Object.values(JSON.parse(readFileSync("public/data/official_costings.json", "utf8")).measures)
+      .flatMap((measure) => Object.values(measure.years))
+      .map((year) => year.not_comparable?.reason)
+      .filter(Boolean);
+    expect(reasons.length).toBeGreaterThan(0);
+    for (const reason of reasons) expect(reason).not.toMatch(/within 1\.5%/);
+    expect(readFileSync("data_inputs/treasury/mapping.csv", "utf8")).not.toMatch(/within 1\.5%/);
   });
 
   // The Table 6.1 figures a note gives as context are the Budget's own
@@ -164,7 +174,9 @@ describe("why our estimates differ from the official costings", () => {
     expect(note("domestic_electricity_zero_vat")).toContain(`${gap("2026-27")} in 2026-27 (£${m(elec("2026-27"))}m against £${m(vat("2026-27"))}m) and ${gap("2027-28")} in 2027-28 (£${m(elec("2027-28"))}m against £${m(vat("2027-28"))}m)`);
     expect(note("domestic_electricity_zero_vat")).toContain(`adds £${m(line(2, "Other AME (current)", "2026-27"))}m and £${m(line(2, "Other AME (current)", "2027-28"))}m of Other AME (current)`);
     for (const [year, label] of [[2026, "2026-27"], [2027, "2027-28"]]) {
-      expect(point("domestic_electricity_zero_vat", year)).toContain(`Official VAT line £${m(vat(label))}m, plus £${m(line(2, "Other AME (current)", label))}m Other AME (current)`);
+      expect(point("domestic_electricity_zero_vat", year)).toContain(`Official total adds £${m(line(2, "Other AME (current)", label))}m Other AME (current)`);
+      // The panel's official line gives the VAT figure; the point doesn't repeat it (Vahid, 30 October, item 4)
+      expect(point("domestic_electricity_zero_vat", year)).not.toContain(`£${m(vat(label))}m`);
     }
     expect(panel("domestic_electricity_zero_vat")).toMatch(new RegExp(`^VAT £${m(vat("2026-27"))}m, £${m(vat("2027-28"))}m:`));
     // The ONS base, 88% to 90% of ours (2024 and 2025)

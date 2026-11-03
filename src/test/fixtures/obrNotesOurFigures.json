@@ -1,8 +1,8 @@
 {
- "source": "Each measure's budgetary_impact.csv in the release (test link manifest, ab2026-local-preview.vercel.app/uk/autumn-budget-2026/data/manifest.json), £ million, negative a cost",
+ "source": "Each measure's budgetary_impact.csv in the release (public/data/manifest.json, revision 60), £ million, negative a cost",
  "measures": {
   "household_energy_payment_2026": {
-   "artifact": "artifacts/household_energy_payment_2026/101a07dc7238a10e",
+   "artifact": "artifacts/household_energy_payment_2026/220d79f0f70e2679",
    "values": {
     "2026-27": -1968.5072,
     "2027-28": 0.0,
@@ -13,7 +13,7 @@
    }
   },
   "domestic_electricity_zero_vat": {
-   "artifact": "artifacts/domestic_electricity_zero_vat/2d9c65726915303e",
+   "artifact": "artifacts/domestic_electricity_zero_vat/d03dc51164c1bb2a",
    "values": {
     "2026-27": -839.8908,
     "2027-28": -353.3177,
@@ -24,7 +24,7 @@
    }
   },
   "fuel_duty_rise_deferral": {
-   "artifact": "artifacts/fuel_duty_rise_deferral/e077f8d4b70440c8",
+   "artifact": "artifacts/fuel_duty_rise_deferral/984f32607d94695d",
    "values": {
     "2026-27": -301.3977,
     "2027-28": -520.5739,
@@ -35,7 +35,7 @@
    }
   },
   "trading_allowance_raise": {
-   "artifact": "artifacts/trading_allowance_raise/eddde823a65b7be4",
+   "artifact": "artifacts/trading_allowance_raise/411e68c2da8830e7",
    "values": {
     "2026-27": 0.0,
     "2027-28": -109.6623,
@@ -46,7 +46,7 @@
    }
   },
   "property_income_rates_up": {
-   "artifact": "artifacts/property_income_rates_up/7bf77b35e33233e0",
+   "artifact": "artifacts/property_income_rates_up/02718faa790c7f77",
    "values": {
     "2026-27": 0.0,
     "2027-28": 399.0453,
