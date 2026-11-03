@@ -101,6 +101,17 @@ REASONS = {
         "were compared with the £1,050 households in tests/test_reforms.py "
         "and tests/test_household_impact_all_measures.py."
     ),
+    "machine_games_duty_rise": (
+        "Checked budget_measures.machine_games_higher_stake_rate: from "
+        "2027-28 it adds to machine_games_duty the higher-stake part of "
+        "standard-rate net takings times 25% less 20%: 75.7% of the "
+        "takings on survey data (the Gambling Commission's Category B "
+        "share) and all of them for one household, times the forecast's "
+        "Machine Games Duty base growth (forecast.gambling, "
+        "policyengine-uk#2761). Before 2027-28 and for every other band the "
+        "native duty stands. The receipt's outputs were compared with the "
+        "hand-computed households in tests/test_machine_games_higher_stake.py."
+    ),
     "plan_2_threshold_unfreeze": (
         "Checked budget_measures.connect_student_loan_repayments, applied "
         "on both sides: it replaces reported Plan 2 repayments with "
