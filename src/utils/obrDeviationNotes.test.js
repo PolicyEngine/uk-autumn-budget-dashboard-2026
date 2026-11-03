@@ -108,10 +108,10 @@ describe("why our estimates differ from the official costings", () => {
   it("gives a point only in the years its figure holds", () => {
     expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2026).map((p) => p.text)).toEqual([
       "Households buy about £13bn of £24bn duty",
-      "Scaled to all fuel, ours would be about £450m",
+      "If we scaled to all fuel, ours would be about £450m",
       "Official assumes 5p back on 1 Jan, law phases it",
     ]);
-    expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2027).map((p) => p.text)).toEqual(["Scaled to all fuel, ours would be about £760m"]);
+    expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2027).map((p) => p.text)).toEqual(["If we scaled to all fuel, ours would be about £760m"]);
     expect(pointsForYear(OBR_DIFFERENCE_POINTS.state_pension_income_tax_protection, 2028).map((p) => p.text)).toEqual(["Pension Credit, HB and CTR take back about a quarter"]);
   });
 

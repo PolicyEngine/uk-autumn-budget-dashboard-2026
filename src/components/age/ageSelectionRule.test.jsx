@@ -2,17 +2,26 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import AgeSection from "../AgeSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
-import { COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, PACKAGE_PARTS_CAVEAT, policiesWithoutRows, singleAgeSelection, withheldNetOnly } from "../../utils/ageImpact";
+import { singleAgeSelection } from "../../utils/ageImpact";
 import { singleAgeBars } from "../youngPeople/youngPeopleData";
-import { agesText, windowTicks, withheldPartsCaveat } from "./SingleAgeCard";
+import { agesText, windowTicks } from "./SingleAgeCard";
 import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
 
 // By age's selection rule, on a publication where one single (BETA)
 // withholds its age bands (too few survey records), keeping all ages, as
-// the State Pension income tax protection does from 2027-28:
-// - the published package of exactly the selection reads its own rows;
-// - another combination is not published by age, never half drawn;
-// - the single alone draws what it has and says what it withholds.
+// the State Pension income tax protection does from 2027-28. Point by point
+// (Vahid, 29 Oct: where one policy is withheld, show everything else that
+// is published, and no disclosure text):
+// - the published package of exactly the selection reads its own net; its
+//   members' parts are drawn where every member has one, or where the
+//   package's net is withheld too, never beside a published net with a
+//   member missing;
+// - another combination draws each policy's published parts, and its net
+//   only where every policy has one;
+// - the single alone draws what it has.
+
+/** No disclosure wording anywhere in the section. */
+const DISCLOSURE = /too few survey records|not published by age|not shown|Not drawn in|split by policy is not shown/i;
 vi.setConfig({ testTimeout: 30000 });
 
 vi.mock("recharts", async () => {
@@ -100,7 +109,7 @@ function expectNoHalfDrawn(container) {
   }
 }
 
-/** By age's "Average change by age" card, switched to its Age groups view (single years by default). */
+/** By age's "Average change by age" card in its Age groups view (the view it opens on). */
 function meanCard(container) {
   const shown = container.querySelector(".young-people-mean");
   if (shown) return shown;
@@ -108,6 +117,25 @@ function meanCard(container) {
   fireEvent.click(within(single).getByRole("button", { name: /^Options:/ }));
   fireEvent.click(within(single).getByRole("radio", { name: "Age groups" }));
   return container.querySelector(".young-people-mean");
+}
+
+/** The Average change by age card, whichever view it shows. */
+const ageCard = (container) => container.querySelector(".young-people-mean, .single-age-card");
+
+/** Clicks the radio `name` in the card's Options, opening the pill if it is shut. */
+function chooseOption(card, name) {
+  if (!within(card).queryByRole("radio", { name })) fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+  fireEvent.click(within(card).getByRole("radio", { name }));
+}
+
+/**
+ * The Average change by age card switched to Single year of age for `group`
+ * (it opens on All ages and Age groups): the group first, then the view.
+ */
+function singleYears(container, group = "16 to 24") {
+  chooseOption(ageCard(container), group);
+  chooseOption(ageCard(container), "Single year of age");
+  return container.querySelector(".single-age-card");
 }
 
 /** The fixture with single-year rows 0 to 90+ for each key, less `without`'s. */
@@ -124,23 +152,20 @@ describe("By age's selection rule with a single that withholds its age bands", (
   it("reads the published package's own rows: every band drawn, no withheld note", async () => {
     const { container } = await renderAge(withheldFixture(), [ALPHA, BETA]);
     meanCard(container);
-    expect(screen.queryByText(COMBINATION_NOT_PUBLISHED)).toBeNull();
-    expect(container.textContent).not.toMatch(/Not drawn in/);
     expect(container.textContent).not.toMatch(/no published results by age/);
     // Average change by age: the package's net (50) in every band, and no
     // stack of the singles under it
     const bands = chartRows(container).find((rows) => rows.some((point) => point.band === "16-24"));
     expect(bands.map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
     expect(bands.every((point) => point[`measure:${ALPHA}`] === null)).toBe(true);
-    // Average change by age: no note on the card, a one-line subtitle, the
-    // reason in About this chart's caveats, and no By policy option
+    // Average change by age: no note or caveat on the card, a one-line
+    // subtitle, and no By policy option (the package's net is published
+    // where a member's part is not)
     const card = meanCard(container);
-    expect(within(card).queryByText(PACKAGE_NET_ONLY)).toBeNull();
     expect(within(card).getByText("Average change in household income per person, £ a year, with all the selected policies.")).toBeInTheDocument();
     expect(card.querySelector(".chart-footer .note, .chart-footer [class*='note']")).toBeNull();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    // The caveat names the policy that withholds its rows by age group
-    expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"], "in some age groups"))).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(DISCLOSURE);
     const pill = within(card).queryByRole("button", { name: /^Options:/ });
     if (pill) {
       fireEvent.click(pill);
@@ -154,21 +179,23 @@ describe("By age's selection rule with a single that withholds its age bands", (
     expectNoHalfDrawn(container);
   });
 
-  it("shows another combination as not published by age, never half drawn", async () => {
+  it("draws another combination's published parts, with no net where a policy is withheld", async () => {
     const { container } = await renderAge(withheldFixture({ packagePublished: false }), [ALPHA, BETA]);
-    expect(screen.getAllByText(COMBINATION_NOT_PUBLISHED).length).toBeGreaterThan(0);
-    expect(container.textContent).not.toMatch(/Not drawn in/);
-    for (const rows of chartRows(container)) {
-      for (const point of rows) {
-        for (const key of ["netChange", ...BANDS, "all"]) expect(point[key] ?? null).toBeNull();
-      }
-    }
-    expectNoHalfDrawn(container);
+    const card = meanCard(container);
+    const bands = chartRows(card).find((rows) => rows.some((point) => point.band === "16-24"));
+    // Alpha's own part in every band; Beta's withheld, and so the net
+    expect(bands.map((point) => point[`measure:${ALPHA}`])).toEqual(BANDS.map(() => 100));
+    expect(bands.every((point) => (point[`measure:${BETA}`] ?? null) === null && point.netChange === null)).toBe(true);
+    // Change by year: all ages, where both publish, keeps its net; the bands do not
+    const trend = chartRows(container).find((rows) => rows.some((point) => point.year === YEAR && "all" in point));
+    const year = trend.find((point) => point.year === YEAR);
+    expect(year.all).toBe(50);
+    for (const key of BANDS) expect(year[key]).toBeNull();
+    expect(container.textContent).not.toMatch(DISCLOSURE);
   });
 
-  it("draws the single alone with what it has, and says what it withholds", async () => {
+  it("draws the single alone with what it has, with no disclosure text", async () => {
     const { container } = await renderAge(withheldFixture(), [BETA]);
-    expect(screen.queryByText(COMBINATION_NOT_PUBLISHED)).toBeNull();
     const trend = chartRows(container).find((rows) => rows.some((point) => point.year === YEAR && "all" in point));
     expect(trend.find((point) => point.year === YEAR).all).toBe(-50);
     // No note under any plot: the reason sits in About this chart's caveats
@@ -176,7 +203,7 @@ describe("By age's selection rule with a single that withholds its age bands", (
     const trendCard = container.querySelector(".young-people-trend");
     expect(trendCard.textContent).not.toMatch(/Not drawn in/);
     fireEvent.click(within(trendCard).getByRole("button", { name: /About this chart/ }));
-    expect(trendCard.textContent).toMatch(/Not drawn in .*, as a selected policy has too few survey records by age/);
+    expect(trendCard.textContent).not.toMatch(DISCLOSURE);
   });
 
   it("applies the same rule to single years of age", () => {
@@ -189,42 +216,122 @@ describe("By age's selection rule with a single that withholds its age bands", (
     const bars = singleAgeBars(rows, policies, ["a", "b"], YEAR, 10, 12);
     const fromPackage = singleAgeSelection(bars, { rows, policies, selected: ["a", "b"], year: YEAR, packageRun: "pkg" });
     expect(fromPackage.map((point) => point.netChange)).toEqual([14, 14, 14]);
-    expect(fromPackage.every((point) => point.parts.length === 0 && !point.partsShown)).toBe(true);
+    // Every part at 10; at 11 and 12 the package's net is published and b
+    // is missing, so no part sits beside it
+    expect(fromPackage.map((point) => point.parts.length)).toEqual([2, 0, 0]);
+    expect(fromPackage.map((point) => point.partsShown)).toEqual([true, false, false]);
+    // The package withholds 11 and 12 too (#347): a's own part, no net
+    const withheld = rows.filter((row) => !(row.reform_id === "pkg" && row.age_band !== "10"));
+    const packageWithheld = singleAgeSelection(singleAgeBars(withheld, policies, ["a", "b"], YEAR, 10, 12), { rows: withheld, policies, selected: ["a", "b"], year: YEAR, packageRun: "pkg" });
+    expect(packageWithheld.map((point) => point.netChange)).toEqual([14, null, null]);
+    expect(packageWithheld.map((point) => point.parts.map((part) => part.id))).toEqual([["a", "b"], ["a"], ["a"]]);
+    expect(packageWithheld.map((point) => point.a)).toEqual([undefined, undefined, undefined]);
+    expect(packageWithheld[1]["measure:a"]).toBe(10);
+    // Another combination: the sum where both publish, a's part alone elsewhere
     const combination = singleAgeSelection(bars, { rows, policies, selected: ["a", "b"], year: YEAR });
-    expect(combination.every((point) => point.netChange === null && point.combinationUnavailable)).toBe(true);
+    expect(combination.map((point) => point.netChange)).toEqual([15, null, null]);
+    expect(combination.map((point) => point.parts.length)).toEqual([2, 1, 1]);
     const alone = singleAgeSelection(singleAgeBars(rows, policies, ["b"], YEAR, 10, 12), { rows, policies, selected: ["b"], year: YEAR });
     expect(alone.map((point) => point.netChange)).toEqual([5, null, null]);
   });
 });
 
 describe("Average change by age with a package whose every member has rows by age", () => {
-  it("shows the package's own bars, with each policy's part offered as By policy", async () => {
+  it("opens on By policy, each policy's part stacked under the package's net, and keeps the reader's choice", async () => {
     const { container } = await renderAge(measureCatalogueFixture({ held: false }), [ALPHA, BETA]);
     const card = meanCard(container);
-    const bandRows = () => chartRows(card).find((rows) => rows.some((point) => point.band === "16-24"));
-    // By default: the package's own net, no policy parts
-    expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
-    expect(bandRows().every((point) => point[`measure:${ALPHA}`] === null)).toBe(true);
-    expect(within(card).getByText("Average change in household income per person, £ a year, with all the selected policies.")).toBeInTheDocument();
-    expect(within(card).queryByText(PACKAGE_NET_ONLY)).toBeNull();
-    // By policy: each policy's own rows stacked under the package's net
-    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
-    fireEvent.click(within(card).getByRole("radio", { name: "By policy" }));
+    const bandRows = () => chartRows(container.querySelector(".young-people-mean")).find((rows) => rows.some((point) => point.band === "16-24"));
+    // By default (Vahid, 29 October): each policy's own rows stacked under the package's net
     expect(bandRows().map((point) => point[`measure:${ALPHA}`])).toEqual(BANDS.map(() => 100));
     expect(bandRows().map((point) => point[`measure:${BETA}`])).toEqual(BANDS.map(() => -50));
     expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
-    expect(within(card).getByRole("button", { name: /^Options:.*By policy/ })).toBeInTheDocument();
+    // By policy is the default, so the pill does not name it
+    expect(within(card).getByRole("button", { name: /^Options:/ }).getAttribute("aria-label") ?? "").not.toMatch(/By policy/);
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    expect(within(card).getByRole("radio", { name: "By policy" })).toHaveAttribute("aria-checked", "true");
+    // All selected policies: the package's own net, no policy parts
+    fireEvent.click(within(card).getByRole("radio", { name: "All selected policies" }));
+    expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
+    expect(bandRows().every((point) => point[`measure:${ALPHA}`] === null)).toBe(true);
+    expect(within(card).getByText("Average change in household income per person, £ a year, with all the selected policies.")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: /^Options:.*All selected policies/ })).toBeInTheDocument();
     // No caveat: nothing is withheld
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    expect(within(card).queryByText(PACKAGE_PARTS_CAVEAT)).toBeNull();
+    expect(card.textContent).not.toMatch(DISCLOSURE);
+  });
+
+  it("keeps the reader's Policies choice across a switch to single years and back", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    const card = meanCard(container);
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card).getByRole("radio", { name: "All selected policies" }));
+    const again = container.querySelector(".young-people-mean");
+    if (!within(again).queryByRole("radio", { name: "Single year of age" })) fireEvent.click(within(again).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(again).getByRole("radio", { name: "Single year of age" }));
+    const back = meanCard(container);
+    fireEvent.click(within(back).getByRole("button", { name: /^Options:/ }));
+    expect(within(back).getByRole("radio", { name: "All selected policies" })).toHaveAttribute("aria-checked", "true");
   });
 });
 
-describe("Average change by age by single year of age (the default view)", () => {
-  const singleCard = (container) => container.querySelector(".single-age-card");
+describe("Average change by age's opening view", () => {
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  /** The radio `name` in the card's Options, the pill opened. */
+  function optionRadio(card, name) {
+    if (!within(card).queryByRole("radio", { name })) fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    return within(card).getByRole("radio", { name });
+  }
+
+  it("opens on All ages, Age groups and By policy (Vahid, 29 October)", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    expect(container.querySelector(".single-age-card")).toBeNull();
+    const card = container.querySelector(".young-people-mean");
+    expect(optionRadio(card, "All ages")).toHaveAttribute("aria-checked", "true");
+    expect(optionRadio(card, "Age groups")).toHaveAttribute("aria-checked", "true");
+    expect(optionRadio(card, "By policy")).toHaveAttribute("aria-checked", "true");
+    // The other cards keep the section's 16 to 24
+    expect(optionRadio(container.querySelector(".young-people-trend"), "16 to 24")).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("leaves Effect of each policy on 16 to 24 against 25 to 34", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    const measures = container.querySelector(".young-people-measures");
+    const legend = measures.querySelector(".measure-dumbbell-legend");
+    expect(legend).toHaveTextContent("16 to 24");
+    expect(legend).toHaveTextContent("25 to 34");
+    expect(optionRadio(measures, "16 to 24")).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("follows a group the reader picks in another card", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    fireEvent.click(optionRadio(container.querySelector(".young-people-trend"), "25 to 34"));
+    expect(optionRadio(ageCard(container), "25 to 34")).toHaveAttribute("aria-checked", "true");
+    expect(optionRadio(ageCard(container), "All ages")).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("follows the section's group when the reader picks one in this card, then in another", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    // 16 to 24, already the section's group: this card moves to it
+    fireEvent.click(optionRadio(ageCard(container), "16 to 24"));
+    expect(optionRadio(ageCard(container), "16 to 24")).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(optionRadio(container.querySelector(".young-people-trend"), "35 to 49"));
+    expect(optionRadio(ageCard(container), "35 to 49")).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("opens on the group in the address (?age=)", async () => {
+    window.history.replaceState(null, "", "/?age=25-34");
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    expect(optionRadio(ageCard(container), "25 to 34")).toHaveAttribute("aria-checked", "true");
+    expect(optionRadio(ageCard(container), "Age groups")).toHaveAttribute("aria-checked", "true");
+  });
+});
+
+describe("Average change by age by single year of age, 16 to 24", () => {
+  const singleCard = (container) => singleYears(container);
   const ageRows = (card) => chartRows(card).find((rows) => rows.some((point) => point.label === "20"));
 
-  it("opens on single years, with each policy's part offered as By policy when every member has rows", async () => {
+  it("shows single years, with each policy's part offered as By policy when every member has rows", async () => {
     const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
     const card = singleCard(container);
     expect(card).not.toBeNull();
@@ -235,7 +342,7 @@ describe("Average change by age by single year of age (the default view)", () =>
     expect(within(card).getAllByTestId("series").map((node) => node.dataset.key).sort()).toEqual([`measure:${ALPHA}`, `measure:${BETA}`]);
   });
 
-  it("drops the Show choice when a member withholds its single years, giving the reason in About this chart", async () => {
+  it("drops the Show choice beside a published package net with a member's single years missing, with no caveat", async () => {
     const { container } = await renderAge(withSingleAges(withheldFixture(), BETA), [ALPHA, BETA]);
     const card = singleCard(container);
     // The package's own net at every age, never its parts
@@ -250,13 +357,14 @@ describe("Average change by age by single year of age (the default view)", () =>
     expect(within(card).queryByText(/^Each policy:/)).toBeNull();
     expect(within(card).getByRole("radio", { name: "Age groups" })).toBeInTheDocument();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"]))).toBeInTheDocument();
+    expect(card.textContent).not.toMatch(DISCLOSURE);
     // No part drawn, not even the policy with rows: beside the package's
-    // net, it would give the withheld policy's part back by difference
+    // published net, it would give the withheld policy's part back by
+    // difference
     expect(within(card).getAllByTestId("series").map((node) => node.dataset.key)).toEqual(["netChange"]);
   });
 
-  it("leaves out the package's ages a member withholds, saying so, never as no change (issue 340)", async () => {
+  it("draws the other policy's part, with no net, at the ages a member and the package withhold (issue 340)", async () => {
     // BETA leaves out ages 20 and 21, and so does the package
     const fixture = withSingleAges(measureCatalogueFixture({ held: false }));
     const [header, ...lines] = fixture.ageCsv.split("\n");
@@ -266,13 +374,17 @@ describe("Average change by age by single year of age (the default view)", () =>
     });
     const { container } = await renderAge({ ...fixture, ageCsv: [header, ...kept].join("\n") }, [ALPHA, BETA]);
     const card = singleCard(container);
-    const points = chartRows(card).find((rows) => rows.some((point) => point.label === "22"));
-    const net = Object.fromEntries(points.map((point) => [point.label, point.netChange]));
-    expect([net["20"], net["21"], net["22"]]).toEqual([null, null, 50]);
-    // Never drawn as a member's part beside the package's net
-    expect(points.every((point) => (point[`measure:${ALPHA}`] ?? null) === null)).toBe(true);
+    const points = () => chartRows(card).find((rows) => rows.some((point) => point.label === "22"));
+    const byAge = () => Object.fromEntries(points().map((point) => [point.label, point]));
+    expect(["20", "21", "22"].map((age) => byAge()[age].netChange)).toEqual([null, null, 50]);
+    // By policy: alpha's own part at 20 and 21, beta's left out, no net
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card).getByRole("radio", { name: "Each policy" }));
+    expect(within(card).getAllByTestId("series").map((node) => node.dataset.key).sort()).toEqual([`measure:${ALPHA}`, `measure:${BETA}`]);
+    expect(["20", "21", "22"].map((age) => byAge()[age][`measure:${ALPHA}`])).toEqual([100, 100, 100]);
+    expect(["20", "21", "22"].map((age) => byAge()[age][`measure:${BETA}`] ?? null)).toEqual([null, null, -50]);
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    expect(card.textContent).toMatch(/Not shown, as too few survey records: ages 20, 21\./);
+    expect(card.textContent).not.toMatch(DISCLOSURE);
   });
 
   it("lists no policy as having no effect when it draws the package's net alone", async () => {
@@ -281,28 +393,136 @@ describe("Average change by age by single year of age (the default view)", () =>
     const { container } = await renderAge(withSingleAges(withheldFixture(), BETA), [ALPHA, BETA]);
     const card = singleCard(container);
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"]));
     expect(card.querySelectorAll("[data-zero-measure]")).toHaveLength(0);
     expect(within(card).queryByText(/No effect on household incomes/)).toBeNull();
   });
 
-  it("names the withheld policy in Change by year's Policies view, drawing no parts", async () => {
+  it("draws no parts beside the package's published net in Change by year's Policies view, with no caveat", async () => {
     const { container } = await renderAge(withheldFixture(), [ALPHA, BETA]);
     const trend = container.querySelector(".young-people-trend");
     fireEvent.click(within(trend).getByRole("button", { name: /^Options:/ }));
     fireEvent.click(within(trend).getByRole("radio", { name: /^Policies,/ }));
     expect(within(trend).queryAllByTestId("series").map((node) => node.dataset.key)).not.toContain(`measure:${ALPHA}`);
     fireEvent.click(within(trend).getByRole("button", { name: /About this chart/ }));
-    expect(await within(trend).findByText(withheldNetOnly(["Mock beta contribution"]))).toBeInTheDocument();
+    expect(trend.textContent).not.toMatch(DISCLOSURE);
+  });
+});
+
+describe("Average change by age when the package withholds every single age", () => {
+  // The members have single years, the package none (a package withholds
+  // what its members withhold, #347); `bands` keeps or drops its age bands
+  function packageWithoutSingleAges({ bands = true } = {}) {
+    const fixture = withSingleAges(measureCatalogueFixture({ held: false }), COMBINED);
+    if (bands) return fixture;
+    const [header, ...lines] = fixture.ageCsv.split("\n");
+    const kept = lines.filter((line) => {
+      const [id, , , band] = line.split(",");
+      return !(id === COMBINED && BANDS.includes(band));
+    });
+    return { ...fixture, ageCsv: [header, ...kept].join("\n") };
+  }
+
+  it("falls back to the age bands, with no note, and Options shows Age groups chosen", async () => {
+    const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA, BETA]);
+    chooseOption(ageCard(container), "16 to 24");
+    chooseOption(ageCard(container), "Single year of age");
+    expect(container.querySelector(".single-age-card")).toBeNull();
+    const card = container.querySelector(".young-people-mean");
+    expect(card).not.toBeNull();
+    // No note on the card (Vahid, 29 October)
+    expect(card.querySelector(".note")).toBeNull();
+    expect(card.textContent).not.toMatch(/Single ages not published/);
+    expect(card.textContent).not.toMatch(/Not shown: too few survey records at every age/);
+    // The package's own net in every band
+    const bands = chartRows(card).find((rows) => rows.some((point) => point.band === "16-24"));
+    expect(bands.map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
+    const pill = within(card).getByRole("button", { name: /^Options:/ });
+    expect(pill.getAttribute("aria-label") ?? pill.textContent).toMatch(/Age groups/);
+    // Still open from the choices above
+    if (!within(card).queryByRole("radio", { name: "Age groups" })) fireEvent.click(pill);
+    expect(within(card).getByRole("radio", { name: "Age groups" })).toHaveAttribute("aria-checked", "true");
+    const single = within(card).getByRole("radio", { name: "Single year of age" });
+    expect(single).toBeDisabled();
+    expect(single).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(single);
+    expect(container.querySelector(".single-age-card")).toBeNull();
+    // No explanation line, no confidentiality wording anywhere on the card
+    expect(card.querySelector(".control-bar-note")).toBeNull();
+    expect(container.querySelector(".young-people-mean").textContent).not.toMatch(/confidential|not published for this selection/i);
+  });
+
+  it("offers the single-age view for a policy alone that has its single ages", async () => {
+    const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA]);
+    const card = singleYears(container);
+    expect(card).not.toBeNull();
+    expect(container.querySelector(".young-people-mean")).toBeNull();
+  });
+
+  it("draws each policy's own parts, with no net, where the package withholds its bands too", async () => {
+    const { container } = await renderAge(packageWithoutSingleAges({ bands: false }), [ALPHA, BETA]);
+    const card = singleYears(container);
+    expect(card).not.toBeNull();
+    expect(container.querySelector(".young-people-mean")).toBeNull();
+    // Net change: nothing to draw, a plain line with no reason given
+    expect(card.textContent).toMatch(/No figures for this selection in 2029-30\./);
+    expect(card.textContent).not.toMatch(DISCLOSURE);
+    // By policy: each member's own published part at every age, no net
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card).getByRole("radio", { name: "Each policy" }));
+    const rows = chartRows(card).find((each) => each.some((point) => point.label === "20"));
+    expect(rows.every((point) => point.netChange === null && point[`measure:${ALPHA}`] === 100 && point[`measure:${BETA}`] === -50)).toBe(true);
+  });
+});
+
+describe("Winners and losers when the package withholds every single age", () => {
+  // As Average change by age above: the members have single years, the
+  // package none; its age bands are published
+  const packageWithoutSingleAges = () => withSingleAges(measureCatalogueFixture({ held: false }), COMBINED);
+
+  /** The card's View radios, its Options opened. */
+  function viewRadios(card) {
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    return {
+      band: within(card).getByRole("radio", { name: "By age group" }),
+      single: within(card).getByRole("radio", { name: "By single year of age" }),
+    };
+  }
+
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  it.each([
+    ["All ages", "all", ".young-people-shares"],
+    ["16 to 24", "16-24", ".young-people-shares"],
+  ])("%s: shows the age groups, with By single year of age disabled and no note", async (_name, age, selector) => {
+    window.history.replaceState(null, "", `/?age=${age}`);
+    const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA, BETA]);
+    const card = container.querySelector(selector);
+    expect(card).not.toBeNull();
+    const { band, single } = viewRadios(card);
+    expect(band).toHaveAttribute("aria-checked", "true");
+    expect(single).toBeDisabled();
+    expect(single).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(single);
+    expect(within(card).getByRole("radio", { name: "By age group" })).toHaveAttribute("aria-checked", "true");
+    // The groups drawn, not the empty panel, and no note or explanation line
+    expect(card.textContent).not.toMatch(/No shares are published/);
+    expect(card.textContent).not.toMatch(/confidential|not published for this selection|too few survey records/i);
+    expect(card.querySelector(".note, .control-bar-note")).toBeNull();
+  });
+
+  it("keeps the reader's By single year of age where the package has its single ages", async () => {
+    window.history.replaceState(null, "", "/?age=all");
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    const card = container.querySelector(".young-people-shares");
+    const { single } = viewRadios(card);
+    expect(single).not.toBeDisabled();
+    fireEvent.click(single);
+    expect(within(card).getByRole("radio", { name: "By single year of age" })).toHaveAttribute("aria-checked", "true");
+    expect(card.textContent).toMatch(/at each age from 0 to 90 and over/);
   });
 });
 
 describe("The single-year age axis", () => {
-  it("names every withheld policy in one list", () => {
-    expect(withheldPartsCaveat(["A", "B", "C"])).toMatch(/: A, B and C have too few survey records at some ages, so the other policies' parts would reveal theirs\.$/);
-    expect(withheldPartsCaveat(["A"])).toMatch(/: A has too few/);
-  });
-
   it("ticks every five years to 90+ on a wide screen and every ten on a phone, with no State Pension age tick", () => {
     expect(windowTicks([0, 90], [], false)).toEqual([...Array.from({ length: 18 }, (_, i) => String(i * 5)), "90+"]);
     expect(windowTicks([0, 90], [], true)).toEqual(["0", "10", "20", "30", "40", "50", "60", "70", "80", "90+"]);
@@ -317,30 +537,5 @@ describe("The single-year age axis", () => {
     expect(windowTicks([16, 24], [], false)).toEqual(["16", "20", "24"]);
     expect(agesText([16, 24])).toBe("16 to 24");
     expect(agesText([67, 90])).toBe("67 to 90 and over");
-  });
-
-  it("says in one sentence why the split by policy is not shown, naming the thin policies", () => {
-    expect(withheldPartsCaveat(["A"])).toBe(
-      "The split by policy is not shown for this selection: A has too few survey records at some ages, so the other policies' parts would reveal its part.",
-    );
-    expect(withheldPartsCaveat(["A"], "in some age groups")).toMatch(/A has too few survey records in some age groups, so/);
-    expect(withheldPartsCaveat([])).toBe(PACKAGE_PARTS_CAVEAT);
-    expect(PACKAGE_PARTS_CAVEAT).toMatch(/a selected policy has too few survey records at some ages/);
-    expect(withheldNetOnly(["A"])).toMatch(/as A has too few survey records by age, and showing only the other policies/);
-    expect(withheldNetOnly([])).toBe(PACKAGE_NET_ONLY);
-  });
-
-  it("finds the selected policies that withhold a row the chart reads", () => {
-    const policies = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "held", displayable: false }];
-    const rows = [
-      ...["16", "17"].map((age) => ({ reform_id: "a", year: YEAR, age_band: age, mean_change: 1, sample_size: 500 })),
-      { reform_id: "b", year: YEAR, age_band: "16", mean_change: 1, sample_size: 500 },
-      ...["16", "17"].map((age) => ({ reform_id: "c", year: YEAR, age_band: age, mean_change: 1, sample_size: 50 })),
-    ];
-    const ids = (selected, years = [YEAR]) => policiesWithoutRows(rows, policies, selected, years, ["16", "17"]).map((policy) => policy.id);
-    expect(ids(["a", "b", "c", "held"])).toEqual(["b", "c"]);
-    expect(ids(["a"])).toEqual([]);
-    // A year with no rows at all is not published, not withheld
-    expect(ids(["a", "b"], [YEAR + 1])).toEqual([]);
   });
 });

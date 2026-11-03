@@ -26,7 +26,7 @@ import { WAGES_HELD_FIXED } from "./measureModelling";
 // reads it, so the page keeps no list of measures)
 export function zeroForHouseholds(measure) {
   return WAGES_HELD_FIXED.test(measure?.description ?? "")
-    ? "Wages are held fixed in this model, so no household's income changes"
+    ? "This model keeps wages fixed, so no household's income changes"
     : null;
 }
 
@@ -150,7 +150,7 @@ export function zeroReason(measure, year) {
   if (employer) return { kind: "employer", text: employer };
   const policy = policyDetailsFor(measure);
   if (!inForceIn(policy, year)) return { kind: "not_in_force", text: inForceText(policy) };
-  return { kind: "none", text: "no change for the households shown" };
+  return { kind: "none", text: "no change for the households we show" };
 }
 
 // Policies whose tax the poverty measure's income leaves out: they change
@@ -168,7 +168,7 @@ const PRICE_TYPES = new Set(["VAT", "Fuel duty"]);
  * ("no one crosses the poverty line").
  */
 export function noPovertyEffectReason(measure, year, fallback = "no one crosses the poverty line") {
-  if (zeroForHouseholds(measure)) return "changes employers' costs; wages held fixed";
+  if (zeroForHouseholds(measure)) return "changes employers' costs; the model keeps wages fixed";
   const policy = policyDetailsFor(measure);
   // Short: "in force from April 2031", without inForceText's "(2031-32 only)"
   if (policy && !inForceIn(policy, year)) return inForceText(policy).replace(/ \(\d{4}-\d{2} only\)$/, "");

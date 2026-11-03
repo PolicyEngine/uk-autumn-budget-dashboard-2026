@@ -44,6 +44,9 @@ class HouseholdInput:
     pension_contributions_salary_sacrifice: float = 0.0
     fuel_spending: float = 0.0
     rail_spending: float = 0.0
+    # Bus and coach fares, £ a year, for the £2 bus fare cap. This route's
+    # household is in London, where the cap credits nothing
+    bus_fare_spending: float = 0.0
 
 
 # Years to calculate (2025 is base year, 2026-2029 are policy years)
@@ -59,6 +62,7 @@ POLICY_IDS = [
     "carers_allowance_earnings_taper",
     "household_energy_payment_2026",
     "trading_allowance_raise",
+    "bus_fare_cap_2027",
 ]
 
 
@@ -124,15 +128,19 @@ def build_situation(household: HouseholdInput, year: int) -> dict:
             benunit_members.append(child_id)
             household_members.append(child_id)
 
+    household_entry = {
+        "members": household_members,
+        "region": {year: "LONDON"},  # Default to London
+    }
+    # Only with bus fares, so every other situation is exactly as before
+    if household.bus_fare_spending:
+        household_entry["bus_fare_spending"] = {
+            year: household.bus_fare_spending
+        }
     return {
         "people": people,
         "benunits": {"benunit": {"members": benunit_members}},
-        "households": {
-            "household": {
-                "members": household_members,
-                "region": {year: "LONDON"},  # Default to London
-            }
-        },
+        "households": {"household": household_entry},
     }
 
 
@@ -886,6 +894,7 @@ class PersonalImpactCalculator:
                 ),
                 "fuel_spending": household.fuel_spending,
                 "rail_spending": household.rail_spending,
+                "bus_fare_spending": household.bus_fare_spending,
             },
             "years": {},
             "policies": {},

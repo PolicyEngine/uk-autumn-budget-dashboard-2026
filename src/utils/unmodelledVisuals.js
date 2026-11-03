@@ -15,16 +15,6 @@
  */
 
 export const UNMODELLED_VISUALS = {
-  // "capped at £2, down from £3", from 1 Jan 2027 to Dec 2027
-  "bus-fare-cap": {
-    kind: "columns",
-    caption: "Single bus fare cap",
-    columns: [
-      { label: "Until 1 Jan 2027", value: 3, text: "£3" },
-      { label: "1 Jan to Dec 2027", value: 2, text: "£2", tone: "gain" },
-    ],
-    alt: "Single bus fare cap: £3 until 1 January 2027, then £2 from 1 January to December 2027.",
-  },
   // "rise by 2 points across the UK, to 24%, 44% and 49%"
   "savings-income-tax": {
     kind: "bars",
@@ -40,7 +30,7 @@ export const UNMODELLED_VISUALS = {
     // the rates before it (20%, 40% and 45%): OBR EFO October 2026, 3.17
     key: { base: "Already set for 6 Apr 2027", add: "2 points more" },
     derived: { "22, 42, 47": "each rate 2 points below its new 24%, 44% and 49% (paragraph 6.247)" },
-    alt: "Income tax rates on savings income from 6 April 2027: 2 points above the rates already set for that date, basic rate 22% to 24%, higher rate 42% to 44%, additional rate 47% to 49%.",
+    alt: "Income tax rates on savings income from 6 April 2027: 2 points above the rates the previous Budget set for that date, basic rate 22% to 24%, higher rate 42% to 44%, additional rate 47% to 49%.",
   },
   // "rises from 20% to 25%"
   "machine-games-duty": {
@@ -60,10 +50,10 @@ export const UNMODELLED_VISUALS = {
     caption: "Cash ISA limit for under-65s, a year",
     max: 24000,
     rows: [
-      { label: "Planned", value: 12000, text: "£12,000", plain: true, dashed: true, ghost: { to: 20000, text: "cut not made" } },
+      { label: "Planned", value: 12000, text: "£12,000", plain: true, dashed: true, ghost: { to: 20000, text: "no cut" } },
       { label: "Kept", value: 20000, text: "£20,000", tone: "gain" },
     ],
-    alt: "Cash ISA limit for under-65s: a cut to £12,000 a year was planned; it is not made, and the limit stays at £20,000.",
+    alt: "Cash ISA limit for under-65s: plans for a cut to £12,000 a year do not go ahead, and the limit stays at £20,000.",
   },
   // "the highest of 2.5%, inflation, or the rise keeping its April 2029 value against earnings"
   "adjusted-triple-lock": {
@@ -97,7 +87,7 @@ export const UNMODELLED_VISUALS = {
       { label: "Until 1 Apr 2027", relief: 15 },
       { label: "From 1 Apr 2027", relief: 35, tone: "gain" },
     ],
-    alt: "Business rates relief for pubs and venues: 15% of the bill until 1 April 2027, 35% from then; the rest of the bill is paid.",
+    alt: "Business rates relief for pubs and venues: 15% of the bill until 1 April 2027, 35% from then; pubs and venues pay the rest of the bill.",
   },
   // "Online marketplaces collect VAT on sales by UK VAT-registered sellers ..."
   "online-marketplace-liability": {
@@ -138,10 +128,10 @@ export const UNMODELLED_VISUALS = {
     caption: "Surplus earnings threshold",
     max: 3000,
     rows: [
-      { label: "As legislated", value: 300, text: "£300", plain: true, dashed: true },
-      { label: "Kept to Mar 2028", value: 2500, text: "£2,500", tone: "gain" },
+      { label: "Current law", value: 300, text: "£300", plain: true, dashed: true },
+      { label: "Until Mar 2028", value: 2500, text: "£2,500", tone: "gain" },
     ],
-    alt: "Universal Credit surplus earnings threshold: £2,500 is kept to March 2028, rather than falling to £300 as legislated.",
+    alt: "Universal Credit surplus earnings threshold: £2,500 stays until March 2028, rather than falling to £300 under current law.",
   },
   // "55p a mile for the first 10,000 business miles is made permanent; above that, 25p rises to 35p"
   "mileage-rates": {
@@ -151,7 +141,7 @@ export const UNMODELLED_VISUALS = {
     first: 55,
     above: { before: 25, after: 35 },
     tone: "gain",
-    alt: "Tax-free mileage rate: 55p a mile for the first 10,000 business miles, made permanent; above 10,000 miles the rate rises from 25p to 35p from April 2027.",
+    alt: "Tax-free mileage rate: 55p a mile for the first 10,000 business miles becomes permanent; above 10,000 miles the rate rises from 25p to 35p from April 2027.",
   },
   // "1 point above 2029-30's in every band, up to 40%"; the bands from the card (9% to 10%, 19% to 20%)
   "company-car-tax": {
@@ -164,7 +154,7 @@ export const UNMODELLED_VISUALS = {
       { label: "1 to 50g CO2/km", base: 19, value: 20, text: "19% → 20%" },
     ],
     tone: "loss",
-    alt: "Company car tax percentages for 2030-31 are 1 point above 2029-30's in every band, up to 40%: zero-emission cars 9% to 10%, cars emitting 1 to 50g CO2 a kilometre 19% to 20%.",
+    alt: "Company car tax percentages for 2030-31 exceed 2029-30's by 1 point in every band, up to 40%: zero-emission cars 9% to 10%, cars emitting 1 to 50g CO2 a kilometre 19% to 20%.",
   },
   // "The lifetime limit on gains taxed at ... 18% falls from £1 million to £500,000"; "taxed at up to 24% rather than 18%"
   "business-asset-disposal-relief": {
@@ -175,23 +165,24 @@ export const UNMODELLED_VISUALS = {
       { label: "Until 6 Apr 2027", bands: [{ share: 100, text: "18%" }] },
       { label: "From 6 Apr 2027", bands: [{ share: 50, text: "18%" }, { share: 50, text: "Up to 24%", tone: "loss" }] },
     ],
-    alt: "Business Asset Disposal Relief: until 6 April 2027 gains up to £1 million are taxed at 18%; from then only the first £500,000, with gains above taxed at up to 24%.",
+    alt: "Business Asset Disposal Relief: until 6 April 2027 an 18% rate applies to gains up to £1 million; from then only to the first £500,000, with up to 24% on gains above.",
   },
   // "A 25%-bonus First Time Buyer ISA"
   "first-time-buyer-isa": {
     kind: "stack",
-    caption: "Paid towards a first home",
+    caption: "Money towards a first home",
     tall: true,
     parts: [
       { label: "Savings", share: null },
       { label: "25% bonus on the savings", share: 20, tone: "gain" },
     ],
-    alt: "First Time Buyer ISA: the government adds a 25% bonus to the savings, paid when they buy a first home.",
+    alt: "First Time Buyer ISA: the government adds a 25% bonus to the savings and pays it when they buy a first home.",
   },
-  // "two weeks' pay after a birth, now up to £194 a week"
+  // "two weeks' pay after a birth, now up to £194 a week": a father's or
+  // partner's two weeks (adopters get up to 39, said in the card's point)
   "parental-allowance": {
     kind: "weeks",
-    caption: "After a birth, from April 2029",
+    caption: "A father or partner, after a birth, from April 2029",
     weeks: ["First week", "Second week"],
     amount: "Up to £194",
     alt: "Parental pay for a self-employed father or partner from April 2029: two weeks' pay after a birth, each week up to £194.",
@@ -199,10 +190,10 @@ export const UNMODELLED_VISUALS = {
   // "£108 a year on average"; "bills fall for homes using less gas, rise for those using more"
   "gas-standing-charges": {
     kind: "standing",
-    caption: "A year's gas bill by gas used (not to scale)",
+    caption: "A year's gas bill by gas use (not to scale)",
     charge: "£108 standing charge",
-    light: "Less gas used: bill falls",
-    heavy: "More gas used: bill rises",
+    light: "Less gas use: bill falls",
+    heavy: "More gas use: bill rises",
     alt: "Gas bills without the standing charge, £108 a year on average: its costs move into unit rates, so before mitigation bills fall for homes using less gas and rise for those using more.",
   },
 };

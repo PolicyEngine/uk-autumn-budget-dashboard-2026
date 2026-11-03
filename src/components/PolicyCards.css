@@ -148,29 +148,34 @@
   justify-content: space-between;
 }
 
-/* The two cards in a row one height; the footer pinned to the bottom, so
-   any extra space is one gap above it; no section or box inside stretched
-   (globals.css lines the sections up with a subgrid; this replaces it) */
+/* The two cards in a row one height, their sections lined up: each card
+   spans five rows of the list (head, summary, At a glance, What changes,
+   footer) as a subgrid, so the summaries, the At a glance strips and the
+   footers start level across a row, and a one-line summary reserves no
+   second line unless its neighbour needs it. Nothing inside is stretched:
+   any extra space is one gap above the footer. */
 .policy-cards {
   align-items: stretch;
 }
 
 .policy-cards > .policy-card {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  grid-row: auto;
-  grid-template-rows: none;
+  display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
+  row-gap: 16px;
 }
 
 .policy-cards > .policy-card > * {
-  grid-row: auto;
-  flex: none;
-  align-self: stretch;
+  align-self: start;
 }
 
 .policy-cards > .policy-card > .policy-card-foot {
-  margin-top: auto;
+  align-self: end;
+}
+
+.policy-cards > .policy-card > .policy-card-summary {
+  min-height: 0;
+  text-wrap: pretty;
 }
 
 /* At a glance where Affects has its own row: Starts and Ends wide enough
@@ -182,5 +187,157 @@
 @media (max-width: 480px) {
   .policy-card-dates:has(> .policy-card-affects.is-wide) {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* ---------- One box per card (PR 359) ----------
+   The card is the only box: At a glance is a strip between two hairlines,
+   not a grey panel; the bullets and the example sit straight on the card.
+   Spacing runs on one rhythm: 16px between sections, 8px inside them. */
+
+/* At a glance: Starts, Ends and Affects side by side, a hairline between
+   each, the label over its value */
+.policy-cards .policy-card-when {
+  gap: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+.policy-cards .policy-card-dates {
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  gap: 0;
+  padding: 10px 0;
+  border-block: 1px solid var(--c-grid);
+}
+
+.policy-cards .policy-card-dates > div {
+  padding: 0 16px;
+  border-left: 1px solid var(--c-grid);
+}
+
+.policy-cards .policy-card-dates > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* Starts and Ends only (no Affects): two columns, the rest left empty */
+.policy-cards .policy-card-dates:not(:has(> .policy-card-affects)) {
+  grid-template-columns: max-content max-content;
+}
+
+.policy-cards .policy-card-dates dd {
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+
+.policy-cards .policy-card-affects dd {
+  font-weight: 500;
+  text-wrap: pretty;
+}
+
+/* What changes, the bullets and the example: one column, one gap */
+.policy-cards .policy-card-spec {
+  gap: 16px;
+}
+
+.policy-cards .policy-card-example {
+  margin-top: 0;
+}
+
+/* The card's bullets: a small square in the measure's colour, darkened so
+   a light colour still shows */
+.policy-card-points {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-700);
+  text-wrap: pretty;
+}
+
+.policy-card-points > li {
+  position: relative;
+  padding-left: 16px;
+}
+
+.policy-card-points > li::before {
+  content: "";
+  position: absolute;
+  top: calc(0.75em - 3px);
+  left: 1px;
+  width: 6px;
+  height: 6px;
+  background: color-mix(in srgb, var(--policy-accent, var(--pe-teal-600)) 70%, var(--pe-gray-700));
+  border-radius: 2px;
+}
+
+.policy-card-point-label {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+/* Every point labelled: the labels a column of their own, a hairline
+   between rows */
+.policy-card-points.is-labelled {
+  gap: 0;
+}
+
+.policy-card-points.is-labelled > li {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 2px 12px;
+  padding: 8px 0;
+}
+
+.policy-card-points.is-labelled > li::before {
+  content: none;
+}
+
+.policy-card-points.is-labelled > li + li {
+  border-top: 1px solid var(--c-grid);
+}
+
+.policy-card-points.is-labelled > li:first-child {
+  padding-top: 0;
+}
+
+.policy-card-points.is-labelled > li:last-child {
+  padding-bottom: 0;
+}
+
+.policy-card-points.is-labelled .policy-card-point-label {
+  font-size: var(--fs-caption);
+  line-height: calc(var(--fs-small) * 1.5);
+  color: var(--pe-gray-600);
+}
+
+@media (max-width: 768px) {
+  /* Starts and Ends side by side; Affects under them, across the card */
+  .policy-cards .policy-card-dates {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .policy-cards .policy-card-dates > .policy-card-affects {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+    padding: 10px 0 0;
+    border-top: 1px solid var(--c-grid);
+    border-left: 0;
+  }
+
+  .policy-cards .policy-card-dates:not(:has(> .policy-card-affects)) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  /* Each label over its text */
+  .policy-card-points.is-labelled > li {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

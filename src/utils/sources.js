@@ -130,6 +130,12 @@ export const SOURCES = {
     url: "https://www.policyengine.org/uk/model/data/calibration",
   },
   // Section 8, Equivalisation: HBAI's modified OECD scale (checked 26 October 2026)
+  // The evaluation that gives the operator participation (about 90%) the
+  // £2 bus fare cap's share is divided by (checked 29 October 2026)
+  dft_two_pound_cap_evaluation: {
+    label: "DfT, Evaluation of the £2 bus fare cap",
+    url: "https://www.gov.uk/government/publications/evaluation-of-the-2-bus-fare-cap",
+  },
   dwp_hbai_methodology: {
     label: "DWP, Households Below Average Income: background information and methodology",
     url: "https://www.gov.uk/government/statistics/households-below-average-income-for-financial-years-ending-1995-to-2025/households-below-average-income-background-information-and-methodology-report-fye-2025",
@@ -166,7 +172,7 @@ Object.assign(SOURCES, {
   // supporting documents page): the figures the reconciliation gate compares
   // (public/data/official_costings.json, from Table 6.1)
   obr_budget_2026_costings: {
-    label: "the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR)",
+    label: "the official Autumn Budget 2026 costings (HM Treasury, with OBR certification)",
     url: "https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf",
   },
   ons_ashe: {

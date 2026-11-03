@@ -23,6 +23,7 @@ import {
   singleAgeKey,
   wholeSelectionRun,
 } from "../../utils/ageImpact";
+import { splitComparison } from "../youngPeople/youngPeopleData";
 
 /** The youngest age counted as a pensioner in fiscal year `year`. */
 export const pensionerAge = (year) => (Number(year) <= 2026 ? 66 : 67);
@@ -33,9 +34,6 @@ export const pensionerAgeLabel = (year) => `${pensionerAge(year)} and over`;
 /** The single-age chart's ages: 55 to 90 and over. */
 export const PENSIONER_AGE_FIRST = 55;
 export const PENSIONER_AGE_LAST = SINGLE_AGE_TOP;
-
-/** Below this (in £ a year) a mean change counts as no change. */
-const NO_EFFECT = 0.005;
 
 const OUTCOME_KEYS = ["pct_better_off", "pct_unchanged", "pct_worse_off"];
 
@@ -125,28 +123,16 @@ export function pensionerTrend(rows, policies, selected, years) {
  * Each selected policy's mean change per pensioner (`group`) beside its
  * all-ages figure (`all`) in `year`, largest pensioner figure first, in
  * the shape of measureComparison (youngPeopleData.js) so the Young people
- * dumbbell draws it. Policies with no effect on either are in `noEffect`;
- * those with a thin pensioner age in `suppressed`.
+ * dumbbell draws it. Where one of the two is withheld or thin, it is null
+ * and the other is still shown (splitComparison).
  */
 export function pensionerMeasures(rows, policies, selected, year, compareBand = ALL_BAND) {
-  const shown = [];
-  const noEffect = [];
-  const suppressed = [];
+  const entries = [];
   for (const policy of policies) {
     if (!selected.includes(policy.id)) continue;
-    const all = lookup(rows, policy.id, year, compareBand);
-    if (!all) continue;
-    const group = pensionerRow(rows, policy.id, year);
-    if (!group) {
-      suppressed.push(policy.name);
-    } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
-      noEffect.push({ id: policy.id, name: policy.name });
-    } else {
-      shown.push({ id: policy.id, name: policy.name, group: group.mean_change, all: all.mean_change });
-    }
+    entries.push({ policy, group: pensionerRow(rows, policy.id, year), all: lookup(rows, policy.id, year, compareBand) ?? null });
   }
-  shown.sort((a, b) => Math.abs(b.group) - Math.abs(a.group) || Math.abs(b.all) - Math.abs(a.all));
-  return { shown, noEffect, suppressed };
+  return splitComparison(entries);
 }
 
 /**
@@ -229,27 +215,28 @@ export function smoothByAge(points, window = 5) {
  * change-by-year card's annotations, tooltip and breakdown read it:
  * `{ year, published, net, parts: [{ id, key, value }], ...bySeries }`.
  * `net` is null in a year not published, or where any measure's pensioner
- * rows are missing or thin.
+ * rows are missing or thin; the other measures' own parts are kept.
  */
 export function pensionerMeasureSeries(rows, policies, selected, years) {
   const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   return years.map((year) => {
     const parts = [];
     let complete = chosen.length > 0 && chosen.length === selected.length && hasYear(rows, year);
-    for (const policy of complete ? chosen : []) {
+    for (const policy of hasYear(rows, year) ? chosen : []) {
       const group = pensionerRow(rows, policy.id, year);
       if (!group || !Number.isFinite(group.mean_change)) {
         complete = false;
-        break;
+        continue;
       }
       parts.push({ id: policy.id, key: policy.seriesKey ?? `measure:${policy.id}`, value: group.mean_change });
     }
-    const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
+    // A year with a withheld policy: no net, the others' own parts kept
+    const bySeries = Object.fromEntries(parts.map((part) => [part.key, part.value]));
     return {
       year: Number(year),
       published: complete,
       net: complete ? parts.reduce((sum, part) => sum + part.value, 0) : null,
-      parts: complete ? parts : [],
+      parts,
       ...bySeries,
     };
   });

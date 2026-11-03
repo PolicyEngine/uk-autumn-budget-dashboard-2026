@@ -550,6 +550,12 @@ def plan_run(
         data_root=Path(parsed.manifest).parent,
         years=plan.years,
     )
+    # The cut is the dataset publish index binds the table to
+    provenance["run"]["dataset"] = {
+        "kind": "local_area_cut",
+        "name": cut.tag,
+        "sha256": cut.sha256,
+    }
     # The release checks this again before it writes; here it stops a run
     # whose table publish index would refuse, before hours of simulation.
     _, carried = carried_provenance(Path(parsed.out_dir), provenance)
@@ -613,7 +619,14 @@ def carried_provenance(
             f"{others[0].name} is in {out_dir} with no readable "
             f"{record_file}: {again}"
         )
+    if document["schema"] != release_index.AREA_PROVENANCE_SCHEMA:
+        # v1 records no run for the table, so there is none to carry
+        raise ConstituencyRunError(
+            f"{record_file} in {out_dir} records {others[0].name} in an "
+            f"older schema: {again}"
+        )
     reforms = dict(provenance["reforms"])
+    carried_runs = {}
     for path in others:
         content = path.read_bytes()
         if (
@@ -638,12 +651,23 @@ def carried_provenance(
                     f"{path.name}: {reform_id} is not recorded by its area "
                     f"run: {again}"
                 )
-            if reforms.setdefault(reform_id, record) != record:
+            # The same key and definition: publish index binds both tables
+            # to those. This run's record, checked against the approval as
+            # it is now, is the one kept.
+            mine = reforms.setdefault(reform_id, record)
+            if any(
+                mine[field] != record[field] for field in ("key", "definition")
+            ):
                 raise ConstituencyRunError(
                     f"{path.name} was made for an approval of {reform_id} "
                     f"other than the one this run binds: {again}"
                 )
-    return {**provenance, "reforms": reforms}, others
+        carried_runs[path.name] = document["runs"][path.name]
+    return {
+        **provenance,
+        "reforms": reforms,
+        "carried_runs": carried_runs,
+    }, others
 
 
 # -- what each measure's process keeps ---------------------------------------
