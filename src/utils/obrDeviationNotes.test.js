@@ -72,7 +72,7 @@ describe("why our estimates differ from the official costings", () => {
     // Pension Tax Allowance and Carer's Allowance as Max corrected them
     // against the OBR's policy Table 1.1 (PR 290, 6479807374)
     expect(OBR_COMPARISON_BASES.state_pension_income_tax_protection).toMatch(/^Official: income tax and small Scottish and departmental spending lines; no benefit savings/);
-    expect(OBR_DEVIATION_NOTES.state_pension_income_tax_protection).toMatch(/^The official costing includes no benefit savings, and its income tax line totals £44m, £83m and £144m/);
+    expect(OBR_DEVIATION_NOTES.state_pension_income_tax_protection).toMatch(/^The official costing includes no benefit savings, and the OBR puts the costing's income tax line at £44m, £83m and £144m in its detailed policy table, Table 1\.1\./);
     expect(OBR_DEVIATION_NOTES.state_pension_income_tax_protection).not.toMatch(/because our data put more pensioners/);
     expect(OBR_DEVIATION_NOTES.carers_allowance_earnings_taper).toMatch(/£5 million and £10 million of extra block grant for Scotland/);
     expect(OBR_DEVIATION_NOTES.carers_allowance_earnings_taper).not.toMatch(/gap is close to the income tax/);
@@ -248,11 +248,11 @@ describe("why our estimates differ from the official costings", () => {
 
   // Max, 31 Oct: a document, rule or measure doesn't act, so the government
   // assumes and spends, the OBR adds and we subtract; a total only includes
-  it("gives each action to whoever takes it, never to the Budget, a total, figure, costing, estimate or benefit", () => {
+  it("gives each action to whoever takes it, never to the Budget, a total, figure, costing, estimate, benefit or the model", () => {
     const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
     const all = strings([OBR_DEVIATION_STATEMENT, OBR_DIFFERENCE_POINTS, NOT_COMPARABLE_SHORT, OBR_DEVIATION_NOTES, OBR_COMPARISON_BASES, OBR_PANEL_BASES]);
     for (const line of all) {
-      expect(line).not.toMatch(/\b(?:[Tt]otals?|[Oo]fficial|costings?|estimates?|figures?|Budget|[Oo]urs) (?:adds?|assumes?|puts?|starts? from|takes? off|grows?|counts?|leaves? out|itemises?)\b|\b(?:Credit|HB|CTR|Benefit|Reduction) take back\b|\bestimate assuming\b/);
+      expect(line).not.toMatch(/\b(?:[Tt]otals?|[Oo]fficial|costings?|estimates?|figures?|Budget|[Oo]urs) (?:adds?|assumes?|puts?|starts? from|takes? off|grows?|counts?|leaves? out|itemises?)\b|\b(?:Credit|HB|CTR|Benefit|Reduction) take back\b|\bestimate assuming\b|\b(?:[Tt]he|[Oo]ur) model\b/);
     }
   });
 
