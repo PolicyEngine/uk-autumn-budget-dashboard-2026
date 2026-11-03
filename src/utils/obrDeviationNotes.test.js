@@ -72,7 +72,7 @@ describe("why our estimates differ from the official costings", () => {
     // Pension Tax Allowance and Carer's Allowance as Max corrected them
     // against the OBR's policy Table 1.1 (PR 290, 6479807374)
     expect(OBR_COMPARISON_BASES.state_pension_income_tax_protection).toMatch(/^Official: income tax and small Scottish and departmental spending lines; no benefit savings/);
-    expect(OBR_DEVIATION_NOTES.state_pension_income_tax_protection).toMatch(/^The official costing counts no benefit savings: its income tax is £44m, £83m and £144m/);
+    expect(OBR_DEVIATION_NOTES.state_pension_income_tax_protection).toMatch(/^The official costing includes no benefit savings, and its income tax line comes to £44m, £83m and £144m/);
     expect(OBR_DEVIATION_NOTES.state_pension_income_tax_protection).not.toMatch(/because our data put more pensioners/);
     expect(OBR_DEVIATION_NOTES.carers_allowance_earnings_taper).toMatch(/£5 million and £10 million of extra block grant for Scotland/);
     expect(OBR_DEVIATION_NOTES.carers_allowance_earnings_taper).not.toMatch(/gap is close to the income tax/);
@@ -80,27 +80,27 @@ describe("why our estimates differ from the official costings", () => {
     expect(text("state_pension_income_tax_protection")).toMatch(/670,000 vs 500,000/);
     expect(text("domestic_electricity_zero_vat")).not.toMatch(/meter records/);
     expect(text("domestic_electricity_zero_vat")).toMatch(/ONS spending base falls 10–12% below ours \(DESNZ\)/);
-    expect(text("fuel_duty_rise_deferral")).toMatch(/5p back on 1 Jan, law phases it/);
+    expect(text("fuel_duty_rise_deferral")).toMatch(/Government assumes 5p back on 1 Jan; law phases it/);
     expect(text("savings_income_rates_up")).toMatch(/included ISA interest/);
     expect(text("savings_income_rates_up")).not.toMatch(/miss(?:es)? ISA interest/);
   });
 
   // Max, 28 Oct: compare with the line of the OBR's policy Table 1.1 that
   // matches what we model (efo-october-2026-detailed-forecast-tables-policy
-  // .xlsx, sheet 1.1), call it the government's costing, certified by the
-  // OBR, and give Table 6.1's rounded total as context
+  // .xlsx, sheet 1.1) and give Table 6.1's rounded total as context. The
+  // notes name it the government's costing, which the OBR certified
   it("compares each re-based note with its OBR Table 1.1 line, Table 6.1 as context", () => {
     const note = (id) => OBR_DEVIATION_NOTES[id];
     const text = (id) => OBR_DIFFERENCE_POINTS[id].map((point) => point.text ?? Object.values(point.byYear).join(" ")).join(" ");
-    expect(note("household_energy_payment_2026")).toMatch(/^Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, certified by the OBR/);
-    expect(note("domestic_electricity_zero_vat")).toMatch(/^Our cost exceeds the VAT receipts in the government's costing, certified by the OBR, by £106m \(14%\) in 2026-27 \(£840m against £734m\) and by £57m \(19%\)/);
+    expect(note("household_energy_payment_2026")).toMatch(/^Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, which the OBR certified/);
+    expect(note("domestic_electricity_zero_vat")).toMatch(/^Our cost exceeds the VAT receipts in the government's costing, which the OBR certified, by £106m \(14%\) in 2026-27 \(£840m against £734m\) and by £57m \(19%\)/);
     expect(note("domestic_electricity_zero_vat")).not.toMatch(/within about 4%/);
-    expect(note("trading_allowance_raise")).toMatch(/^Against the matching Income tax and NICs lines of the government's costing, certified by the OBR \(the OBR's detailed policy table, Table 1\.1: £221m, £165m, £171m and £178m\)/);
-    expect(note("property_income_rates_up")).toMatch(/ours exceeds the income tax line of the government's costing, certified by the OBR, by 9% to 11%: \+£429m against \+£394m in 2029-30/);
-    expect(note("savings_income_rates_up")).toMatch(/68% to 69% of the income tax line of the government's costing, certified by the OBR[^]*\+£307m against \+£443m in 2029-30/);
+    expect(note("trading_allowance_raise")).toMatch(/^From 2028-29 our estimate trails the matching income tax and NICs lines of the government's costing, which the OBR certified, by [^]*The OBR gives those lines as £221m, £165m, £171m and £178m in its detailed policy table, Table 1\.1\./);
+    expect(note("property_income_rates_up")).toMatch(/ours exceeds the income tax line of the government's costing, which the OBR certified, by 9% to 11%: \+£429m against \+£394m in 2029-30/);
+    expect(note("savings_income_rates_up")).toMatch(/68% to 69% of the income tax line of the government's costing, which the OBR certified[^]*\+£307m against \+£443m in 2029-30/);
     // Fuel duty's is the one costing the OBR could not certify (EFO October 2026, chapter 3)
     expect(note("fuel_duty_rise_deferral")).toMatch(/£273 million below the official figure in 2026-27 \(£301 million against £574 million\)[^]*the government's estimate, which the OBR used but could not certify/);
-    expect(note("fuel_duty_rise_deferral")).not.toMatch(/certified by the OBR/);
+    expect(note("fuel_duty_rise_deferral")).not.toMatch(/OBR certified|certified by the OBR/);
     expect(OBR_COMPARISON_BASES.fuel_duty_rise_deferral).toMatch(/could not certify/);
     // The Pension Tax Allowance's "the Treasury's 500,000" is a count, not a costing
     const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
@@ -130,12 +130,12 @@ describe("why our estimates differ from the official costings", () => {
       return Math.round(Math.abs(Number(found.value_bn)) * 1000);
     };
     const note = (id) => OBR_DEVIATION_NOTES[id];
-    expect(note("household_energy_payment_2026")).toContain(`rounds it to £${t61(1, "2026-27").toLocaleString("en-GB")} million`);
-    expect(note("domestic_electricity_zero_vat")).toContain(`Table 6.1 rounds the totals to £${t61(2, "2026-27")}m and £${t61(2, "2027-28")}m`);
-    expect(note("fuel_duty_rise_deferral")).toContain(`Table 6.1 rounds it to £${t61(3, "2026-27")} million and £${t61(3, "2027-28")} million`);
+    expect(note("household_energy_payment_2026")).toContain(`rounds it to £${t61(1, "2026-27").toLocaleString("en-GB")} million in the Budget's Table 6.1`);
+    expect(note("domestic_electricity_zero_vat")).toContain(`rounds the totals to £${t61(2, "2026-27")}m and £${t61(2, "2027-28")}m in Table 6.1`);
+    expect(note("fuel_duty_rise_deferral")).toContain(`rounds it to £${t61(3, "2026-27")} million and £${t61(3, "2027-28")} million in Table 6.1`);
     expect(note("trading_allowance_raise")).toContain(`(£${t61(15, "2028-29")}m, £${t61(15, "2029-30")}m, £${t61(15, "2030-31")}m and £${t61(15, "2031-32")}m from 2028-29)`);
-    expect(note("property_income_rates_up")).toContain(`The Table 6.1 total shown here, +£${t61(61, "2029-30")}m in 2029-30`);
-    expect(note("savings_income_rates_up")).toContain(`The Table 6.1 total shown here, +£${t61(62, "2029-30")}m in 2029-30`);
+    expect(note("property_income_rates_up")).toContain(`The Table 6.1 total we show, +£${t61(61, "2029-30")}m in 2029-30`);
+    expect(note("savings_income_rates_up")).toContain(`The Table 6.1 total we show, +£${t61(62, "2029-30")}m in 2029-30`);
   });
 
   // Every OBR Table 1.1 figure, gap and ratio the notes, points and panel
@@ -164,7 +164,7 @@ describe("why our estimates differ from the official costings", () => {
     expect(note("household_energy_payment_2026")).toContain(`Our £${m(our("household_energy_payment_2026", "2026-27")).toLocaleString("en-GB")} million in 2026-27 falls ${m((1 - our("household_energy_payment_2026", "2026-27") / hep) * 100)}% short of the government's costing of £${m(hep).toLocaleString("en-GB")} million`);
     expect(note("household_energy_payment_2026")).toContain(`about £${m(hep - england)} million, our estimate using the Barnett formula`);
     expect(note("household_energy_payment_2026")).toContain(`about £${(m((england - 100) / 100) * 100).toLocaleString("en-GB")} million remains`);
-    expect(point("household_energy_payment_2026", 2026)).toContain(`ours is ${m((our("household_energy_payment_2026", "2026-27") / (england - 100)) * 100)}% of it`);
+    expect(point("household_energy_payment_2026", 2026)).toContain(`ours reaches ${m((our("household_energy_payment_2026", "2026-27") / (england - 100)) * 100)}% of it`);
     expect(panel("household_energy_payment_2026")).toMatch(new RegExp(`^£${m(hep).toLocaleString("en-GB")}m:`));
 
     // Electricity: the VAT line, Other AME (current) beside it
@@ -174,7 +174,7 @@ describe("why our estimates differ from the official costings", () => {
     expect(note("domestic_electricity_zero_vat")).toContain(`${gap("2026-27")} in 2026-27 (£${m(elec("2026-27"))}m against £${m(vat("2026-27"))}m) and ${gap("2027-28")} in 2027-28 (£${m(elec("2027-28"))}m against £${m(vat("2027-28"))}m)`);
     expect(note("domestic_electricity_zero_vat")).toContain(`adds £${m(line(2, "Other AME (current)", "2026-27"))}m and £${m(line(2, "Other AME (current)", "2027-28"))}m of Other AME (current)`);
     for (const [year, label] of [[2026, "2026-27"], [2027, "2027-28"]]) {
-      expect(point("domestic_electricity_zero_vat", year)).toContain(`Official total adds £${m(line(2, "Other AME (current)", label))}m Other AME (current)`);
+      expect(point("domestic_electricity_zero_vat", year)).toContain(`Official total also includes £${m(line(2, "Other AME (current)", label))}m Other AME (current)`);
       // The panel's official line gives the VAT figure; the point doesn't repeat it (Vahid, 30 October, item 4)
       expect(point("domestic_electricity_zero_vat", year)).not.toContain(`£${m(vat(label))}m`);
     }
@@ -192,7 +192,8 @@ describe("why our estimates differ from the official costings", () => {
     const taxNics = (year) => line(15, "Income tax", year) + line(15, "NICs", year);
     const trading = (year) => our("trading_allowance_raise", year);
     const shown = FROM_2028.map((year) => `£${m(taxNics(year))}m`);
-    expect(note("trading_allowance_raise")).toContain(`Table 1.1: ${shown.slice(0, 3).join(", ")} and ${shown[3]}), our estimate falls ${pounds(FROM_2028.map((year) => m(taxNics(year)) - m(trading(year))), "m")} a year below them from 2028-29 (${span(FROM_2028.map((year) => (1 - trading(year) / taxNics(year)) * 100), "%")})`);
+    expect(note("trading_allowance_raise")).toContain(`trails the matching income tax and NICs lines of the government's costing, which the OBR certified, by ${pounds(FROM_2028.map((year) => m(taxNics(year)) - m(trading(year))), "m")} a year (${span(FROM_2028.map((year) => (1 - trading(year) / taxNics(year)) * 100), "%")})`);
+    expect(note("trading_allowance_raise")).toContain(`The OBR gives those lines as ${shown.slice(0, 3).join(", ")} and ${shown[3]} in its detailed policy table, Table 1.1.`);
     // The other lines: the total (a cost, like the two lines) beyond Income tax and NICs
     expect(FROM_2028.map((year) => m(total(15, year) - taxNics(year)))).toEqual([2, 2, 2, 2]);
     expect(note("trading_allowance_raise")).toContain("lines, about £2m a year");
@@ -230,6 +231,26 @@ describe("why our estimates differ from the official costings", () => {
     for (const line of all) expect(line).not.toMatch(/\b(?:is|are|was|were|be|been)\b[^.;:,]{0,40}\b(?:above|below)\b/);
   });
 
+  // Max, 28 Oct: active voice, reduced passives included, so the OBR certifies,
+  // we show, households buy and taxpayers pay
+  it("names who certifies, shows, buys and pays, with no reduced passive", () => {
+    const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
+    const all = strings([OBR_DEVIATION_STATEMENT, OBR_DIFFERENCE_POINTS, NOT_COMPARABLE_SHORT, OBR_DEVIATION_NOTES, OBR_COMPARISON_BASES, OBR_PANEL_BASES]);
+    for (const line of all) {
+      expect(line).not.toMatch(/certified by the OBR|\bshown here\b|\btotal shown\b|Self Assessment pays|\bwhen paid\b|\bprices paid\b|\bbought by\b|\bbusiness included\b/);
+    }
+  });
+
+  // Max, 31 Oct: a document, rule or measure doesn't act, so the government
+  // assumes and spends, the OBR adds and we subtract; a total only includes
+  it("gives each action to whoever takes it, never to a total, costing, estimate or benefit", () => {
+    const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
+    const all = strings([OBR_DEVIATION_STATEMENT, OBR_DIFFERENCE_POINTS, NOT_COMPARABLE_SHORT, OBR_DEVIATION_NOTES, OBR_COMPARISON_BASES, OBR_PANEL_BASES]);
+    for (const line of all) {
+      expect(line).not.toMatch(/\b(?:total|[Oo]fficial|costing|estimate|[Oo]urs) (?:adds|assumes|puts|starts from|takes off|grows)\b|\btake back\b|\bestimate assuming\b/);
+    }
+  });
+
   it("writes every point and basis side as a short fragment, tagged with one of the four reasons, \"ours\" never PolicyEngine's (Vahid, 28 Oct)", () => {
     const words = (text) => text.split(/\s+/).length;
     for (const [id, points] of Object.entries(OBR_DIFFERENCE_POINTS)) {
@@ -254,10 +275,10 @@ describe("why our estimates differ from the official costings", () => {
     expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2026).map((p) => p.text)).toEqual([
       "Households buy about £13bn of £24bn duty",
       "Scaled to all fuel, ours would be about £450m",
-      "Official assumes 5p back on 1 Jan, law phases it",
+      "Government assumes 5p back on 1 Jan; law phases it",
     ]);
     expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2027).map((p) => p.text)).toEqual(["Scaled to all fuel, ours would be about £760m"]);
-    expect(pointsForYear(OBR_DIFFERENCE_POINTS.state_pension_income_tax_protection, 2028).map((p) => p.text)).toEqual(["Pension Credit, HB and CTR take back about a quarter"]);
+    expect(pointsForYear(OBR_DIFFERENCE_POINTS.state_pension_income_tax_protection, 2028).map((p) => p.text)).toEqual(["Pension Credit, HB and CTR savings offset about a quarter"]);
   });
 
   it("names the four reasons in one sentence", () => {
