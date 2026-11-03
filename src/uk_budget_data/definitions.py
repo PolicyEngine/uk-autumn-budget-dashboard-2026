@@ -56,7 +56,12 @@ from uk_budget_data.publication.receipt import (
     ReceiptUnavailable,
     measure_identities,
 )
-from uk_budget_data.reforms import SAVINGS_INCOME_RATES_ID, get_reform
+from uk_budget_data.reforms import (
+    CASH_ISA_LIMIT_ID,
+    MACHINE_GAMES_DUTY_ID,
+    SAVINGS_INCOME_RATES_ID,
+    get_reform,
+)
 
 # The fields of an identity its digest depends on, the ones the receipt
 # gate compares (``receipt._IDENTITY_FIELDS``); ``name`` is a label.
@@ -75,7 +80,11 @@ UNREGISTERED = "not a measure the running code registers"
 # doesn't name has no
 # receipt to check its definition against, so the page leaves it unchecked;
 # once named, it is checked as any published measure (``checked_measures``).
-CALCULATOR_ONLY_MEASURES = (SAVINGS_INCOME_RATES_ID,)
+CALCULATOR_ONLY_MEASURES = (
+    SAVINGS_INCOME_RATES_ID,
+    CASH_ISA_LIMIT_ID,
+    MACHINE_GAMES_DUTY_ID,
+)
 
 # The deploy and rollback pipelines' expectations snippets
 # (cloudbuild*.yaml) call ``definitions_for`` and ``FULL_COMMIT`` inside the

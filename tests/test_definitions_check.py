@@ -658,7 +658,9 @@ def test_no_examples_are_computed_for_a_file_the_page_would_not_use(
 # savings rise, so the page checks it, and the examples' file records it,
 # only once the publication names it.
 SAVINGS = "savings_income_rates_up"
-OTHER = next(key for key in MEASURES if key != SAVINGS)
+OTHER = next(
+    key for key in MEASURES if key not in definitions.CALCULATOR_ONLY_MEASURES
+)
 
 
 CALCULATOR_ONLY_JS = (
@@ -686,7 +688,7 @@ def test_the_calculator_only_measures_are_the_pages():
         constants[value] if value in constants else json.loads(value)
         for value in re.findall(r"^\s+id: (\w+|\"[a-z_]+\"),$", block, re.M)
     ]
-    assert ids == [SAVINGS]
+    assert ids == [SAVINGS, "cash_isa_limit_kept", "machine_games_duty_rise"]
     assert tuple(ids) == definitions.CALCULATOR_ONLY_MEASURES
     assert set(ids) <= set(MEASURES)
 
