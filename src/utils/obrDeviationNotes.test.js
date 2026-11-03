@@ -157,6 +157,13 @@ describe("why our estimates differ from the official costings", () => {
     expect(note("bus_fare_cap_2027")).toContain(`Over the two years, ours exceeds the official net cost by about the participation adjustment: £${Math.round(bus("2026-27") + bus("2027-28"))} million against £${busNet} million.`);
     expect((bus("2026-27") + bus("2027-28")) / busNet).toBeCloseTo(1 / 0.9, 1);
     expect(note("bus_fare_cap_2027")).toContain(`So ours exceeds the official net cost by ${Math.round((bus("2026-27") / t61(4, "2026-27") - 1) * 100)}% in 2026-27 and ${Math.round((bus("2027-28") / t61(4, "2027-28") - 1) * 100)}% in 2027-28.`);
+    // Carer's Allowance: ours against the rounded totals, as a share of the
+    // figures the note shows
+    const ourCarers = JSON.parse(readFileSync("src/test/fixtures/obrNotesOurFigures.json", "utf8")).measures.carers_allowance_earnings_taper.values;
+    const carers = (year) => Math.round(Math.abs(ourCarers[year]));
+    const carersShare = (year) => Math.round((carers(year) / t61(7, year)) * 100);
+    expect(carersShare("2030-31")).toBe(carersShare("2031-32"));
+    expect(note("carers_allowance_earnings_taper")).toContain(`Our static estimate reaches about ${carersShare("2030-31")}% of the official costing in both years we compare: £${carers("2030-31")} million against £${t61(7, "2030-31")} million in 2030-31, and £${carers("2031-32")} million against £${t61(7, "2031-32")} million in 2031-32.`);
   });
 
   // Every OBR Table 1.1 figure, gap and ratio the notes, points and panel
@@ -169,6 +176,7 @@ describe("why our estimates differ from the official costings", () => {
     const line = (measure, category, year) => Math.abs(t11.find((l) => l.measure === measure && l.category === category).values[year]);
     const total = (measure, year) => Math.abs(t11.find((l) => l.measure === measure && l.head === "Total").values[year]);
     const our = (id, year) => Math.abs(ours[id].values[year]);
+    const gross = (id, year) => Math.abs(ours[id].officialBasis[year]);
     const m = Math.round;
     const span = (values, unit) => `${Math.min(...values.map(m))}${unit} to ${Math.max(...values.map(m))}${unit}`;
     const pounds = (values, unit) => `£${Math.min(...values.map(m))}${unit} to £${Math.max(...values.map(m))}${unit}`;
@@ -214,6 +222,48 @@ describe("why our estimates differ from the official costings", () => {
     const duty = (year) => m(line(3, "Fuel Duty", year));
     const fuel = (year) => m(our("fuel_duty_rise_deferral", year));
     expect(note("fuel_duty_rise_deferral")).toContain(`£${duty("2026-27") - fuel("2026-27")} million below the official figure in 2026-27 (£${fuel("2026-27")} million against £${duty("2026-27")} million) and £${duty("2027-28") - fuel("2027-28")} million below in 2027-28 (£${fuel("2027-28")} million against £${duty("2027-28")} million)`);
+    expect(note("fuel_duty_rise_deferral")).toContain("Both estimates fall to zero from 2028-29.");
+    for (const [year, value] of Object.entries(ours.fuel_duty_rise_deferral.values)) if (year >= "2028-29") expect(Math.abs(value), year).toBe(0);
+    for (const [year, value] of Object.entries(t11.find((l) => l.measure === 3 && l.head === "Total").values)) if (year >= "2028-29") expect(Math.abs(value), year).toBe(0);
+    // Our VAT: the modifier moves VAT by ROAD_FUEL_VAT_RATE of the duty change
+    // on each litre (pump_vat_on_fuel_duty_deferral.py), so VAT makes 0.2 / 1.2
+    // of our cost
+    const vatRate = Number(readFileSync("src/uk_budget_data/budget_measures/pump_vat_on_fuel_duty_deferral.py", "utf8").match(/^ROAD_FUEL_VAT_RATE = ([\d.]+)$/m)[1]);
+    const fuelVat = (year) => (our("fuel_duty_rise_deferral", year) * vatRate) / (1 + vatRate);
+    expect(note("fuel_duty_rise_deferral")).toContain(`Ours includes £${m(fuelVat("2026-27"))} million and £${m(fuelVat("2027-28"))} million of VAT on the lower pump price`);
+    // Scaled to all fuel: our fuel duty cost, without that VAT, times the
+    // OBR's fuel duty receipts (EFO October 2026 receipts table 4.8) over our
+    // households' fuel duty, to the nearest £10m. The release doesn't publish
+    // that base; a baseline run of #290 at 9b98370e gave it on 28 October
+    const receipts = { "2026-27": 23.95, "2027-28": 25.713 };
+    const householdDuty = { "2026-27": 13.3635, "2027-28": 14.6503 };
+    const allFuel = (year) => m(((our("fuel_duty_rise_deferral", year) - fuelVat(year)) * receipts[year]) / householdDuty[year] / 10) * 10;
+    expect(note("fuel_duty_rise_deferral")).toContain(`about £${m(householdDuty["2026-27"])} billion of the £${m(receipts["2026-27"])} billion of fuel duty the OBR forecasts for 2026-27`);
+    expect(point("fuel_duty_rise_deferral", 2026)).toContain(`Households pay about £${m(householdDuty["2026-27"])}bn of £${m(receipts["2026-27"])}bn duty`);
+    expect(note("fuel_duty_rise_deferral")).toContain(`we would estimate a fuel duty cost of about £${allFuel("2026-27")} million in 2026-27 and £${allFuel("2027-28")} million in 2027-28.`);
+    expect(point("fuel_duty_rise_deferral", 2026)).toContain(`If we scaled to all fuel, we would estimate about £${allFuel("2026-27")}m`);
+    expect(point("fuel_duty_rise_deferral", 2027)).toContain(`If we scaled to all fuel, we would estimate about £${allFuel("2027-28")}m`);
+
+    // Carer's Allowance: the UK's benefit spending and Scotland's block grant
+    // make the total, with no income tax line. Ours before income tax is the
+    // release's official basis (Carer's Allowance and Universal Credit), and
+    // the note's income tax on the allowance is that less our net cost
+    const CA_YEARS = ["2030-31", "2031-32"];
+    const caSpend = (year) => line(7, "Welfare inside cap", year);
+    const caBlock = (year) => line(7, "Scottish BGA (current)", year);
+    const caGross = (year) => gross("carers_allowance_earnings_taper", year);
+    const caTax = (year) => caGross(year) - our("carers_allowance_earnings_taper", year);
+    expect(t11.filter((l) => l.measure === 7).map((l) => l.category)).toEqual(["Welfare inside cap", "Scottish BGA (current)", null]);
+    for (const year of CA_YEARS) {
+      expect(total(7, year), year).toBeCloseTo(caSpend(year) + caBlock(year), 3);
+      expect(caTax(year), year).toBeGreaterThan(0);
+      expect(caGross(year) / caSpend(year) - 1, year).toBeCloseTo(1 / 6, 1);
+    }
+    expect(note("carers_allowance_earnings_taper")).toContain(`The OBR gives £${m(total(7, "2030-31"))} million and £${m(total(7, "2031-32"))} million before the Treasury rounds them. They include £${m(caBlock("2030-31"))} million and £${m(caBlock("2031-32"))} million of extra block grant for Scotland`);
+    expect(note("carers_allowance_earnings_taper")).toContain(`The UK government spends the rest, £${m(caSpend("2030-31"))} million and £${m(caSpend("2031-32"))} million, on Carer's Allowance and Universal Credit, and the costing has no line for income tax`);
+    expect(note("carers_allowance_earnings_taper")).toContain(`Before we subtract the income tax on the higher allowance (£${m(caTax("2030-31"))} million and £${m(caTax("2031-32"))} million) for our net cost, we estimate £${m(caGross("2030-31"))} million and £${m(caGross("2031-32"))} million, which exceed that spending by about a sixth.`);
+    expect(point("carers_allowance_earnings_taper", 2030)).toContain(`Official includes Scotland's block grant (£${m(caBlock("2030-31"))}m, £${m(caBlock("2031-32"))}m)`);
+    expect(point("carers_allowance_earnings_taper", 2030)).toContain("Before income tax, ours exceeds official spending by about a sixth");
 
     // Trading allowance: Income tax and NICs together, other lines beside them
     const taxNics = (year) => line(15, "Income tax", year) + line(15, "NICs", year);
@@ -229,6 +279,26 @@ describe("why our estimates differ from the official costings", () => {
     const largest = (f) => FROM_2028.reduce((a, b) => (f(b) > f(a) ? b : a));
     expect([largest((year) => taxNics(year) - trading(year)), largest(taxNics)]).toEqual(["2028-29", "2028-29"]);
     expect(panel("trading_allowance_raise")).toContain(`from 2028-29: ${shown.join(", ")}`);
+
+    // Pension Tax Allowance: the income tax line, with a zero welfare line.
+    // Ours before benefit savings is the release's official basis (income
+    // tax), and the savings are that less our net cost
+    const PTA_YEARS = ["2027-28", "2028-29", "2029-30"];
+    const ptaTax = (year) => line(52, "Income tax", year);
+    const ptaGross = (year) => gross("state_pension_income_tax_protection", year);
+    const pta = (year) => our("state_pension_income_tax_protection", year);
+    for (const value of Object.values(t11.find((l) => l.measure === 52 && l.category === "Welfare inside cap").values)) expect(value).toBe(0);
+    for (const year of PTA_YEARS) expect(1 - pta(year) / ptaGross(year), year).toBeCloseTo(0.25, 1);
+    const ptaLine = PTA_YEARS.map((year) => `£${m(ptaTax(year))}m`);
+    expect(note("state_pension_income_tax_protection")).toContain(`the OBR puts the costing's income tax line at ${ptaLine[0]}, ${ptaLine[1]} and ${ptaLine[2]} in its detailed policy table, Table 1.1.`);
+    // The percentages compare the figures the note shows, so a reader can
+    // check them; the unrounded figures can round differently (2027-28 falls
+    // 5.7% short at revision 60)
+    const shownPct = (year) => m((m(ptaGross(year)) / m(ptaTax(year)) - 1) * 100);
+    expect(note("state_pension_income_tax_protection")).toContain(`Ours, £${m(ptaGross("2027-28"))}m, £${m(ptaGross("2028-29"))}m and £${m(ptaGross("2029-30"))}m, falls about ${-shownPct("2027-28")}% short of that line in 2027-28 and exceeds it by ${shownPct("2028-29")}% and ${shownPct("2029-30")}% in 2028-29 and 2029-30.`);
+    expect(note("state_pension_income_tax_protection")).toContain(`we estimate a net cost of £${m(pta("2027-28"))}m, £${m(pta("2028-29"))}m and £${m(pta("2029-30"))}m.`);
+    expect(point("state_pension_income_tax_protection", 2028)).toContain("Pension Credit, HB and CTR savings offset about a quarter");
+    expect(panel("state_pension_income_tax_protection")).toBe(`Income tax ${ptaLine.join(", ")}; no benefit savings`);
 
     // Property: the income tax line, and ours above it by year
     const prop = (year) => our("property_income_rates_up", year);
@@ -290,13 +360,16 @@ describe("why our estimates differ from the official costings", () => {
   });
 
   // The figures those notes compute from are the release's own: each
-  // measure's artifact in public/data/manifest.json and its
-  // budgetary_impact.csv, in £ million. A regeneration changes the
+  // measure's artifact in public/data/manifest.json, its
+  // budgetary_impact.csv and, where a note gives our figure before offsets,
+  // its official_basis.csv, in £ million. A regeneration changes the
   // artifacts, so this fails until the fixture, and each note figure
   // computed from it, matches the new release
   it("computes from the figures the release publishes", () => {
     const fixture = JSON.parse(readFileSync("src/test/fixtures/obrNotesOurFigures.json", "utf8")).measures;
     const manifest = JSON.parse(readFileSync("public/data/manifest.json", "utf8"));
+    // Every measure with a note has its figures here
+    expect(Object.keys(fixture).sort()).toEqual(Object.keys(OBR_DEVIATION_NOTES).sort());
     for (const [id, entry] of Object.entries(fixture)) {
       // A measure held back from the release stays out of the manifest
       if (!entry.artifact.startsWith("artifacts/")) {
@@ -304,10 +377,14 @@ describe("why our estimates differ from the official costings", () => {
         continue;
       }
       expect(manifest.measures[id]?.artifact, id).toBe(entry.artifact);
-      const rows = parseDashboardCsv(readFileSync(`public/data/${entry.artifact}/budgetary_impact.csv`, "utf8"));
-      for (const [label, value] of Object.entries(entry.values)) {
-        expect(Number(rows.find((row) => row.year === label.slice(0, 4)).value) * 1000, `${id} ${label}`).toBeCloseTo(value, 3);
-      }
+      const check = (file, values) => {
+        const rows = parseDashboardCsv(readFileSync(`public/data/${entry.artifact}/${file}`, "utf8"));
+        for (const [label, value] of Object.entries(values)) {
+          expect(Number(rows.find((row) => row.year === label.slice(0, 4)).value) * 1000, `${id} ${file} ${label}`).toBeCloseTo(value, 3);
+        }
+      };
+      check("budgetary_impact.csv", entry.values);
+      if (entry.officialBasis) check("official_basis.csv", entry.officialBasis);
     }
   });
 
@@ -333,12 +410,13 @@ describe("why our estimates differ from the official costings", () => {
   });
 
   // Max, 31 Oct: a document, rule or measure doesn't act, so the government
-  // assumes and spends, the OBR adds and we subtract; a total only includes
+  // assumes and spends, the OBR adds and we subtract; a total only includes.
+  // Nor does a concept explain or narrow a gap
   it("gives each action to whoever takes it, never to the Budget, a total, figure, costing, estimate, benefit or the model", () => {
     const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
     const all = strings([OBR_DEVIATION_STATEMENT, OBR_DIFFERENCE_POINTS, NOT_COMPARABLE_SHORT, OBR_DEVIATION_NOTES, OBR_COMPARISON_BASES, OBR_PANEL_BASES]);
     for (const line of all) {
-      expect(line).not.toMatch(/\b(?:[Tt]otals?|[Oo]fficial|costings?|estimates?|figures?|Budget|[Oo]urs) (?:adds?|assumes?|puts?|starts? from|takes? off|grows?|counts?|leaves? out|itemises?)\b|\b(?:Credit|HB|CTR|Benefit|Reduction) take back\b|\bestimate assuming\b|\b(?:[Tt]he|[Oo]ur)(?: static)? model\b/);
+      expect(line).not.toMatch(/\b(?:[Tt]otals?|[Oo]fficial|costings?|estimates?|figures?|Budget|[Oo]urs) (?:adds?|assumes?|puts?|starts? from|takes? off|grows?|counts?|leaves? out|itemises?)\b|\b(?:Credit|HB|CTR|Benefit|Reduction) take back\b|\bestimate assuming\b|\b(?:[Tt]he|[Oo]ur)(?: static)? model\b|\b(?:Coverage|Timing|Scope|Behaviour|VAT(?: and behaviour)?) (?:explains?|narrows?|widens?|affects?)\b/);
     }
   });
 

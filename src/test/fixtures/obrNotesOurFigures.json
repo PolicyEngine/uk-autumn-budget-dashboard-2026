@@ -1,5 +1,5 @@
 {
- "source": "Each measure's budgetary_impact.csv in the release (public/data/manifest.json, revision 60), £ million, negative a cost",
+ "source": "Each measure's budgetary_impact.csv in the release (public/data/manifest.json, revision 60), and its official_basis.csv where a note gives our figure before offsets, £ million, negative a cost",
  "measures": {
   "household_energy_payment_2026": {
    "artifact": "artifacts/household_energy_payment_2026/220d79f0f70e2679",
@@ -45,6 +45,25 @@
     "2031-32": 0.0
    }
   },
+  "carers_allowance_earnings_taper": {
+   "artifact": "artifacts/carers_allowance_earnings_taper/302ddb4d9fccbdf1",
+   "values": {
+    "2026-27": 0.0,
+    "2027-28": 0.0,
+    "2028-29": 0.0,
+    "2029-30": 0.0,
+    "2030-31": -23.7928,
+    "2031-32": -47.5838
+   },
+   "officialBasis": {
+    "2026-27": 0.0,
+    "2027-28": 0.0,
+    "2028-29": 0.0,
+    "2029-30": 0.0,
+    "2030-31": -39.2422,
+    "2031-32": -79.4209
+   }
+  },
   "trading_allowance_raise": {
    "artifact": "artifacts/trading_allowance_raise/411e68c2da8830e7",
    "values": {
@@ -54,6 +73,25 @@
     "2029-30": -118.6716,
     "2030-31": -119.7785,
     "2031-32": -129.6881
+   }
+  },
+  "state_pension_income_tax_protection": {
+   "artifact": "artifacts/state_pension_income_tax_protection/c4654db081855054",
+   "values": {
+    "2026-27": 0.0,
+    "2027-28": -29.6299,
+    "2028-29": -82.5717,
+    "2029-30": -143.6617,
+    "2030-31": 0.0,
+    "2031-32": 0.0
+   },
+   "officialBasis": {
+    "2026-27": 0.0,
+    "2027-28": -41.5277,
+    "2028-29": -112.4937,
+    "2029-30": -192.9618,
+    "2030-31": 0.0,
+    "2031-32": 0.0
    }
   },
   "property_income_rates_up": {
