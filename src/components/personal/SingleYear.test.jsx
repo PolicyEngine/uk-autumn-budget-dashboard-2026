@@ -340,7 +340,7 @@ describe("the household calculation, from the fixture", () => {
         const tile = headlineCard().querySelector(".result-tiles .forecast-tile");
         const unit = ids.length === 1 ? "policy" : "policies";
         expect(tile.querySelector(".result-policies-link")).toHaveTextContent(
-          new RegExp(`^${ids.length} ${unit}, the savings income tax rise and the cash ISA limit kept at £20,000$`),
+          new RegExp(`^${ids.length} ${unit}, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty$`),
         );
         // The request carries both, so the card must name them
         expect(household.at(-1).policies).toContain("savings_income_rates_up");
@@ -371,7 +371,7 @@ describe("the household calculation, from the fixture", () => {
     // The selected policies, counted as the header counts them, and the
     // savings rise the calculator always adds, named
     expect(tiles[0]).toHaveTextContent(
-      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies, the savings income tax rise and the cash ISA limit kept at £20,000`,
+      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty`,
     );
     expect(changeValue()).toBe("+£3,765");
     // All three figures in the tiles' one headline class, the change not
