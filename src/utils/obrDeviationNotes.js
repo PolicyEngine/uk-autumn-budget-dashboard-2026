@@ -68,7 +68,7 @@ export const OBR_DIFFERENCE_POINTS = {
     { reason: "Scope", text: "Pension Credit, HB and CTR savings offset about a quarter", years: [2027, 2028, 2029] },
   ],
   household_energy_payment_2026: [
-    { reason: "Scope", text: "Without devolved funding and the council fund, ours reaches 94% of it", years: [2026] },
+    { reason: "Scope", text: "Ours reaches 94% of the official cost less devolved and council funding", years: [2026] },
   ],
   carers_allowance_earnings_taper: [
     // OBR policy Table 1.1: £4.92m and £10.16m of block grant (#290, 6479807374)
@@ -128,7 +128,7 @@ export const NOT_COMPARABLE_SHORT = {
   savings_income_rates_up: "Self Assessment taxpayers pay later.",
   trading_allowance_raise: "Self Assessment taxpayers pay later.",
   state_pension_income_tax_protection: "The allowance ends in April 2030, so we don't compare later years.",
-  bus_fare_cap_2027: "The cap has ended; the government reprioritises budgets to fund it.",
+  bus_fare_cap_2027: "The cap ends in December 2027, so we don't compare later years.",
 };
 
 /**
@@ -146,7 +146,7 @@ export const NOT_COMPARABLE_SHORT = {
  */
 export const OBR_DEVIATION_NOTES = {
   bus_fare_cap_2027:
-    "The government pays bus operators a grant to keep single fares at £2 instead of £3 in England outside London from January to December 2027, funding the grant by reprioritising Department for Energy Security and Net Zero budgets. It counts the savings from those budgets in the same years against the grant, so it puts the net cost at £50 million in 2026-27 and £180 million in 2027-28. We share that net cost out across households by their bus fare spending in England outside London: 10.0% of spending at £3 fares while the cap runs. We calculate the 10.0% by dividing the £230 million by 0.9 for operator participation and by £2,557 million of spending. So ours exceeds the official net cost by about the participation adjustment, and moves with the bus fare spending in our data each year. After the cap ends, the government counts a further +£65 million in 2028-29 and +£170 million in 2029-30 from that reprioritisation, so we don't compare those years.",
+    "The government pays bus operators a grant to keep single fares at £2 instead of £3 in England outside London from January to December 2027. It funds the grant by reprioritising Department for Energy Security and Net Zero budgets. It counts the savings from those budgets in the same years against the grant, so it puts the net cost at £50 million in 2026-27 and £180 million in 2027-28, £230 million in all. We share that net cost out across households by their bus fare spending in England outside London: each household gets 10.0% of its spending at £3 fares while the cap runs. We calculate the 10.0% by dividing the £230 million by 0.9 for operator participation and by £2,557 million of spending. Over the two years, ours exceeds the official net cost by about the participation adjustment: £254 million against £230 million. Each year, we scale ours by the days the cap runs and households' bus fare spending, while the government counts savings worth 56% of the grant in 2026-27 and 49% in 2027-28. So ours exceeds the official net cost by 28% in 2026-27 and 6% in 2027-28. After the cap ends, the government counts a further +£65 million in 2028-29 and +£170 million in 2029-30 from that reprioritisation, so we don't compare those years.",
   household_energy_payment_2026:
     "Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, which the OBR certified (the Treasury rounds it to £2,625 million in the Budget's Table 6.1). The gap arises because the costing also covers two things we don't model: the devolved governments' share of the funding (about £425 million, our estimate using the Barnett formula) and £100 million for councils in England for targeted support. Without them, about £2,100 million remains for the payment in England, and our estimate reaches 94% of it. The government spends up to £2,000 million of that on £100 payments to as many as 20 million households, and neither the OBR nor the Treasury itemises the rest. Both estimates fall to zero from 2027-28.",
   domestic_electricity_zero_vat:

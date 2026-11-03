@@ -34,6 +34,17 @@
     "2031-32": 0.0
    }
   },
+  "bus_fare_cap_2027": {
+   "artifact": "artifacts/bus_fare_cap_2027/f2a6a66839d4331c",
+   "values": {
+    "2026-27": -63.9319,
+    "2027-28": -190.1592,
+    "2028-29": 0.0,
+    "2029-30": 0.0,
+    "2030-31": 0.0,
+    "2031-32": 0.0
+   }
+  },
   "trading_allowance_raise": {
    "artifact": "artifacts/trading_allowance_raise/411e68c2da8830e7",
    "values": {

@@ -126,6 +126,7 @@ describe("why our estimates differ from the official costings", () => {
     expect(notCompared("state_pension_income_tax_protection")).toEqual(["2030", "2031"]);
     expect(NOT_COMPARABLE_SHORT.state_pension_income_tax_protection).toBe("The allowance ends in April 2030, so we don't compare later years.");
     expect(notCompared("bus_fare_cap_2027")).toEqual(["2028", "2029"]);
+    expect(NOT_COMPARABLE_SHORT.bus_fare_cap_2027).toBe("The cap ends in December 2027, so we don't compare later years.");
     expect(note("bus_fare_cap_2027")).toMatch(/in 2028-29 and \+£170 million in 2029-30 from that reprioritisation, so we don't compare those years\.$/);
   });
 
@@ -144,9 +145,18 @@ describe("why our estimates differ from the official costings", () => {
     expect(note("trading_allowance_raise")).toContain(`(£${t61(15, "2028-29")}m, £${t61(15, "2029-30")}m, £${t61(15, "2030-31")}m and £${t61(15, "2031-32")}m from 2028-29)`);
     expect(note("property_income_rates_up")).toContain(`The Table 6.1 total we show, +£${t61(61, "2029-30")}m in 2029-30`);
     expect(note("savings_income_rates_up")).toContain(`The Table 6.1 total we show, +£${t61(62, "2029-30")}m in 2029-30`);
-    expect(note("bus_fare_cap_2027")).toContain(`so it puts the net cost at £${t61(4, "2026-27")} million in 2026-27 and £${t61(4, "2027-28")} million in 2027-28`);
+    expect(note("bus_fare_cap_2027")).toContain(`so it puts the net cost at £${t61(4, "2026-27")} million in 2026-27 and £${t61(4, "2027-28")} million in 2027-28, £${t61(4, "2026-27") + t61(4, "2027-28")} million in all.`);
     expect(note("bus_fare_cap_2027")).toContain(`dividing the £${t61(4, "2026-27") + t61(4, "2027-28")} million by 0.9`);
     expect(note("bus_fare_cap_2027")).toContain(`a further +£${t61(4, "2028-29")} million in 2028-29 and +£${t61(4, "2029-30")} million in 2029-30`);
+    // Ours against that net cost (fixtures/obrNotesOurFigures.json): about
+    // the participation adjustment over the two years, and by year as our
+    // day weights and the government's savings shares split it
+    const ourBus = JSON.parse(readFileSync("src/test/fixtures/obrNotesOurFigures.json", "utf8")).measures.bus_fare_cap_2027.values;
+    const bus = (year) => Math.abs(ourBus[year]);
+    const busNet = t61(4, "2026-27") + t61(4, "2027-28");
+    expect(note("bus_fare_cap_2027")).toContain(`Over the two years, ours exceeds the official net cost by about the participation adjustment: £${Math.round(bus("2026-27") + bus("2027-28"))} million against £${busNet} million.`);
+    expect((bus("2026-27") + bus("2027-28")) / busNet).toBeCloseTo(1 / 0.9, 1);
+    expect(note("bus_fare_cap_2027")).toContain(`So ours exceeds the official net cost by ${Math.round((bus("2026-27") / t61(4, "2026-27") - 1) * 100)}% in 2026-27 and ${Math.round((bus("2027-28") / t61(4, "2027-28") - 1) * 100)}% in 2027-28.`);
   });
 
   // Every OBR Table 1.1 figure, gap and ratio the notes, points and panel
@@ -175,7 +185,7 @@ describe("why our estimates differ from the official costings", () => {
     expect(note("household_energy_payment_2026")).toContain(`Our £${m(our("household_energy_payment_2026", "2026-27")).toLocaleString("en-GB")} million in 2026-27 falls ${m((1 - our("household_energy_payment_2026", "2026-27") / hep) * 100)}% short of the government's costing of £${m(hep).toLocaleString("en-GB")} million`);
     expect(note("household_energy_payment_2026")).toContain(`about £${m(hep - england)} million, our estimate using the Barnett formula`);
     expect(note("household_energy_payment_2026")).toContain(`about £${(m((england - 100) / 100) * 100).toLocaleString("en-GB")} million remains`);
-    expect(point("household_energy_payment_2026", 2026)).toContain(`ours reaches ${m((our("household_energy_payment_2026", "2026-27") / (england - 100)) * 100)}% of it`);
+    expect(point("household_energy_payment_2026", 2026)).toContain(`Ours reaches ${m((our("household_energy_payment_2026", "2026-27") / (england - 100)) * 100)}% of the official cost less devolved and council funding`);
     expect(note("household_energy_payment_2026")).toContain(`our estimate reaches ${m((our("household_energy_payment_2026", "2026-27") / (england - 100)) * 100)}% of it`);
     expect(note("household_energy_payment_2026")).toContain("on £100 payments to as many as 20 million households");
     // Both fall to zero from 2027-28: ours, and every Table 1.1 line of measure 1
@@ -262,9 +272,43 @@ describe("why our estimates differ from the official costings", () => {
       expect(line(4, "PSCE in RDEL", year), year).toBe(0);
       expect(busSavings(year), year).toBeGreaterThan(0);
     }
+    // With signs, too: each year's total is the grant, a cost, plus the savings
+    const signed = (pred, year) => t11.find((l) => l.measure === 4 && pred(l)).values[year];
+    for (const year of ["2026-27", "2027-28", "2028-29", "2029-30"]) {
+      expect(signed((l) => l.head === "Total", year), year).toBeCloseTo(signed((l) => l.category === "PSCE in RDEL", year) + busSavings(year), 3);
+    }
+    const savingsShare = (year) => m((busSavings(year) / line(4, "PSCE in RDEL", year)) * 100);
+    expect(note("bus_fare_cap_2027")).toContain(`while the government counts savings worth ${savingsShare("2026-27")}% of the grant in 2026-27 and ${savingsShare("2027-28")}% in 2027-28`);
+    // "Each year, we scale ours by the days the cap runs": the modifier's day
+    // shares, and the end date the short reason gives (bus_fare_cap_2027.py)
+    const busModifier = readFileSync("src/uk_budget_data/budget_measures/bus_fare_cap_2027.py", "utf8");
+    expect(busModifier).toMatch(/capped_2026=95 \/ 365,\n\s+capped_2027=270 \/ 366,/);
+    expect(busModifier).toMatch(/CAP_TO = "2027-12-31"/);
     expect(note("bus_fare_cap_2027")).toContain("It counts the savings from those budgets in the same years against the grant, so it puts the net cost at");
     expect(note("bus_fare_cap_2027")).not.toMatch(/costing covers the grant|is the grant/);
     expect(panel("bus_fare_cap_2027")).toBe("Grant to bus operators, less DESNZ budget savings");
+  });
+
+  // The figures those notes compute from are the release's own: each
+  // measure's artifact in public/data/manifest.json and its
+  // budgetary_impact.csv, in £ million. A regeneration changes the
+  // artifacts, so this fails until the fixture, and each note figure
+  // computed from it, matches the new release
+  it("computes from the figures the release publishes", () => {
+    const fixture = JSON.parse(readFileSync("src/test/fixtures/obrNotesOurFigures.json", "utf8")).measures;
+    const manifest = JSON.parse(readFileSync("public/data/manifest.json", "utf8"));
+    for (const [id, entry] of Object.entries(fixture)) {
+      // A measure held back from the release stays out of the manifest
+      if (!entry.artifact.startsWith("artifacts/")) {
+        expect(manifest.measures[id], id).toBeUndefined();
+        continue;
+      }
+      expect(manifest.measures[id]?.artifact, id).toBe(entry.artifact);
+      const rows = parseDashboardCsv(readFileSync(`public/data/${entry.artifact}/budgetary_impact.csv`, "utf8"));
+      for (const [label, value] of Object.entries(entry.values)) {
+        expect(Number(rows.find((row) => row.year === label.slice(0, 4)).value) * 1000, `${id} ${label}`).toBeCloseTo(value, 3);
+      }
+    }
   });
 
   // Max, 28 Oct: "'is above' -> 'exceeds'", and active voice throughout;
