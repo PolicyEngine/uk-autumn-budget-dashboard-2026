@@ -7,8 +7,11 @@ data: each duty, weighted, grows with its national base, on the installed
 engine's population path, and one household's answers are not projected.
 """
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import policyengine_uk
 import pytest
 from policyengine_uk import Simulation
 
@@ -254,12 +257,15 @@ def test_every_duty_and_input_is_covered():
     covered = {
         name for _, inputs in gambling.DUTIES.values() for name in inputs
     }
-    engine_inputs = {
-        name
-        for name, variable in system.variables.items()
-        if "/consumption/gambling/"
-        in (variable.__module__ or "").replace(".", "/")
-    }
+    # The engine's gambling inputs, one file each
+    folder = (
+        Path(policyengine_uk.__file__).parent
+        / "variables/input/consumption/gambling"
+    )
+    engine_inputs = {path.stem for path in folder.glob("*.py")}
+    # 15 on 2.151.0 and 2.165.1; #2731's higher-stake input makes 16
+    assert len(engine_inputs) >= 15
+    assert engine_inputs <= set(system.variables)
     assert engine_inputs <= covered
     for variable, _ in gambling.DUTIES.values():
         assert not system.variables[variable].adds
