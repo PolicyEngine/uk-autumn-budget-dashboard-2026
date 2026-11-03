@@ -10,6 +10,8 @@ change in the eligible benefits (Universal Credit and Pension Credit alone
 reach 4.8m).
 """
 
+import gc
+
 import numpy as np
 import pytest
 
@@ -26,15 +28,23 @@ def test_the_top_up_reaches_about_desnz_recipients():
 
     from uk_budget_data.pipeline import build_microsimulation
 
+    # One simulation at a time: the baseline's arrays are read and the
+    # baseline dropped before the reform is built, so the certified-data
+    # job's peak memory stays under the runner's 16 GB (Max, 6479755553)
     baseline = build_microsimulation(None)
+    weight = np.array(baseline.calculate("household_weight", YEAR).values)
+    before = np.array(
+        baseline.calculate("cost_of_living_support_payment", YEAR).values
+    )
+    del baseline
+    gc.collect()
     reform = build_microsimulation(
         None,
         Scenario(simulation_modifier=warm_home_discount_top_up),
     )
-    weight = baseline.calculate("household_weight", YEAR).values
     paid = (
         reform.calculate("cost_of_living_support_payment", YEAR).values
-        - baseline.calculate("cost_of_living_support_payment", YEAR).values
+        - before
     )
     assert np.all(np.isclose(paid, 0) | np.isclose(paid, 100))
     recipients = (weight * np.isclose(paid, 100)).sum()

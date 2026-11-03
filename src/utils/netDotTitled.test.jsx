@@ -18,9 +18,10 @@ describe("netDotTitled", () => {
     expect(group.querySelector("circle")).toHaveAttribute("r", "3.5");
   });
 
-  it("draws nothing for a point with no place", () => {
+  it.each([undefined, null, NaN])("draws nothing for a point with no place (%s)", (coordinate) => {
     const Dot = netDotTitled(() => "unused");
-    const { container } = render(<svg><Dot cx={undefined} cy={5} payload={{}} /></svg>);
+    const { container } = render(<svg><Dot cx={5} cy={coordinate} payload={{ netChange: null }} /></svg>);
     expect(container.querySelector("title")).toBeNull();
+    expect(container.querySelector("circle")).toBeNull();
   });
 });

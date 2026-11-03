@@ -45,6 +45,8 @@ TAX_NAMES = {
         rf"dividends|savings|income|earnings)\b)",
         r"(?i:\bhigh income child benefit charge\b)",
         r"\bHICBC\b",
+        # Budget 2026's reduction in pensioners' income tax.
+        r"(?i:\bpension tax allowance\b)",
     ),
     "National Insurance": (
         r"(?i:\bnational[- ]insurance\b)",
@@ -143,6 +145,7 @@ TAX_PARAMETERS = {
     "gov.local_authorities.domestic_rates": ("domestic rates",),
     "gov.hmrc.alcohol_duty": ("alcohol duty",),
     "gov.hmrc.tobacco_duty": ("tobacco duty",),
+    "gov.hmrc.gambling_duty": ("gambling duties",),
     "gov.dft.vehicle_excise_duty": ("vehicle excise duty",),
     "gov.hmrc.business_rates": ("business rates",),
     "gov.contrib.ubi_center.carbon_tax": ("carbon tax",),
@@ -155,16 +158,16 @@ DECLARED = {
     # The duty, and the VAT charged on it at the pump.
     "fuel_duty_rise_deferral": {"fuel duty", "VAT"},
     "state_pension_income_tax_protection": {"income tax"},
-    # A payment, through the cost-of-living channel.
-    "warm_home_discount_top_up": set(),
     "domestic_electricity_zero_vat": {"VAT"},
-    # From 2031-32 the engine sets the NI primary threshold and upper
-    # earnings limit at the allowance and higher rate threshold, so holding
-    # those holds them too.
-    "threshold_freeze_2031_32": {"income tax", "National Insurance"},
-    "road_fuel_vat_cut": {"VAT"},
-    # Student loan repayments are not a tax.
-    "plan_2_threshold_unfreeze": set(),
+    "carers_allowance_earnings_taper": set(),
+    "household_energy_payment_2026": set(),
+    "bus_fare_cap_2027": set(),
+    "trading_allowance_raise": {"income tax", "National Insurance"},
+    "property_income_rates_up": {"income tax"},
+    "savings_income_rates_up": {"income tax"},
+    # The tax on the interest the planned limit's excess would have earned
+    "cash_isa_limit_kept": {"income tax"},
+    "machine_games_duty_rise": {"gambling duties"},
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(
@@ -332,7 +335,9 @@ def test_the_threshold_freeze_copy_states_the_frozen_thresholds():
     rate band, not the band alone: the 2030-31 values held in 2031-32,
     against the engine's 2031-32 values."""
     income_tax = installed_system.parameters.gov.hmrc.income_tax
-    description = get_reform("threshold_freeze_2031_32").description
+    from uk_budget_data import reforms
+
+    description = reforms._create_threshold_freeze_2031_32().description
     held = "2030-04-06"
     allowance = income_tax.allowances.personal_allowance.amount(held)
     band = income_tax.rates.uk.brackets[1].threshold(held)
@@ -363,6 +368,7 @@ def test_the_names_are_read_as_copy_uses_them():
         "capital gains tax relief": {"capital gains tax"},
         "R&D tax relief": {"corporation tax"},
         "the High Income Child Benefit Charge": {"income tax"},
+        "a Pension Tax Allowance": {"income tax"},
         "where employers spread increased NI costs": {"National Insurance"},
         "attract employee and employer National Insurance": {
             "National Insurance"

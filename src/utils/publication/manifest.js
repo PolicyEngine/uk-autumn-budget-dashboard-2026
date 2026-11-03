@@ -25,7 +25,7 @@ export const PROVISIONAL_LABEL =
 
 /** The provisional label before the Budget: the entries are candidates. */
 export const CANDIDATE_PROVISIONAL_LABEL =
-  "Provisional: candidate policies modelled before the Budget, not announced policy";
+  "Provisional: candidate policies we modelled before the Budget, not announced policy";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
 
@@ -60,6 +60,16 @@ export function provisionalLabel(manifest) {
   return isCandidateManifest(manifest)
     ? CANDIDATE_PROVISIONAL_LABEL
     : PROVISIONAL_LABEL;
+}
+
+/**
+ * The provisional notice the page shows for this manifest: the candidate
+ * label before the Budget, nothing from Budget day. Statement figures stay
+ * provisional in the manifest (`provisionalLabel`, `publicationLabel`), but
+ * on Budget day the page carries no banner for them.
+ */
+export function provisionalNotice(manifest) {
+  return isCandidateManifest(manifest) ? CANDIDATE_PROVISIONAL_LABEL : "";
 }
 
 const DIGEST = /^[0-9a-f]{64}$/;
@@ -287,7 +297,7 @@ function entryProblems(key, entry, { combined }) {
     );
   }
   if (limited && DISPLAYABLE.includes(entry.status)) {
-    problems.push(`${where} has data limits, so its figures cannot be shown`);
+    problems.push(`${where} has data limits, so we cannot show its figures`);
   }
   if (entry.attestation !== undefined && entry.attestation !== null) {
     problems.push(

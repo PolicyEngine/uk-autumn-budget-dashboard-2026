@@ -166,8 +166,11 @@ export function modifierTemplatesProblems(receipt) {
   return problems;
 }
 
+// Only while sign-off is on (uk_budget_data/sign_off.py, carried by the
+// contract): off, a hand-written modifier needs no attestation.
 function isHeld(receipt) {
   return (
+    contract.sign_off_required &&
     contract.data_limits_active &&
     ["baseline", "reform"].some((side) =>
       receipt?.dashboard?.modifier_templates?.[side]?.includes(null),
@@ -186,6 +189,9 @@ function isHeld(receipt) {
 export async function receiptProblems(receipt, key, entry) {
   const problems = [];
   const dashboard = receipt?.dashboard ?? {};
+  if (dashboard.disclosure_floor?.thin_cells_in_tables) {
+    problems.push("its tables hold cells under the floor of survey households");
+  }
   if ((await artifactSha256(receipt)) !== entry.artifact_sha256) {
     problems.push("the receipt is not the artifact the manifest names");
   }
@@ -245,7 +251,7 @@ export async function receiptProblems(receipt, key, entry) {
     contract.data_limits_registry_sha256
   ) {
     problems.push(
-      "the receipt was generated against another data-limit registry",
+      "we generated the receipt against another data-limit registry",
     );
   }
   if (!Array.isArray(dashboard.data_limits)) {
@@ -253,7 +259,7 @@ export async function receiptProblems(receipt, key, entry) {
   } else if (dashboard.data_limits.length > 0) {
     problems.push(
       "the receipt records data limits: not computable on current data, " +
-        "so its figures cannot be shown",
+        "so we cannot show its figures",
     );
   }
   // A measure the installed model mis-costs records its model limits in its
@@ -265,7 +271,7 @@ export async function receiptProblems(receipt, key, entry) {
     contract.model_limits_registry_sha256
   ) {
     problems.push(
-      "the receipt was generated against another model-limit registry",
+      "we generated the receipt against another model-limit registry",
     );
   }
   if (!Array.isArray(dashboard.model_limits)) {
@@ -275,13 +281,14 @@ export async function receiptProblems(receipt, key, entry) {
     entry.status !== "provisional"
   ) {
     problems.push(
-      "the receipt records model limits: held at provisional, so it " +
-        "cannot be shown as approved",
+      "the receipt records model limits: it stays provisional, so we " +
+        "cannot show it as approved",
     );
   }
-  // Pure template proofs are recorded at generation time. Any hand-written
-  // modifier, on either side or in a combined run, needs an attestation of
-  // this complete receipt, including its generation timestamp and id.
+  // Pure template proofs are recorded at generation time. While sign-off is
+  // on, any hand-written modifier, on either side or in a combined run,
+  // needs an attestation of this complete receipt, including its generation
+  // timestamp and id.
   const templateProblems = modifierTemplatesProblems(receipt);
   problems.push(...templateProblems);
   if (templateProblems.length === 0 && isHeld(receipt)) {

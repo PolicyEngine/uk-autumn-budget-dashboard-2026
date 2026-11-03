@@ -7,7 +7,8 @@ import Tip from "./Tip";
 /**
  * A pill that opens a short list of options: [badge] label, then a chevron.
  *
- * The badge shows the chosen option; the list marks it with a check. The
+ * The badge shows the chosen option; the list marks it by weight and
+ * colour only (never a tick mark). The
  * band variant matches the year and policy pills in the title band (it
  * shares .policy-selector-toggle); the light variant is the in-card
  * version. Button + listbox: arrow keys move, Enter or a click chooses,
@@ -175,9 +176,6 @@ function PillSelect({
               onClick={() => choose(index)}
               onMouseEnter={() => setActive(index)}
             >
-              <span className="pill-select-check" aria-hidden="true">
-                {index === current ? "✓" : ""}
-              </span>
               <Tip content={option.title}>
                 <span>{option.label}</span>
               </Tip>

@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation, preloadAllViews } from "./App";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { EXPLAINERS, RESEARCH_URL } from "./utils/explainers";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -44,7 +45,7 @@ describe("the view tabs", () => {
     const { container } = await renderApp();
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
-      "Household impact",
+      "Household calculator",
       "Pre-measures forecast",
       "Policies",
       "Methodology",
@@ -79,7 +80,7 @@ describe("the view tabs", () => {
     const { container } = await renderApp();
     const expected = {
       dashboard: [true, true],
-      // The year drives Household impact's household calculation
+      // The year drives Household calculator's household calculation
       household: [true, true],
       outlook: [false, false],
       policies: [false, false],
@@ -120,7 +121,7 @@ describe("the view tabs", () => {
     });
   });
 
-  it("show the year pill on Household impact, whatever an old ?sub= link says", async () => {
+  it("show the year pill on Household calculator, whatever an old ?sub= link says", async () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
     const { container } = await renderApp();
     expect(shown(band(container).querySelector(".band-year"))).toBe(true);
@@ -148,9 +149,9 @@ describe("the view tabs", () => {
 
   it("open the view an old or new link names", async () => {
     for (const [url, label] of [
-      ["/?tab=household", "Household impact"],
+      ["/?tab=household", "Household calculator"],
       // An old link: the view it named, at its new address
-      ["/?tab=personal", "Household impact"],
+      ["/?tab=personal", "Household calculator"],
       ["/?tab=outlook", "Pre-measures forecast"],
       // An old link: Pre-measures forecast was Living standards
       ["/?tab=living", "Pre-measures forecast"],
@@ -186,8 +187,12 @@ describe("the view tabs", () => {
     expect(screen.queryByText(/What each policy does is on/)).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
     const panel = screen.getByRole("tabpanel", { name: "Policies" });
-    // The fixture publishes one measure (beforeEach)
-    expect(within(panel).getAllByRole("listitem")).toHaveLength(1);
+    // The fixture publishes one measure (beforeEach); the Budget's measures
+    // the dashboard does not model follow in their own section
+    const modelled = panel.querySelector("#policy-details");
+    expect(within(modelled).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(panel).getByRole("region", { name: "Budget policies we do not model" })).toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Budget policies we do not model" })).toHaveAttribute("aria-expanded", "false");
     expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
   });
 
@@ -369,14 +374,14 @@ describe("the view tabs", () => {
       "Data",
       "Model and policies",
       "Population impact",
-      "Household impact",
+      "Household calculator",
       "Pre-measures forecast",
       "Limitations",
     ]) {
       expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();
     }
     // Figures by area and results by age are folded topics of Population
-    // impact; the household calculation is one of Household impact
+    // impact; the household calculation is one of Household calculator
     const population = within(panel).getByRole("heading", { level: 2, name: "Population impact" }).closest(".method-section");
     for (const name of ["Figures by area", "Results by age"]) {
       expect(within(population).getByRole("button", { name })).toBeInTheDocument();
@@ -384,9 +389,10 @@ describe("the view tabs", () => {
     expect(within(panel).getByRole("button", { name: "How the household calculation works" })).toBeInTheDocument();
     expect(panel).not.toHaveTextContent(/lifetime/i);
     expect(panel).toHaveTextContent("dominance and p% rules");
-    // No leftover link to last year's research
+    // No leftover link to last year's research: only this Budget's write-ups
     expect(panel).not.toHaveTextContent("our research on the");
-    expect(panel.querySelector('a[href*="policyengine.org/uk/research"]')).toBeNull();
+    const research = [...panel.querySelectorAll('a[href*="policyengine.org/uk/research"]')].map((link) => link.getAttribute("href"));
+    expect(research).toEqual(EXPLAINERS.map(({ slug }) => `${RESEARCH_URL}/${slug}`));
     const living = panel.querySelector("#method-living");
     expect(within(living).getByRole("link", { name: "Forecast changes" })).toHaveAttribute("href", "?tab=outlook&sub=forecast");
     // Said once on the page

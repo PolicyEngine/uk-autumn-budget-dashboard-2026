@@ -1,11 +1,13 @@
 """Mark the outlook's public-file review row pending after a rewrite.
 
-Every file under public/ needs a row in data_inputs/public_data_review.csv
-with the sha256 of the bytes a person reviewed. A rewrite of the outlook
-changes its bytes, so the command that writes it puts its row back to
-``pending``: it names who decides and by when (at most 14 days on, as
-scripts/check_public_data.py allows), and records the new sha256. It is
-not a sign-off. Every other row keeps its bytes.
+While sign-off is on (uk_budget_data/sign_off.py; the commands skip this
+while it is off), every file under public/ needs a row in
+data_inputs/public_data_review.csv with the sha256 of the bytes a person
+reviewed. A rewrite of the outlook changes its bytes, so the command that
+writes it puts its row back to ``pending``: it names who decides and by
+when (at most 14 days on, as scripts/check_public_data.py allows), and
+records the new sha256. It is not a sign-off. Every other row keeps its
+bytes.
 """
 
 import csv

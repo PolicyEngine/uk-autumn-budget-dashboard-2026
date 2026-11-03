@@ -154,3 +154,50 @@ def test_cli_refuses_without_a_manifest(tmp_path):
         )
         == 2
     )
+
+
+def test_a_year_classified_not_comparable_says_so_with_its_reason():
+    reason = "Allowance ends 5 April 2030; timing after the end"
+    doc = official_costings(
+        manifest(rate=entry(years=(2029, 2030))),
+        [
+            source(2029, -0.15, "post_behavioural"),
+            source(2030, 0.05, "post_behavioural"),
+        ],
+        [
+            MappingRow(
+                "rate",
+                "S",
+                "1",
+                not_comparable_years=("2030-31",),
+                reason=reason,
+                reviewer="vahid-ahmadi",
+            )
+        ],
+    )
+    assert doc["measures"]["rate"]["years"] == {
+        "2029": {"static_costing": None, "post_behavioural": -0.15},
+        "2030": {
+            "static_costing": None,
+            "post_behavioural": None,
+            "not_comparable": {"reason": reason},
+        },
+    }
+
+
+def test_a_measure_not_comparable_in_every_year_it_reports_is_left_out():
+    doc = official_costings(
+        manifest(rate=entry(years=(2030,))),
+        [source(2030, 0.05, "post_behavioural")],
+        [
+            MappingRow(
+                "rate",
+                "S",
+                "1",
+                not_comparable_years=("2030-31",),
+                reason="Timing",
+                reviewer="R",
+            )
+        ],
+    )
+    assert doc["measures"] == {}

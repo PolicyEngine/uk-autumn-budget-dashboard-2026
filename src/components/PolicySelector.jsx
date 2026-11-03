@@ -5,21 +5,26 @@ import "./PolicySelector.css";
 import { ListChecks } from "lucide-react";
 import PillChevron from "./PillChevron";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
+import { measureSummary, shortNameOf } from "../utils/policyDetails";
 import Tip, { InfoTip } from "./Tip";
 
 // The menu's order: measures that raise revenue, then those that cost it,
-// then the rest, each in the catalogue's order. One flat list: no group
-// labels or dividers.
+// then the rest, each in the catalogue's order. One flat list, not grouped
+// by category: most categories hold a single measure, so headings would
+// label one row each and double the list's height; each row's category
+// caption already says what grouping would.
 const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
 
 /**
  * The band's policies control: "Policies All 9 policies" or "Policies 3 of
  * 9 policies"; while the publication loads, "Policies" with no count; with
  * none published, "No policies yet", disabled, its reason in a Tip. Its
- * menu is one compact row per policy (checkbox, colour, short name, the
- * one-line summary in a Tip), one flat list in the catalogue's revenue
- * order, with Select all, Clear and Done.
+ * menu is one row per policy (checkbox, icon, short name over its category,
+ * the one-line summary in an info tip at the right), one flat list in the
+ * catalogue's revenue order, a chosen row tinted, with Select all, Clear and
+ * Done in a footer that stays in view. Up and down arrows (Home, End) move
+ * between rows, space ticks, Escape closes. On a phone it is a sheet from
+ * the foot of the screen.
  *
  * @param {Object} props
  * @param {boolean} [props.loading] - The publication is still loading
@@ -31,8 +36,11 @@ const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
  *   selection at once (Select all, Clear). One call, never a run of
  *   toggles: a toggle handler reads the selection of its render, so a run of
  *   them kept only the last (Select all and Clear changed one policy).
+ * @param {boolean} [props.single] - One policy at a time (no combined run
+ *   published yet): radio rows, the pill names the policy, no Select all
+ *   or Clear
  */
-function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, onPoliciesSet, disabledReason, loading = false, noneReason, inactiveReason }) {
+function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, onPoliciesSet, disabledReason, loading = false, noneReason, inactiveReason, single = false }) {
   const { displayable } = useMeasureCatalogue();
   const policies = (providedPolicies ?? displayable).filter(
     (policy) => policy.displayable !== false,
@@ -41,6 +49,19 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
   const presence = usePresence(isExpanded);
   const dropdownRef = useRef(null);
   const toggleRef = useRef(null);
+  const listRef = useRef(null);
+
+  // Up and down arrows move between the rows' checkboxes (Home and End to
+  // the ends); from the open pill, Down goes to the first row
+  const rowBoxes = () => [...(listRef.current?.querySelectorAll('input[type="checkbox"], input[type="radio"]') ?? [])];
+  const handleListKeyDown = (event) => {
+    const boxes = rowBoxes();
+    const at = boxes.indexOf(document.activeElement);
+    const to = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: boxes.length - 1 }[event.key];
+    if (to === undefined || boxes.length === 0) return;
+    event.preventDefault();
+    boxes[Math.max(0, Math.min(boxes.length - 1, at < 0 && event.key === "ArrowUp" ? boxes.length - 1 : to))].focus();
+  };
 
   // Close dropdown when clicking outside, or on Escape (focus back on the
   // pill if it was in the menu: WCAG 2.1.2 and 2.4.3)
@@ -90,7 +111,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
     else ids.filter((id) => selectedPolicies.includes(id) !== next.includes(id)).forEach((id) => onPolicyToggle(id));
   };
   const none = !loading && policies.length === 0;
-  const reason = disabledReason ?? (none ? noneReason ?? "No policies are published yet" : undefined);
+  const reason = disabledReason ?? (none ? noneReason ?? "We have published no policies yet" : undefined);
   const disabled = loading || Boolean(reason);
   // A view the policies do not change: the menu closes and does not open
   useEffect(() => {
@@ -98,6 +119,8 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
     if (inactiveReason) setIsExpanded(false);
   }, [inactiveReason]);
   const unit = (n) => (n === 1 ? "policy" : "policies");
+  // One at a time: the chosen policy's short name on the pill
+  const chosen = single ? policies.find((policy) => selectedPolicies.includes(policy.id)) : null;
 
   return (
     <div className="policy-selector" ref={dropdownRef}>
@@ -107,6 +130,13 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
         ref={toggleRef}
         className={`policy-selector-toggle band-control${inactiveReason ? " is-inactive" : ""}`}
         onClick={() => { if (!inactiveReason) setIsExpanded(!isExpanded); }}
+        onKeyDown={(event) => {
+          if (event.key !== "ArrowDown" || inactiveReason || disabled) return;
+          event.preventDefault();
+          if (!isExpanded) setIsExpanded(true);
+          // The rows render with the menu: focus the first once it is there
+          requestAnimationFrame(() => rowBoxes()[0]?.focus());
+        }}
         aria-expanded={isExpanded}
         aria-disabled={inactiveReason ? "true" : undefined}
         // The name starts with the pill's visible text, "Policies All 7
@@ -119,6 +149,8 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
             ? "Policies: loading"
             : none
             ? `No policies yet${reason ? `: ${reason}` : ""}`
+            : chosen
+            ? `Policies ${shortNameOf(chosen)}${inactiveReason ? `: ${inactiveReason}` : reason ? `: ${reason}` : ", choose one policy"}`
             : `Policies ${selectedCount === policies.length ? "All " : ""}${selectedCount}${selectedCount === policies.length ? "" : ` of ${policies.length}`} ${unit(policies.length)}${
                 inactiveReason ? `: ${inactiveReason}` : reason ? `: ${reason}` : ", choose which to include"
               }`
@@ -133,6 +165,12 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
             <span className="band-control-value">Policies</span>
           ) : none ? (
             <span className="band-control-value">No policies yet</span>
+          ) : chosen ? (
+            <>
+              <span className="band-control-label">Policies</span>
+              {" "}
+              <span className="band-control-value policy-selector-chosen">{shortNameOf(chosen)}</span>
+            </>
           ) : (
             <>
               <span className="band-control-label">Policies</span>
@@ -153,24 +191,32 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
       </Tip>
 
       {presence.mounted && (
+        // A phone's sheet sits over a scrim; a tap on it closes the sheet
+        <div className={`policy-selector-scrim ${popoverClass(presence.shown)}`} aria-hidden="true" onClick={() => setIsExpanded(false)} />
+      )}
+      {presence.mounted && (
         <div className={`policy-selector-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>
-          <div className="policy-list" role="group" aria-label="Policies">
+          {/* The sheet's own title on a phone, where the pill is out of sight */}
+          <div className="policy-selector-sheet-title" aria-hidden="true">Policies</div>
+          <div className="policy-list" role={single ? "radiogroup" : "group"} aria-label="Policies" ref={listRef} onKeyDown={handleListKeyDown}>
             {DIRECTION_ORDER.flatMap((direction) =>
               policies.filter((policy) => (DIRECTION_ORDER.includes(policy.direction) ? policy.direction : "neutral") === direction),
             ).map((policy) => {
-              const summary = policyDetailsFor(policy)?.summary;
+              const summary = measureSummary(policy);
+              const checked = selectedPolicies.includes(policy.id);
               return (
                 // The info button sits outside the label, so it never ticks the box
-                <div key={policy.id} className="policy-item">
+                <div key={policy.id} className={checked ? "policy-item is-selected" : "policy-item"}>
                   <label className="policy-item-label">
                     <input
-                      type="checkbox"
-                      checked={selectedPolicies.includes(policy.id)}
+                      type={single ? "radio" : "checkbox"}
+                      name={single ? "policy-selector-one" : undefined}
+                      checked={checked}
                       onChange={() => onPolicyToggle(policy.id)}
                     />
-                    <MeasureRowLabel tip={false} measure={policy} name={shortNameOf(policy)} nameClassName="policy-selector-name" />
+                    <MeasureRowLabel tip={false} caption measure={policy} name={shortNameOf(policy)} nameClassName="policy-selector-name" />
                   </label>
-                  {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
+                  {summary && <InfoTip wide content={summary} label={`About ${shortNameOf(policy)}`} />}
                 </div>
               );
             })}
@@ -179,7 +225,10 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
               screen, so it needs its own way out */}
           <div className="policy-selector-actions">
             {/* The button just used goes disabled, so focus moves to the
-                other one rather than dropping to the page */}
+                other one rather than dropping to the page. One at a time:
+                neither (nothing to select all of, nothing to clear) */}
+            {!single && (
+            <>
             <button
               ref={selectAllRef}
               type="button"
@@ -204,6 +253,8 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
             >
               Clear
             </button>
+            </>
+            )}
             <button type="button" className="policy-selector-done" onClick={() => setIsExpanded(false)}>
               Done
             </button>

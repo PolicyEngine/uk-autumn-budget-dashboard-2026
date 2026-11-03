@@ -25,10 +25,13 @@ The gates, in order:
    known fix lands (``uk_budget_data.model_limits``, recorded in its
    receipt) may be staged or provisional, with its figure, but is never
    approved.
-4c. **Hand-written modifiers.** While a data limit is active, an artifact
-   whose receipt binds a hand-written modifier on either side is held at
-   every figure level until two people attest its exact receipt
-   (``attestations``); a release never waives any other check.
+4c. **Hand-written modifiers.** While sign-off is on
+   (``uk_budget_data.sign_off``, off since 28 October 2026) and a data
+   limit is active, an artifact whose receipt binds a hand-written modifier
+   on either side is held at every figure level until two people attest
+   its exact receipt (``attestations``); a release never waives any other
+   check. With sign-off off nothing is held, and an attestation an entry
+   recorded earlier is kept but not checked.
 4d. **The floor of survey households** (``disclosure_floor``). A
    provisional or approved artifact with household tables must have been
    held to it: its receipt records the check, so one generated before the
@@ -58,6 +61,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from uk_budget_data import sign_off
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import (
     COMBINED_PREFIX,
@@ -95,7 +99,10 @@ from uk_budget_data.publication.reconcile import (
 )
 from uk_budget_data.publication.responsiveness import RESPONSIVE
 from uk_budget_data.publication.tables import TABLES
-from uk_budget_data.publication.validate import table_problems
+from uk_budget_data.publication.validate import (
+    table_problems,
+    withholding_problems,
+)
 
 TREASURY_INPUTS = Path("data_inputs/treasury")
 # TODO(W5): require household receipts once the deployed-route checker
@@ -202,7 +209,7 @@ def binding_problems(
             )
     elif entry.measures is not None or entry.member_outputs_sha256 is not None:
         problems.append("a measure's entry names combined-run members")
-    if entry.attestation is not None:
+    if entry.attestation is not None and sign_off.REQUIRED:
         try:
             validate_attestation(document, entry.attestation.model_dump())
         except (ValueError, TypeError) as error:
@@ -569,34 +576,35 @@ def gate_problems(
 
 
 def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
-    """Why an artifact may not hold ``level`` for the floor of survey
-    households. Its decile tables still hold cells under it (as generation
-    writes a run with one unless ``UK_BUDGET_THIN_DECILES=refuse``, recorded
-    by ``disclosure_floor.floor_record``): no level takes it, not even
-    staged, so ``publish review-rows`` deletes it before anything is
-    committed. Or, to be provisional or approved, its household tables were
-    never held to it: its receipt records no check, as for one generated
-    before the floor. No acknowledgement lifts either: such a cell rests on
-    too few cases to publish."""
+    """Check the floor and the receipt's withholding at every figure level.
+
+    Published thin decile cells are refused even at staging. Withheld
+    rows must be present and blank, with their complementary all row.
+    Provisional and approved household tables also need a recorded floor
+    check, so artifacts made before the floor must be regenerated.
+    """
     floor = dashboard.get("disclosure_floor")
+    problems = withholding_problems(tables, floor)
     if floor is None:
         if level in (m.PROVISIONAL, m.APPROVED) and (
             tables.keys() & set(FLOOR_TABLES)
         ):
-            return [
+            return problems + [
                 "its receipt records no check of its household tables "
                 "against the floor of survey households, as for an artifact "
                 "generated before the floor: regenerate it"
             ]
-        return []
+        return problems
+    if not isinstance(floor, dict):
+        return problems
     if not floor.get("thin_cells_in_tables"):
-        return []
+        return problems
     cells = "; ".join(
         f"{cell['table']} {cell['year']} ({', '.join(cell['groups'])})"
         for cell in floor.get("thin_cells") or []
         if cell.get("table") in DECILE_TABLES
     )
-    return [
+    return problems + [
         "its tables hold cells resting on fewer than "
         f"{floor.get('survey_households')} survey households: {cells}"
     ]
@@ -901,8 +909,12 @@ def check(
     data_root: Path,
     inputs: Path = TREASURY_INPUTS,
     check_flat_index: bool = True,
+    code_root: Optional[Path] = None,
 ) -> list[str]:
     """Re-run every gate over every entry the page lists.
+
+    ``code_root``, a checkout with full history, adds the area code and
+    dataset checks ``publish index`` makes (``release_index.area_problems``).
 
     Returns one line per failure; an empty list means the manifest may be
     published as it stands.
@@ -918,7 +930,9 @@ def check(
         data_root
     )
     if check_flat_index:
-        failures += release_index_problems(data_root, manifest)
+        failures += release_index_problems(
+            data_root, manifest, code_root=code_root
+        )
     for key, entry in sorted(manifest.entries().items()):
         if entry.status not in m.LISTED:
             continue

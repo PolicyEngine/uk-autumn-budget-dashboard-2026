@@ -1,5 +1,5 @@
 /**
- * The Household impact view's API: one household, one year, before and after
+ * The Household calculator view's API: one household, one year, before and after
  * the selected policies. Everything that knows the API's shape is in this
  * module (the URL, the request, the errors and the response), so a change
  * to the backend's contract is a change here only.
@@ -23,6 +23,7 @@
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
+import { localAuthorityKey } from "./localAuthorities";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -36,6 +37,33 @@ export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
  */
 export const REQUEST_TIMEOUT_MS = 90_000;
 export const DETAIL_TIMEOUT_MS = 200_000;
+
+/**
+ * The longest the page waits for the detail service (Modal) before asking
+ * Cloud Run instead. Modal ends a web request that has sent nothing for
+ * 150 s, and the page then got an empty answer (27 October 2026, test app
+ * from cold: about 150 s, then nothing). A cold full breakdown there took
+ * 63.5 s (#259), so 100 s leaves room and stops the page well before that.
+ */
+export const MODAL_TIMEOUT_MS = 100_000;
+
+/**
+ * Retrying a service that may be starting up (a cold Modal container, a
+ * Cloud Run instance being replaced): when an answer is empty, a 5xx, a
+ * timeout or never arrives (`isStartingUp`), the request is sent again
+ * after `delayMs` (or the service's own Retry-After, up to
+ * `maxRetryAfterMs`), at most `maxRetries` times, all within `budgetMs`
+ * from the first attempt. A retry is not started with less than
+ * `minAttemptMs` of the budget left. A slow failure (a timeout) leaves room
+ * for one retry; a fast one (a 503 straight away) for up to three.
+ */
+export const RETRY_POLICY = Object.freeze({
+  delayMs: 5_000,
+  maxRetryAfterMs: 20_000,
+  maxRetries: 3,
+  budgetMs: 150_000,
+  minAttemptMs: 10_000,
+});
 
 /** The year the wizard's salary is entered for; the server grows it. */
 export const SALARY_YEAR = 2026;
@@ -67,6 +95,7 @@ export const FIELD_LABELS = {
   petrol_spending: "Petrol spending",
   diesel_spending: "Diesel spending",
   electricity_spending: "Electricity spending",
+  bus_fare_spending: "Bus fares",
   salary_sacrifice_pension_contributions: "Salary sacrifice",
   student_loan_plan: "Student loan plan",
   council_tax_band: "Council tax band",
@@ -77,6 +106,10 @@ export const FIELD_LABELS = {
   in_education: "In full-time education",
   state_pension: "State Pension",
   partner_state_pension: "Partner's State Pension",
+  self_employment_receipts: "Self-employment or side income",
+  self_employment_expenses: "Its allowable expenses",
+  is_carer: "Carer",
+  care_hours_per_week: "Hours of care",
 };
 
 /**
@@ -118,20 +151,74 @@ export function householdDetailApiUrl() {
   return url ? url.trim() : null;
 }
 
-/** An error the Household impact view can explain: `kind` says which. */
+/** An error the Household calculator view can explain: `kind` says which. */
 export class HouseholdApiError extends Error {
   /**
    * @param {"config"|"timeout"|"network"|"invalid"|"server"} kind
    * @param {string} message
-   * @param {{ status?: number, fields?: Array<{field: string, label: string, message: string}> }} [extra]
+   * @param {{ status?: number, fields?: Array<{field: string, label: string, message: string}>, empty?: boolean, retryAfterMs?: number|null }} [extra]
    */
-  constructor(kind, message, { status, fields = [] } = {}) {
+  constructor(kind, message, { status, fields = [], empty = false, retryAfterMs = null } = {}) {
     super(message);
     this.name = "HouseholdApiError";
     this.kind = kind;
     this.status = status;
     this.fields = fields;
+    // The service answered, but with nothing the page can read
+    this.empty = empty;
+    // How long the service asked the page to wait before asking again
+    this.retryAfterMs = retryAfterMs;
   }
+}
+
+/**
+ * Whether an error looks like a service still starting up, so asking again
+ * shortly may well succeed: a timeout, no connection (a cold service's
+ * gateway may answer without CORS headers, which the browser reports as a
+ * network failure), an empty or unreadable answer, a 502, 503 or 504, or
+ * a 429 (Cloud Run when it cannot scale fast enough for a burst).
+ * Not an answer the API refused (400, 422), a missing service (404), a
+ * 500 the API explained (a calculation error: asking again gets the same),
+ * a missing URL, or an answer from another model version.
+ */
+const STARTING_STATUSES = new Set([429, 502, 503, 504]);
+export function isStartingUp(error) {
+  if (!(error instanceof HouseholdApiError)) return false;
+  if (error.kind === "timeout" || error.kind === "network") return true;
+  if (error.kind !== "server") return false;
+  return error.empty || error.status === undefined || STARTING_STATUSES.has(error.status);
+}
+
+/**
+ * The wait a service asked for, in ms: its Retry-After header (seconds; a
+ * cross-origin page reads it only when the service exposes it) or the
+ * body's `retry_after_seconds`; null when it asked for none.
+ */
+function retryAfterOf(response, payload) {
+  const header = Number.parseFloat(response.headers?.get?.("retry-after") ?? "");
+  if (Number.isFinite(header) && header >= 0) return header * 1000;
+  const body = payload?.retry_after_seconds;
+  return typeof body === "number" && Number.isFinite(body) && body >= 0 ? body * 1000 : null;
+}
+
+/** Wait `ms`, or reject at once if `signal` aborts. */
+function pause(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const aborted = () => signal.reason ?? new DOMException("The operation was aborted.", "AbortError");
+    if (signal?.aborted) {
+      reject(aborted());
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(aborted());
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 /** The oldest age the form takes for a child (policyengine-uk's
@@ -174,6 +261,17 @@ export function childrenForRequest(inputs) {
 }
 
 const RENTING = new Set(["RENT_PRIVATELY", "RENT_FROM_COUNCIL", "RENT_FROM_HA"]);
+
+// The regions outside the £2 bus fare cap: London, and the nations outside
+// England (the API's household_impact.BUS_FARE_CAP_REGIONS)
+const OUTSIDE_BUS_FARE_CAP = new Set(["LONDON", "WALES", "SCOTLAND", "NORTHERN_IRELAND"]);
+/** Whether a region is in England outside London, where the £2 bus fare cap applies. */
+export const inBusFareCapArea = (region) => Boolean(region) && !OUTSIDE_BUS_FARE_CAP.has(region);
+/** The fiscal years the £2 bus fare cap credits anything in (2026-27 and 2027-28). */
+export const BUS_FARE_CAP_YEARS = [2026, 2027];
+/** The bus fares sent: as entered, in England outside London; else 0 (not sent). */
+export const busFares = (inputs) =>
+  inBusFareCapArea(inputs.region) && Number(inputs.bus_fare_spending_per_year) > 0 ? Number(inputs.bus_fare_spending_per_year) : 0;
 export const isRenting = (tenure) => RENTING.has(tenure);
 
 /**
@@ -185,6 +283,7 @@ export const isRenting = (tenure) => RENTING.has(tenure);
 export function buildHouseholdRequest(inputs, { year, policies, include = HEADLINE_INCLUDE }) {
   const children = childrenForRequest(inputs);
   const renting = isRenting(inputs.tenure);
+  const localAuthority = inputs.council ? localAuthorityKey(inputs.council) : null;
   return {
     year,
     policies: [...policies],
@@ -196,6 +295,11 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       partner_employment_income: inputs.has_partner ? inputs.partner_salary : 0,
       children,
       region: inputs.region,
+      // The council picked, as policyengine-uk's LocalAuthority key: the API
+      // estimates Council Tax from its own Band D. Only once picked, so a
+      // request without one (every example's) is as it was, and its key
+      // (and precomputed answer) still matches
+      ...(localAuthority ? { local_authority: localAuthority } : {}),
       claims_universal_credit: Boolean(inputs.claims_universal_credit),
       tenure: inputs.tenure,
       // Left as prefilled (null), the region's average private rent
@@ -210,8 +314,9 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       electricity_spending: inputs.electricity_spending_per_year ?? DEFAULT_SPENDING.electricity,
       salary_sacrifice_pension_contributions: inputs.salary_sacrifice_per_year,
       student_loan_plan: inputs.student_loan_plan,
-      // The API estimates Council Tax from the band and the region's average
-      // Band D (none in Northern Ireland, which has domestic rates)
+      // The API estimates Council Tax from the band and the council's own
+      // Band D, or the region's average until a council is picked (none in
+      // Northern Ireland, which has domestic rates)
       council_tax_band: inputs.council_tax_band,
       // Childcare only counts with children
       monthly_childcare: children.length ? inputs.monthly_childcare : 0,
@@ -226,6 +331,25 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       atStatePensionAge(inputs.partner_age, year)
         ? { partner_state_pension: inputs.partner_state_pension_per_year }
         : {}),
+      // Caring only for a carer: anyone else's request is as it was before
+      // the form asked, so its key (and a precomputed answer) still matches
+      ...(inputs.is_carer ? { is_carer: true, care_hours_per_week: careHours(inputs) } : {}),
+      // Bus fares only when answered, where the £2 cap reaches (England
+      // outside London), likewise
+      ...(busFares(inputs) ? { bus_fare_spending: busFares(inputs) } : {}),
+      // Cash ISA payments only when answered, likewise
+      ...(inputs.cash_isa_payments_per_year > 0 ? { cash_isa_subscriptions: inputs.cash_isa_payments_per_year } : {}),
+      // Losses on higher-stake gaming machines only when answered, likewise
+      ...(inputs.higher_stake_machine_losses_per_year > 0
+        ? { higher_stake_machine_losses: inputs.higher_stake_machine_losses_per_year }
+        : {}),
+      // Self-employment only when answered, likewise
+      ...(selfEmployed(inputs)
+        ? {
+            self_employment_receipts: inputs.self_employment_receipts_per_year || 0,
+            self_employment_expenses: inputs.self_employment_expenses_per_year || 0,
+          }
+        : {}),
     },
     include: [...include],
   };
@@ -236,6 +360,19 @@ export const monthlyRent = (inputs) =>
   typeof inputs.monthly_rent === "number" && Number.isFinite(inputs.monthly_rent)
     ? inputs.monthly_rent
     : regionalRent(inputs.region);
+
+/** A carer's hours of care a week: as entered, else the form's 35. */
+export const careHours = (inputs) =>
+  typeof inputs.care_hours_per_week === "number" && Number.isFinite(inputs.care_hours_per_week)
+    ? inputs.care_hours_per_week
+    : DEFAULT_CARE_HOURS;
+
+/** Whether the answers give self-employment receipts or expenses. */
+export const selfEmployed = (inputs) =>
+  Boolean(inputs.self_employment_receipts_per_year) || Boolean(inputs.self_employment_expenses_per_year);
+
+/** The Carer's Allowance minimum hours of care a week, the form's default. */
+export const DEFAULT_CARE_HOURS = 35;
 
 const statePensionEntered = (value) => typeof value === "number" && Number.isFinite(value);
 
@@ -279,7 +416,7 @@ export async function postHouseholdImpact(
   if (!url) {
     throw new HouseholdApiError(
       "config",
-      `${HOUSEHOLD_API_VAR} is not set, so this build cannot calculate a household.`,
+      `This build has no ${HOUSEHOLD_API_VAR}, so it cannot calculate a household.`,
     );
   }
   const doFetch = fetchImpl ?? globalThis.fetch;
@@ -325,10 +462,12 @@ export async function postHouseholdImpact(
     if (!payload || typeof payload !== "object" || !payload.net_income) {
       throw new HouseholdApiError("server", "The calculation service sent an answer this page cannot read.", {
         status: response.status,
+        empty: true,
       });
     }
     return payload;
   }
+  const retryAfterMs = retryAfterOf(response, payload);
   const detail = payload?.detail;
   if (response.status === 422 && Array.isArray(detail)) {
     const fields = fieldErrors(detail);
@@ -347,11 +486,48 @@ export async function postHouseholdImpact(
   if (response.status === 504 || response.status === 408) {
     throw new HouseholdApiError("timeout", "The calculation took too long.", {
       status: response.status,
+      retryAfterMs,
     });
   }
   throw new HouseholdApiError("server", `The calculation service answered with an error (${response.status}).`, {
     status: response.status,
+    empty: payload === null,
+    retryAfterMs,
   });
+}
+
+/**
+ * postHouseholdImpact, asked again while the service looks to be starting
+ * up (`isStartingUp`, `RETRY_POLICY`). The same URL and body each time, so
+ * an answer is checked exactly as a first answer would be: a retry never
+ * lets in an answer from another model version. Rejects with the last
+ * error once the retries or the time budget are used up, or at once for an
+ * error a retry would not change.
+ *
+ * @param {Object} body
+ * @param {Object} [options] - postHouseholdImpact's options, plus `retry`
+ *   (overrides of RETRY_POLICY) and `onRetry(error, attempt)`, called
+ *   before each wait, so the page can say the service is starting up
+ */
+export async function postHouseholdImpactRetrying(body, { retry = {}, onRetry = null, ...options } = {}) {
+  const policy = { ...RETRY_POLICY, ...retry };
+  const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const started = Date.now();
+  const left = () => policy.budgetMs - (Date.now() - started);
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await postHouseholdImpact(body, {
+        ...options,
+        timeoutMs: attempt === 0 ? timeoutMs : Math.max(1, Math.min(timeoutMs, left())),
+      });
+    } catch (error) {
+      if (options.signal?.aborted || !isStartingUp(error) || attempt >= policy.maxRetries) throw error;
+      const wait = Math.min(policy.maxRetryAfterMs, Math.max(policy.delayMs, error.retryAfterMs ?? 0));
+      if (left() - wait < policy.minAttemptMs) throw error;
+      onRetry?.(error, attempt + 1);
+      await pause(wait, options.signal);
+    }
+  }
 }
 
 const num = (value) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
@@ -380,7 +556,8 @@ function normaliseByPolicy(raw) {
       change: num(row.change),
       status: row.status === "not_affected" ? "not_affected" : "affected",
       // A note where the number alone would mislead: "employer_cost" (£0 by
-      // construction) or "if_received" (the eligible amount)
+      // construction), "if_received" (the eligible amount) or "assumption"
+      // (an amount that rests on what the household would have done)
       note: row.note ?? null,
       noteKind: row.note_kind ?? null,
     })),
@@ -737,26 +914,40 @@ export const askAllAtOnce = () => householdDetailApiUrl() !== null;
 /**
  * A detail part (sweep or split by policy): from the detail URL when the
  * build has one, falling back to the main API if that service cannot be
- * reached, errs, times out, refuses the request (an older build may not know
- * a measure) or answers with something `accept` refuses (not the headline's
- * build). The main API's answer is returned as it is: the caller checks it
- * again.
+ * reached, errs, times out (within MODAL_TIMEOUT_MS), refuses the request
+ * (an older build may not know a measure) or answers with something
+ * `accept` refuses (not the headline's build). The main API's answer is
+ * returned as it is: the caller checks it again.
+ *
+ * The detail URL is not asked twice: a failure there goes to the main API
+ * at once, which is quicker than waiting for a cold service. With `retry`
+ * (RETRY_POLICY's overrides, or `true` for the policy as it is) the main
+ * API is asked again while it looks to be starting up.
  *
  * @param {Object} body
  * @param {Object} [options] - postHouseholdImpact's options, plus
- *   `accept(raw) => boolean` for the detail URL's answer, and `detail:
- *   false` to ask the main API alone (the caller knows the detail URL's
- *   answer could not be accepted, so waiting for it would only add its time)
+ *   `accept(raw) => boolean` for the detail URL's answer, `detail: false`
+ *   to ask the main API alone (the caller knows the detail URL's answer
+ *   could not be accepted, so waiting for it would only add its time), and
+ *   `retry` and `onRetry` as postHouseholdImpactRetrying takes them
  */
-export async function postHouseholdDetail(body, { accept = null, detail = true, ...options } = {}) {
+export async function postHouseholdDetail(body, { accept = null, detail = true, retry = null, onRetry = null, ...options } = {}) {
+  const main = () =>
+    retry
+      ? postHouseholdImpactRetrying(body, { ...options, retry: retry === true ? {} : retry, onRetry })
+      : postHouseholdImpact(body, options);
   const detailUrl = detail ? householdDetailApiUrl() : null;
-  if (!detailUrl) return postHouseholdImpact(body, options);
+  if (!detailUrl) return main();
   try {
-    const raw = await postHouseholdImpact(body, { ...options, url: detailUrl });
+    const raw = await postHouseholdImpact(body, {
+      ...options,
+      timeoutMs: Math.min(options.timeoutMs ?? REQUEST_TIMEOUT_MS, MODAL_TIMEOUT_MS),
+      url: detailUrl,
+    });
     if (!accept || accept(raw)) return raw;
   } catch (error) {
     if (options.signal?.aborted) throw error;
     if (!(error instanceof HouseholdApiError)) throw error;
   }
-  return postHouseholdImpact(body, options);
+  return main();
 }

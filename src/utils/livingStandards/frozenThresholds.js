@@ -1,39 +1,70 @@
-// Frozen thresholds against pay: the personal allowance, the higher rate
-// threshold and the Plan 2 student loan repayment threshold under current
-// law, against the OBR's average earnings, each indexed to 2026-27 = 100.
-// The thresholds are the current-law ("before") values the Policies tab
-// reads (public/data/policy_parameters.json); earnings is the OBR March
-// 2026 growth in the outlook file (public/data/living_standards_outlook.json).
+// Frozen thresholds against pay: the personal allowance and the higher
+// rate threshold under current law, each relative to the OBR's average
+// earnings (2026-27 = 100), and the trading allowance at the level the
+// Budget sets, relative to earnings from its first year: a threshold that
+// keeps pace with pay stays at 100, a frozen one falls.
+// The income tax thresholds are the current-law values policy_parameters.json
+// carries in its current_law block (uk-budget-data policy-table, the
+// engine's own parameters); the trading allowance is the same file's
+// Budget measure row of that name, its "after" values; earnings is the OBR
+// October 2026 growth every simulation runs on
+// (src/uk_budget_data/forecast/obr_october_2026.json: the detailed
+// forecast tables, economy, Table 1.6).
 
+import OCTOBER_2026 from "../../uk_budget_data/forecast/obr_october_2026.json";
+import { fittedAxis } from "../chartTheme";
 import { fyLabel, formatOneDp } from "./outlook";
 
 export const BASE_YEAR = 2026;
 
-// Each threshold: the parameter row label it is read from, in whichever
-// published entry carries it
+// Each threshold: the label of the current_law row it is read from
 export const THRESHOLDS = [
   { key: "personal_allowance", row: "Personal allowance" },
   { key: "higher_rate", row: "Higher rate threshold" },
-  { key: "plan_2", row: "Plan 2 repayment threshold" },
 ];
+
+// The trading allowance: the label of the measure row it is read from
+// (whichever published measure carries it; no measure id is named here)
+export const TRADING = { key: "trading_allowance", row: "Trading allowance" };
+
+/**
+ * The trading allowance the Budget sets, from its measure's row: { start,
+ * values } with `start` the first year it differs from current law (the
+ * year the new level takes effect) and `values` its level by fiscal year
+ * from then; null without the measure.
+ */
+export function tradingAllowance(document) {
+  const found = Object.values(document?.measures ?? {})
+    .flatMap((m) => m?.rows ?? [])
+    .find((r) => r.label === TRADING.row);
+  const points = (found?.points ?? []).filter((p) => Number.isFinite(p.year) && Number.isFinite(p.after));
+  const first = points.find((p) => p.after !== p.before);
+  if (!first) return null;
+  return { start: first.year, values: Object.fromEntries(points.filter((p) => p.year >= first.year).map((p) => [p.year, p.after])) };
+}
 
 /** A threshold's current-law value by fiscal year (start year), or null if absent. */
 export function thresholdValues(document, { row }) {
-  const found = Object.values(document?.measures ?? {})
-    .flatMap((entry) => entry?.rows ?? [])
-    .find((r) => r.label === row && r.points?.length);
+  const found = (document?.current_law?.rows ?? []).find((r) => r.label === row && r.points?.length);
   if (!found?.points?.length) return null;
   return Object.fromEntries(found.points.filter((p) => Number.isFinite(p.before)).map((p) => [p.year, p.before]));
 }
 
+const EARNINGS_PARAMETER = "gov.economic_assumptions.yoy_growth.obr.average_earnings";
+
 /**
- * The OBR earnings growth before the measures, as { year: rate } (calendar
- * years, rate a fraction), or null.
+ * The OBR October 2026 earnings growth the runs use, as { year: rate }
+ * (calendar years, rate a fraction), from the forecast file's
+ * "YYYY-01-01.YYYY-12-31" keys; null without it.
  */
-export function earningsGrowth(outlook) {
-  const series = outlook?.forecast?.sections?.flatMap((s) => s.series).find((s) => s.key === "earnings");
-  if (!series?.pre?.length) return null;
-  return Object.fromEntries(series.pre.filter((p) => Number.isFinite(p.value)).map((p) => [Number(p.year), p.value]));
+export function earningsGrowth(forecast = OCTOBER_2026) {
+  const values = forecast?.parameter_changes?.[EARNINGS_PARAMETER]?.values;
+  if (!values) return null;
+  return Object.fromEntries(
+    Object.entries(values)
+      .map(([period, value]) => [Number(period.slice(0, 4)), value])
+      .filter(([year, value]) => Number.isFinite(year) && Number.isFinite(value)),
+  );
 }
 
 /**
@@ -50,47 +81,87 @@ export function earningsIndex(growth) {
 
 /**
  * One row per fiscal year (year: its start), 2026-27 to the last year of
- * the earnings index, each line indexed to 2026-27 = 100; null when the
- * data is missing.
+ * the earnings index: `earnings`, average earnings indexed to 2026-27 =
+ * 100, and each threshold relative to average earnings (its own index
+ * divided by the earnings index, times 100), so a threshold that keeps
+ * pace with pay stays at 100; null when the data is missing. The trading
+ * allowance is indexed to its own first year, both it and earnings, so its
+ * line starts at 100 there and is null before (and absent without the
+ * measure).
  */
-export function thresholdRows(document, outlook) {
-  const growth = earningsGrowth(outlook);
+export function thresholdRows(document, growth = earningsGrowth()) {
   const values = THRESHOLDS.map((t) => [t.key, thresholdValues(document, t)]);
   if (!growth || values.some(([, v]) => !v?.[BASE_YEAR])) return null;
   const earnings = earningsIndex(growth);
   const years = Object.keys(earnings).map(Number).sort((a, b) => a - b);
   if (years.length < 2) return null;
+  const trading = tradingAllowance(document);
+  const tradingAt = (year) => {
+    const v = trading?.values;
+    if (!v || year < trading.start || v[year] == null || earnings[trading.start] == null) return null;
+    return (100 * (v[year] / v[trading.start])) / (earnings[year] / earnings[trading.start]);
+  };
   return years.map((year) => ({
     year,
     earnings: earnings[year],
-    ...Object.fromEntries(values.map(([key, v]) => [key, v[year] != null ? (100 * v[year]) / v[BASE_YEAR] : null])),
+    ...Object.fromEntries(
+      values.map(([key, v]) => [key, v[year] != null ? (100 * ((100 * v[year]) / v[BASE_YEAR])) / earnings[year] : null]),
+    ),
+    ...(trading ? { [TRADING.key]: tradingAt(year) } : {}),
   }));
 }
 
-const pctHigher = (index) => `${formatOneDp(index - 100)}%`;
-
-/** The card's sentence, from the last row: earnings' rise against the thresholds held at 2026-27's level. */
-export function thresholdsSentence(rows) {
-  const last = rows?.at(-1);
-  if (!last) return null;
-  const frozen = [
-    last.personal_allowance != null && Math.abs(last.personal_allowance - 100) < 1e-9 && "the personal allowance",
-    last.higher_rate != null && Math.abs(last.higher_rate - 100) < 1e-9 && "the higher rate threshold",
-  ].filter(Boolean);
-  const lead = `By ${fyLabel(last.year)} average earnings are ${pctHigher(last.earnings)} higher than in ${fyLabel(BASE_YEAR)}`;
-  if (frozen.length === 2) return `${lead}, while the personal allowance and higher rate threshold are unchanged.`;
-  if (frozen.length === 1) return `${lead}, while ${frozen[0]} is unchanged.`;
-  return `${lead}, against ${pctHigher(last.personal_allowance)} for the personal allowance.`;
+/** Whether the personal allowance and higher rate threshold move together in every year (both frozen), so one line draws both. */
+export function sameThresholds(rows) {
+  return Boolean(rows?.length) && rows.every((r) => r.personal_allowance != null && Math.abs(r.personal_allowance - (r.higher_rate ?? NaN)) < 1e-9);
 }
 
-/** An axis for index values: whole steps of 2 (or 5 over a wider range) around 100. */
-export function indexAxis(values) {
-  const lo = Math.min(100, ...values);
-  const hi = Math.max(100, ...values);
-  const step = hi - lo > 20 ? 5 : 2;
-  const from = Math.floor((lo - 0.5) / step) * step;
-  const to = Math.ceil(hi / step) * step;
-  const ticks = [];
-  for (let v = from; v <= to + 1e-9; v += step) ticks.push(v);
-  return { domain: [from, to], ticks };
+const change = (relative) => `${formatOneDp(Math.abs(relative - 100))}% ${relative < 100 ? "less" : "more"}`;
+
+const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
+
+/**
+ * The card's headline, one short line from the last row: the thresholds
+ * drawn (the income tax thresholds and the trading allowance, each from
+ * its own start) worth about N% less (or more) relative to pay, N their
+ * average gap from 100 to the nearest whole per cent. Null without the
+ * income tax thresholds.
+ */
+export function thresholdsHeadline(rows) {
+  const last = rows?.at(-1);
+  if (last?.personal_allowance == null || last.higher_rate == null) return null;
+  const values = [last.personal_allowance, last.higher_rate, last[TRADING.key]].filter((v) => v != null);
+  const gap = values.reduce((sum, v) => sum + (v - 100), 0) / values.length;
+  const size = Math.round(Math.abs(gap));
+  if (size === 0) return `By ${fyLabel(last.year)}, the thresholds roughly keep pace with pay.`;
+  return `By ${fyLabel(last.year)}, frozen thresholds are worth about ${size}% ${gap < 0 ? "less" : "more"} relative to pay.`;
+}
+
+/**
+ * The card's full sentence (in About this chart's "What it shows"), from
+ * the last row: what the income tax thresholds
+ * are worth against average earnings, then the trading allowance (with
+ * its level and first year, from `trading`) when it has a line.
+ */
+export function thresholdsSentence(rows, trading = null) {
+  const last = rows?.at(-1);
+  if (last?.personal_allowance == null || last.higher_rate == null) return null;
+  const tail = `relative to average earnings than in ${fyLabel(BASE_YEAR)}`;
+  const income = sameThresholds(rows)
+    ? `By ${fyLabel(last.year)} the personal allowance and higher rate threshold are worth ${change(last.personal_allowance)} ${tail}`
+    : `By ${fyLabel(last.year)} the personal allowance is worth ${change(last.personal_allowance)} and the higher rate threshold ${change(last.higher_rate)} ${tail}`;
+  const ta = last[TRADING.key];
+  if (ta == null || !trading || last.year <= trading.start) return `${income}.`;
+  return `${income}; the trading allowance, ${pounds(trading.values[trading.start])} from ${fyLabel(trading.start)}, is worth ${change(ta)} than in its first year.`;
+}
+
+/**
+ * The y axis of values relative to average earnings: fitted to the gaps
+ * from 100 (chartTheme.fittedAxis), with a step of room above 100 so the
+ * reference line is not the plot's top edge.
+ */
+export function relativeAxis(values) {
+  const gaps = values.filter((v) => v != null && Number.isFinite(v)).map((v) => v - 100);
+  const { domain, ticks } = fittedAxis([...gaps, 0.5]);
+  return { domain: domain.map((v) => v + 100), ticks: ticks.map((v) => v + 100) };
 }

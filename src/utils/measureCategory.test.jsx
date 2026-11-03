@@ -15,7 +15,13 @@ const CURRENT = [
   ["road_fuel_vat_cut", "VAT cut on road fuel", "VAT on petrol and diesel falls from 20% to 15%", "VAT", "receipt"],
   ["state_pension_income_tax_protection", "State Pension income tax protection", "people over State Pension age get an income tax allowance", "Income tax", "wallet"],
   ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "Candidate measure. The income tax personal allowance stays at £12,570 and the basic rate band at £37,700 (a higher rate threshold of £50,270) for one more year. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold.", "Income tax", "wallet"],
+  ["lha_unfreeze_2027", "Local Housing Allowance unfrozen", "Candidate measure. From April 2027 Local Housing Allowance rates are no longer frozen", "Benefits", "piggy"],
+  ["employer_nics_secondary_threshold_raise", "Employer NI threshold raised", "Candidate measure. From 6 April 2027 the threshold above which employers pay Class 1 National Insurance goes back", "National Insurance", "briefcase"],
+  ["unearned_income_rates_up", "Dividend, savings and property income tax up", "Candidate measure. From 6 April 2027 the income tax rates on dividends, savings income and property income each rise", "Income tax", "wallet"],
+  ["property_income_rates_up", "Property income tax rates up", "From 6 April 2027 the income tax rates on property income rise", "Income tax", "wallet"],
+  ["savings_income_rates_up", "Savings income tax rates up", "From 6 April 2027 the income tax rates on savings income rise", "Income tax", "wallet"],
   ["warm_home_discount_top_up", "Warm Home Discount top-up", "£100 more to each household receiving Universal Credit, Pension Credit", "Energy", "flame"],
+  ["bus_fare_cap_2027", "Single bus fares capped at £2", "Single bus fares on participating services in England outside London are capped at £2 instead of £3", "Transport", "compass"],
 ];
 
 describe("measureCategoryOf", () => {
@@ -52,15 +58,17 @@ describe("measureCategoryOf", () => {
 });
 
 describe("MeasureRowLabel", () => {
-  it("draws an unknown measure with an icon, its name and a category, without crashing", () => {
+  it("draws an unknown measure with an icon and its name, without crashing; the category only on request", () => {
     const { container } = render(<MeasureRowLabel measure={{ id: "budget_2026_new_levy", name: "New levy" }} />);
     expect(container.querySelector(".mrl-icon svg")).toBeTruthy();
     expect(container.querySelector(".mrl-name")).toHaveTextContent("New levy");
-    expect(container.querySelector(".mrl-caption")).toHaveTextContent("Business");
+    expect(container.querySelector(".mrl-caption")).toBeNull();
+    const { container: withCaption } = render(<MeasureRowLabel caption measure={{ id: "budget_2026_new_levy", name: "New levy" }} />);
+    expect(withCaption.querySelector(".mrl-caption")).toHaveTextContent("Business");
   });
 
   it("drops the caption in its compact form", () => {
-    const { container } = render(<MeasureRowLabel compact measure={{ id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred" }} />);
+    const { container } = render(<MeasureRowLabel compact caption measure={{ id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred" }} />);
     expect(container.querySelector(".mrl--compact .mrl-icon svg")).toBeTruthy();
     expect(container.querySelector(".mrl-caption")).toBeNull();
   });

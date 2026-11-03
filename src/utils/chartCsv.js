@@ -13,7 +13,7 @@ export const CSV_SOURCE =
 
 /** A number as CSV text: rounded to `decimals`, no trailing noise. */
 export function formatCsvNumber(value, decimals = 4) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "";
+  if (value === null || value === undefined || Number.isNaN(value) || (typeof value === "string" && value.trim() === "")) return "";
   const factor = 10 ** decimals;
   const rounded = Math.round(Number(value) * factor) / factor;
   return Object.is(rounded, -0) ? "0" : String(rounded);
@@ -79,7 +79,7 @@ export function revenueCsv(data, policyNames) {
     columns: [
       { key: "fiscal_year", label: "Fiscal year" },
       ...policyNames.map((policy) => policyColumn(policy, 4)),
-      { key: "netImpact", label: "Net impact", decimals: 4 },
+      { key: "netImpact", label: "Net change", decimals: 4 },
     ],
     // A year not yet published is a note, never a row of zeros
     rows: data

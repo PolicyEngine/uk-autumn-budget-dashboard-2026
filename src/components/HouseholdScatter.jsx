@@ -12,7 +12,6 @@ import { CHART_LOGO, PolicyEngineLogo } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
-  CHANGE_AXIS_DOMAIN,
   clampToAxis,
   fitChangeAxisAcrossYears,
   householdsPerDot,
@@ -20,11 +19,13 @@ import {
   incomeLikeYours,
   panelDots,
   scatterCsv,
+  decilesShowChange,
   scatterView,
 } from "../utils/householdScatter";
-import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, chartMargin } from "../utils/chartTheme";
+import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, noFigures, chartMargin } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import { selectionPackageKey, showAllLabel, showAloneLabel } from "../utils/geography/selection";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -32,11 +33,10 @@ import { ViewportBox, pointIn } from "./ViewportTooltip";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
+import "./PillSelect.css";
 import "./HouseholdScatterTemplate.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
-import PillSelect from "./PillSelect";
-import { shortNameOf } from "../utils/policyDetails";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -65,9 +65,15 @@ const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
 // beside the income decile card it takes that card's plot height (see
 // HouseholdScatterTemplate.css).
 const STACKED_HEIGHT = 400;
-// Room under the axis for the logo, drawn in the SVG as the decile card
-// beside it draws its own (WaterfallChart's LOGO_ROOM), so the two plots,
-// axis titles and logos sit level
+// Room under the axis for the logo, which the SVG draws at its foot. The
+// decile card beside it draws its logo at its SVG's foot too, and both
+// SVGs end at the foot of the shared plot row, so the two logos sit level.
+// The axes don't: the decile chart's Recharts legend sits between its axis
+// and its logo, so its axis sits higher by the legend's height less this
+// room, and moves as the legend gains or loses rows. The decile charts'
+// own LOGO_ROOM (WaterfallChart, DistributionalChart), the same size,
+// applies only under a section key (key.shared), which All households
+// doesn't have.
 export const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
 
 // The dots' colours, as colourFor draws them; the key under the plot
@@ -121,13 +127,12 @@ function ScatterMoreInfo({ basisLabel }) {
     <ChartMoreInfo
       info={{
         how: [
-          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the policies, fixed across years.`,
-          "So a dot moves only sideways when the year changes, and its row stays the same households.",
-          `Change axis: 1st to 99th percentile across years, capped at ±${pounds(CHANGE_AXIS_DOMAIN[1])}; larger changes sit at its edge.`,
+          `Each dot is a group of households with similar ${basisLabel} incomes under current law (${pounds(SCATTER_BINS.income_band_width)} bands).`,
+          "The groups and the change axis are the same in every year. Changes beyond the axis show as arrows at its edge.",
           "No change (under £1 either way) is an unfilled ring on £0.",
         ],
-        caveats: ["Groups with too few survey households are left out."],
-        method: { anchor: METHOD_ANCHORS.scatter, label: "How the household groups are built" },
+        caveats: ["We leave out groups with too few survey households."],
+        method: { anchor: METHOD_ANCHORS.scatter, label: "How we build the household groups" },
       }}
     />
   );
@@ -205,6 +210,24 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
         const cy = yAxis.scale(dot.income);
         // Fading out, or (mid-tween) beyond the axis: not drawn
         if (dot.opacity <= 0.01 || cx < left || cx > right) return null;
+        const hover = () => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width });
+        if (dot.clamped) {
+          // Beyond the axis: an arrow on the edge, pointing the way it lies
+          const out = dot.change < 0 ? -1 : 1;
+          const r = DOT_RADIUS * 1.2;
+          return (
+            <path
+              key={dot.key}
+              data-dot={dot.key}
+              data-capped={out < 0 ? "low" : "high"}
+              d={`M${cx + out * r},${cy} L${cx - out * r * 0.6},${cy - r} L${cx - out * r * 0.6},${cy + r} Z`}
+              fill={colourFor(dot)}
+              fillOpacity={DOT_OPACITY}
+              opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
+              onMouseEnter={hover}
+            />
+          );
+        }
         return (
           <circle
             key={dot.key}
@@ -217,7 +240,7 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
             opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
             stroke={isNoChange(dot) ? CHART_COLOURS.noChange : undefined}
             strokeWidth={isNoChange(dot) ? 1 : 0}
-            onMouseEnter={() => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width })}
+            onMouseEnter={hover}
           />
         );
       })}
@@ -340,7 +363,7 @@ function youSentence({ perDot, you, points, basisLabel, incomeMatches }) {
   }
   if (incomeMatches && you.income >= INCOME_AXIS_DOMAIN[1]) {
     parts.push(
-      `The chart stops at ${pounds(INCOME_AXIS_DOMAIN[1])} of ${basisLabel} net income, so households like yours are not shown; your ring sits at its top.`,
+      `The chart stops at ${pounds(INCOME_AXIS_DOMAIN[1])} of ${basisLabel} net income, so it does not show households like yours; your ring sits at its top.`,
     );
   }
   if (you.note) parts.push(you.note);
@@ -370,7 +393,9 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
           {pounds(point.incomeBand)}–{pounds(incomeTop)}
         </strong>{" "}
         had <strong style={{ color: colourFor(point) }}>{change}</strong>.
-        {point.clamped ? " Beyond the axis range, so drawn at its edge." : ""}
+        {point.clamped
+          ? " This is beyond the axis, so the chart draws it as an arrow at its edge, pointing the way it lies."
+          : ""}
       </p>
     </div>
     </ViewportBox>
@@ -394,19 +419,25 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
  * survey household is shown on its own (#30): a dot's tooltip gives its
  * group.
  *
- * Cells are published per reform: one measure shows its own, every measure
- * the package's, and any other selection a notice.
+ * Cells are published per reform: one policy shows its own, several the
+ * published combined run of exactly those policies, and with no such run
+ * a notice. The policies are the header's selection; the card has no
+ * policy choice of its own.
  *
  * With `you` ({change, income, label?, incomeYear?, note?}), the chart
- * places the reader's household on it (Household impact): `change` is its
+ * places the reader's household on it (Household calculator): `change` is its
  * change in net income in `selectedYear`, `income` its baseline household
  * net income, the y axis's concept, in `incomeYear` (the basis year when
  * not given). The title is then `title`, and the line under it says what a
  * dot is and how households with incomes like the reader's changed.
  *
- * `embedded` draws it as one view of another card (the Household impact
+ * `embedded` draws it as one view of another card (the Household calculator
  * position card): no title, download menu or logo of its own; the card's
  * menu takes this chart's download, handed up through `onDownload`.
+ *
+ * `onPoliciesSet` is the header picker's setter (Select all): given it, a
+ * selection of some policies gets buttons to show all of them or the first
+ * alone, the two runs the chart can draw.
  */
 function HouseholdScatter({
   selectedPolicies,
@@ -418,30 +449,29 @@ function HouseholdScatter({
   onDownload = null,
   // A link on the subtitle line, after the sentence
   descriptionLink = null,
+  onPoliciesSet = null,
 }) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
   const [hovered, setHovered] = useState(null);
-  // Several measures and no single published reform: the measure shown
-  const [focusId, setFocusId] = useState(null);
   const data = useHouseholdScatterData();
-  const { combinedId } = useMeasureCatalogue();
+  // Several policies: the published combined run of exactly them, if any
+  const catalogue = useMeasureCatalogue();
+  const { manifest } = catalogue;
+  const packageKey = selectionPackageKey(manifest, selectedPolicies);
   const view = useMemo(
     () => scatterView({
       data,
       selectedIds: selectedPolicies,
       policyIds: (policies ?? []).filter((policy) => policy.displayable !== false).map((policy) => policy.id),
       year: selectedYear,
-      packageId: combinedId,
-      focusId,
+      packageKey,
+      fullPackageKey: catalogue.combinedId ?? null,
     }),
-    [data, selectedPolicies, policies, selectedYear, combinedId, focusId],
+    [data, selectedPolicies, policies, selectedYear, packageKey, catalogue.combinedId],
   );
   const yearLabel = fiscalYearLabel(selectedYear);
-  const focus = view.kind === "points" ? view.focus : null;
-  const focusName = (id) => shortNameOf((policies ?? []).find((policy) => policy.id === id) ?? { id });
-  // The title names the one measure shown when several are selected
-  const chartTitle = focus ? `${title}, ${yearLabel}: ${focusName(view.reform)}` : `${title}, ${yearLabel}`;
+  const chartTitle = `${title}, ${yearLabel}`;
   const ready = view.kind === "points";
   const basisLabel = ready ? fiscalYearLabel(view.basisYear) : null;
   // The change axis is fitted once per selection, across every year, so
@@ -464,7 +494,28 @@ function HouseholdScatter({
   const incomeMatches = ready && you && (you.incomeYear ?? view.basisYear) === view.basisYear;
   const youShown =
     ready && you && Number.isFinite(you.change) && Number.isFinite(you.income) ? you : null;
-  const description = !ready
+  // Every published cell this year in the zero band (under £1), and the
+  // reader's household unchanged too: a note, not a column of dots at £0.
+  // Only for a published result (ready); a notice says why not
+  const zeroCells =
+    ready &&
+    view.points.every((point) => changeKind(point.changeBand, point.changeBandUpper) === "zero") &&
+    (!youShown || Math.round(youShown.change) === 0);
+  // Cells with too few survey households are left out, so zero cells alone
+  // do not mean no household's income changes: when the reform's income
+  // decile results show a change, or withhold one, the groups that change
+  // were withheld, and the plot shows a plain "No figures" line in place of dots. Only a selection
+  // whose deciles are all zero (an employer cost alone) gets "None of the
+  // selected policies changes…"
+  const changesWithheld =
+    zeroCells &&
+    decilesShowChange(catalogue.tablesByKey?.[view.reform]?.distributional_impact, view.reform, selectedYear);
+  const nothingChanges = zeroCells && !changesWithheld;
+  // Either way no dots are drawn
+  const noDots = nothingChanges || changesWithheld;
+  // No dots drawn (a note in their place): the plain subtitle, not "Each
+  // dot is about …"
+  const description = !ready || noDots
     ? DESCRIPTION_LOADING
     : youShown
       ? youSentence({
@@ -474,7 +525,7 @@ function HouseholdScatter({
             : {
                 ...youShown,
                 note: [
-                  `Your ring is placed by your ${fiscalYearLabel(youShown.incomeYear)} net income; the dots by ${basisLabel}'s.`,
+                  `The chart places your ring by your ${fiscalYearLabel(youShown.incomeYear)} net income and the dots by ${basisLabel}'s.`,
                   youShown.note,
                 ]
                   .filter(Boolean)
@@ -486,13 +537,6 @@ function HouseholdScatter({
         })
       : describe(householdsPerDot(view.basisPoints));
   const key = youShown ? [...KEY, YOU_KEY] : KEY;
-  // Every published cell this year in the zero band (under £1), and the
-  // reader's household unchanged too: the shared note, not a column of
-  // dots at £0. Only for a published result (ready); a notice says why not
-  const nothingChanges =
-    ready &&
-    view.points.every((point) => changeKind(point.changeBand, point.changeBandUpper) === "zero") &&
-    (!youShown || Math.round(youShown.change) === 0);
 
   // A hovered dot's group belongs to the year and selection it was
   // hovered in
@@ -528,13 +572,13 @@ function HouseholdScatter({
   // Households keep their basis-year band in every year (the y axis does
   // not move with the year), so the title names no year; About this chart
   // and the tooltip give the basis year
-  const incomeTitle = "Household net income before the policies (£k)";
+  const incomeTitle = "Household net income under current law (£k)";
   // The key: in the sentence, with the logo in the SVG as on the decile
   // card; with the reader's household, a key row under the plot and the
   // logo below it. A note instead of a plot keeps the logo row.
-  const keyRow = ready && !nothingChanges && Boolean(youShown);
+  const keyRow = ready && !noDots && Boolean(youShown);
   const svgLogo = !embedded && !youShown;
-  const htmlLogo = !embedded && (Boolean(youShown) || nothingChanges);
+  const htmlLogo = !embedded && (Boolean(youShown) || noDots);
 
   // Beside a household's result, a selection the chart is not published
   // for gets the reason in a line, not an empty plot
@@ -589,6 +633,16 @@ function HouseholdScatter({
             <div>
               <p className="household-scatter-empty-reason">{view.reason}</p>
               {view.detail && <p className="household-scatter-empty-detail">{view.detail}</p>}
+              {view.choices && onPoliciesSet && (
+                <div className="household-scatter-empty-actions">
+                  <button type="button" className="light-pill-button" onClick={() => onPoliciesSet(view.choices.all)}>
+                    {showAllLabel(view.choices.all.length)}
+                  </button>
+                  <button type="button" className="light-pill-button" onClick={() => onPoliciesSet([view.choices.alone])}>
+                    {showAloneLabel((policies ?? []).find((policy) => policy.id === view.choices.alone)?.name ?? view.choices.alone)}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -610,37 +664,26 @@ function HouseholdScatter({
               </span>
             </h3>
             <p className="chart-description">
-              {ready && !youShown && !nothingChanges ? describeWithKey(householdsPerDot(view.basisPoints)) : description}
+              {ready && !youShown && !noDots ? describeWithKey(householdsPerDot(view.basisPoints)) : description}
               {descriptionLink && <> {descriptionLink}</>}
             </p>
           </div>
           <ChartDownloadMenu
             download={download}
             chartTitle={chartTitle}
-            disabledReason={ready ? undefined : "Available when results are published"}
+            disabledReason={ready ? undefined : "Available when we publish results"}
           />
         </div>
       )}
 
-      {focus && (
-        <div className="chart-controls household-scatter-controls">
-          <PillSelect
-            variant="light"
-            name="Policy shown"
-            prefix="Policy"
-            value={view.reform}
-            onChange={setFocusId}
-            options={focus.options.map((id) => ({ value: id, label: focusName(id) }))}
-          />
-        </div>
-      )}
-      {/* The plot takes the rows the map beside it uses for its controls,
-          map and colour scale, so the two cards line up and fill alike */}
+      {/* Beside the income decile card, the plot fills the plot row that
+          card's plot sets (HouseholdScatterTemplate.css), so the two
+          cards line up */}
       <div className="chart-plot household-scatter-template-plot">
         <div className="household-scatter-template-canvas" ref={chartRef}>
-          {nothingChanges ? (
+          {noDots ? (
             <div className="plot-empty household-scatter-no-change" role="status">
-              <p>{noHouseholdChange(yearLabel)}</p>
+              <p>{changesWithheld ? noFigures(yearLabel) : noHouseholdChange(yearLabel)}</p>
             </div>
           ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>
@@ -696,7 +739,7 @@ function HouseholdScatter({
           </ResponsiveContainer>
           )}
         </div>
-        {ready && !nothingChanges && (
+        {ready && !noDots && (
           <GroupTooltip
             hover={hover}
             basisLabel={basisLabel}

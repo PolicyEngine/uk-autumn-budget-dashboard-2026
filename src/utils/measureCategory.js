@@ -22,10 +22,11 @@ export const MEASURE_CATEGORIES = [
   { label: "National Insurance", icon: "briefcase", pattern: /national insurance|\bnics?\b|\bni\b|salary sacrifice/ },
   { label: "Student loans", icon: "cap", pattern: /student|\bplan [12345]\b|postgraduate loan|tuition/ },
   { label: "Childcare", icon: "users", pattern: /childcare|child care|nursery|free hours/ },
+  { label: "Transport", icon: "compass", pattern: /\bbus(es)?\b|bus fares?|\brail\b|\btrain\b/ },
   { label: "Energy", icon: "flame", pattern: /warm home|energy|electricity|\bgas\b|heating|\bheat\b|ofgem|\bwhd\b/ },
-  { label: "Income tax", icon: "wallet", pattern: /income tax|personal allowance|basic rate|higher rate|additional rate|dividend|savings allowance|marriage allowance/ },
+  { label: "Income tax", icon: "wallet", pattern: /income tax|personal allowance|basic rate|higher rate|additional rate|dividend|savings allowance|marriage allowance|\btax allowance\b/ },
   { label: "Pensions", icon: "armchair", pattern: /pension|triple lock|annuit/ },
-  { label: "Benefits", icon: "piggy", pattern: /universal credit|\buc\b|benefit|tax credit|\bpip\b|disability|carer|jobseeker|\besa\b|two child|child limit|winter fuel/ },
+  { label: "Benefits", icon: "piggy", pattern: /universal credit|\buc\b|benefit|local housing allowance|\blha\b|tax credit|\bpip\b|disability|carer|jobseeker|\besa\b|two child|child limit|winter fuel/ },
   { label: "Council tax", icon: "landmark", pattern: /council tax/ },
   { label: "Property", icon: "house", pattern: /stamp duty|\bsdlt\b|property|mansion|housing|\brent\b|mortgage|inheritance|\bland\b|second home/ },
   { label: "Business", icon: "building", pattern: /business|corporation tax|employer|company|companies|\blevy\b|levies|apprenticeship|\bbank\b|windfall|digital services|duty|duties|tariff/ },
@@ -70,6 +71,11 @@ function categoryFromLabel(label) {
  */
 export function measureCategoryOf(measure) {
   if (!measure) return OTHER_CATEGORY;
+  // A card's own chip, given in full (a Budget measure the dashboard does
+  // not model: utils/unmodelledCards.js)
+  if (measure.category && typeof measure.category === "object" && measure.category.label) {
+    return { label: String(measure.category.label), icon: measure.category.icon ?? OTHER_CATEGORY.icon };
+  }
   const published = typeof measure.category === "string" ? categoryFromLabel(measure.category) : null;
   if (published) return published;
   for (const text of [measure.name, measure.label, measure.id]) {

@@ -14,6 +14,7 @@ import {
   chartEndYear,
   shortLabel,
   lineSeries,
+  OFFICIAL_VS_PE,
   mergeSeries,
   projectionStartYear,
   trimProjection,
@@ -103,19 +104,20 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
       !visibleEmpty &&
         noOutturn &&
         viewMode === "both" &&
-        `No official outturn series for ${groupName} on this measure; projection only.`,
+        `No official outturn series for ${groupName} on this measure; PolicyEngine only.`,
       ...(poverty.notes || []),
     ],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
     info: {
       how: [
+        OFFICIAL_VS_PE,
         isAbsolute
           ? "The absolute line is 60% of the 2024-25 median income, held fixed in real terms."
           : "The relative line is 60% of each year's median income.",
       ],
       caveats: [
-        !visibleEmpty && noOutturn && viewMode === "both" && `No official series for ${groupName} on this measure; projection only.`,
+        !visibleEmpty && noOutturn && viewMode === "both" && `No official series for ${groupName} on this measure; PolicyEngine only.`,
         "The model's 2024-25 incomes sit above official ones and its poverty rates below them: read changes, not levels.",
       ],
       sources: [HBAI_SOURCE],
@@ -155,12 +157,11 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
         <div className="plot-empty">
           {viewMode === "outturn" && noOutturn
             ? `No official outturn series for ${groupName} on this measure.`
-            : "No projection for this selection."}
+            : "No PolicyEngine figures for this selection."}
         </div>
       </div>
     ) : (
       <OverTimeChart
-        compare={range}
         data={chartData}
         series={series}
         // A fitted axis can step by half a point: one decimal where a tick

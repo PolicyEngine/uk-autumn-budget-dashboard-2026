@@ -80,10 +80,9 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
 
   // Focus goes in once it is shown (a hidden drawer cannot take it)
   useEffect(() => {
-    // Quietly: no focus ring until a key is pressed on it (a drawer opened
-    // by a click would otherwise show a ring at rest)
+    // Its ring is :focus-visible only: none when a click opened the drawer,
+    // a subtle one when a key did
     if (open && entered && closeRef.current) {
-      closeRef.current.dataset.quiet = "";
       closeRef.current.focus({ preventScroll: true });
     }
   }, [open, entered]);
@@ -138,8 +137,6 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
               className="overview-close"
               aria-label="Close"
               onClick={onClose}
-              onKeyDown={(event) => { delete event.currentTarget.dataset.quiet; }}
-              onBlur={(event) => { delete event.currentTarget.dataset.quiet; }}
             >
               <X size={20} strokeWidth={2} aria-hidden="true" />
             </button>

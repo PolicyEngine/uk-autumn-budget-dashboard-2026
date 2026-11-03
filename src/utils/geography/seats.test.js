@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { parseGeographyTable } from "./parse";
 import {
+  CATEGORY_COLOURS,
   NO_DATA_FILL,
-  WITHHELD_FILL,
-  approximateFill,
 } from "./palette";
-import { cardLines, describeSeat, movesNoSeat, seatCard, noSeatMovedNote, seatStates, seatStyle, seatSummary } from "./seats";
+import { TOO_UNCERTAIN } from "./classify";
+import { cardLines, constituencySentence, describeSeat, drawnAsNoData, movesNoSeat, seatCard, noSeatMovedNote, seatStates, seatStyle, seatSummary } from "./seats";
 import { geographyFixture } from "../../test/geographyFixture";
+import { CHART_COLOURS } from "../chartTheme";
 
 const constituency = parseGeographyTable(geographyFixture("constituency.csv"), {
   level: "constituency",
@@ -36,13 +37,22 @@ describe("seat states", () => {
     });
   });
 
-  it("draw withheld seats hatched, approximate ones dotted, missing ones as no data", () => {
-    expect(seatStyle(states.get("Z14000003")).fill).toBe(WITHHELD_FILL);
-    // Status is a texture, never a change of colour.
+  it("draw withheld, too uncertain and missing seats as No data, approximate ones in plain colour", () => {
+    // One No data swatch on the map (Vahid, 28 October): a withheld seat is
+    // never coloured, with or without the continuous scale
+    expect(seatStyle(states.get("Z14000003")).fill).toBe(NO_DATA_FILL);
+    expect(seatStyle(states.get("Z14000003"), () => CHART_COLOURS.gain).fill).toBe(NO_DATA_FILL);
+    expect(states.get("Z14000004").category).toBe(TOO_UNCERTAIN);
+    expect(seatStyle(states.get("Z14000004"), () => CHART_COLOURS.gain).fill).toBe(NO_DATA_FILL);
+    expect(["Z14000003", "Z14000004", "Z14000006"].every((code) => drawnAsNoData(states.get(code)))).toBe(true);
+    expect(drawnAsNoData(states.get("Z14000001"))).toBe(false);
+    expect(drawnAsNoData(states.get("Z14000002"))).toBe(false);
+    // No texture: an approximate seat is plain colour (Vahid, 28 October)
     expect(seatStyle(states.get("Z14000002"))).toMatchObject({
-      fill: approximateFill("small_gain"),
+      fill: CATEGORY_COLOURS.small_gain,
       fillOpacity: 1,
     });
+    expect(seatStyle(states.get("Z14000002"), () => CHART_COLOURS.gain).fill).toBe(CHART_COLOURS.gain);
     expect(seatStyle(states.get("Z14000006")).fill).toBe(NO_DATA_FILL);
     expect(seatStyle(undefined).fill).toBe(NO_DATA_FILL);
   });
@@ -60,7 +70,7 @@ describe("seat states", () => {
     };
     const withheld = { kind: "withheld", row: null, category: null };
     const { lines } = describeSeat({ feature, state: withheld, regional, ...options });
-    expect(lines).toEqual([{ kind: "note", text: "Not published: too few survey households" }]);
+    expect(lines).toEqual([{ kind: "note", text: "No data: not published, to protect survey respondents' confidentiality" }]);
   });
 
   it("label the regional figure as the region's, approximate where it is", () => {
@@ -168,5 +178,102 @@ describe("a measure that moves no seat", () => {
     expect(noSeatMovedNote({ yearLabel: "2029-30", several: true })).toBe(
       "No constituency shows a change large enough to publish for these policies in 2029-30.",
     );
+  });
+});
+
+describe("the card's sentence", () => {
+  const seats = (rows) => new Map(rows.map((row, i) => [`s${i}`, { kind: row ? row.tier : "no-data", row }]));
+  // No published category but for a zero: the sentence signs the figure as
+  // the seat cards do (the file's own categories are tested below)
+  const row = (areaName, value, tier = "reported") => ({ areaName, value, tier, direction: value === "0" ? "no_change" : undefined });
+  const withheld = { tier: "withheld", direction: "", value: "" };
+  const options = { outcome: "average_change", yearLabel: "2029-30" };
+
+  it("gives the range when every seat gains", () => {
+    const rows = [row("Northfield East", "310.0"), row("Harbour, Mill and Quay", "12.0"), row("Lough Side", "85.0")];
+    expect(constituencySentence(seats(rows), options)).toBe(
+      "Households gain on average in all 3 constituencies, from £12 a year in Harbour, Mill and Quay to £310 in Northfield East.",
+    );
+    // Seats with no data (not published, no row) are left out: "with data"
+    const relative = [row("Northfield East", "0.0112"), row("Lough Side", "0.0031"), withheld, null];
+    expect(constituencySentence(seats(relative), { ...options, outcome: "relative_change" })).toBe(
+      "Households gain on average in all 2 constituencies with data, from 0.31% of income in Lough Side to 1.12% in Northfield East.",
+    );
+  });
+
+  it("counts each seat in the file's own category, too close to call apart and never as a loss, and names the policy", () => {
+    const at = (areaName, value, direction, tier = "approximate") => ({ areaName, value, tier, direction });
+    const rows = [at("A", "-40.0", "loss"), at("B", "-30.0", "loss"), at("C", "-2.0", "too_close_to_call"), at("D", "6.0", "gain"), withheld, null];
+    expect(constituencySentence(seats(rows), options)).toBe(
+      "Households lose on average in 2 constituencies and gain in 1, 1 too close to call, and 2 have too few survey households to show.",
+    );
+    expect(constituencySentence(seats(rows), { ...options, policy: "Property income tax up" })).toMatch(/^Property income tax up: households lose on average in 2 constituencies/);
+    expect(constituencySentence(seats(rows), { ...options, policy: "Property income tax up", note: "choose another policy" })).toMatch(
+      /^Showing Property income tax up \(choose another policy\): households lose /,
+    );
+  });
+
+  it("gives the range of a loss without a minus sign", () => {
+    const rows = [row("Northfield East", "-0.0112"), row("Lough Side", "-0.0005")];
+    expect(constituencySentence(seats(rows), { ...options, outcome: "relative_change" })).toBe(
+      "Households lose on average in all 2 constituencies, from 0.05% of income in Lough Side to 1.12% in Northfield East.",
+    );
+  });
+
+  it("counts the seats each way when they differ", () => {
+    // Under half a pound reads as no change, as on the seat cards
+    const rows = [row("A", "10.0"), row("B", "20.0"), row("C", "-5.0"), row("D", "0.3"), withheld];
+    expect(constituencySentence(seats(rows), options)).toBe(
+      "Households gain on average in 2 constituencies, lose in 1 and see almost no change in 1, and 1 has too few survey households to show.",
+    );
+    expect(constituencySentence(seats([row("A", "10.0"), row("C", "-5.0")]), options)).toBe(
+      "Households gain on average in 1 constituency and lose in 1.",
+    );
+  });
+
+  it("names almost no change only when it covers a tenth of the seats or more (Vahid, 28 October)", () => {
+    const many = (n, make) => Array.from({ length: n }, (_, i) => make(i));
+    // 577 lose, 2 almost no change, 71 not published: the 2 are not said
+    const budgetDay = [...many(577, (i) => row(`L${i}`, "-40.0")), row("F1", "0.2"), row("F2", "-0.1"), ...many(71, () => withheld)];
+    expect(constituencySentence(seats(budgetDay), options)).toBe("Households lose on average in 577 constituencies, and 71 have too few survey households to show.");
+    // Both ways, a few flat: the gains and losses are each said
+    const both = [...many(500, (i) => row(`G${i}`, "40.0")), ...many(80, (i) => row(`L${i}`, "-40.0")), ...many(5, (i) => row(`F${i}`, "0.1"))];
+    expect(constituencySentence(seats(both), options)).toBe("Households gain on average in 500 constituencies and lose in 80.");
+    // A tenth or more flat: said
+    const flatShare = [...many(80, (i) => row(`G${i}`, "40.0")), ...many(20, (i) => row(`F${i}`, "0.1"))];
+    expect(constituencySentence(seats(flatShare), options)).toBe("Households gain on average in 80 constituencies and see almost no change in 20.");
+    // Only a few seats flat and nothing else placed: still said
+    expect(constituencySentence(seats([row("F", "0.1"), withheld, withheld, withheld, withheld, withheld, withheld, withheld, withheld, withheld, withheld, withheld]), options)).toBe(
+      "Households see almost no change on average in 1 constituency, and 11 have too few survey households to show.",
+    );
+  });
+
+  it("counts a seat too uncertain to place as no data, as the map draws it", () => {
+    const uncertain = { kind: "reported", category: TOO_UNCERTAIN, row: row("U", "-90.0") };
+    const states = new Map([
+      ["a", { kind: "reported", row: row("A", "10.0") }],
+      ["b", { kind: "reported", row: row("B", "-5.0") }],
+      ["u", uncertain],
+      ["n", { kind: "no-data", row: null }],
+    ]);
+    expect(constituencySentence(states, options)).toBe("Households gain on average in 1 constituency and lose in 1, and 2 have too few survey households to show.");
+  });
+
+  it("says when the policy changes no incomes", () => {
+    expect(constituencySentence(seats([row("A", "0"), row("B", "0")]), options)).toBe(
+      "This policy does not change household incomes in any constituency in 2029-30.",
+    );
+    expect(constituencySentence(seats([row("A", "0")]), { ...options, several: true })).toBe(
+      "These policies do not change household incomes in any constituency in 2029-30.",
+    );
+    // Some seats withheld: nothing is published to say there is no change
+    expect(constituencySentence(seats([row("A", "0"), withheld]), options)).toBe(
+      "No constituency shows a change large enough to publish for this policy in 2029-30.",
+    );
+  });
+
+  it("says nothing without rows", () => {
+    expect(constituencySentence(seats([null]), options)).toBeNull();
+    expect(constituencySentence(null, options)).toBeNull();
   });
 });

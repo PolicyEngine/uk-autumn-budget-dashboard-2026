@@ -97,8 +97,12 @@ def group_cells(sim, years) -> dict:
 def deflator(system=None):
     """``real(value, year, basis)``: nominal to 2027-28 prices, as build.py."""
     if system is None:
-        from policyengine_uk.system import system
-    params = system.parameters.gov.economic_assumptions
+        # The OBR October 2026 forecast every run is built on.
+        from uk_budget_data.forecast import forecast_parameters
+
+        params = forecast_parameters().gov.economic_assumptions
+    else:
+        params = system.parameters.gov.economic_assumptions
     indices = {
         "bhc": params.indices.obr.consumer_price_index,
         "ahc": params.indices.obr.consumer_price_index_ahc,

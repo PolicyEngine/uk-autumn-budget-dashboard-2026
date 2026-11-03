@@ -9,6 +9,17 @@ const COMPACTABLE = ".ls-year-panel-list, .chart-tooltip-section";
 // The hovered row, kept in view when the tooltip scrolls inside
 const ACTIVE_ROW = ".is-hovered, [data-active='true']";
 
+/**
+ * Whether a tooltip's point (window px) is inside the window: its anchor,
+ * or for a box pinned elsewhere (under the plot, say) the point it is for
+ * (`anchor.point`). A coordinate that is not a number is not checked.
+ */
+export function anchorInWindow(anchor, viewportWidth, viewportHeight) {
+  const { x, y } = anchor.point ?? anchor;
+  const inside = (value, size) => !Number.isFinite(value) || (value >= 0 && value <= size);
+  return inside(x, viewportWidth) && inside(y, viewportHeight);
+}
+
 /** Measure the box and place it (placeTooltip), compacting a tall list. */
 function placeBox(box, probe, locate, offset) {
   if (!box || !probe) return;
@@ -26,6 +37,13 @@ function placeBox(box, probe, locate, offset) {
   content.style.overflowY = "";
   const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
   const viewportHeight = window.innerHeight;
+  // Its point scrolled out of the window (a tooltip left open by a tap,
+  // then the page scrolled): hidden, not pinned to the window's edge far
+  // from its chart
+  if (!anchorInWindow(anchor, viewportWidth, viewportHeight)) {
+    box.style.visibility = "hidden";
+    return;
+  }
   const topInset = stickyInset(probe);
   const room = viewportHeight - topInset - 2 * TOOLTIP_MARGIN;
   let rect = box.getBoundingClientRect();
@@ -123,6 +141,64 @@ export function pointIn(probe, x, y) {
   return { x: origin.left + x, y: origin.top + y };
 }
 
+// A touch screen (no hover): there a chart's tooltip opens on a tap
+// (ChartTooltip TOOLTIP_PROPS trigger "click")
+const touchScreen = () =>
+  typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(hover: none)").matches;
+
+/**
+ * On a touch screen a Recharts tooltip opened by a tap ("click" trigger)
+ * never closes by itself: Recharts only ever sets it active, and there is
+ * no pointer to leave the chart. So it closes here: on a touch or click
+ * anywhere outside its chart (a tap elsewhere, or a swipe that starts
+ * there), and opens again on the next tap on the chart. A swipe that
+ * starts on the chart does not bring a closed one back: only a tap (a
+ * click) does. Returns whether it is closed, and a probe to render inside
+ * the chart (it finds the chart's wrapper).
+ *
+ * @param {boolean} [active] - Whether the chart has it open
+ */
+export function useTapDismiss(active) {
+  const probeRef = useRef(null);
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => {
+    if (!touchScreen()) return undefined;
+    const chart = () => probeRef.current?.closest(".recharts-wrapper") ?? null;
+    const onDown = (event) => {
+      const plot = chart();
+      if (!plot || !(event.target instanceof Node)) return;
+      if (!plot.contains(event.target)) setDismissed(true);
+    };
+    const onClick = (event) => {
+      const plot = chart();
+      if (plot && event.target instanceof Node && plot.contains(event.target)) setDismissed(false);
+    };
+    // Capture: before the chart's own handlers, and whatever stops a
+    // click's propagation further down
+    document.addEventListener("pointerdown", onDown, true);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, []);
+  // Closed by the chart itself: the next one it opens shows (state
+  // adjusted while rendering, not in an effect)
+  if (dismissed && active === false) setDismissed(false);
+  // Closed here, the chart still marks the tapped point (its cursor band,
+  // an active dot): ChartTooltip.css hides them with the tooltip
+  useEffect(() => {
+    const plot = probeRef.current?.closest(".recharts-wrapper");
+    if (!plot) return undefined;
+    plot.classList.toggle("is-tip-dismissed", dismissed);
+    return () => plot.classList.remove("is-tip-dismissed");
+  }, [dismissed]);
+  return {
+    value: dismissed,
+    probe: <span ref={probeRef} className="viewport-tooltip-probe" aria-hidden="true" />,
+  };
+}
+
 /**
  * A Recharts tooltip's content, drawn by ViewportBox: anchored at the
  * hovered point (Recharts' coordinate) or, where the chart pins it with
@@ -145,7 +221,9 @@ function ViewportContent({ inner, ...props }) {
     const x = pinned && Number.isFinite(position.x) ? position.x : coordinate.x;
     const y = pinned && Number.isFinite(position.y) ? position.y : coordinate.y;
     if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    return { x: box.left + x, y: box.top + y };
+    // Pinned, the box is still for the point hovered or tapped
+    const point = pinned ? { x: box.left + coordinate.x, y: box.top + coordinate.y } : undefined;
+    return { x: box.left + x, y: box.top + y, point };
   };
   return (
     <ViewportBox locate={locate} offset={pinned ? 0 : offset ?? 12}>
@@ -161,7 +239,17 @@ function ViewportContent({ inner, ...props }) {
  * displayName, and every prop passes through.
  */
 export function Tooltip(props) {
-  const { content } = props;
-  return <RechartsTooltip {...props} content={<ViewportContent inner={content} />} />;
+  const { content, active } = props;
+  const dismissed = useTapDismiss(active);
+  return (
+    <>
+      <RechartsTooltip
+        {...props}
+        active={dismissed.value ? false : active}
+        content={<ViewportContent inner={content} />}
+      />
+      {dismissed.probe}
+    </>
+  );
 }
 Tooltip.displayName = "Tooltip";

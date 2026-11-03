@@ -9,10 +9,11 @@ import {
   displayYears,
   isDisplayYear,
   isPublishedYear,
+  yearsForSelection,
 } from "./displayYears";
 
 describe("display years", () => {
-  it("come from budget_years.json, from 2027-28 (no chart starts at 2026-27)", () => {
+  it("come from budget_years.json, from 2027-28 (2026-27 only for a selection with an effect in it)", () => {
     expect(FIRST_DISPLAY_YEAR).toBe(2027);
     expect(DISPLAY_YEARS).toEqual(
       budgetYears.policy_years.filter((year) => year >= 2027),
@@ -61,5 +62,30 @@ describe("display years", () => {
     expect(displayYearOr("x")).toBe(DEFAULT_DISPLAY_YEAR);
     expect(displayYearOr(undefined)).toBe(DEFAULT_DISPLAY_YEAR);
     expect(displayYearOr("2028")).toBe(2028);
+  });
+
+  describe("2026-27 for a selection", () => {
+    const rows = [
+      { reform_id: "warm_home_discount_top_up", year: "2026", value: "-0.519" },
+      { reform_id: "warm_home_discount_top_up", year: "2027", value: "0" },
+      { reform_id: "threshold_freeze_2031_32", year: "2026", value: "0" },
+      { reform_id: "threshold_freeze_2031_32", year: "2031", value: "3.1" },
+    ];
+
+    it("comes first when a selected policy has an effect in it (the Warm Home Discount top-up)", () => {
+      expect(yearsForSelection(rows, ["warm_home_discount_top_up"])).toEqual([2026, ...DISPLAY_YEARS]);
+      expect(yearsForSelection(rows, ["threshold_freeze_2031_32", "warm_home_discount_top_up"])).toEqual([2026, ...DISPLAY_YEARS]);
+    });
+
+    it("is left out when no selected policy has an effect in it: the years start at 2027-28", () => {
+      expect(yearsForSelection(rows, ["threshold_freeze_2031_32"])).toEqual(DISPLAY_YEARS);
+      expect(yearsForSelection(rows, [])).toEqual(DISPLAY_YEARS);
+      expect(yearsForSelection([], ["warm_home_discount_top_up"])).toEqual(DISPLAY_YEARS);
+      expect(yearsForSelection(rows, ["threshold_freeze_2031_32"])[0]).toBe(2027);
+    });
+
+    it("never moves the default year", () => {
+      expect(DEFAULT_DISPLAY_YEAR).toBe(2027);
+    });
   });
 });

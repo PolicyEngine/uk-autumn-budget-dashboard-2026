@@ -4,7 +4,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
 import App, { preloadAllViews } from "./App";
-import { resetPageScroll, scrollPageTo } from "./utils/pageScroll";
+import { SITE_NAV_DWELL_MS, resetPageScroll, scrollPageTo } from "./utils/pageScroll";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -34,28 +34,61 @@ describe("the ui-kit shell's sticky site nav", () => {
     expect(app).toContain(`'${SELECTOR}'`);
   });
 
-  it("is fixed and hidden above the window by default, and the bars sit under it once shown", () => {
+  it("is in the page's flow at its top on load, waits above the window once scrolled away, and the bars sit under it once shown", () => {
     const sheet = css();
-    expect(sheet).not.toMatch(/position:\s*relative\s*!important/);
-    expect(sheet).toMatch(/position: fixed !important;\s*top: 0 !important;/);
-    expect(sheet).toContain(`:root:not([data-site-nav-shown]) ${SELECTOR} {\n  transform: translateY(-100%);`);
+    // Sticky, in the flow: on load it is in view at the page's top, as on
+    // every policyengine.org page (app-v2's app-zone shell audit wants its
+    // links in the window's top 140px), and a scroll down takes it away
+    // with the page. Once scrolled away it sticks at minus its own height,
+    // just above the window; never hidden by a transform
+    expect(sheet).toMatch(
+      /position: sticky !important;\s*top: calc\(0px - var\(--site-nav-height, var\(--spacing-header, 58px\)\)\) !important;/,
+    );
+    expect(sheet).not.toMatch(/translateY\(-100%\)/);
+    expect(sheet).not.toMatch(/position: fixed !important;\s*top: 0 !important;/);
+    // On a touch-only device it stays relative, in the flow, and is never
+    // laid over the page, even with focus in it (Budget day)
+    const touch = sheet.indexOf("@media (hover: none) and (pointer: coarse) {\n  html[data-site-nav-shown]");
+    expect(touch).toBeGreaterThan(-1);
+    expect(sheet.indexOf("position: relative !important;\n    top: 0 !important;")).toBeGreaterThan(touch);
+    expect(sheet.slice(touch, touch + 200)).toMatch(/--nav-offset: 0px;/);
     expect(sheet).toMatch(/:root \{\s*--nav-offset: 0px;\s*\}/);
-    // Shown, the nav overlays the band: it never moves the sticky stack
-    expect(sheet).not.toMatch(/:root\[data-site-nav-shown\] \{\s*--nav-offset/);
-    expect(sheet).toMatch(/:root\[data-site-nav-shown\] \.min-h-screen\.flex\.flex-col > div:first-child\[style\*="sticky"\] \{\s*box-shadow/);
+    // Shown, the nav sticks at the window's top and moves the band and tab
+    // rows down by its height, so it never covers the Year and Policies
+    // pills (Pavel's review, HDR1)
+    // (html[...], not :root[...]: the CSS build folds a :root[attr] custom
+    // property rule into :root and drops it)
+    expect(sheet).toMatch(/html\[data-site-nav-shown\] \{\s*--nav-offset: var\(--site-nav-height, 0px\);/);
+    expect(sheet).toMatch(
+      /:root\[data-site-nav-shown\] \.min-h-screen\.flex\.flex-col > div:first-child\[style\*="sticky"\] \{\s*top: 0 !important;\s*box-shadow/,
+    );
     expect(sheet).toMatch(/\.title-row \{\s*position: sticky;\s*top: var\(--nav-offset\);/);
     expect(sheet).toMatch(/\.view-tabs-bar \{\s*position: sticky;\s*top: calc\(var\(--nav-offset\) \+ var\(--title-row-height\)\);/);
     expect(sheet).toContain("--sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));");
-    expect(sheet).toMatch(/transition: transform var\(--motion-slide\) var\(--ease-out\)/);
-    expect(sheet).not.toContain("data-band-hidden");
+    expect(sheet).toMatch(/z-index: 1110 !important;\s*transition: top var\(--motion-slide\) var\(--ease-out\);/);
+    // The band tucks away only on a phone on its side
+    const landscape = sheet.indexOf("@media (orientation: landscape) and (max-height: 500px) {");
+    expect(landscape).toBeGreaterThan(-1);
+    expect(sheet.indexOf(".app[data-band-hidden]")).toBeGreaterThan(landscape);
     expect(sheet).not.toContain("data-site-nav-hidden");
   });
 });
 
 describe("showing the site nav", () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    delete window.matchMedia;
+  });
 
-  const setup = (inShell = false) => {
+  const setup = (inShell = false, { touchOnly = false } = {}) => {
+    window.matchMedia = (query) => ({
+      matches: touchOnly && query === "(hover: none) and (pointer: coarse)",
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+    });
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
     vi.stubGlobal("fetch", async () => new Promise(() => {}));
     // Runs the frame at once; 0 so the next scroll asks for another
@@ -86,116 +119,162 @@ describe("showing the site nav", () => {
     const move = (clientY) => act(() => {
       window.dispatchEvent(new MouseEvent("mousemove", { clientY }));
     });
+    // The pointer resting at the window's top edge long enough to show it
+    const rest = () => {
+      move(1);
+      wait(SITE_NAV_DWELL_MS);
+    };
     const moveOver = () => act(() => {
       nav().querySelector("a, button").dispatchEvent(
         new MouseEvent("mousemove", { clientY: 30, bubbles: true }),
       );
     });
-    return { root, scrollTo, shift, wait, shown, nav, move, moveOver };
+    // The pointer leaving the window (no element to go to) at clientY
+    const leave = (clientY) => act(() => {
+      document.body.dispatchEvent(
+        new MouseEvent("mouseout", { clientY, relatedTarget: null, bubbles: true }),
+      );
+    });
+    const touchScroll = (y) => act(() => {
+      const way = y < window.scrollY ? 1 : -1;
+      window.dispatchEvent(new TouchEvent("touchstart", { touches: [{ clientY: 300 }] }));
+      window.dispatchEvent(new TouchEvent("touchmove", { touches: [{ clientY: 300 + way * 40 }] }));
+      window.scrollY = y;
+      window.dispatchEvent(new Event("scroll"));
+    });
+    return { root, scrollTo, shift, wait, shown, nav, move, rest, moveOver, leave, touchScroll };
   };
 
-  it("is hidden on load, and shows only once the reader has scrolled up 24px in one run", () => {
-    const { scrollTo, wait, shown } = setup();
+  it("is not laid over the page on load (it is in its place at the top), and never shows on a scroll up, by any input", () => {
+    const { scrollTo, shift, wait, shown } = setup(true);
     expect(shown()).toBe(false);
-    scrollTo(4);
+    scrollTo(2_000);
+    scrollTo(1_500);
+    scrollTo(300);
     expect(shown()).toBe(false);
-    scrollTo(400);
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "PageUp" })));
+    shift(100);
     expect(shown()).toBe(false);
-    scrollTo(396);
-    scrollTo(380);
-    expect(shown()).toBe(false);
-    // A scroll down starts the run again
-    scrollTo(390);
-    scrollTo(370);
-    expect(shown()).toBe(false);
-    scrollTo(366);
-    expect(shown()).toBe(true);
-    cleanup();
-    expect(shown()).toBe(false);
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" })));
+    shift(0);
     wait(10_000);
     expect(shown()).toBe(false);
   });
 
-  it("is always hidden within its own height of the page's top, so the top looks as on load", () => {
-    const { scrollTo, wait, shown, nav } = setup(true);
+  it("goes back to its place in the flow within its own height of the page's top, so the top looks as on load", () => {
+    const { scrollTo, wait, shown, nav, move, rest } = setup(true);
     Object.defineProperty(nav(), "offsetHeight", { configurable: true, value: 58 });
     scrollTo(800);
-    scrollTo(300);
+    rest();
+    move(400);
     expect(shown()).toBe(true);
-    // Back at the top: hidden at once, not after the 3s linger
-    scrollTo(0);
-    expect(shown()).toBe(false);
+    // Up to the top: hidden at once, not after the 1.5s linger
     scrollTo(57);
     expect(shown()).toBe(false);
     wait(10_000);
     expect(shown()).toBe(false);
   });
 
-  it("does not show for the page's own scroll up (utils/pageScroll), only the reader's", () => {
-    const { scrollTo, shown } = setup();
-    scrollTo(1_000);
-    act(() => {
-      window.scrollTo = () => {};
-      scrollPageTo(200);
-    });
-    scrollTo(600);
-    scrollTo(200);
-    expect(shown()).toBe(false);
-    resetPageScroll();
-    scrollTo(100);
-    expect(shown()).toBe(true);
-  });
-
-  it("stays 3s after the scroll up, and any scroll down by the reader hides it at once", () => {
-    const { scrollTo, shift, wait, shown } = setup();
+  it("any scroll down by the reader hides it at once", () => {
+    const { scrollTo, shift, wait, shown, move, rest } = setup(true);
     scrollTo(400);
-    scrollTo(300);
+    rest();
+    move(400);
     expect(shown()).toBe(true);
-    wait(2_999);
-    expect(shown()).toBe(true);
-    wait(1);
+    // A pixel down, inside the 1.5s
+    scrollTo(401);
     expect(shown()).toBe(false);
-    scrollTo(200);
-    expect(shown()).toBe(true);
-    // A pixel down, inside the 3s
-    scrollTo(201);
-    expect(shown()).toBe(false);
-    // Keys count as the reader's scroll too
-    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "PageUp" })));
-    shift(100);
-    expect(shown()).toBe(true);
+    rest();
+    move(400);
     act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" })));
     expect(shown()).toBe(false);
-  });
-
-  it("never shows when the page moves up by itself while the reader scrolls down", () => {
-    const { scrollTo, shift, wait, shown } = setup();
-    // The tab rows going compact as they stick shrink the page above the
-    // window, and scroll anchoring moves scrollY up a few px each time
-    scrollTo(120);
-    shift(113);
-    shift(111);
-    scrollTo(230);
-    for (let y = 228; y >= 220; y -= 2) shift(y);
-    // A chart loading above the window shrinking a long way
+    // The page moving by itself, once the keys' scroll is over, leaves it
     wait(1_000);
-    shift(400);
-    shift(150);
-    expect(shown()).toBe(false);
-    // Trackpad jitter: tiny moves up inside a scroll down
-    let y = 400;
-    for (const d of [3, 8, 14, 20, 16, -2, 10, 6, 4, -1, 2, 1, -3, 12]) {
-      y += d;
-      scrollTo(y);
-      expect(shown()).toBe(false);
-    }
+    rest();
+    move(400);
+    shift(600);
+    expect(shown()).toBe(true);
   });
 
-  it("shows at the top 8px of the window, holds while the pointer is over it, and hides 1.5s after it leaves", () => {
-    const { scrollTo, wait, shown, move, moveOver } = setup(true);
+  it("does not show when the pointer only passes through the top edge (HDR1)", () => {
+    const { scrollTo, wait, shown, move } = setup(true);
+    scrollTo(1_000);
+    // From the address bar down to the Year pill: one move at the edge,
+    // the next below it
+    move(1);
+    move(30);
+    wait(10_000);
+    expect(shown()).toBe(false);
+  });
+
+  it("holds while the pointer is on the title band the nav pushes down (HDR1)", () => {
+    const { scrollTo, wait, shown, nav, move, rest } = setup(true);
+    Object.defineProperty(nav(), "offsetHeight", { configurable: true, value: 58 });
+    const band = document.querySelector(".title-row");
+    if (band) Object.defineProperty(band, "offsetHeight", { configurable: true, value: 57 });
+    scrollTo(1_000);
+    rest();
+    expect(shown()).toBe(true);
+    // On the Year pill, below the nav: still shown long after
+    move(80);
+    wait(10_000);
+    expect(shown()).toBe(true);
+    move(400);
+    wait(10_000);
+    expect(shown()).toBe(false);
+  });
+
+  it("does not show when the pointer leaves the window, even through its top edge", () => {
+    const { scrollTo, shown, move, leave } = setup(true);
+    scrollTo(1_000);
+    move(300);
+    leave(900);
+    expect(shown()).toBe(false);
+    // On its way between the address bar and the Year pill (HDR1)
+    leave(0);
+    expect(shown()).toBe(false);
+    move(20);
+    expect(shown()).toBe(false);
+  });
+
+  it("does not show when the pointer rests at the edge, then leaves the window (HDR1)", () => {
+    const { scrollTo, wait, shown, move, leave } = setup(true);
+    scrollTo(1_000);
+    move(1);
+    leave(0);
+    wait(SITE_NAV_DWELL_MS * 2);
+    expect(shown()).toBe(false);
+  });
+
+  it("on a touch-only device, shows only while the page is at its very top", () => {
+    const { wait, shown, move, leave, touchScroll } = setup(true, { touchOnly: true });
+    // On load, at the top
+    expect(shown()).toBe(true);
+    wait(10_000);
+    expect(shown()).toBe(true);
+    touchScroll(300);
+    expect(shown()).toBe(false);
+    // A scroll up, or a tap's emulated mouse events at the window's top,
+    // do not bring it in
+    touchScroll(20);
+    move(2);
+    leave(0);
+    wait(5_000);
+    expect(shown()).toBe(false);
+    touchScroll(0);
+    expect(shown()).toBe(true);
+    touchScroll(1);
+    expect(shown()).toBe(false);
+  });
+
+  it("shows after the pointer rests at the top 2px of the window, holds while the pointer is over it, and hides 0.75s after it leaves", () => {
+    const { scrollTo, wait, shown, move, rest, moveOver } = setup(true);
     move(300);
     expect(shown()).toBe(false);
-    move(6);
+    move(1);
+    wait(SITE_NAV_DWELL_MS - 1);
+    expect(shown()).toBe(false);
+    wait(1);
     expect(shown()).toBe(true);
     moveOver();
     wait(10_000);
@@ -203,25 +282,25 @@ describe("showing the site nav", () => {
     wait(10_000);
     expect(shown()).toBe(true);
     move(400);
-    wait(1_499);
+    wait(749);
     expect(shown()).toBe(true);
     // Coming back cancels the hide
     moveOver();
     wait(5_000);
     expect(shown()).toBe(true);
     move(400);
-    wait(1_500);
+    wait(750);
     expect(shown()).toBe(false);
-    // Leaving straight after it shows still keeps the 3s
-    move(6);
+    // Leaving straight after it shows still keeps the 1.5s
+    rest();
     move(400);
-    wait(2_999);
+    wait(1_499);
     expect(shown()).toBe(true);
     wait(1);
     expect(shown()).toBe(false);
   });
 
-  it("holds while focus is in it, and hides 1.5s after focus leaves", () => {
+  it("shows when the reader tabs into it, holds while focus is in it, and hides 0.75s after focus leaves", () => {
     const { wait, shown, nav } = setup(true);
     const link = nav().querySelector("a, button");
     act(() => link.focus());
@@ -229,15 +308,15 @@ describe("showing the site nav", () => {
     wait(10_000);
     expect(shown()).toBe(true);
     act(() => link.blur());
-    wait(1_499);
+    wait(749);
     expect(shown()).toBe(true);
     wait(1);
     expect(shown()).toBe(false);
   });
 
   it("holds while one of its menus is open", () => {
-    const { wait, shown, nav, move, moveOver } = setup(true);
-    move(6);
+    const { wait, shown, nav, move, rest, moveOver } = setup(true);
+    rest();
     moveOver();
     // An open ui-kit menu puts a role="presentation" overlay in the nav
     const overlay = document.createElement("div");
@@ -247,7 +326,7 @@ describe("showing the site nav", () => {
     wait(10_000);
     expect(shown()).toBe(true);
     act(() => overlay.remove());
-    wait(1_500);
+    wait(750);
     expect(shown()).toBe(false);
   });
 });

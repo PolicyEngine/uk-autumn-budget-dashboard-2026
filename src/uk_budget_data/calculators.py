@@ -4,6 +4,7 @@ Each calculator is responsible for computing a specific type of metric
 from baseline and reformed microsimulation results.
 """
 
+import functools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
@@ -132,6 +133,98 @@ class BudgetaryImpactCalculator(BaseCalculator):
                         "value": impact,
                     }
                 )
+        return results
+
+
+def exchequer_signs(variables) -> dict[str, int]:
+    """Each variable's sign on the Exchequer's balance, as ``gov_balance``
+    adds it up: +1 for a tax (policyengine-uk's ``GOV_TAX_VARIABLES``, which
+    ``gov_tax`` sums), -1 for spending (``GOV_SPENDING_VARIABLES``, which
+    ``gov_spending`` sums). A variable in neither list, or in both, is
+    refused: its change has no one sign on the balance."""
+    from policyengine_uk.variables.gov.gov_spending import (
+        GOV_SPENDING_VARIABLES,
+    )
+    from policyengine_uk.variables.gov.gov_tax import GOV_TAX_VARIABLES
+
+    signs = {}
+    for name in variables:
+        tax = name in GOV_TAX_VARIABLES
+        spending = name in GOV_SPENDING_VARIABLES
+        if tax == spending:
+            raise ValueError(
+                f"{name} is {'in both' if tax else 'in neither'} of "
+                "policyengine-uk's gov_tax and gov_spending, so its change "
+                "has no Exchequer sign"
+            )
+        signs[name] = 1 if tax else -1
+    return signs
+
+
+# The engine variables each measure's official costing covers, where it
+# covers fewer taxes and benefits than our net figure (#297): the Carer's
+# Allowance taper's costing is Carer's Allowance and Universal Credit
+# spending (policy costings p. 16), the Pension Tax Allowance's income tax
+# only (p. 63). Code, not a Treasury input under data_inputs/treasury/,
+# which generation never reads (publication.receipt.is_non_calculation_path):
+# the official_basis table is generated from these, so its receipt binds them.
+OFFICIAL_BASES: dict[str, tuple[str, ...]] = {
+    "carers_allowance_earnings_taper": (
+        "carers_allowance",
+        "universal_credit",
+    ),
+    "state_pension_income_tax_protection": ("income_tax",),
+}
+
+
+@dataclass
+class OfficialBasisCalculator(BaseCalculator):
+    """A measure's figure on its official costing's basis (#297).
+
+    Where the official costing covers fewer taxes and benefits than our net
+    figure (``budgetary_impact``, the change in ``gov_balance``), the change
+    in just those (``OFFICIAL_BASES``), from the same two simulations, in
+    £bn with the same sign: + is a gain to the Exchequer. Each row names
+    the variables it sums (``variables``, ``;``-separated), so the
+    published table says what its figure counts and the page names it by
+    them. No rows for a measure with no official basis.
+    """
+
+    years: list[int] = field(default_factory=lambda: list(POLICY_YEARS))
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        variables=(),
+    ) -> list[dict]:
+        if not variables:
+            return []
+        signs = exchequer_signs(variables)
+        results = []
+        for year in self.years:
+            impact = (
+                sum(
+                    sign
+                    * (
+                        reformed.calculate(name, period=year)
+                        - baseline.calculate(name, period=year)
+                    ).sum()
+                    for name, sign in signs.items()
+                )
+                / 1e9
+            )
+            results.append(
+                {
+                    "reform_id": reform_id,
+                    "reform_name": reform_name,
+                    "year": year,
+                    "value": float(impact),
+                    "variables": ";".join(signs),
+                }
+            )
         return results
 
 
@@ -584,7 +677,11 @@ class IncomeCurveCalculator(BaseCalculator):
             state_pension_weekly=full_new_state_pension(years),
             points=self.num_points,
         )
-        sim = Simulation(situation=situation, scenario=effective(scenario))
+        from uk_budget_data.forecast import with_forecast
+
+        sim = Simulation(
+            situation=situation, scenario=with_forecast(effective(scenario))
+        )
         built = AsBuilt(sim)
         curves = {}
         for year in years:
@@ -677,11 +774,45 @@ class IncomeCurveCalculator(BaseCalculator):
 
 
 def full_new_state_pension(years: list[int]) -> dict[int, float]:
-    """The full new State Pension, £ a week, in each year, as legislated
-    (the rate ``new_state_pension`` splits a reported amount at)."""
+    """The full new State Pension, £ a week, in each year, as legislated in
+    the policyengine-uk the bundle pins (the rate ``new_state_pension``
+    splits a reported amount at). A simulation built on the forecast
+    (``forecast.with_forecast``) pays a reported amount scaled by the
+    forecast's rate over this one, so this rate reported is the forecast's
+    full rate paid (``forecast_full_new_state_pension``)."""
     from policyengine_uk.system import system
 
     amount = system.parameters.gov.dwp.state_pension.new_state_pension.amount
+    return {year: float(amount(f"{year}-01-01")) for year in years}
+
+
+@functools.lru_cache(maxsize=None)
+def _forecast_parameters():
+    """policyengine-uk's parameters on the forecast every simulation here
+    is built with (``forecast.with_forecast``): the October 2026 OBR
+    forecast, not the March one the package ships, so the triple lock
+    uprates the State Pension on October's earnings and inflation."""
+    from policyengine_uk import Simulation
+
+    from uk_budget_data.forecast import with_forecast
+
+    simulation = Simulation(
+        situation={
+            "people": {"p": {"age": {2026: 40}}},
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {"h": {"members": ["p"]}},
+        },
+        scenario=with_forecast(None),
+    )
+    return simulation.tax_benefit_system.parameters
+
+
+def forecast_full_new_state_pension(years: list[int]) -> dict[int, float]:
+    """The full new State Pension, £ a week, in each year, that a
+    simulation on the forecast pays (``_forecast_parameters``)."""
+    amount = (
+        _forecast_parameters().gov.dwp.state_pension.new_state_pension.amount
+    )
     return {year: float(amount(f"{year}-01-01")) for year in years}
 
 

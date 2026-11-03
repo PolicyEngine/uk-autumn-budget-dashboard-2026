@@ -22,6 +22,7 @@ from typing import Callable, Optional
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
+from uk_budget_data.forecast import with_forecast
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.reforms import (
     get_autumn_budget_2026_reforms,
@@ -43,6 +44,9 @@ class HouseholdInput:
     pension_contributions_salary_sacrifice: float = 0.0
     fuel_spending: float = 0.0
     rail_spending: float = 0.0
+    # Bus and coach fares, £ a year, for the £2 bus fare cap. This route's
+    # household is in London, where the cap credits nothing
+    bus_fare_spending: float = 0.0
 
 
 # Years to calculate (2025 is base year, 2026-2029 are policy years)
@@ -52,11 +56,13 @@ YEARS = [2025, 2026, 2027, 2028, 2029, 2030]
 POLICY_IDS = [
     "fuel_duty_rise_deferral",
     "state_pension_income_tax_protection",
-    "warm_home_discount_top_up",
     "domestic_electricity_zero_vat",
-    "threshold_freeze_2031_32",
-    "road_fuel_vat_cut",
-    "plan_2_threshold_unfreeze",
+    "property_income_rates_up",
+    "savings_income_rates_up",
+    "carers_allowance_earnings_taper",
+    "household_energy_payment_2026",
+    "trading_allowance_raise",
+    "bus_fare_cap_2027",
 ]
 
 
@@ -122,15 +128,19 @@ def build_situation(household: HouseholdInput, year: int) -> dict:
             benunit_members.append(child_id)
             household_members.append(child_id)
 
+    household_entry = {
+        "members": household_members,
+        "region": {year: "LONDON"},  # Default to London
+    }
+    # Only with bus fares, so every other situation is exactly as before
+    if household.bus_fare_spending:
+        household_entry["bus_fare_spending"] = {
+            year: household.bus_fare_spending
+        }
     return {
         "people": people,
         "benunits": {"benunit": {"members": benunit_members}},
-        "households": {
-            "household": {
-                "members": household_members,
-                "region": {year: "LONDON"},  # Default to London
-            }
-        },
+        "households": {"household": household_entry},
     }
 
 
@@ -278,7 +288,7 @@ def create_simulation(
         scenario["simulation_modifier"] = simulation_modifier
     return Simulation(
         situation=situation,
-        scenario=Scenario(**scenario) if scenario else None,
+        scenario=with_forecast(Scenario(**scenario) if scenario else None),
     )
 
 
@@ -310,12 +320,13 @@ def household_simulations(
     return (
         Simulation(
             situation=situation,
-            scenario=effective(
-                reform.baseline_scenario_for(config, uses_config)
+            scenario=with_forecast(
+                effective(reform.baseline_scenario_for(config, uses_config))
             ),
         ),
         Simulation(
-            situation=situation, scenario=effective(reform.to_scenario())
+            situation=situation,
+            scenario=with_forecast(effective(reform.to_scenario())),
         ),
     )
 
@@ -405,7 +416,7 @@ def simulate_years(situation: dict, years: list[int], scenario) -> dict:
     """One simulation's metrics for each of ``years``: built once, and each
     year read from it as built (``AsBuilt``). Runs in a worker process when
     the calculator has more than one."""
-    sim = Simulation(situation=situation, scenario=scenario)
+    sim = Simulation(situation=situation, scenario=with_forecast(scenario))
     built = AsBuilt(sim)
     metrics = {}
     for year in years:
@@ -883,6 +894,7 @@ class PersonalImpactCalculator:
                 ),
                 "fuel_spending": household.fuel_spending,
                 "rail_spending": household.rail_spending,
+                "bus_fare_spending": household.bus_fare_spending,
             },
             "years": {},
             "policies": {},

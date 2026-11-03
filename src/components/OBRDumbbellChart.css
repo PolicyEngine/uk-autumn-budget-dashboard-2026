@@ -14,6 +14,29 @@
   font-family: inherit;
 }
 
+/* The hovered or focused row: its band is stronger (drawn in the chart)
+   and its name and difference are in bold, so the row reads across */
+.obr-dumbbell-row.is-active .mrl-svg-name,
+.obr-dumbbell-row.is-selected .mrl-svg-name,
+.obr-dumbbell-row.is-selected .obr-dumbbell-difference,
+.obr-dumbbell-row.is-active .obr-dumbbell-difference {
+  font-weight: 600;
+}
+
+/* Rows that select a policy for the panel: a pointer, and the hover tint */
+.obr-dumbbell-row[role="button"] {
+  cursor: pointer;
+}
+
+.obr-dumbbell-row:focus {
+  outline: none;
+}
+
+.obr-dumbbell-row:focus-visible .obr-dumbbell-hit {
+  stroke: var(--c-gain);
+  stroke-width: 2;
+}
+
 .obr-dumbbell-empty {
   margin: 0;
   padding: 40px 16px;
@@ -66,6 +89,12 @@
   border-radius: 50%;
 }
 
+/* Ours on the official costing's basis: a smaller ring, as in the chart */
+.obr-dumbbell-key-ring.is-basis {
+  width: 10px;
+  height: 10px;
+}
+
 .obr-dumbbell-legend .obr-dumbbell-legend-title {
   color: var(--pe-gray-600);
 }
@@ -96,6 +125,22 @@
 @media (prefers-reduced-motion: reduce) {
   .obr-dumbbell-move,
   .obr-dumbbell-dot-move {
+    transition: none;
+  }
+}
+
+/* A change of selection: the tints fade and the accent bar slides */
+.obr-dumbbell-band {
+  transition: fill 200ms ease-out;
+}
+
+.obr-dumbbell-accent {
+  transition: transform 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obr-dumbbell-band,
+  .obr-dumbbell-accent {
     transition: none;
   }
 }

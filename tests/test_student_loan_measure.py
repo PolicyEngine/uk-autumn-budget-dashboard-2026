@@ -13,6 +13,10 @@ from uk_budget_data.budget_measures.connect_student_loan_repayments import (
 )
 from uk_budget_data.reforms import get_reform
 
+# The four candidates withdrawn on Budget day stay fixtures of the
+# calculation's machinery here (tests/conftest.py).
+pytestmark = pytest.mark.usefixtures("pre_budget_registry")
+
 REPORTED = 500.0
 YEAR = 2028
 # The model computes in float32, so pounds agree to within a penny.

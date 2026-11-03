@@ -1,6 +1,6 @@
 import { CATEGORY_BREAKS } from "../utils/geography/classify";
 import { formatFigure } from "../utils/geography/format";
-import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, TriangleAlert } from "lucide-react";
+import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, Target, Info } from "lucide-react";
 import FactList from "./methodology/FactList";
 import { ExternalLink } from "./methodology/MethodUi";
 import "./GeographyMethodology.css";
@@ -15,7 +15,7 @@ const breaks = (outcome) => {
 };
 
 /**
- * How the figures by region and constituency are estimated and protected,
+ * How the figures by constituency are estimated and protected,
  * as a fact grid. Shown on the Methodology view; the map links to it.
  */
 function GeographyMethodology() {
@@ -32,7 +32,7 @@ function GeographyMethodology() {
             {
               points: [
                 "Every published figure rests on at least 10 survey households.",
-                "No single household dominates it: each figure is checked against dominance and p% rules before it is published.",
+                "No single household dominates it: we check each figure against dominance and p% rules before we publish it.",
               ],
             },
             ShieldCheck,
@@ -41,7 +41,7 @@ function GeographyMethodology() {
             "90% intervals",
             {
               points: [
-                "Each figure comes with a 90% interval, from resampling survey households with their weights held fixed.",
+                "Each figure comes with a 90% interval, from resampling survey households while holding their weights fixed.",
                 "Holding the weights fixed leaves out some of the uncertainty, so the intervals understate it.",
               ],
             },
@@ -50,7 +50,7 @@ function GeographyMethodology() {
           [
             "Rounding",
             <>
-              Figures are rounded to the precision the data supports, so a
+              We round figures to the precision the data supports, so a
               less certain figure has fewer digits.
             </>,
             Hash,
@@ -62,39 +62,50 @@ function GeographyMethodology() {
               interval understates the uncertainty, so read it as a rough
               guide.
             </>,
-            TriangleAlert,
+            Info,
           ],
           [
             "Not published",
             <>
-              Some figures are not published, to protect the confidentiality
-              of survey respondents. The map hatches these constituencies, and
-              the tables mark them.
+              We do not publish some figures, to protect the confidentiality
+              of survey respondents. The map shows these constituencies as no
+              data, and the tables mark them.
             </>,
             EyeOff,
           ],
           [
             "Map colours",
             {
-              lead: "The map groups figures into categories with breaks fixed in advance:",
+              lead: "The map groups figures into categories with breaks we fix in advance:",
               points: [
                 `little change: under ${percent.small} of income (${pounds.small} a year) either way;`,
                 `small change: up to ${percent.large} (${pounds.large});`,
                 "large change: more.",
-                "A constituency is coloured only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify.",
+                "The map colours a constituency only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify, and the map shows it as no data.",
               ],
             },
             Palette,
           ],
           [
-            "Constituencies and regions",
+            "Local-area dataset",
             <>
               Constituency figures come from Microcosm&apos;s local-area
-              dataset, in which each household belongs to one constituency.
-              They do not add up exactly to the regional ones, which may come
-              from a different dataset.
+              dataset, in which each household belongs to one constituency,
+              not from the national file behind the other figures. The data
+              certificate covers only the national file, so read them as
+              estimates.
             </>,
             Layers,
+          ],
+          [
+            "Local calibration",
+            {
+              points: [
+                "The local-area file's calibration targets local totals of council tax bands, electricity and gas use, employment and self-employment income, Universal Credit, age, tenure and rents.",
+                "Calibration targets savings, property, pension and road-fuel incomes, and carers, by region at most, so the map for a policy acting on them follows age, tenure and earnings, not observed local totals.",
+              ],
+            },
+            Target,
           ],
           [
             "Later years",

@@ -89,6 +89,23 @@ function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, period,
     };
   }, [open]);
 
+  // Opened near the screen's foot (a phone, scrolling down the cards), the
+  // list would open below the fold: bring it into view, the least scroll
+  // that shows it (phone check, 28 Oct)
+  const menuRef = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const frame = requestAnimationFrame(() => {
+      const menu = menuRef.current;
+      if (!menu?.getBoundingClientRect || typeof window === "undefined") return;
+      if (menu.getBoundingClientRect().bottom > window.innerHeight - 8) {
+        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        menu.scrollIntoView?.({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
   // Shown but disabled until there is something to download, so the card's
   // layout is final before its results are published.
   if (disabledReason) {
@@ -140,7 +157,7 @@ function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, period,
         </button>
       </Tip>
       {presence.mounted && (
-        <ul className={`chart-download-menu ${popoverClass(presence.shown)}`} id={menuId} {...leavingProps(presence.shown)}>
+        <ul ref={menuRef} className={`chart-download-menu ${popoverClass(presence.shown)}`} id={menuId} {...leavingProps(presence.shown)}>
           {available.map((format) => (
             <li key={format}>
               <button

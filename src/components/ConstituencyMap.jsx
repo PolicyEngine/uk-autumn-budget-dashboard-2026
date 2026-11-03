@@ -26,6 +26,7 @@ import {
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { frameCsv, frameFileName, frameSvg } from "../utils/exportFrame";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
+import { htmlImageFormats } from "../utils/chartDownloads";
 import {
   EXPORT_UNITS,
   buildCsv,
@@ -38,18 +39,12 @@ import {
   MAP_LEGEND_CLASS,
   appendStatusPatterns,
   drawMapLegend,
-  ensureApproximateColourDots,
   placeMapLegend,
 } from "../utils/geography/legend";
 import {
   DIRECTION_TEXT_COLOURS,
   NO_DATA_FILL,
-  NO_DATA_STROKE,
-  UNCERTAIN_FILL,
-  WITHHELD_FILL,
-  approximateFill,
 } from "../utils/geography/palette";
-import { TOO_UNCERTAIN } from "../utils/geography/classify";
 import {
   SCALE_GRADIENT,
   colourExtent,
@@ -59,33 +54,31 @@ import {
 import { rowsFor } from "../utils/geography/rows";
 import {
   cardLines,
+  drawnAsNoData,
   seatCard,
   seatCode,
   seatName,
   seatStates,
-  movesNoSeat,
-  noSeatMovedNote,
+  constituencySentence,
   seatStyle,
   seatSummary,
   unchangedLine,
 } from "../utils/geography/seats";
-import {
-  choiceLabel,
-  choiceMeasureNames,
-} from "../utils/geography/selection";
+import { choiceLabel, choiceMeasureNames } from "../utils/geography/selection";
 import {
   REGION_VIEW_ID,
   areaViewsNotAvailable,
 } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
+import { STACK_APPROXIMATE_NOTE } from "../utils/geography/stack";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { FloatingTooltip } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
 import Tip, { InfoTip } from "./Tip";
 
-const CHART_TITLE = "Constituency-level impacts";
+const CHART_TITLE = "Constituency impacts";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -144,13 +137,26 @@ function constituencyCsvText(table, { reform, year, yearLabel, packageChoice, la
   ]);
 }
 
+/**
+ * How stacked figures are made, said once in About this chart (and in the
+ * exported map's description): several policies with no combined run by
+ * constituency (stack.js; Vahid, 28 October).
+ */
+export const STACK_ABOUT =
+  "When you select several policies, each constituency's figure is the sum of each policy's own effect, " +
+  "so it leaves out interactions between policies (nationally they come to under £1m a year). " +
+  "Its 90% interval adds up the policies' own intervals, so it is wider than a combined estimate's would be. " +
+  "A figure a policy withholds for confidentiality counts as zero, and the constituency's figure is then approximate.";
+
 /** The exported map's description: what it shows, and how to read it. */
-const exportDescription = (label, outcome) =>
-  `${label}. Each constituency is coloured by the size of its average ` +
-  `change in household net income, in ${OUTCOME_LABELS[outcome]}, when its ` +
-  "90% interval is narrow enough to tell. Dotted constituencies rest on " +
-  "few survey households; hatched ones are not published, to protect " +
-  "survey respondents' confidentiality.";
+const exportDescription = (label, outcome, stacked = false) =>
+  `${label}. The map colours each constituency by the size of its average ` +
+  `change in household net income, in ${OUTCOME_LABELS[outcome]}. Blank ` +
+  "ones have no data: we do not publish their figures, to protect survey respondents' " +
+  "confidentiality, or there are too few survey households to estimate them. " +
+  (stacked
+    ? STACK_ABOUT
+    : "Some figures are approximate, resting on fewer than 30 survey households.");
 
 /**
  * The card's "About this chart". Each rule is the generator's: the
@@ -161,29 +167,32 @@ const exportDescription = (label, outcome) =>
  * in the key's tip (MapKey), not here.
  * `releaseKind` is the area routing's: which dataset the seats come from.
  */
-export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRouted }) {
+export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRouted, stacked = false }) {
   const shows =
     `The average change in household net income in each of the 650 Westminster ` +
     `constituencies in ${yearLabel}, ${outcome === "average_change" ? "in £ a year per household" : "as a share of household income"}.` +
-    (label ? ` Shown: ${label}.` : "");
+    (label ? ` Selection: ${label}.` : "");
   if (notRouted) return { shows };
   return {
     shows,
     how: [
       releaseKind === "area_coded_national"
-        ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with 2025 constituency weights, scaled to each later year."
+        ? "We reweight households in the national dataset (the enhanced Family Resources Survey) to each constituency with 2025 constituency weights, which we scale to each later year."
         : "Each survey household in PolicyEngine's local-area dataset belongs to one constituency; its figure is their weighted average.",
       "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households.",
-      // Colour scale, unclassified, dotted and hatched: said once, in the key's tip
-      "The key's \u201cHow to read the key\u201d tip gives the colour scale's range, and when a constituency is unclassified, approximate (dotted) or not published (hatched).",
+      // No data and approximate: said here once; the key has the No data swatch only
+      "No data: we do not publish the figure, to protect survey respondents' confidentiality (under 10 survey households, or one or two would make up too much of it), or there are too few survey households to estimate it (its 90% interval spans more than two of the map's size bands); hover a constituency for its interval.",
+      "Some figures are approximate, resting on fewer than 30 survey households, so read them as a rough guide: the map colours them like the rest, and the constituency's card says so.",
+      ...(stacked ? [STACK_ABOUT] : []),
     ],
     definitions: [
       { ref: "netIncome" },
-      { term: "Hex map", meaning: "One equal hexagon per seat, placed roughly where it lies; shapes are not geographic." },
+      { term: "Hex map", meaning: "One equal hexagon per seat, roughly where it lies; shapes are not geographic." },
       { term: "Map", meaning: "Each seat's real boundary, so large rural seats dominate." },
+      { term: "No data", meaning: "Not published, or too few survey households to estimate." },
     ],
     caveats: [
-      "Survey weights are held fixed in the resampling, so the intervals understate the uncertainty.",
+      "The resampling holds survey weights fixed, so the intervals understate the uncertainty.",
       "Constituency figures do not add up exactly to the regional ones, and may use a different dataset.",
     ],
     sources: [
@@ -193,7 +202,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
         href: "https://github.com/open-innovations/constituencies",
       },
     ],
-    method: { anchor: METHOD_ANCHORS.area, label: "How the figures by area are estimated" },
+    method: { anchor: METHOD_ANCHORS.area, label: "How we estimate the figures by area" },
   };
 }
 
@@ -303,33 +312,20 @@ export function seatGeometry(features, mode) {
   };
 }
 
-// The map key's entries that highlight seats on hover: three statuses and
-// too uncertain. Solid, the reported status, is the default, so it has no
-// entry; the continuous scale has no entries to hover.
+// The map key's one entry that highlights seats on hover: No data, beside
+// the colour scale (Vahid, 28 October). Little change is on the scale, at
+// its 0; not published, no row and too uncertain to place on the scale
+// share the No data swatch (drawnAsNoData). Approximate figures are plain
+// colour; the card and About this chart say so, with no chip.
+export const NO_DATA_KEY = "no-data";
+export const NO_DATA_DETAIL = "No data: not published, or too few survey households to estimate";
 const STATUS_ENTRIES = [
-  {
-    key: "kind:approximate",
-    label: "Approximate",
-    detail: "Approximate: few survey households",
-    halves: [approximateFill("large_gain"), approximateFill("large_loss")],
-  },
-  {
-    key: "kind:withheld",
-    label: "Not published",
-    detail: "Not published: confidential",
-    fill: WITHHELD_FILL,
-  },
-  { key: "kind:no-data", label: "No data", fill: NO_DATA_FILL, stroke: NO_DATA_STROKE },
-  {
-    key: `cat:${TOO_UNCERTAIN}`,
-    label: "Too uncertain",
-    detail: "Too uncertain to classify",
-    fill: UNCERTAIN_FILL,
-  },
+  { key: NO_DATA_KEY, label: "No data", detail: NO_DATA_DETAIL, fill: NO_DATA_FILL },
 ];
 
-/** Whether a seat's state matches a key entry ("cat:small_gain", "kind:withheld"). */
+/** Whether a seat's state matches a key entry (NO_DATA_KEY, "cat:small_gain", "kind:approximate"). */
 export function matchesKey(state, key) {
+  if (key === NO_DATA_KEY) return drawnAsNoData(state);
   const [type, value] = key.split(":");
   if (type === "cat") return state?.category === value;
   return (state?.kind ?? "no-data") === value;
@@ -346,18 +342,48 @@ export function keyCounts(states) {
   return counts;
 }
 
+// Below this window width (a phone) the key sits under the map in rows;
+// wider, it is a column beside the map, so the map takes the card's height
+export const LEGEND_SIDE_MIN_WIDTH = 640;
+
+/** Where the map's key goes at a window width: "side" or "below". */
+export const legendPlacement = (width) =>
+  Number.isFinite(width) && width < LEGEND_SIDE_MIN_WIDTH ? "below" : "side";
+
+/** The key's place for the current window, following resizes. */
+function useLegendPlacement() {
+  const [placement, setPlacement] = useState(() =>
+    typeof window === "undefined" ? "side" : legendPlacement(window.innerWidth),
+  );
+  useEffect(() => {
+    const update = () => setPlacement(legendPlacement(window.innerWidth));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return placement;
+}
+
+// The scale's gradient in the side key: loss at the foot, gain at the top
+const SCALE_GRADIENT_VERTICAL = SCALE_GRADIENT.replace("to right", "to top");
+
 const seatCount = (n) => `${n.toLocaleString("en-GB")} ${n === 1 ? "seat" : "seats"}`;
 
 /**
- * The map's key, under the map: a smooth gradient from a loss (amber)
- * through no change (light grey) to a gain (teal), labelled at its two
- * ends and 0, and a row of compact chips for too uncertain and the three
- * status textures. Hovering or focusing a chip highlights the seats it
- * covers (`onHighlight`) and gives their number. The textures are the map
- * SVG's own patterns.
+ * The map's key: a smooth gradient from a loss (amber) through no change
+ * (light grey) to a gain (teal), labelled at its two ends and 0, and
+ * one compact No data chip. Beside the map (`placement` "side") the
+ * gradient stands upright, gain at the top, with a tick at each label, and
+ * the chip is under it; on a phone ("below") it is the horizontal row
+ * under the map. Hovering or focusing the chip highlights the seats it
+ * covers (`onHighlight`) and gives their number beside the chip, out of
+ * the flow, so hovering never moves anything.
  */
-function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
+function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "below" }) {
   const [low, zero, high] = scaleLabels(outcome, extent);
+  const title = `Change in household net income, ${OUTCOME_LABELS[outcome]}`;
+  const lastSpace = title.lastIndexOf(" ");
+  const [titleStart, titleEnd] = [title.slice(0, lastSpace), title.slice(lastSpace + 1)];
   const hovered = highlight ? counts[highlight] : null;
   const entryProps = (key, label) => ({
     type: "button",
@@ -380,30 +406,35 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
     </svg>
   );
   return (
-    <div className={`map-key${highlight ? " is-highlighting" : ""}`} role="group" aria-label="Key">
+    <div
+      className={`map-key map-key-${placement}${highlight ? " is-highlighting" : ""}`}
+      role="group"
+      aria-label="Key"
+    >
       <div className="map-key-head">
+        {/* The ⓘ ends the title's last line, wrapping with its last word
+            (never alone on a line of its own) */}
         <p className="map-key-title">
-          Change in household net income, {OUTCOME_LABELS[outcome]}
+          {titleStart}{" "}
+          <span className="nowrap map-key-title-end">
+            {titleEnd}
+            <InfoTip
+              label="How to read the key"
+              content={
+                `Amber is a loss, light grey little or no change and teal a gain, on one scale from ${low} to ${high} ` +
+                "for every policy and year (larger changes take the end colours). No data: not published, or too few survey households to estimate. " +
+                "About this chart says more."
+              }
+            />
+          </span>
         </p>
-        <InfoTip
-          label="How to read the key"
-          content={
-            `Amber is a loss, light grey no change and teal a gain, on one scale from ${low} to ${high} for every ` +
-            "policy and year. Mid grey is too uncertain to classify; dotted is approximate (under 30 effective survey " +
-            "households); hatched is not published, to protect survey respondents' confidentiality (under 10 survey " +
-            "households, or one or two would make up too much of the figure); solid is reported."
-          }
-        />
-        <span className="map-key-count" aria-live="polite">
-          {hovered !== null && hovered !== undefined ? seatCount(hovered) : ""}
-        </span>
       </div>
       <div className="map-key-scale">
         <div
           className="map-key-gradient"
           role="img"
           aria-label={`Colour scale from ${low} (amber) through ${zero} (grey) to ${high} (teal)`}
-          style={{ background: SCALE_GRADIENT }}
+          style={{ background: placement === "side" ? SCALE_GRADIENT_VERTICAL : SCALE_GRADIENT }}
         />
         <div className="map-key-labels" aria-hidden="true">
           <span>{low}</span>
@@ -422,6 +453,12 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
             <span>{entry.label}</span>
           </button>
         ))}
+        {/* The hovered entry's seat count, beside the chip and out of the
+            flow, so it appearing never moves the key, the chip under the
+            pointer or the map (Vahid, 28 October: "it changes the position") */}
+        <span className="map-key-count" aria-live="polite">
+          {hovered !== null && hovered !== undefined ? seatCount(hovered) : ""}
+        </span>
       </div>
     </div>
   );
@@ -519,10 +556,11 @@ const CARD_GAP = 10;
 
 /**
  * Constituency results as the disclosure layer published them, for one
- * measure or the whole package, one outcome and one year. Seats are
- * coloured by category, dotted when approximate, hatched when withheld,
- * light grey when too uncertain to classify, and drawn as no data when
- * there is no row. Nothing is summed across measures. It draws only on a
+ * measure or the whole package, one outcome and one year; for several
+ * policies with no combined run, the sum of their own rows (stack.js).
+ * Seats are coloured on the scale (approximate ones too), and drawn as no
+ * data when withheld, too uncertain to place on the scale, or with no
+ * row. It draws only on a
  * release that says it routes results by area: on one that routes none it
  * says so, and when it can't read the release's routing it says its results
  * could not be loaded, drawing nothing either way.
@@ -579,8 +617,6 @@ export default function ConstituencyMap({
   showRegionLink = true,
 }) {
   const [outcome, setOutcome] = useState("relative_change");
-  // A selection with no single reform: the measure shown (Measure picker)
-  const [focusId, setFocusId] = useState(null);
   const [panel, setPanelParam] = usePanelParam();
   // The map view drawn: the one shown, or in the Table view the last one
   // shown, kept mounted so it keeps its zoom
@@ -592,6 +628,7 @@ export default function ConstituencyMap({
     },
     [setPanelParam],
   );
+  const legendPlace = useLegendPlacement();
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [svgNode, setSvgNode] = useState(null);
@@ -613,13 +650,24 @@ export default function ConstituencyMap({
     boundariesReady,
     routing,
     regionalHasChoice,
-  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, focusId });
-  const focusName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
+  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome });
+  const policyName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
   // On a release that routes no results by area, the card describes the
   // measure only, not how to read a map it does not draw.
   const notRouted = areaViewsNotAvailable(routing);
   const reform = view.kind === "rows" ? view.reform : null;
   const label = choiceLabel(choice, policies);
+  // Several policies, with no combined run by constituency: each seat's
+  // figure is the sum of their own (stack.js)
+  const stacked = choice.kind === "stack";
+  const several = choice.kind === "package" || stacked;
+  // What the title names: the one policy shown, or the selection
+  const titleSubject =
+    choice.kind === "measure"
+      ? policyName(choice.reform)
+      : several || choice.kind === "no-package"
+        ? "selected policies"
+        : null;
   const yearLabel = fiscalYearLabel(selectedYear);
   // A hover from another year, measure or outcome is not shown, so the
   // tooltip never shows the figures it had while the year pill plays
@@ -640,6 +688,10 @@ export default function ConstituencyMap({
         : null,
     [features, constituencyTable, reform, selectedYear, outcome],
   );
+
+  // The colour scale's half-width: fixed in advance, the same for every
+  // selection, year and policy (scale.js)
+  const colourDomain = colourExtent(outcome);
 
   // The Table view: every seat's figures for the reform and year, ranked
   // by the outcome the map shows.
@@ -748,7 +800,9 @@ export default function ConstituencyMap({
       .style("cursor", "pointer");
     // The legend is for the exported file, which shows the whole drawing
     // area with the legend in its corner; on screen the key is HTML
-    placeMapLegend(svg.append("g").attr("class", MAP_LEGEND_CLASS), {
+    // (MapKey), so this one is never drawn there, even before the
+    // stylesheet loads (the export takes the attribute off)
+    placeMapLegend(svg.append("g").attr("class", MAP_LEGEND_CLASS).attr("display", "none").attr("aria-hidden", "true"), {
       x: LEGEND_INSET,
       y: LEGEND_INSET,
     });
@@ -779,13 +833,11 @@ export default function ConstituencyMap({
     const map = mapRef.current;
     if (!map || !states) return;
     const seats = map.layer.selectAll("path.constituency-path");
-    const extent = colourExtent(outcome);
+    const extent = colourDomain;
     const colourOf = (value) => scaleColour(value, extent);
-    const defs = map.svg.select("defs");
     seats.each(function (feature) {
       const node = d3.select(this);
       const style = seatStyle(states.get(seatCode(feature)), colourOf);
-      if (style.dots) ensureApproximateColourDots(defs, style.dots);
       const previous = node.attr("fill");
       node.interrupt();
       node.attr("fill-opacity", style.fillOpacity);
@@ -835,17 +887,28 @@ export default function ConstituencyMap({
         );
         d3.select(this).attr("stroke", stroke).attr("stroke-width", strokeWidth);
       });
-  }, [svgNode, features, geometry, states, outcome, applyStrokes, selectSeat]);
+  }, [svgNode, features, geometry, states, outcome, colourDomain, applyStrokes, selectSeat]);
 
   // The key entry hovered: the seats it covers stand out, the rest fade
   // (a style on the page only; the exported file never carries it)
   const [keyHighlight, setKeyHighlight] = useState(null);
   const counts = useMemo(() => keyCounts(states), [states]);
-  // Every seat zero or withheld: say so, so the map's grey and hatching
-  // are not left to explain themselves
-  const flatNote = useMemo(
-    () => (movesNoSeat(states) ? noSeatMovedNote({ yearLabel, several: choice.kind === "package" }) : null),
-    [states, yearLabel, choice.kind],
+  // The card's one sentence under its title, from the rows the map
+  // colours; when every seat is zero or withheld it says so, so the map's
+  // grey and blank seats are not left to explain themselves
+  const sentence = useMemo(
+    () =>
+      view.kind === "rows"
+        ? constituencySentence(states, {
+            outcome,
+            yearLabel,
+            several,
+            // Always which policy it describes, when it is one
+            policy: choice.kind === "measure" ? policyName(choice.reform) : null,
+          })
+        : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [view.kind, states, outcome, yearLabel, choice.kind, choice.reform, several],
   );
   useEffect(() => {
     const map = mapRef.current;
@@ -893,7 +956,9 @@ export default function ConstituencyMap({
           year: selectedYear,
           outcome,
           measures: cardMeasures,
-          label: choice.kind === "package" ? "All policies" : null,
+          label: several
+            ? `${choice.all ? "All policies" : "Selected policies"}${stacked ? ", the sum of each policy's effect" : ""}`
+            : null,
         })
       : null;
   const card = selectedCode ? cardFor(selectedCode) : null;
@@ -923,6 +988,8 @@ export default function ConstituencyMap({
   // The pinned card sits just above the seat the map centres, moved down
   // and across as needed so it stays inside the map (and so on screen)
   const cardRef = useRef(null);
+  // The Table view's panel, for its image downloads
+  const [rankingsPanel, setRankingsPanel] = useState(null);
   const closeRef = useRef(null);
   const [cardPlace, setCardPlace] = useState(null);
   useLayoutEffect(() => {
@@ -971,7 +1038,7 @@ export default function ConstituencyMap({
   // Built when a download runs, as the SVG export always was.
   const exportOptions = () => ({
     title: `${CHART_TITLE}, ${yearLabel}`,
-    description: exportDescription(label, outcome),
+    description: exportDescription(label, outcome, stacked),
     logo: CHART_LOGO,
     tooltip,
   });
@@ -1008,7 +1075,7 @@ export default function ConstituencyMap({
       reform,
       year: selectedYear,
       yearLabel,
-      packageChoice: choice.kind === "package",
+      packageChoice: several,
       label,
       names: choiceMeasureNames(choice, policies),
     });
@@ -1048,7 +1115,11 @@ export default function ConstituencyMap({
   // The map's full fit: the box round every seat in the view drawn
   const fit = geometry?.box ?? { x: 0, y: 0, width: WIDTH, height: HEIGHT };
   const downloadsReady = onMap ? view.kind === "rows" : tableReady;
-  const downloads = onMap ? mapDownloads : { csv: handleExportRankings };
+  // The Table view: its CSV, and the table as the page shows it as images
+  // (chartDownloads), so both views offer the same formats
+  const downloads = onMap
+    ? mapDownloads
+    : { csv: handleExportRankings, ...htmlImageFormats(() => rankingsPanel, `constituency-rankings-${reform}-${selectedYear}-by-${metric}`) };
   const notice =
     view.kind === "notice" ? (
       <UnavailableNotice reason={view.reason}>
@@ -1060,16 +1131,10 @@ export default function ConstituencyMap({
       </UnavailableNotice>
     ) : null;
 
-  // The card's choices, in its one Options pill: the measure shown (when
-  // several selected measures have constituency results), how the change
-  // is shown, and the view
+  // The card's choices: how the change is shown, and the view. The
+  // policies are the header's selection, stacked when there are several
+  // (Vahid, 28 October), so the card has no Policy choice of its own
   const optionGroups = [
-    choice.focus && choice.focus.options.length > 1 && {
-      label: "Policy",
-      value: choice.reform,
-      onChange: setFocusId,
-      options: choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),
-    },
     {
       label: "Show the change as",
       value: outcome,
@@ -1100,16 +1165,20 @@ export default function ConstituencyMap({
               <TitleIcon name="map" />
               <span className="title-text">
                 {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
-                {choice.focus && <span className="map-title-focus">: {focusName(choice.reform)}</span>}
+                {titleSubject && <span className="map-title-focus">: {titleSubject}</span>}
               </span>
             </h3>
-            {/* What the card shows is the section's subtitle, and how to
-                read it is in About this chart; a release that routes no
-                results by area gets a line describing the measure only */}
-            {notRouted && (
+            {/* One plain sentence from the map's figures, as the other
+                cards have; how to read the map is in About this chart. A
+                release that routes no results by area gets a line
+                describing the measure only */}
+            {notRouted ? (
               <p className="chart-description">
                 Average change in household net income by constituency.
               </p>
+            ) : (
+              // One paragraph: the figures only
+              sentence && <p className="chart-description">{sentence}</p>
             )}
           </div>
           {downloadsReady ? (
@@ -1122,7 +1191,7 @@ export default function ConstituencyMap({
             <ChartDownloadMenu
               formats={{}}
               chartTitle={`${CHART_TITLE}, ${yearLabel}`}
-              disabledReason="Available when results are published"
+              disabledReason="Available when we publish results"
             />
           )}
         </div>
@@ -1131,9 +1200,9 @@ export default function ConstituencyMap({
       {/* Rows shared with the card beside it: controls, plot, legend,
           then the logo. */}
       <div className="chart-controls">
-        {/* The same row in every view: the Options pill (measure, how the
-            change is shown, and the view) and the search box, which picks
-            a seat on a map and filters the table */}
+        {/* The same row in every view: the Options pill (how the change
+            is shown, and the view) and the search box, which picks a seat
+            on a map and filters the table */}
         <div className="map-top-bar">
           <ControlBar name={CHART_TITLE} options={optionGroups} />
           <div className="map-search-section">
@@ -1189,18 +1258,24 @@ export default function ConstituencyMap({
         {/* Before results are in, the Table view is the notice alone: no
             empty table, count or "no match" line behind it */}
         {!onMap && view.kind === "rows" && (
-          <div className="rankings-panel">
-            <ConstituencyTable entries={rankingEntriesForView} metric={metric} query={searchQuery} />
+          <div ref={setRankingsPanel} className="rankings-panel">
+            <ConstituencyTable
+              entries={rankingEntriesForView}
+              metric={metric}
+              query={searchQuery}
+              approximateNote={stacked ? STACK_APPROXIMATE_NOTE : undefined}
+            />
           </div>
         )}
         {!onMap && view.kind === "notice" && <div className="rankings-panel rankings-panel-notice">{notice}</div>}
 
         {/* Kept mounted in the Table view, so the map keeps its zoom */}
         {view.kind === "rows" && (
-          <div className="map-content" hidden={!onMap}>
+          <div className={`map-content is-legend-${legendPlace}`} hidden={!onMap}>
             <MapKey
+              placement={legendPlace}
               outcome={outcome}
-              extent={colourExtent(outcome)}
+              extent={colourDomain}
               counts={counts}
               highlight={keyHighlight}
               onHighlight={setKeyHighlight}
@@ -1304,7 +1379,6 @@ export default function ConstituencyMap({
               )}
               <FloatingTooltip tip={hoverTip} />
             </div>
-            {flatNote && <p className="map-flat-note">{flatNote}</p>}
           </div>
         )}
       </SwapTransition>
@@ -1334,6 +1408,7 @@ export default function ConstituencyMap({
             outcome,
             releaseKind: routing?.routing?.regionalReleaseKind,
             notRouted,
+            stacked,
           })}
         />
       </div>

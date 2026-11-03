@@ -58,3 +58,26 @@ describe("SeriesToggle", () => {
     expect(onHover).toHaveBeenLastCalledWith(null);
   });
 });
+
+describe("SeriesToggle chip tips", () => {
+  it("shows an enabled chip's tip on hover and focus, and adds that the last one stays on", async () => {
+    const { chipTip } = await import("./SeriesToggle");
+    const series = [
+      { key: "a", label: "Alpha", colour: "currentColor", tip: "Alpha: no effect on your marginal tax rate." },
+      { key: "b", label: "Beta", colour: "currentColor" },
+    ];
+    render(<SeriesToggle series={series} shown={["a", "b"]} onChange={() => {}} />);
+    const alpha = screen.getByRole("button", { name: "Alpha" });
+    fireEvent.mouseEnter(alpha);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Alpha: no effect on your marginal tax rate.");
+    expect(alpha.getAttribute("aria-describedby")).toBe(screen.getByRole("tooltip").id);
+    fireEvent.mouseLeave(alpha);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    // A chip with no tip shows none
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "Beta" }));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(chipTip(series[0], true)).toBe("Alpha: no effect on your marginal tax rate. At least one line stays on.");
+    expect(chipTip(series[1], true)).toBe("Beta: at least one line stays on");
+    expect(chipTip({ ...series[0], disabled: true }, false)).toBe(series[0].tip);
+  });
+});

@@ -7,9 +7,9 @@
 
 import { useEffect, useState } from "react";
 import FactList from "./FactList";
-import { TriangleAlert } from "lucide-react";
+import { Info } from "lucide-react";
 import { ExternalLink, SourceLink, Tag, Topic } from "./MethodUi";
-import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
+import { describeDataset, fyDash, fyLabel, loadOutlook, outlookForecastSource, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, plainWords, scrubNote } from "../livingStandards/sources";
 import { METHOD_ANCHORS } from "./anchors";
 
@@ -19,7 +19,7 @@ const UNVALIDATED = /unvalidated|not yet validated/i;
 const SAID_ELSEWHERE = [UNVALIDATED, /OBR forecast is due on/i];
 
 // A package's GitHub release, by the version the outlook file records
-// (each tag is the bare version, e.g. policyengine.py 6.10.2, policyengine-uk 2.132.6)
+// (each tag is the bare version, e.g. policyengine.py 6.11.1, policyengine-uk 2.151.0)
 const releaseUrl = (repo, version) => `https://github.com/PolicyEngine/${repo}/releases/tag/${version}`;
 
 /** The deflators in a few words, from meta.deflator. */
@@ -51,7 +51,7 @@ function ucHealthElementFix({ fix, engine }) {
     ),
     more: [
       `policyengine-uk ${engine} ends the protection of pre-2026 claimants' UC health element after ${last}, so every claimant falls to the new-claimant rate; the fix is in ${fix.fixed_in}.`,
-      "Here, protected claimants keep the protected amount and new claimants the new-claimant amount, both uprated with benefits.",
+      "Here, protected claimants keep the protected amount and new claimants the new-claimant amount, and both rise in line with benefits.",
       `${Math.round(fix.new_claimant_share * 100)}% of claimants count as new, as in ${last}.`,
     ],
   };
@@ -94,14 +94,14 @@ function ChartNotes({ outlook, meta }) {
     ["Growth across the distribution", outlook.income_by_decile?.notes],
     ["Poverty over time", outlook.poverty?.notes],
     ["Depth of poverty", outlook.deep_poverty?.notes],
-    ["Who is in poverty", (outlook.poverty_by_group?.notes || []).filter((n) => !/^Region/.test(n))],
+    ["Change in poverty by group", (outlook.poverty_by_group?.notes || []).filter((n) => !/^Region/.test(n))],
   ]
     .map(([title, notes]) => [title, (notes || []).filter(Boolean).map(scrubNote).map(linkNote)])
     .filter(([, notes]) => notes.length);
   if (!groups.length) return null;
   return (
     <Topic id={METHOD_ANCHORS.lsNotes} title="Notes on the forecast charts" preview={groups.map(([title]) => title).join(" · ")}>
-      <FactList items={groups.map(([title, notes]) => [title, { points: notes }, TriangleAlert])} />
+      <FactList items={groups.map(([title, notes]) => [title, { points: notes }, Info])} />
     </Topic>
   );
 }
@@ -168,7 +168,7 @@ export default function LivingStandardsMethod() {
                 value: (
                   <>
                     <ExternalLink href={hbai.url || HBAI_URL}>DWP HBAI</ExternalLink>
-                    ; <SourceLink id="obr_efo_current" />
+                    ; <SourceLink id={outlookForecastSource(meta)} />
                   </>
                 ),
                 more: notes.map((n) => linkNote(text(n))),
@@ -185,7 +185,7 @@ export default function LivingStandardsMethod() {
           <ul className="method-list method-list-icons method-list-caveats">
             {caveats.map((c) => (
               <li key={c}>
-                <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
+                <Info aria-hidden="true" strokeWidth={1.75} />
                 <span>{linkNote(text(c))}</span>
               </li>
             ))}

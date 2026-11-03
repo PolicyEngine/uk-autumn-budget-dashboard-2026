@@ -29,7 +29,7 @@ import {
   buildMeasureCatalogue,
   MeasureCatalogueProvider,
 } from "../measureCatalogue";
-import { choiceLabel } from "./selection";
+import { SELECTION_NOT_PUBLISHED, choiceLabel } from "./selection";
 
 // TEST DATA ONLY: the area run's name for the package
 const ALIAS = "synthetic_package_alias";
@@ -138,15 +138,22 @@ describe("the page's measures in the constituency views", () => {
     const catalogue = await publish(
       layerTable(IDS.filter((id) => id !== BETA)),
     );
-    expect((await show(catalogue, [BETA])).view.reason).toBe(
-      "Results by constituency are not yet published for this policy.",
-    );
-    // With no package published, every measure selected shows one measure
-    // at a time (the Measure picker), never the held one nor a sum
+    // The left-out measure alone: the card says so (no other policy
+    // stands in for it)
+    const alone = await show(catalogue, [BETA]);
+    expect(alone.view).toMatchObject({ kind: "notice" });
+    // With no package published, the map stacks the selected measures'
+    // own rows (the left-out one counts as zero)
     const all = await show(catalogue, IDS);
-    expect(all.choice.focus.options).not.toContain(BETA);
-    expect(all.choice.reform).not.toBe(BETA);
+    expect(all.choice).toMatchObject({ kind: "stack", members: IDS });
     expect(all.view).toMatchObject({ kind: "rows", reform: all.choice.reform });
+    // With no run for any selected measure, the combination's notice
+    cleanup();
+    resetGeographyCache();
+    const none = await show(await publish(layerTable([])), IDS);
+    expect(none.choice.kind).toBe("no-package");
+    expect(none.choice.reform).toBeUndefined();
+    expect(none.view).toEqual({ kind: "notice", reason: SELECTION_NOT_PUBLISHED, detail: null });
   });
 
   it("reads not yet published while no table is published", async () => {
@@ -154,7 +161,7 @@ describe("the page's measures in the constituency views", () => {
     for (const selected of [[IDS[0]], IDS]) {
       expect((await show(catalogue, selected)).view).toMatchObject({
         kind: "notice",
-        reason: "Results by constituency are not yet published.",
+        reason: "We have not yet published results by constituency.",
       });
     }
   });

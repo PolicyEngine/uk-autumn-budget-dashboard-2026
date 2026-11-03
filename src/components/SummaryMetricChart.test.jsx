@@ -74,14 +74,37 @@ describe("SummaryMetricChart", () => {
     );
     // No blocking message: one series per measure, with its key
     expect(screen.queryByText(/Choose one policy or all policies/)).toBeNull();
-    // The selected year: one bar per measure with an effect, the rest counted
-    expect(document.querySelectorAll(".mev-row")).toHaveLength(1);
-    expect(screen.getByText("1 policy with no effect hidden")).toBeInTheDocument();
+    // The selected year: a row per selected measure, a bar where it has an
+    // effect; one with no row published that year says so, with no bar
+    expect(document.querySelectorAll(".mev-row")).toHaveLength(2);
+    expect(document.querySelectorAll(".mev-row .mev-bar")).toHaveLength(1);
+    expect(document.querySelector(".mev-row--none")).toHaveTextContent(/Not published/);
+    expect(screen.queryByText(/with no effect hidden/)).toBeNull();
     expect(document.querySelector(".chart-description")).toHaveTextContent(/each policy on its own: biggest/i);
     // Year by year: a table of measures by years, never a sum
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "View" })).getByRole("radio", { name: "Year by year" }));
-    expect(document.querySelectorAll(".mev-table tbody tr")).toHaveLength(1);
+    expect(document.querySelectorAll(".mev-table tbody tr")).toHaveLength(2);
+  });
+
+  it("names the year, as a sentence, when no selected policy moves the figure that year", () => {
+    // W6 G1: a subset whose own changes are exactly 0 has no biggest bar;
+    // the subtitle was "<metric short>, pp Each selected policy on its own."
+    render(
+      <SummaryMetricChart
+        metric={SUMMARY_METRICS.poverty}
+        rows={[
+          { reform_id: "fuel_duty_rise_deferral", year: "2027", poverty_change_pp: "0" },
+          { reform_id: "road_fuel_vat_cut", year: "2027", poverty_change_pp: "0" },
+        ]}
+        policies={POLICIES}
+        selectedPolicies={["fuel_duty_rise_deferral", "road_fuel_vat_cut"]}
+        selectedYear={2027}
+      />,
+    );
+    const subtitle = document.querySelector(".chart-description");
+    expect(subtitle).toHaveTextContent(/^2027-28, each policy on its own\.$/);
+    expect(document.querySelectorAll(".mev-row--none")).toHaveLength(2);
   });
 
   it("says a run is not yet published rather than drawing zeros", () => {

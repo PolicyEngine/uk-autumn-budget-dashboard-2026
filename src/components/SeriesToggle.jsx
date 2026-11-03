@@ -3,6 +3,9 @@ import "./SeriesToggle.css";
 import Tip from "./Tip";
 
 const HINT_KEY = "pe-series-toggle-hint-seen";
+// Said to every key on the page when the reader first clicks a chip, so
+// two keys sharing one state (Across earnings) drop the hint together
+const HINT_EVENT = "pe-series-toggle-hint-seen";
 
 /** Whether the reader has clicked a chip in this session (sessionStorage, if it can be read). */
 function hintSeen() {
@@ -19,6 +22,17 @@ function markHintSeen() {
   } catch {
     // Private browsing or blocked storage: the hint just shows again
   }
+  window.dispatchEvent(new Event(HINT_EVENT));
+}
+
+/**
+ * A chip's tip: its own (`tip`: why a disabled one has nothing, or what an
+ * enabled one is), and on the last one on, that it stays on.
+ */
+export function chipTip(s, last) {
+  if (s.disabled) return s.tip ?? null;
+  if (last) return s.tip ? `${s.tip} At least one line stays on.` : `${s.label}: at least one line stays on`;
+  return s.tip ?? null;
 }
 
 /**
@@ -39,7 +53,8 @@ function markHintSeen() {
  * @param {Object} props
  * @param {Array<{key: string, label: string, colour: string, dash?: string, short?: string, shape?: "line"|"block", disabled?: boolean, tip?: string}>} props.series
  *   (`shape: "block"` for a filled layer: a square swatch; `disabled` for one
- *   with nothing to draw, kept so two keys line up, with `tip` saying why)
+ *   with nothing to draw, kept so two keys line up, with `tip` saying why;
+ *   on an enabled chip, `tip` is shown on hover and focus too)
  * @param {string[]} props.shown - The keys of the lines drawn
  * @param {(keys: string[]) => void} props.onChange - The next keys drawn, in `series` order
  * @param {(key: string|null) => void} [props.onHover]
@@ -50,6 +65,9 @@ function markHintSeen() {
  *   "N more with no effect for you" toggle that opens them in place
  * @param {boolean} [props.expanded] - Whether that chip is open (to share it)
  * @param {(open: boolean) => void} [props.onExpandedChange]
+ * @param {string} [props.noEffectOn] - Where the folded chips have no
+ *   effect, for that chip's tip ("this chart"; "either chart" for a key
+ *   two cards share)
  * @param {"card"|"section"} [props.placement] - "section" for one control
  *   above several cards: a bordered, rounded bar like the section measure
  *   key (MeasureKey's is-section), its lead as a title on the left, a
@@ -71,6 +89,7 @@ export default function SeriesToggle({
   expanded: expandedProp,
   onExpandedChange,
   placement = "card",
+  noEffectOn,
 }) {
   // The disabled chips folded into one "N more with no effect for you" toggle
   // (`collapseDisabled`), opened in place; open or not can be shared
@@ -81,6 +100,9 @@ export default function SeriesToggle({
   const [hint, setHint] = useState(false);
   useEffect(() => {
     setHint(!hintSeen());
+    const seen = () => setHint(false);
+    window.addEventListener(HINT_EVENT, seen);
+    return () => window.removeEventListener(HINT_EVENT, seen);
   }, []);
   const off = new Set(series.filter((s) => s.disabled).map((s) => s.key));
   // Folded into "+N": those marked `folded`, else every disabled one
@@ -119,7 +141,7 @@ export default function SeriesToggle({
           const active = on.has(s.key);
           const last = active && on.size === 1;
           return (
-            <Tip key={s.key} content={s.disabled ? s.tip ?? null : last ? `${s.label}: at least one line stays on` : null}>
+            <Tip key={s.key} content={chipTip(s, last)}>
             <button
               type="button"
               className={`series-toggle-chip${active ? " is-on" : ""}${s.disabled ? " is-disabled" : ""}`}
@@ -158,6 +180,7 @@ export default function SeriesToggle({
           );
         })}
         {collapseDisabled && foldedCount > 0 && (
+          <Tip content={expanded ? null : `${foldedCount === 1 ? "One component has" : `${foldedCount} components have`} no effect on ${noEffectOn ?? (placement === "section" ? "either chart" : "this chart")} for you: open to list them.`}>
           <button
             type="button"
             className="series-toggle-chip series-toggle-more"
@@ -169,6 +192,7 @@ export default function SeriesToggle({
             </svg>
             {expanded ? `Hide the ${foldedCount} with no effect` : `${foldedCount} more with no effect for you`}
           </button>
+          </Tip>
         )}
         {extras.map((item) => (
           <span key={item.key} className="series-toggle-extra">
@@ -178,7 +202,8 @@ export default function SeriesToggle({
         ))}
       </div>
       {hint && (
-        <p className="series-toggle-hint">
+        // An instruction for the page, not part of an exported image
+        <p className="series-toggle-hint" data-export="skip">
           {/* "Tap" on a touch screen, "Click" with a mouse (CSS picks one) */}
           <span className="series-toggle-hint-click">Click to show or hide</span>
           <span className="series-toggle-hint-tap">Tap to show or hide</span>

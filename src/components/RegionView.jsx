@@ -8,7 +8,6 @@ import { downloadFile } from "../utils/downloadFile";
 import {
   EXPORT_UNITS,
   buildCsv,
-  buildTxt,
   formatGenerated,
   regionExportRows,
 } from "../utils/geography/exportTable";
@@ -24,12 +23,15 @@ import { REGIONS } from "../utils/geography/regions";
 import {
   choiceLabel,
   choiceMeasureNames,
-  chooseReform,
+  chooseSelectionReform,
+  selectionNotPublished,
+  selectionPackageKey,
 } from "../utils/geography/selection";
 import { REGION_VIEW_ID, viewState } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
 import { CHART_LOGO } from "../utils/chartLogo";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import { htmlImageFormats } from "../utils/chartDownloads";
 import "./RegionView.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
@@ -86,13 +88,15 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
   const titleId = useId();
   const captionId = useId();
 
-  const { combinedId } = useMeasureCatalogue();
-  const choice = chooseReform({
+  // The header's selection: one policy's own run, or the published
+  // combined run of exactly the selected policies, else a notice
+  const { manifest } = useMeasureCatalogue();
+  const choice = chooseSelectionReform({
     selectedIds: selectedPolicies,
-    // The package is every measure the page can show, held ones excluded
     policyIds: policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     reforms: regional.table?.reforms ?? [],
-    packageId: combinedId,
+    packageKey: selectionPackageKey(manifest, selectedPolicies),
+    reason: selectionNotPublished("Regional"),
   });
   const view = viewState({
     data: regional,
@@ -105,7 +109,9 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
   const yearLabel = fiscalYearLabel(selectedYear);
   const rows = view.kind === "rows" ? view.rows : null;
 
-  const exportFile = (kind) => {
+  // The table, for its image downloads
+  const [table, setTable] = useState(null);
+  const exportCsv = () => {
     if (!rows) return;
     const exported = regionExportRows(regional.table, {
       reform: view.reform,
@@ -123,22 +129,11 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
       ["Source", "PolicyEngine UK Autumn Budget 2026 dashboard"],
     ];
     const filename = `results-by-region-${view.reform}-${selectedYear}`;
-    if (kind === "csv") {
-      downloadFile(
-        buildCsv(exported, metadata),
-        `${filename}.csv`,
-        "text/csv;charset=utf-8",
-      );
-    } else {
-      downloadFile(
-        buildTxt(exported, {
-          title: `${TITLE}: UK Autumn Budget 2026 dashboard`,
-          metadata,
-        }),
-        `${filename}.txt`,
-        "text/plain;charset=utf-8",
-      );
-    }
+    downloadFile(
+      buildCsv(exported, metadata),
+      `${filename}.csv`,
+      "text/csv;charset=utf-8",
+    );
   };
 
   return (
@@ -158,8 +153,8 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
           </h3>
           <p className="chart-description">
             The average change in household net income in each region and
-            nation, with its 90% interval. Figures are rounded to the precision
-            the data supports, and some are not published, to protect survey
+            nation, with its 90% interval. We round figures to the precision
+            the data supports, and withhold some, to protect survey
             respondents' confidentiality.
           </p>
         </div>
@@ -167,8 +162,9 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
           <ChartDownloadMenu
             chartTitle={`${TITLE}, ${yearLabel}`}
             formats={{
-              csv: () => exportFile("csv"),
-              txt: () => exportFile("txt"),
+              csv: exportCsv,
+              // The table as an image, as every card's (chartDownloads)
+              ...htmlImageFormats(() => table, `results-by-region-${view.reform}-${selectedYear}`),
             }}
           />
         )}
@@ -211,7 +207,7 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
             aria-label="Table of results by region"
             tabIndex={0}
           >
-            <table className="region-table" aria-labelledby={captionId}>
+            <table ref={setTable} className="region-table" aria-labelledby={captionId}>
               <thead>
                 <tr>
                   <th scope="col">Region</th>
@@ -235,8 +231,8 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
           </div>
           <p className="region-note">
             Approximate figures rest on few survey households, and their
-            intervals understate the uncertainty. Figures marked not
-            published are withheld to protect survey respondents'
+            intervals understate the uncertainty. Where a row says not
+            published, we withhold its figure to protect survey respondents'
             confidentiality.
           </p>
           <div className="card-logo">

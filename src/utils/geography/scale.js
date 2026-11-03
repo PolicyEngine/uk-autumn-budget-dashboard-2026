@@ -4,9 +4,12 @@
  * src/components/ConstituencyMap.jsx, lines 13-16 and 213-232, and
  * ConstituencyMap.css lines 177-182): amber #D97706 for a loss, through
  * light grey #E5E7EB at no change, to teal #14B8A6 for a gain, each half
- * interpolated in RGB, on a fixed domain of −1% to +1% that clamps at its
- * ends and is the same for every measure and year. In £ a year the same
- * scale runs from −£100 to +£100.
+ * interpolated in RGB, symmetric round 0 (always the neutral grey) and
+ * clamping at its ends. The domain is fixed in advance, never derived
+ * from the published figures (as classify.js's breaks are), and the same
+ * for every selection, year and policy: ±0.05% of income, or ±£50 a year
+ * (Vahid, 28 October: the stacked effects are a few hundredths of a per
+ * cent, so the earlier ±1% left every seat grey).
  */
 
 import * as d3 from "d3";
@@ -21,15 +24,15 @@ export const SCALE_COLOURS = Object.freeze({
 
 /** The fixed extent, in each outcome's units (a fraction, or £). */
 export const SCALE_EXTENT = Object.freeze({
-  relative_change: 0.01,
-  average_change: 100,
+  relative_change: 0.0005,
+  average_change: 50,
 });
 
 // Steps the scale is drawn in: a hundred, too fine to see, and a bounded
 // set of dot textures for the approximate seats.
 const STEPS = 100;
 
-/** The scale's extent for an outcome. */
+/** The scale's fixed extent for an outcome. */
 export const colourExtent = (outcome) => SCALE_EXTENT[outcome] ?? SCALE_EXTENT.relative_change;
 
 const lossHalf = d3.interpolateRgb(SCALE_COLOURS.loss, SCALE_COLOURS.neutral);

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import NoBreakYear from "../NoBreakYear";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import {
@@ -39,11 +40,11 @@ const DROP_FILL = CHART_COLOURS.mutedFill;
 // Over the stacked layers the total is drawn in ink, as on the marginal
 // rate card
 const TOTAL_COLOUR = CHART_COLOURS.ink;
-const TOTAL_NAME = { before: "Net income before", after: "Net income after", change: "Change in net income" };
+const TOTAL_NAME = { before: "Net income under current law", after: "Net income with the policies", both: "Net income with the policies", change: "Change in net income" };
 
 export const LEGEND_ITEMS = [
-  { label: "Before the selected policies", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
-  { label: "After the selected policies", color: AFTER_COLOUR, type: "line" },
+  { label: "Under current law", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
+  { label: "With the selected policies", color: AFTER_COLOUR, type: "line" },
 ];
 const DROP_ITEM = { label: "Net income falls as salary rises", color: CHART_COLOURS.grid };
 // The change card's key, as the population charts colour a gain and a loss
@@ -89,6 +90,33 @@ function valueAt(points, income, key) {
 }
 
 /**
+ * The salary and £ value under the pointer, from its offset within the plot
+ * area (px from the plot's left, py from its top). Pavel's review (HH7): the
+ * margin was taken off twice, so the hover trailed the pointer and the
+ * right end of the axis could not be reached.
+ */
+export function pointerOnPlot(px, py, { plotW, plotH, xMax, yLo, yHi }) {
+  return {
+    income: (px / plotW) * xMax,
+    value: yLo + ((plotH - py) / plotH) * (yHi - yLo),
+  };
+}
+
+/**
+ * Where the hover box goes beside the guide at `guideX` in a plot `width`
+ * wide: to its right, or past 60% of the width to its left, 12px off; and
+ * never with less than `room` px to the plot's edge on its open side. On a
+ * phone the box beside a guide near the middle was squeezed into the
+ * little room left, its names a word a line (phone check, 28 Oct): it now
+ * moves in, over the guide if it must.
+ */
+export function tipPlacement(guideX, width, room = 220) {
+  const onLeft = guideX > width * 0.6;
+  const most = Math.max(0, width - Math.min(room, width));
+  return onLeft ? { right: Math.min(width - guideX + 12, most) } : { left: Math.min(guideX + 12, most) };
+}
+
+/**
  * Across earnings, one card with three views chosen above the plot, as the
  * marginal rate card beside it: "Before" and "After" the selected policies,
  * net income as the salary varies, and "Change", what the policies add or
@@ -128,6 +156,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const view = sync?.view ?? ownView;
   const setView = sync?.setView ?? setOwnView;
   const isChange = view === "change";
+  // Both: current law and with the policies as two lines, no layers
+  const isBoth = view === "both";
+  const side = isBoth ? "after" : view;
   const narrow = useNarrowViewport();
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
@@ -154,11 +185,14 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const viewTitle = isChange ? `Net income change, ${yearLabel}` : title;
 
   const points = useMemo(() => sweepPoints(sweep), [sweep]);
-  const netParts = sweep.netParts ?? null;
+  const netParts = isBoth ? null : (sweep.netParts ?? null);
   // The view's rows, by programme when the API sends the parts
   const rows = useMemo(
-    () => (netParts ? layerRows(points, netParts, view) : points.map((p) => ({ income: p.income, total: isChange ? p.change : p[view] }))),
-    [points, netParts, view, isChange],
+    () =>
+      netParts
+        ? layerRows(points, netParts, view)
+        : points.map((p) => ({ income: p.income, total: isChange ? p.change : p[side], ...(isBoth ? { before: p.before, after: p.after, change: p.change } : {}) })),
+    [points, netParts, view, side, isChange, isBoth],
   );
   // The layers in use before or after, so switching between them keeps the
   // legend; the change's own layers in Change
@@ -171,8 +205,8 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const totalShown = !hidden.includes("total");
   const stack = useMemo(() => stackLayers(rows, shownLayers), [rows, shownLayers]);
   const drops = useMemo(
-    () => (isChange ? [] : netIncomeDrops(points.map((p) => ({ income: p.income, after: p[view] })))),
-    [isChange, points, view],
+    () => (isChange ? [] : netIncomeDrops(points.map((p) => ({ income: p.income, after: p[side] })))),
+    [isChange, points, side],
   );
   // The change is under 1% of net income at every salary
   const smallChange =
@@ -200,6 +234,8 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   // runs to the axis's domain, not its last tick (the domain can sit half a
   // step past it).
   const youAt = salary !== null ? valueAt(rows, salary, "total") : null;
+  // Both: your net income under current law too
+  const youBefore = isBoth && salary !== null ? valueAt(rows, salary, "before") : null;
   const changeReach = Math.max(
     Math.abs(stack.top),
     Math.abs(stack.bottom),
@@ -209,7 +245,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   );
   const yAxis = isChange
     ? divergingAxis([changeReach, -changeReach], { pad: Y_HEADROOM })
-    : zeroBasedAxis([...levelReach, youAt], { pad: Y_HEADROOM });
+    : zeroBasedAxis([...levelReach, youAt, ...(youBefore == null ? [] : [youBefore])], { pad: Y_HEADROOM });
   // Ticks out to both ends, so the top value is always labelled above
   // the highest point (+£110 reads against a £150 tick, not a £100 one)
   const yTicks = ticksToDomain(yAxis);
@@ -229,10 +265,10 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const youValue = youAt;
 
   const onMove = (event) => {
+    // The hover rect is the plot itself (x = left, y = top), so the pointer
+    // is already relative to the plot: no margin to take off again
     const rect = event.currentTarget.getBoundingClientRect();
-    const px = event.clientX - rect.left;
-    const py = event.clientY - rect.top;
-    const income = ((px - left) / plotW) * xMax;
+    const { income, value } = pointerOnPlot(event.clientX - rect.left, event.clientY - rect.top, { plotW, plotH, xMax, yLo, yHi });
     let best = 0;
     rows.forEach((p, i) => {
       if (Math.abs(p.income - income) < Math.abs(rows[best].income - income)) best = i;
@@ -241,7 +277,6 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
     sync?.setHover({ income: rows[best].income, card: "net" });
     // The layer under the pointer, if any: its band at this salary holds
     // the pointer's value
-    const value = yLo + ((top + plotH - py) / plotH) * (yHi - yLo);
     const under = shownLayers.find((layer) => {
       const band = stack.bands[layer.key]?.[best];
       return band && value >= Math.min(band.lo, band.hi) && value <= Math.max(band.lo, band.hi) && Math.abs(band.hi - band.lo) > 0;
@@ -262,7 +297,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const hovered = hover !== null ? rows[hover] : null;
   // Without the parts: one line, coloured as before or after, or the
   // change's gain and loss
-  const sideColour = view === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
+  const sideColour = side === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
   const lineColour = netParts ? TOTAL_COLOUR : sideColour;
   const dotColour = (value) => (netParts ? TOTAL_COLOUR : isChange ? (value < 0 ? LOSS_COLOUR : AFTER_COLOUR) : sideColour);
   const totalItem = { label: TOTAL_NAME[view], color: TOTAL_COLOUR, type: "line" };
@@ -271,10 +306,12 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
       ? [...layerLegendItems(layers), totalItem]
       : isChange
         ? CHANGE_LEGEND_ITEMS
-        : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]]),
+        : isBoth
+          ? LEGEND_ITEMS
+          : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]]),
     ...(drops.length ? [DROP_ITEM] : []),
   ];
-  const sideWords = view === "before" ? "before the selected policies" : "after the selected policies";
+  const sideWords = view === "before" ? "under current law" : isBoth ? "under current law and with the selected policies" : "with the selected policies";
   // One plain sentence: your household at your salary
   const youRounded = youValue == null ? null : Math.round(youValue / 10) * 10;
   // A change within £5 of itself at every salary: said in the sentence
@@ -289,10 +326,12 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         ? youRounded === 0
           ? `${at}, the selected policies barely change your household's net income.`
           : `${at}, the selected policies ${youRounded > 0 ? "add" : "take"} about ${formatPounds(Math.abs(youRounded))} a year ${youRounded > 0 ? "to" : "from"} your household's net income${flatChange ? ", about the same at every salary" : ""}.`
-        : `${at}, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
+        : isBoth && youBefore != null
+          ? `${at}, your household's net income is about ${formatPounds(Math.round(youBefore / 10) * 10)} a year under current law and ${formatPounds(Math.round(youValue / 10) * 10)} with the selected policies.`
+          : `${at}, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
   const description = isChange
-    ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, with partner income and everything else held fixed.`
-    : `Your household's net income ${sideWords} as your salary varies${netParts ? ": income and benefits above zero, taxes below" : ""}, with partner income and everything else held fixed.`;
+    ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, while partner income and everything else stay fixed.`
+    : `Your household's net income ${sideWords} as your salary varies${netParts ? ": income and benefits above zero, taxes below" : ""}, while partner income and everything else stay fixed.`;
 
   const layerColumns = layers.map((layer) => ({
     key: layer.key,
@@ -320,7 +359,13 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         columns: [
           { key: "income", label: "Employment income (£)", decimals: 0 },
           ...layerColumns,
-          { key: "total", label: `${TOTAL_NAME[view]} (£)`, decimals: 2 },
+          ...(isBoth
+            ? [
+                { key: "before", label: "Net income under current law (£)", decimals: 2 },
+                { key: "after", label: "Net income with the policies (£)", decimals: 2 },
+                { key: "change", label: "Change in net income (£)", decimals: 2 },
+              ]
+            : [{ key: "total", label: `${TOTAL_NAME[view]} (£)`, decimals: 2 }]),
         ],
         rows,
       }),
@@ -342,10 +387,16 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             value: hovered[layer.key],
             color: layer.color,
           })),
-        { dataKey: "total", name: TOTAL_NAME[view], value: hovered.total, color: dotColour(hovered.total) },
+        ...(isBoth
+          ? [
+              { dataKey: "before", name: TOTAL_NAME.before, value: hovered.before, color: BEFORE_COLOUR },
+              { dataKey: "after", name: TOTAL_NAME.after, value: hovered.after, color: AFTER_COLOUR },
+              { dataKey: "change", name: TOTAL_NAME.change, value: hovered.change, color: CHART_COLOURS.ink },
+            ]
+          : [{ dataKey: "total", name: TOTAL_NAME[view], value: hovered.total, color: dotColour(hovered.total) }]),
       ];
   const tipLeft = hovered ? x(hovered.income) : 0;
-  const tipOnLeft = tipLeft > width * 0.6;
+  const tipSide = tipPlacement(tipLeft, width);
 
   return (
     <div className="card single-year-card">
@@ -432,6 +483,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 <path d={areaPath(points, x, y, -1)} fill={LOSS_COLOUR} fillOpacity={0.6} stroke="none" />
               </>
             ) : totalShown && (
+              <>
               <path
                 className="earnings-total"
                 d={linePath(rows, x, y, "total")}
@@ -441,6 +493,18 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 strokeOpacity={highlighted && !highlighted.includes("total") ? 0.3 : 1}
                 strokeDasharray={!netParts && view === "before" ? BEFORE_DASH : undefined}
               />
+              {isBoth && (
+                // Current law dashed, over the policies' solid line so both show where they meet
+                <path
+                  className="earnings-total earnings-total-before"
+                  d={linePath(rows, x, y, "before")}
+                  fill="none"
+                  stroke={BEFORE_COLOUR}
+                  strokeWidth={2}
+                  strokeDasharray={BEFORE_DASH}
+                />
+              )}
+              </>
             )}
 
             {/* X axis */}
@@ -465,6 +529,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             {youX !== null && (
               <g className="earnings-you">
                 <line x1={youX} x2={youX} y1={top} y2={top + plotH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray={REFERENCE_DASH} />
+                {youBefore !== null && (
+                  <circle cx={youX} cy={y(youBefore)} r={5} fill={BEFORE_COLOUR} stroke={CHART_COLOURS.surface} strokeWidth={2} />
+                )}
                 {youValue !== null && (
                   <circle
                     cx={youX}
@@ -489,7 +556,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                   {/* "You: £18,010", as the marginal rate card's "You: 28%" */}
                   {youValue === null
                     ? "You"
-                    : `You: ${isChange ? `${youValue < 0 ? "−" : "+"}${formatPounds(Math.abs(Math.round(youValue / 10) * 10))}` : formatPounds(Math.round(youValue / 10) * 10)}`}
+                    : `You: ${isChange ? `${youValue < 0 ? "−" : "+"}${formatPounds(Math.abs(Math.round(youValue / 10) * 10))}` : isBoth && youBefore != null ? `${formatPounds(Math.round(youBefore / 10) * 10)} → ${formatPounds(Math.round(youValue / 10) * 10)}` : formatPounds(Math.round(youValue / 10) * 10)}`}
                 </text>
               </g>
             )}
@@ -512,6 +579,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             {hovered && (
               <g className="earnings-hover" pointerEvents="none">
                 <line x1={x(hovered.income)} x2={x(hovered.income)} y1={top} y2={top + plotH} stroke={CHART_COLOURS.noChange} strokeWidth={1} />
+                {isBoth && <circle cx={x(hovered.income)} cy={y(hovered.before)} r={3.5} fill={BEFORE_COLOUR} />}
                 <circle cx={x(hovered.income)} cy={y(hovered.total)} r={3.5} fill={dotColour(hovered.total)} />
               </g>
             )}
@@ -533,8 +601,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             <div
               className="earnings-tooltip"
               style={{
-                left: tipOnLeft ? undefined : tipLeft + 12,
-                right: tipOnLeft ? width - tipLeft + 12 : undefined,
+                ...tipSide,
                 top: top + 8,
               }}
             >
@@ -543,7 +610,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 payload={tooltipPayload}
                 label={hovered.income}
                 format={formatPounds}
-                labelFormat={(v) => (layerTip ? `At ${formatPoundsShort(v)}` : `${X_LABEL} ${formatPounds(v)}, ${yearLabel}`)}
+                labelFormat={(v) => (layerTip ? `At ${formatPoundsShort(v)}` : <NoBreakYear text={`${X_LABEL} ${formatPounds(v)}, ${yearLabel}`} />)}
                 grouped={false}
                 netKey={netParts && !layerTip ? "total" : undefined}
                 netLabel={TOTAL_NAME[view]}
@@ -554,15 +621,10 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         </div>
       </div>
       <div className="single-year-legend chart-legend">
-        {netParts && sync?.sharedLegend ? (
-          // The Show control is above the pair; only this card's own key
-          // item (the shaded bands) stays here
-          drops.length > 0 && (
-            <span className="series-toggle-extra">
-              <span className="series-toggle-band" style={{ background: DROP_FILL }} aria-hidden="true" />
-              {DROP_ITEM.label}
-            </span>
-          )
+        {netParts && sync?.legend ? (
+          // The key shared with the marginal rate card (the same chips and
+          // state), with this card's own shaded bands after them
+          sync.legend(drops.length ? [{ key: "drop", label: DROP_ITEM.label, fill: DROP_FILL }] : [])
         ) : netParts ? (
           // The layers and the total as chips: show or hide each, hover to
           // bring one forward
@@ -598,16 +660,24 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
           info={{
             shows: description,
             how: [
-              "Your household is calculated again at each salary from £0 up, with partner income and everything else held fixed.",
+              // "Held fixed" is said once, in What it shows above
+              "We calculate your household again at each salary from £0 up.",
+              // By view: in Change each layer is after minus before and the
+              // line the change (layerRows); with no parts, Change draws two
+              // shaded areas and no line (W6 G1)
               netParts
-                ? "Each layer is one tax or benefit's part of net income; income and benefits are above zero, taxes below, and the line is net income."
-                : "The line is your household's net income.",
+                ? isChange
+                  ? "Each layer is one tax or benefit's part of the change: above zero where it adds to net income, below where it takes away. The line is the change in net income."
+                  : "Each layer is one part of net income (earnings, a benefit or a tax), and the line is net income."
+                : isChange
+                  ? "The shaded area is the change: above zero a gain, below a loss."
+                  : "The line is your household's net income.",
               "The dashed line marks your salary.",
             ],
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               isChange && smallChange && "The change is under 1% of net income at every salary.",
-              drops.length > 0 && "In the shaded bands net income falls as salary rises: taxes and withdrawn benefits take more than the extra pay.",
+              drops.length > 0 && "In the shaded bands net income falls as salary rises: taxes and benefit withdrawals take more than the extra pay.",
             ],
           }}
         />

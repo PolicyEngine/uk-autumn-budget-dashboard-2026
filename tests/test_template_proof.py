@@ -182,7 +182,7 @@ def test_template_helpers_and_unfixed_modules_are_hand_written(source):
     "modifier", [subscript_call_modifier, subscript_attribute_modifier]
 )
 def test_calls_and_attributes_in_subscripts_are_hand_written_and_held(
-    modifier,
+    modifier, sign_off_required
 ):
     world = World()
     reform = Reform(

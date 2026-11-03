@@ -1,0 +1,20 @@
+/* The policies a group of questions is for: tiny muted icons, in a row */
+.policy-icons {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  cursor: default;
+}
+
+.policy-icons .mrl-icon--compact {
+  width: 16px;
+  height: 16px;
+  color: var(--pe-gray-500);
+  background: var(--pe-gray-100);
+}
+
+.policy-icons .mrl-icon--compact svg {
+  width: 10px;
+  height: 10px;
+}

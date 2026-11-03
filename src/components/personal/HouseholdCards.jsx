@@ -4,13 +4,17 @@ import {
   ArrowRight,
   Baby,
   BriefcaseBusiness,
+  Bus,
   Car,
   ChevronDown,
+  Glasses,
   LayoutGrid,
   GraduationCap,
+  HandHeart,
   HardHat,
   House,
   KeyRound,
+  PiggyBank,
   UsersRound,
 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -19,11 +23,13 @@ import useDataFile from "../../hooks/useDataFile";
 import { buildHouseholdRequest } from "../../utils/householdImpactApi";
 import { presetInputs } from "../../utils/householdPresets";
 import { DISTRIBUTION_FILE, curveOf, distributionRunOf, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
-import { catalogueProvisional, useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { NEUTRAL_COLOR, catalogueProvisional, useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { CALCULATOR_ONLY_MEASURES, isCalculatorOnly } from "../../utils/calculatorOnlyMeasures";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
 import Tip from "../Tip";
+import { shortNameOf } from "../../utils/policyDetails";
 
 /** Each example's icon, by the name it gives (householdExamples.js). */
 export const EXAMPLE_ICONS = {
@@ -35,7 +41,20 @@ export const EXAMPLE_ICONS = {
   car: Car,
   briefcase: BriefcaseBusiness,
   baby: Baby,
+  glasses: Glasses,
+  handHeart: HandHeart,
+  piggyBank: PiggyBank,
+  bus: Bus,
 };
+
+/**
+ * A measure as the cards show it: the catalogue's, or a calculator-only
+ * one's (calculatorOnlyMeasures.js), which the catalogue never lists but a
+ * card that turns it on features.
+ */
+const measureOf = (id, catalogue) =>
+  catalogue?.byId.get(id) ??
+  (isCalculatorOnly(id) ? { ...CALCULATOR_ONLY_MEASURES[id], label: CALCULATOR_ONLY_MEASURES[id].name, color: NEUTRAL_COLOR, displayable: true } : undefined);
 
 /**
  * Whether the catalogue publishes every measure an example features: its
@@ -43,24 +62,17 @@ export const EXAMPLE_ICONS = {
  * never named on a card, alone or beside another (#104).
  */
 export function featuresPublished(example, catalogue) {
-  return (example.measures ?? [example.measure]).every((id) => catalogue.byId.get(id)?.displayable === true);
+  return (example.measures ?? [example.measure]).every((id) => measureOf(id, catalogue)?.displayable === true);
 }
 
-/** Each measure's short name, as a card's chip names it (sentence case there). */
-const SOURCE_NAMES = {
-  domestic_electricity_zero_vat: "zero VAT on electricity",
-  fuel_duty_rise_deferral: "the fuel duty deferral",
-  road_fuel_vat_cut: "the VAT cut on road fuel",
-  state_pension_income_tax_protection: "State Pension tax protection",
-  plan_2_threshold_unfreeze: "the Plan 2 threshold unfreeze",
-  threshold_freeze_2031_32: "the threshold freeze",
-  warm_home_discount_top_up: "the Warm Home Discount top-up",
-  employer_ni_relief_under_25s: "employer National Insurance relief",
-  badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
+// A measure's short name, as Policies names it (policyDetails.js), else
+// its published name
+const sourceName = (id, catalogue) => {
+  if (!catalogue?.byId.get(id) && isCalculatorOnly(id)) return CALCULATOR_ONLY_MEASURES[id].name;
+  const measure = catalogue?.byId.get(id);
+  return measure ? shortNameOf(measure) : id;
 };
-// A short name where there is one, else the catalogue's published name
-const sourceName = (id, catalogue) => SOURCE_NAMES[id] ?? catalogue?.byId.get(id)?.name ?? id;
-// As a chip names it: "Zero VAT on electricity", "Fuel duty deferral"
+// As a chip names it: "Zero VAT on electricity", "Pension Tax Allowance"
 const chipName = (id, catalogue) => {
   const name = sourceName(id, catalogue).replace(/^the /, "");
   return name.charAt(0).toUpperCase() + name.slice(1);
@@ -102,7 +114,20 @@ export function cardFigures(example, byYear, year, catalogue = null) {
   // Every year a reader can choose: one not yet in is null (its bar a stub)
   const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].filter(isDisplayYear).sort((a, b) => a - b);
   const series = years.map((y) => ({ year: y, change: byYear[y] ? byYear[y].change : null }));
-  return { change: current.change, ownPart, top, series };
+  // The chips: always the example's own measures, each by its short name
+  // with its own part (the example exists for them); a measure with no
+  // part this year but one later says when it starts, from the example's
+  // own results ("from 2030-31")
+  const startOf = (id) => years.find((y) => y > year && Math.round(byYear[y]?.byPolicy?.[id] ?? 0) !== 0) ?? null;
+  const ownChips = own.map((id) => {
+    const part = split ? split[id] ?? 0 : null;
+    const quiet = part !== null && Math.round(part) === 0;
+    return { id, name: chipName(id, catalogue), part, from: quiet ? startOf(id) : null };
+  });
+  // Several own measures: those with a part this year, else the first
+  const moving = ownChips.filter((chip) => chip.part === null || Math.round(chip.part) !== 0);
+  const chips = moving.length ? moving : ownChips.slice(0, 1);
+  return { change: current.change, ownPart, top, series, chips };
 }
 
 /**
@@ -127,7 +152,7 @@ export function examplePercentile(example, point, { year, policies, rows, catalo
 /** A small strip with a dot where the example sits, and its percentile. */
 function PositionStrip({ percentile, yearLabel }) {
   return (
-    <Tip content={`${percentile} in 100 people in the UK live in a household with a lower income than this one, adjusted for household size (${yearLabel}, after the selected policies)`}>
+    <Tip content={`Income percentile, ${yearLabel}, with the selected policies`}>
     <span className="household-card-position">
       <span className="household-card-position-track" aria-hidden="true">
         <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
@@ -241,7 +266,7 @@ export function YearBars({ series, year }) {
 }
 
 /**
- * The Household impact view's cards: first one wide "Your household"
+ * The Household calculator view's cards: first one wide "Your household"
  * card, which opens the form below the cards; then eight example
  * households under "Example households", all the same size, each of which
  * fills the form and shows its result at once. One section heading over
@@ -364,17 +389,21 @@ export default function HouseholdCards({
               })
             : null;
           const featured = featuresPublished(example, catalogue);
-          // The chip: the top measure once the split is known, else the
-          // example's own; shown only while the catalogue publishes it
-          const chipFigures = figures?.top ?? { ids: example.measures ?? [example.measure], name: example.tag, part: null, own: true };
-          const chip = chipFigures.ids.every((id) => catalogue.byId.get(id)?.displayable === true) ? chipFigures : null;
+          // The chips: the example's own measures, each with its part once
+          // the split is known; shown only while the catalogue publishes them
+          const ownIds = example.measures ?? [example.measure];
+          const chips = featured
+            ? figures?.chips ?? ownIds.slice(0, 1).map((id) => ({ id, name: chipName(id, catalogue), part: null, from: null }))
+            : null;
+          // Another measure giving the larger part: said in the chips' tip
+          const larger = figures && !figures.top.own ? figures.top : null;
           const pressed = value === example.id;
           const describedBy = `household-card-${example.id}-result household-card-${example.id}-description`;
           return (
             <div
               key={example.id}
               className={`household-card ${pressed ? "is-selected" : ""}`.trim()}
-              style={{ "--card-accent": featured ? catalogue.byId.get(example.measure).color : undefined, "--i": index + 1 }}
+              style={{ "--card-accent": featured ? measureOf(example.measure, catalogue)?.color : undefined, "--i": index + 1 }}
             >
               <span className="household-card-icon" aria-hidden="true">
                 <Icon size={22} strokeWidth={1.8} />
@@ -421,21 +450,35 @@ export default function HouseholdCards({
               <span className="household-card-description" id={`household-card-${example.id}-description`}>
                 {example.description}
               </span>
-              {/* One chip: the measure giving most of the year's change, with
-                  its part, in its colour; the example's own measure in the
-                  chip's title when another gives more */}
-              {chip && (
+              {/* One chip: the measure with the largest single effect in the
+                  year, with its part, in its colour; the example's own
+                  measure in the chip's title when another gives more. Not
+                  "most of the change": nothing checks it is half the change,
+                  or even its sign (W6 G1) */}
+              {chips && (
                 <Tip
                   content={
-                    !chip.own && featured && figures
-                      ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); most of the change comes from ${chip.name} (${signedMoney(chip.part)}).`
+                    larger
+                      ? `This example features ${chips.map((chip) => chip.name).join(" and ")} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); the largest single effect is ${larger.name} (${signedMoney(larger.part)}).`
                       : null
                   }
                 >
-                <span className="household-card-tag" style={{ "--chip-accent": catalogue.byId.get(chip.ids[0])?.color }}>
-                  <span className="household-card-dot" aria-hidden="true" />
-                  <span className="household-card-tag-name">{chip.name}</span>
-                  {chip.part != null && <span className="household-card-tag-part">{signedMoney(chip.part)}</span>}
+                <span className="household-card-tags">
+                  {chips.map((chip) => (
+                    <span
+                      key={chip.id}
+                      className={`household-card-tag${chip.from ? " is-later" : ""}`}
+                      style={{ "--chip-accent": measureOf(chip.id, catalogue)?.color }}
+                    >
+                      <span className="household-card-dot" aria-hidden="true" />
+                      <span className="household-card-tag-name">{chip.name}</span>
+                      {chip.from ? (
+                        <span className="household-card-tag-part">from {fiscalYearTick(chip.from)}</span>
+                      ) : (
+                        chip.part != null && <span className="household-card-tag-part">{signedMoney(chip.part)}</span>
+                      )}
+                    </span>
+                  ))}
                 </span>
                 </Tip>
               )}
@@ -515,7 +558,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
 function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
   const catalogue = useMeasureCatalogue();
   // A chip's accent only while the catalogue publishes its measures (#104)
-  const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
+  const accentOf = (example) => (featuresPublished(example, catalogue) ? (measureOf(example.measure, catalogue)?.color ?? null) : null);
   const items = [
     { id: null, label: "Your household", short: "Your household", Icon: House, change: yoursChange, accent: null },
     ...examples.map((example) => ({

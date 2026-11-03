@@ -82,11 +82,6 @@
   visibility: visible;
 }
 
-.pill-select-check {
-  width: 14px;
-  color: var(--pe-teal-700);
-}
-
 /* Light variant: the in-card version of the band pills */
 .pill-select-light .pill-select-toggle {
   display: inline-flex;

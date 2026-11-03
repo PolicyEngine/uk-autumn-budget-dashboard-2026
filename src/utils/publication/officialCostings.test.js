@@ -45,6 +45,22 @@ describe("officialCostingRows", () => {
     expect(() => officialCostingRows(doc({ measures: { rate: { years: { 2027: { static_costing: "1.2" } } } } }), manifest)).toThrow(/not a number/);
     expect(() => officialCostingRows(doc({ measures: { rate: { years: { "27": { static_costing: 1 } } } } }), manifest)).toThrow(/malformed/);
   });
+
+  it("carries the reason for a year a reviewer classified not comparable", () => {
+    const reason = "Allowance ends 5 April 2030";
+    const years = { 2029: { static_costing: null, post_behavioural: -0.15 }, 2030: { static_costing: null, post_behavioural: null, not_comparable: { reason } } };
+    expect(officialCostingRows(doc({ measures: { rate: { years } } }), manifest)).toEqual([
+      { reform_id: "rate", year: 2029, obr_static: null, obr_behavioural: -0.15 },
+      { reform_id: "rate", year: 2030, obr_static: null, obr_behavioural: null, not_comparable: reason },
+    ]);
+  });
+
+  it("refuses a not-comparable year with no reason or with a figure", () => {
+    const with_ = (figures) => doc({ measures: { rate: { years: { 2030: figures } } } });
+    expect(() => officialCostingRows(with_({ static_costing: null, post_behavioural: null, not_comparable: {} }), manifest)).toThrow(/malformed/);
+    expect(() => officialCostingRows(with_({ static_costing: null, post_behavioural: null, not_comparable: "x" }), manifest)).toThrow(/malformed/);
+    expect(() => officialCostingRows(with_({ static_costing: null, post_behavioural: 0.05, not_comparable: { reason: "x" } }), manifest)).toThrow(/malformed/);
+  });
 });
 
 describe("loadOfficialCostings", () => {
@@ -63,7 +79,7 @@ describe("loadOfficialCostings", () => {
   });
 
   it("fails without a manifest or on another error", async () => {
-    await expect(loadOfficialCostings({}, { fetchImpl: vi.fn() })).rejects.toThrow(/No Budget results/);
+    await expect(loadOfficialCostings({}, { fetchImpl: vi.fn() })).rejects.toThrow(/published no Budget results/);
     const fetchImpl = vi.fn(async () => new Response("", { status: 500 }));
     await expect(loadOfficialCostings(catalogue, { fetchImpl })).rejects.not.toBeInstanceOf(OfficialCostingsPendingError);
   });

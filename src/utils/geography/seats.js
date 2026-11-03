@@ -4,28 +4,29 @@
  *
  * A seat's state comes only from its own published row:
  *
- * - `reported` or `approximate`: the row's category colour, solid when
- *   reported and under a dot texture when approximate;
- * - `withheld`: hatched, with no figure;
+ * - `reported` or `approximate`: the row's colour, solid when reported and
+ *   plain either way (the card says when it is approximate);
+ * - `withheld`: drawn as No data, with no figure;
  * - `no-data`: no row at all, drawn as such and never given a value.
+ *
+ * A seat too uncertain to place on the scale is drawn as No data too, so
+ * the key is the colour scale and one No data swatch (Vahid, 28 October);
+ * its card still gives its figure and interval.
  */
 
 import { TOO_UNCERTAIN, classifyRow } from "./classify";
+import { absDecimal, compareDecimal } from "./decimal";
 import { formatFigure, formatInterval } from "./format";
 import {
   CATEGORY_COLOURS,
   NO_DATA_FILL,
   NO_DATA_STROKE,
-  UNCERTAIN_FILL,
-  WITHHELD_FILL,
-  approximateColourFill,
-  approximateFill,
 } from "./palette";
 import { regionForBoundary } from "./regions";
 import { lookupRow } from "./rows";
 import { CHART_COLOURS } from "../chartTheme";
 
-export const NO_DATA_NOTE = "No figure is published for this constituency.";
+export const NO_DATA_NOTE = "We publish no figure for this constituency.";
 
 /** The seat's ONS code, from the boundary file. */
 export const seatCode = (feature) => feature?.properties?.GSScode ?? "";
@@ -77,43 +78,151 @@ export function movesNoSeat(states) {
 export const noSeatMovedNote = ({ yearLabel, several = false }) =>
   `No constituency shows a change large enough to publish for ${several ? "these policies" : "this policy"} in ${yearLabel}.`;
 
+const OUTCOME_UNIT = { average_change: " a year", relative_change: " of income" };
+const seatsWord = (n) => `${n.toLocaleString("en-GB")} constituenc${n === 1 ? "y" : "ies"}`;
+
+// "Little change" is said only when it covers this share of the map's
+// seats or more (Vahid, 28 October: "577 lose; 71 have no data")
+const LITTLE_CHANGE_SHARE = 0.1;
+
+/**
+ * The card's one plain sentence under its title (Vahid, 27 October: "add a
+ * subtitle like other boxes"), from the published rows the map colours, in
+ * the outcome it shows: where households gain or lose on average, and the
+ * range when every seat with a figure moves one way. Seats the map draws as
+ * No data (not published, no row, too uncertain) are counted as "no data",
+ * as the key names them, never explained (the key says why) and never
+ * counted as a gain or loss. Little change is said only when it covers a
+ * tenth of the seats or more. Null with no rows.
+ *
+ * @param {Map<string, {kind: string, row: Object|null}>|null} states - seatStates
+ * With `policy` (the name of the policy the map shows) the sentence names
+ * it first ("Property income tax up: households lose on average in 127
+ * constituencies, 16 too close to call; 507 have too few survey
+ * households to show"); with `note` as well, one line says why this
+ * policy and that another can be chosen ("Showing Property income tax up
+ * (no map yet for all the policies together; choose another policy): …").
+ *
+ * @param {Map<string, {kind: string, row: Object|null}>|null} states - seatStates
+ * @param {{outcome: string, yearLabel: string, several?: boolean, policy?: string|null, note?: string|null}} options
+ */
+export function constituencySentence(states, { outcome, yearLabel, several = false, policy = null, note = null }) {
+  const plain = sentenceBody(states, { outcome, yearLabel, several });
+  if (plain === null) return null;
+  const rest = `${plain.charAt(0).toLowerCase()}${plain.slice(1)}`;
+  if (policy && note) return `Showing ${policy} (${note}): ${rest}`;
+  return policy ? `${policy}: ${rest}` : plain;
+}
+
+function sentenceBody(states, { outcome, yearLabel, several }) {
+  const all = [...(states?.values() ?? [])];
+  if (!all.some((state) => state?.row)) return null;
+  if (movesNoSeat(states)) {
+    if (all.some((state) => state?.row?.tier === "withheld")) return noSeatMovedNote({ yearLabel, several });
+    return `${several ? "These policies do" : "This policy does"} not change household incomes in any constituency in ${yearLabel}.`;
+  }
+  // Each seat in the published category the file gives it (`direction`:
+  // gain, loss, no change, too close to call), so the counts are the
+  // data's; a figure with no category is signed as the seat cards colour
+  // it. A seat with no row or not published is "too few survey households
+  // to show"; one too close to call is counted apart, never as a loss
+  // A seat the map draws as too uncertain to place (with no category of
+  // too close to call) is counted with no data, as the map draws it
+  const shown = all.filter(
+    (state) =>
+      state?.row &&
+      state.kind !== "no-data" &&
+      state.kind !== "withheld" &&
+      !(state.category === TOO_UNCERTAIN && state.row.direction !== "too_close_to_call"),
+  );
+  const directionOf = (row) => {
+    if (row.direction === "too_close_to_call") return "close";
+    if (row.direction === "gain" || row.direction === "loss") return row.direction;
+    if (row.direction === "no_change") return "zero";
+    return signOf(row.value, outcome);
+  };
+  const close = shown.filter((state) => directionOf(state.row) === "close").length;
+  const placed = shown.map((state) => state.row).filter((row) => directionOf(row) !== "close");
+  const noData = all.length - shown.length;
+  const gains = placed.filter((row) => directionOf(row) === "gain");
+  const losses = placed.filter((row) => directionOf(row) === "loss");
+  const flat = placed.length - gains.length - losses.length;
+  // "; 71 have no data": the noun is said once, on the first count
+  const noDataPart = noData > 0 ? `, and ${noData.toLocaleString("en-GB")} ${noData === 1 ? "has" : "have"} too few survey households to show` : "";
+  const closePart = close > 0 ? `, ${close.toLocaleString("en-GB")} too close to call` : "";
+  const oneWay = flat === 0 && close === 0 && (gains.length === 0 || losses.length === 0);
+  if (oneWay) {
+    const moving = gains.length > 0 ? gains : losses;
+    const sorted = [...moving].sort((a, b) => compareDecimal(absDecimal(a.value), absDecimal(b.value)));
+    const [least, most] = [sorted[0], sorted[sorted.length - 1]];
+    const size = (row) => formatFigure(outcome, row.value.replace(/^-/, ""), { signed: false });
+    const every = noData > 0 ? `all ${seatsWord(placed.length)} with data` : `all ${seatsWord(placed.length)}`;
+    const range =
+      moving.length > 1 && compareDecimal(least.value, most.value) !== 0
+        ? `, from ${size(least)}${OUTCOME_UNIT[outcome]} in ${least.areaName} to ${size(most)} in ${most.areaName}`
+        : `, by ${size(most)}${OUTCOME_UNIT[outcome]}`;
+    return `Households ${gains.length > 0 ? "gain" : "lose"} on average in ${every}${range}.`;
+  }
+  const sayFlat = flat > 0 && (flat >= LITTLE_CHANGE_SHARE * all.length || (gains.length === 0 && losses.length === 0));
+  // The larger count first: "lose on average in 103 … and gain in 1"
+  const moves = [
+    gains.length > 0 && ["gain", gains.length],
+    losses.length > 0 && ["lose", losses.length],
+  ].filter(Boolean).sort((a, b) => b[1] - a[1]);
+  const parts = [
+    ...moves,
+    // Under 50p either way (signOf), as the page's "almost no change" for a
+    // figure that rounds to £0; not the map's "Little change" (under £10),
+    // which counts other seats (W6 G1)
+    sayFlat && ["see almost no change", flat],
+  ].filter(Boolean);
+  // "gain on average in 600 constituencies and lose in 40": "on average"
+  // and the noun once, on the first count
+  const said = parts.map(([verb, n], i) =>
+    i === 0 ? `${verb} on average in ${seatsWord(n)}` : `${verb} in ${n.toLocaleString("en-GB")}`,
+  );
+  const joined = said.length > 1 ? `${said.slice(0, -1).join(", ")} and ${said[said.length - 1]}` : said[0];
+  if (!joined) return `Households' changes are too close to call in ${seatsWord(close)}${noDataPart}.`;
+  return `Households ${joined}${closePart}${noDataPart}.`;
+}
+
 const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth: 0.05 });
 
 /**
- * How a seat is drawn. `fill` is an attribute value: a colour, a dotted
- * pattern's url() for an approximate seat, or the hatch's for a withheld
- * one. With `colourOf` (a value to a #rrggbb colour, the map's continuous
- * scale) a seat takes its figure's colour, and an approximate seat's
- * `dots` names the colour its dot texture needs; a seat too uncertain to
- * classify is mid grey. Without it, its category's colour.
+ * Whether the map draws a seat as No data: no row, not published (the
+ * disclosure guard: never a colour, which on a map reads as a value), or
+ * too uncertain to place on the scale.
+ */
+export function drawnAsNoData(state) {
+  return !state || state.kind === "no-data" || state.kind === "withheld" || state.category === TOO_UNCERTAIN;
+}
+
+// The same thin border as every other seat (PLAIN_STROKE's width)
+const NO_DATA_STYLE = Object.freeze({
+  fill: NO_DATA_FILL,
+  fillOpacity: 1,
+  stroke: NO_DATA_STROKE,
+  strokeWidth: 0.05,
+});
+
+/**
+ * How a seat is drawn. `fill` is a plain colour, with no texture; a seat
+ * drawn as No data (drawnAsNoData) is blank and outlined. With `colourOf`
+ * (a value to a #rrggbb colour, the map's continuous scale) a seat takes
+ * its figure's colour, approximate or not. Without it, its category's
+ * colour.
  */
 export function seatStyle(state, colourOf) {
-  const colour = () => {
-    if (!colourOf) return null;
-    if (state.category === TOO_UNCERTAIN) return UNCERTAIN_FILL;
-    return colourOf(state.row?.value);
-  };
-  switch (state?.kind) {
+  if (drawnAsNoData(state)) return { ...NO_DATA_STYLE };
+  const colour = () => (colourOf ? colourOf(state.row?.value) : null);
+  switch (state.kind) {
+    // Approximate: plain colour, as a reported figure (Vahid, 28
+    // October); the card and About this chart say it is approximate
     case "reported":
+    case "approximate":
       return { fill: colour() ?? CATEGORY_COLOURS[state.category], fillOpacity: 1, ...PLAIN_STROKE };
-    case "approximate": {
-      const dots = colour();
-      return {
-        fill: dots ? approximateColourFill(dots) : approximateFill(state.category),
-        ...(dots ? { dots } : {}),
-        fillOpacity: 1,
-        ...PLAIN_STROKE,
-      };
-    }
-    case "withheld":
-      return { fill: WITHHELD_FILL, fillOpacity: 1, ...PLAIN_STROKE };
     default:
-      return {
-        fill: NO_DATA_FILL,
-        fillOpacity: 1,
-        stroke: NO_DATA_STROKE,
-        strokeWidth: 0.3,
-      };
+      return { ...NO_DATA_STYLE };
   }
 }
 
@@ -125,12 +234,19 @@ export function seatSummary(state) {
   return state.kind === "approximate" ? `${summary} (approximate)` : summary;
 }
 
-/** The card's line for a seat with no published figure. */
-export const WITHHELD_SEAT_NOTE = "Not published: too few survey households";
+/**
+ * The card's line for a seat with no published figure. Not "too few survey
+ * households": a seat is also withheld under the dominance rule, or so that
+ * subtraction cannot recover a withheld one (geography.py), so the reason
+ * given is the one that covers every case, as the map key's tip says.
+ */
+export const WITHHELD_SEAT_NOTE = "No data: not published, to protect survey respondents' confidentiality";
+/** The card's line for a seat drawn as No data for a figure too uncertain to place on the scale. */
+export const UNCERTAIN_SEAT_NOTE = "No data on the map: too uncertain to place on the scale";
 /** A By policy row for a measure withheld in this seat, and its tooltip. */
 export const WITHHELD_MEASURE_NOTE = "Not published";
 export const WITHHELD_MEASURE_TITLE =
-  "Not published for this constituency, to protect survey respondents' confidentiality.";
+  "We do not publish a figure for this constituency, to protect survey respondents' confidentiality.";
 
 /** The By policy heading: the package's parts, or the other selected measures. */
 export const PACKAGE_PARTS_HEADING = "Of which";
@@ -139,25 +255,20 @@ export const OTHER_POLICIES_HEADING = "Other selected policies";
 /** The line for measures with no change in the seat: "+1 with no change". */
 export const unchangedLine = (count) => `+${count} with no change`;
 
-const SUPPORT_BAND_WORDS = Object.freeze({
-  "<10": "fewer than 10",
-  "10–29": "10–29",
-  "30+": "30 or more",
-});
+/** The card's line for an approximate figure: the map draws it plain, so the card says so. */
+export const APPROXIMATE_SEAT_NOTE = "Approximate: it rests on fewer than 30 survey households";
 
 /**
  * The card's one muted line on how firm a figure is, or null when there is
- * nothing to add: an approximate figure gives its survey households and
- * 90% interval; a reported figure whose interval includes zero gives the
- * interval.
+ * nothing to add: an approximate figure says so, with its 90% interval (the
+ * map draws it in plain colour, with no texture); a reported figure whose
+ * interval includes zero gives the interval.
  */
 export function disclosureNote(row) {
   if (!row || row.tier === "withheld") return null;
   const interval = `90% interval ${formatInterval(row.outcome, row.lo, row.hi)}`;
-  if (row.tier === "approximate") {
-    const band = SUPPORT_BAND_WORDS[row.supportBand];
-    return band ? `Estimate from ${band} survey households; ${interval}` : `Approximate estimate; ${interval}`;
-  }
+  // A stacked figure says why it is approximate (stack.js)
+  if (row.tier === "approximate") return `${row.note ?? APPROXIMATE_SEAT_NOTE}; ${interval}`;
   if (row.direction === "too_close_to_call") return interval;
   return null;
 }
@@ -193,7 +304,8 @@ function figureOf(row) {
  * measure follows under "Of which". Measures with no change are counted,
  * not listed.
  *
- * Every figure is a published row; nothing is summed or derived.
+ * Every figure is a published row, or for several policies with no
+ * combined run their stacked sum (stack.js).
  *
  * @param {Object} options
  * @param {Object} options.feature - The seat's boundary feature.
@@ -292,7 +404,12 @@ export function seatCard({ feature, state, table, regional, reform, year, outcom
     policiesHeading: listed ? (shownMeasure ? OTHER_POLICIES_HEADING : PACKAGE_PARTS_HEADING) : null,
     byPolicy: listed ? byPolicy : [],
     unchanged: listed ? unchanged : [],
-    note: disclosureNote(state.row),
+    note:
+      state.category === TOO_UNCERTAIN
+        ? `${UNCERTAIN_SEAT_NOTE}; ${
+            disclosureNote(state.row) ?? `90% interval ${formatInterval(state.row.outcome, state.row.lo, state.row.hi)}`
+          }`
+        : disclosureNote(state.row),
   };
 }
 

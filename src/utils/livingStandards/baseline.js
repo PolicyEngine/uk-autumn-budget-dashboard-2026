@@ -35,10 +35,19 @@ export function shortLabel(label) {
 }
 
 export const VIEW_OPTIONS = [
-  { value: "outturn", label: "Outturn" },
+  { value: "outturn", label: "Official figures" },
   { value: "both", label: "Both" },
-  { value: "forecast", label: "Projection" },
+  { value: "forecast", label: "PolicyEngine" },
 ];
+
+/**
+ * About this chart's line on the two series. The teal line is the model,
+ * not a forecast; it starts at the latest outturn year (projectionStartYear,
+ * and the generator's JOIN_START), so it overlaps official figures in that
+ * one year only.
+ */
+export const OFFICIAL_VS_PE =
+  "Official figures are DWP Households Below Average Income outturn. The teal line is PolicyEngine's microsimulation. It starts in the latest year with official figures, where the two can differ.";
 
 /** SVG dash patterns, so lines differ by pattern as well as colour. */
 export const DASH = {
@@ -106,16 +115,17 @@ export function lineSeries(viewMode, hasOutturn = true) {
   return [
     {
       key: "historical",
-      name: "Official: DWP Households Below Average Income",
+      name: "Official figures",
       colour: OUTTURN_COLOUR,
       dash: DASH.solid,
       hidden: viewMode === "forecast" || !hasOutturn,
     },
     {
       key: "projection",
-      name: "Baseline (projection)",
+      name: "PolicyEngine",
       colour: PROJECTION_COLOUR,
-      dash: DASH.long,
+      // Solid: a dashed line would read as a forecast
+      dash: DASH.solid,
       hidden: viewMode === "outturn",
     },
   ];

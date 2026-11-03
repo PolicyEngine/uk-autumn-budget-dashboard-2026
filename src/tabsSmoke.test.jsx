@@ -17,6 +17,7 @@
  * files with HTTP 200) the "Built site" CI job checks against `next start`.
  */
 import { expectCompletePills } from "./test/optionsPills";
+import { downloadMenus, STANDARD_FORMATS } from "./test/downloadMenus";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,6 +33,7 @@ import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { OBR_CARD_TITLE, OBR_PENDING } from "./components/OBRComparisonTable";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -42,7 +44,16 @@ beforeAll(preloadAllViews, 60_000);
 vi.mock("./utils/displayYears", async (original) => {
   const actual = await original();
   const { IN_DATA } = await import("./test/publicationFixture");
-  return { ...actual, DEFAULT_DISPLAY_YEAR: IN_DATA, DISPLAY_YEARS: [...new Set([...actual.DISPLAY_YEARS, IN_DATA])] };
+  // App shows the years yearsForSelection returns and moves a year it does
+  // not offer back to DEFAULT_DISPLAY_YEAR, so the fixture year is added
+  // there too (the real function closes over the real DISPLAY_YEARS)
+  const withFixtureYear = (years) => [...new Set([...years, IN_DATA])];
+  return {
+    ...actual,
+    DEFAULT_DISPLAY_YEAR: IN_DATA,
+    DISPLAY_YEARS: withFixtureYear(actual.DISPLAY_YEARS),
+    yearsForSelection: (rows, selected) => withFixtureYear(actual.yearsForSelection(rows, selected)),
+  };
 });
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
@@ -52,19 +63,17 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
 // The official costings follow the Budget; until then Public finances shows
-// no comparison at all. The OBR's prices by spending category wait on their
-// review row; until then their card says they are not yet available.
+// the comparison's card empty, saying when it fills in.
 const NOT_YET_PUBLISHED = new Set([
   "/data/regional.csv",
   "/data/constituency.csv",
   "/data/release-index.json",
   "/data/official_costings.json",
-  "/data/obr_price_categories.json",
 ]);
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
-  /NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/,
+  /This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL/,
   /Results are not available here/,
   /API error/,
   /Application error/,
@@ -94,7 +103,7 @@ const LOADED = {
   // shows once the outlook is read. Living standards is the default.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under current law" }),
   outlookPoverty: (panel) => within(panel).findAllByRole("heading", { name: "Poverty under current law" }),
-  outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: /economic forecast$/ }),
+  outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: /economic forecasts?$/ }),
   // Its Forecast vintages sub-tab (?sub=vintages): the chart card shows
   // once the forecasts file is read.
   vintages: (panel) => within(panel).findAllByRole("heading", { name: "Real household disposable income per head" }),
@@ -113,7 +122,7 @@ let consoleErrors;
 const publicationFetch = dashboardFixtureFetch();
 
 // The household API must run the model versions the approved receipts
-// record, or Household impact shows nothing: answer with alpha's.
+// record, or Household calculator shows nothing: answer with alpha's.
 const PUBLISHED_ENGINE = receiptEngine(
   fixtureJson(`${fixtureJson("manifest.json").measures.alpha.artifact}/receipt.json`),
 );
@@ -209,6 +218,8 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
       await new Promise((resolve) => setTimeout(resolve, 50));
       // Every Options pill on the tab names every choice its dialog holds
       expectCompletePills(panel);
+      // Every card's Download offers the same formats (CSV, PNG, SVG)
+      for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
 
       for (const pattern of FAILURE_TEXT) {
         expect(document.body.textContent, String(pattern)).not.toMatch(pattern);
@@ -239,6 +250,7 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
         await waitFor(() => expect(panel.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), {
           timeout: 5000,
         });
+        for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API && yours(r))
           .map((r) => JSON.parse(r.body).include);
@@ -261,7 +273,7 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
   // (?tab=outlook&sub=…), each linking to its twin
   it.each([
     ["living", "Living standards", /^Change in income inequality/, "Living standards under current law", ["Incomes over time", "Growth across the distribution", "Inequality over time \\(current law\\)"]],
-    ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Who is in poverty"]],
+    ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Change in poverty by group"]],
   ])("?sub=%s shows the measures, its twin on the Pre-measures forecast current law", async (sub, label, measures, currentLaw, cards) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     render(<App />);
@@ -298,13 +310,13 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ }, { timeout: 5000 });
     fireEvent.click(screen.getByRole("tab", { name: "Forecast changes" }));
     const forecast = screen.getByRole("tabpanel", { name: "Forecast changes" });
-    expect(await within(forecast).findByRole("heading", { name: /economic forecast$/ })).toBeInTheDocument();
+    expect(await within(forecast).findByRole("heading", { name: /economic forecasts?$/ })).toBeInTheDocument();
     expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
     expect(document.querySelectorAll("#current-law-incomes")).toHaveLength(1);
     expect(document.querySelectorAll("#current-law-poverty")).toHaveLength(1);
   }, 15000);
 
-  it("fails the Household impact tab when the API URL is not set", async () => {
+  it("fails the Household calculator tab when the API URL is not set", async () => {
     // The tab's call never leaves the page, and it says so where the
     // results would be: the check above would catch it.
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
@@ -313,7 +325,7 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
     fireEvent.click(await screen.findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await screen.findByRole("button", { name: /^Calculate/ }));
     await waitFor(() =>
-      expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
+      expect(document.body.textContent).toMatch(/This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL/),
     );
     expect(requests.some((r) => r.url.startsWith(API))).toBe(false);
   });
@@ -338,7 +350,7 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
     render(<App />);
     // The views are rebuilt once the publication verifies
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
-    const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
+    const personal = await screen.findByRole("tabpanel", { name: "Household calculator" });
     fireEvent.click(await within(personal).findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await within(personal).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(held).toHaveLength(1));
@@ -355,20 +367,26 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
     await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3));
 
     // Back: the same view, with the finished answer, and nothing asked again
-    fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
-    expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
+    fireEvent.click(screen.getByRole("tab", { name: "Household calculator" }));
+    expect(screen.getByRole("tabpanel", { name: "Household calculator" })).toBe(personal);
     expect(await within(personal).findByText(/^Your change$/)).toBeInTheDocument();
     await waitFor(() => expect(personal.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull());
     expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3);
     expect(held).toHaveLength(0);
   });
 
-  it("shows no OBR comparison, not even a pending line, until the OBR's costings are in", async () => {
+  it("shows the OBR comparison's card empty, with no figures, until the OBR's costings are in", async () => {
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
-    expect(document.querySelectorAll(".obr-pending")).toHaveLength(0);
+    await screen.findByText(OBR_PENDING, {}, { timeout: 5000 });
+    const cards = document.querySelectorAll("#obr-comparison");
+    expect(cards).toHaveLength(1);
+    expect(within(cards[0]).getByRole("heading", { name: OBR_CARD_TITLE })).toBeInTheDocument();
+    expect(within(cards[0]).queryByRole("button")).toBeNull();
+    expect(cards[0].textContent).not.toMatch(/£/);
+    // Below Revenue impact
+    expect(document.querySelector("#revenue").compareDocumentPosition(cards[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Compare with the official costings" })).toBeNull();
   });
 
@@ -376,14 +394,16 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Forecast vintages", "Population impact"]) {
+    for (const tab of ["All households", "Living standards", "Poverty", "Household calculator", "Pre-measures forecast", "Forecast vintages", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     // Every view opened so far stays mounted; Methodology is never opened
     // The one exception: the provisional label names candidate measures
     // while the manifest predates the Budget (Vahid, 26 October)
-    const text = document.body.textContent.replaceAll(CANDIDATE_PROVISIONAL_LABEL, "");
+    // and the official costings card's empty line, which names their date
+    // until the file is published (Vahid, 27 October)
+    const text = document.body.textContent.replaceAll(CANDIDATE_PROVISIONAL_LABEL, "").replaceAll(OBR_PENDING, "");
     expect(text).not.toMatch(/pre-Budget/i);
     expect(text).not.toMatch(/28 October/);
     expect(text).not.toMatch(/candidate/i);
@@ -402,7 +422,7 @@ describe("each of the five tabs and their sub-tabs, on a verified publication an
     window.history.replaceState({}, "", "/?tab=household");
     render(<App />);
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
-    const household = await screen.findByRole("tabpanel", { name: "Household impact" });
+    const household = await screen.findByRole("tabpanel", { name: "Household calculator" });
     fireEvent.click(await within(household).findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await within(household).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());
@@ -431,9 +451,9 @@ describe("the income decile card", () => {
     // The scatter shares the decile card's row
     const scatter = await within(section).findByRole("heading", { level: 3, name: /^Household income impacts/ }, { timeout: 5000 });
     expect(scatter.closest(".charts-grid")).toBe(title.closest(".charts-grid"));
-    await waitFor(() => expect(panel.querySelectorAll(".measure-key")).toHaveLength(1));
-    const key = panel.querySelector(".measure-key");
-    expect(key.compareDocumentPosition(panel.querySelector("#constituencies")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // No section-level Policies key above the map: each chart draws its own
+    const map = panel.querySelector("#constituencies");
+    for (const key of panel.querySelectorAll(".measure-key")) expect(key.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING).toBeFalsy();
     expect(within(panel).getByRole("heading", { level: 2, name: "By income" })).toBeInTheDocument();
     expect(panel.querySelector("#constituencies").compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // £ by default; % of net income in the Options, kept in the address

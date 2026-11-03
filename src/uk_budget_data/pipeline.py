@@ -19,6 +19,7 @@ from rich.markup import escape
 
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
+    OFFICIAL_BASES,
     AgeImpactCalculator,
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
@@ -29,6 +30,7 @@ from uk_budget_data.calculators import (
     IncomeDistributionCalculator,
     IncomeMobilityCalculator,
     MetricsCalculator,
+    OfficialBasisCalculator,
     WinnersLosersCalculator,
 )
 from uk_budget_data.measure_templates import (
@@ -56,11 +58,12 @@ def build_microsimulation(dataset_path: Optional[str], scenario=None):
             certified dataset (requires HUGGING_FACE_TOKEN).
         scenario: Scenario to apply, or None for current law.
     """
-    kwargs = {} if scenario is None else {"scenario": scenario}
+    from uk_budget_data.forecast import with_forecast
+
     return pe.uk.managed_microsimulation(
         dataset=dataset_path,
         allow_unmanaged=dataset_path is not None,
-        **kwargs,
+        scenario=with_forecast(scenario),
     )
 
 
@@ -120,6 +123,11 @@ class ReformProcessor:
         self.budgetary_calc = BudgetaryImpactCalculator(
             years=self.config.years
         )
+        self.official_basis_calc = OfficialBasisCalculator(
+            years=self.config.years
+        )
+        # The variables its official costing covers, or none (#297)
+        self.official_basis = OFFICIAL_BASES.get(reform.id, ())
         self.distributional_calc = DistributionalImpactCalculator()
         self.winners_losers_calc = WinnersLosersCalculator()
         self.metrics_calc = MetricsCalculator()
@@ -161,6 +169,10 @@ class ReformProcessor:
         # Calculate budgetary impact
         budgetary = self.budgetary_calc.calculate(
             baseline, reformed, reform_id, reform_name
+        )
+        # The same, on the official costing's basis, where it is narrower
+        official_basis = self.official_basis_calc.calculate(
+            baseline, reformed, reform_id, reform_name, self.official_basis
         )
 
         # Calculate per-year metrics
@@ -240,6 +252,7 @@ class ReformProcessor:
             reform_id=reform_id,
             reform_name=reform_name,
             budgetary_impact=budgetary,
+            official_basis=official_basis,
             distributional_impact=all_distributional,
             winners_losers=all_winners_losers,
             metrics=all_metrics,
@@ -572,6 +585,11 @@ class FlatUnit:
     config: DataConfig
     dataset_path: Optional[str]
     tables: frozenset
+    # One year of ``config.years`` for a per-year unit (``flat_units`` with
+    # ``by_year``: income_distribution and income_growth only), or None for
+    # every year. ``config`` itself is never cut down, so the measure, its
+    # baseline and a combined run compose exactly as in a whole unit.
+    years: Optional[tuple] = None
 
 
 @dataclass
@@ -580,11 +598,19 @@ class FlatOutcome:
 
     reform_id: str
     result: Optional[ReformResult] = None
+    # The unit's ``years`` (None for every year), so a per-year outcome is
+    # checked against the unit it answers.
+    years: Optional[tuple] = None
+    reform_name: Optional[str] = None
     age_rows: list = field(default_factory=list)
     distribution_rows: list = field(default_factory=list)
     mobility_rows: list = field(default_factory=list)
     scatter_cells: list = field(default_factory=list)
     growth_rows: list = field(default_factory=list)
+    # A per-year income_growth unit's group cells, ``{"baseline": {year:
+    # cells}, "reform": {year: cells}}``. Its rows are made only once every
+    # year is back (``merge_year_outcomes``), since the floor reads them all.
+    growth_cells: dict = field(default_factory=dict)
     messages: list = field(default_factory=list)
 
 
@@ -599,8 +625,17 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
     config = unit.config
     dataset_path = unit.dataset_path
     flat = "flat" in unit.tables
-    outcome = FlatOutcome(reform_id=reform.id)
+    outcome = FlatOutcome(
+        reform_id=reform.id, years=unit.years, reform_name=reform.name
+    )
     say = outcome.messages.append
+    if unit.years is not None and (
+        flat or not unit.tables <= DISTRIBUTION | GROWTH
+    ):
+        raise ValueError(
+            "only income_distribution and income_growth run one year per unit"
+        )
+    years_read = list(unit.years) if unit.years is not None else config.years
 
     baseline_scenario = reform.baseline_scenario_for(config)
     reform_scenario = reform.to_scenario()
@@ -677,48 +712,34 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
                     )
                 )
         elif "income_distribution" in unit.tables:
-            calculator = IncomeDistributionCalculator()
-            mobility = IncomeMobilityCalculator()
-            for year in config.years:
-                outcome.distribution_rows.extend(
-                    calculator.calculate(
-                        baseline,
-                        reformed,
-                        reform.id,
-                        reform.name,
-                        year,
-                        survey_households=survey,
-                    )
-                )
-                outcome.mobility_rows.extend(
-                    mobility.calculate(
-                        baseline,
-                        reformed,
-                        reform.id,
-                        reform.name,
-                        year,
-                        survey_households=survey,
-                    )
-                )
+            _read_distribution(
+                outcome, reform, baseline, reformed, years_read, survey
+            )
         elif "income_growth" in unit.tables:
-            from uk_budget_data.living_standards import measures_growth
-
-            years = list(config.years)
-            outcome.growth_rows = measures_growth.growth_rows(
-                reform.id,
-                reform.name,
-                measures_growth.group_cells(baseline, years),
-                measures_growth.group_cells(reformed, years),
-                years[1:],
-                measures_growth.deflator(),
+            _read_growth(
+                outcome,
+                reform,
+                config,
+                baseline,
+                reformed,
+                unit.years,
+                years_read,
             )
         if survey is not None and "household_scatter" in unit.tables:
             outcome.scatter_cells = _scatter_cells(
                 reform, config, dataset_path, baseline, reformed, survey
             )
 
-    # This flat path has no publication gate, so say loudly when the data
-    # cannot cost a measure, or the model mis-costs it.
+    _say_limits(say, reform, baseline, reformed, observed, flat)
+    # The observation holds both simulations: free them together.
+    del baseline, reformed, observed
+    say(f"[green]✓[/green] {reform.name}")
+    return outcome
+
+
+def _say_limits(say, reform, baseline, reformed, observed, flat) -> None:
+    """This flat path has no publication gate, so say loudly when the data
+    cannot cost a measure, or the model mis-costs it."""
     for limit in data_limits.limits_touched(baseline, reformed, observed):
         if flat:
             say(
@@ -744,9 +765,102 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
                 f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
                 f"{reform.name}: {limit['reason']}"
             )
-    # The observation holds both simulations: free them together.
-    del baseline, reformed, observed
-    say(f"[green]✓[/green] {reform.name}")
+
+
+def _read_distribution(outcome, reform, baseline, reformed, years, survey):
+    """``income_distribution`` and ``income_mobility`` rows for ``years``,
+    appended to ``outcome`` a year at a time."""
+    calculator = IncomeDistributionCalculator()
+    mobility = IncomeMobilityCalculator()
+    for year in years:
+        outcome.distribution_rows.extend(
+            calculator.calculate(
+                baseline,
+                reformed,
+                reform.id,
+                reform.name,
+                year,
+                survey_households=survey,
+            )
+        )
+        outcome.mobility_rows.extend(
+            mobility.calculate(
+                baseline,
+                reformed,
+                reform.id,
+                reform.name,
+                year,
+                survey_households=survey,
+            )
+        )
+
+
+def _read_growth(
+    outcome, reform, config, baseline, reformed, unit_years, years_read
+):
+    """``income_growth`` for a unit: one year's group cells for a per-year
+    unit (``growth_rows`` runs on the merge), else every year's rows."""
+    from uk_budget_data.living_standards import measures_growth
+
+    years = list(config.years)
+    if unit_years is not None:
+        outcome.growth_cells = {
+            "baseline": measures_growth.group_cells(baseline, years_read),
+            "reform": measures_growth.group_cells(reformed, years_read),
+        }
+    else:
+        outcome.growth_rows = measures_growth.growth_rows(
+            reform.id,
+            reform.name,
+            measures_growth.group_cells(baseline, years),
+            measures_growth.group_cells(reformed, years),
+            years[1:],
+            measures_growth.deflator(),
+        )
+
+
+def read_flat_tables(
+    reform,
+    config: DataConfig,
+    dataset_path: Optional[str],
+    tables: frozenset,
+    baseline,
+    reformed,
+) -> FlatOutcome:
+    """The package files' tables (``income_distribution``,
+    ``income_mobility``, ``income_growth``) of one measure over every year
+    of ``config``, read from two simulations already built: what
+    ``run_flat_unit`` returns for a whole unit of each table, in one
+    outcome. ``generate --national`` reads them in the container that has
+    just built the measure's simulations for its artifact, instead of
+    building them again (``uk_budget_data.national``).
+
+    The simulations must be the ones ``run_flat_unit`` would build for
+    ``reform``: the caller checks the scenarios. The rows are made by the
+    same readers, in the same order, under the same data-limit watch."""
+    if not tables or not tables <= DISTRIBUTION | GROWTH:
+        raise ValueError(
+            "read_flat_tables reads income_distribution and income_growth"
+        )
+    outcome = FlatOutcome(reform_id=reform.id, reform_name=reform.name)
+    years = list(config.years)
+    survey = None
+    if "income_distribution" in tables:
+        survey = scatter_survey_households(baseline, dataset_path)
+    with data_limits.observing(baseline, reformed) as observed:
+        if "income_distribution" in tables:
+            _read_distribution(
+                outcome, reform, baseline, reformed, years, survey
+            )
+        if "income_growth" in tables:
+            _read_growth(
+                outcome, reform, config, baseline, reformed, None, years
+            )
+    _say_limits(
+        outcome.messages.append, reform, baseline, reformed, observed, False
+    )
+    del observed
+    outcome.messages.append(f"[green]✓[/green] {reform.name}")
     return outcome
 
 
@@ -756,35 +870,140 @@ def flat_units(
     dataset_path: Optional[str],
     tables: frozenset,
     runner=None,
+    by_year: bool = False,
 ) -> list[FlatOutcome]:
     """Run one unit per measure and say each measure's lines, in measure
-    order. Results come back in measure order whatever the runner."""
+    order. Results come back in measure order whatever the runner.
+
+    ``by_year`` (income_distribution and income_growth only) runs one unit
+    per measure and year instead, so a runner that has a container per unit
+    (``--backend modal``) runs the years side by side, and folds each
+    measure's years back into one outcome (``merge_year_outcomes``): the
+    same rows, in the same order, as one unit over every year."""
     from uk_budget_data.parallel import (
         CombinedMeasures,
         SerialRunner,
         portable,
     )
 
+    if by_year and not (tables and tables <= DISTRIBUTION | GROWTH):
+        raise ValueError(
+            "by_year runs income_distribution and income_growth only"
+        )
     runner = runner or SerialRunner()
-    units = [
-        FlatUnit(
-            (
-                reform
-                if isinstance(reform, CombinedMeasures)
-                else portable(reform, runner)
-            ),
-            config,
-            dataset_path,
-            tables,
+    references = [
+        (
+            reform
+            if isinstance(reform, CombinedMeasures)
+            else portable(reform, runner)
         )
         for reform in reforms
     ]
+    if not by_year:
+        units = [
+            FlatUnit(reference, config, dataset_path, tables)
+            for reference in references
+        ]
+
+        def report(index, outcome):
+            for message in outcome.messages:
+                console.print(message)
+
+        return runner.map(run_flat_unit, units, on_result=report)
+
+    years = list(config.years)
+    if not years:
+        raise ValueError("by_year needs at least one year")
+    # Measure-major, year-minor: a measure's years are contiguous, in
+    # config.years order, and the measures in their own order.
+    units = [
+        FlatUnit(reference, config, dataset_path, tables, (year,))
+        for reference in references
+        for year in years
+    ]
+    per_measure = len(years)
+
+    returned: list = []
 
     def report(index, outcome):
-        for message in outcome.messages:
-            console.print(message)
+        # Say a measure's lines once its last year is back (results come
+        # back in unit order), each line once.
+        returned.append(outcome)
+        if index % per_measure == per_measure - 1:
+            for message in _unique(
+                line
+                for result in returned[-per_measure:]
+                for line in result.messages
+            ):
+                console.print(message)
 
-    return runner.map(run_flat_unit, units, on_result=report)
+    outcomes = runner.map(run_flat_unit, units, on_result=report)
+    return [
+        merge_year_outcomes(
+            outcomes[i * per_measure : (i + 1) * per_measure], years, tables
+        )
+        for i in range(len(references))
+    ]
+
+
+def _unique(lines) -> list:
+    """``lines`` with each line kept once, at its first place."""
+    return list(dict.fromkeys(lines))
+
+
+def merge_year_outcomes(
+    outcomes: list[FlatOutcome], years: list, tables: frozenset
+) -> FlatOutcome:
+    """One measure's per-year outcomes (``flat_units`` with ``by_year``),
+    in ``years`` order, as the one outcome a unit over every year makes.
+
+    Distribution and mobility rows are made a year at a time and their
+    floors are per year, so they concatenate in year order, as the whole
+    unit's loop appends them. Growth rows are made here, from every year's
+    group cells, by the same ``growth_rows`` the whole unit calls: its
+    floor withholds a grouping when any year it reads is under it, so it
+    can only run once every year is back. Messages (data-limit and
+    model-limit lines, the measure's tick) are kept once each, in the order
+    first said."""
+    from uk_budget_data.living_standards import measures_growth
+
+    years = list(years)
+    if len(outcomes) != len(years):
+        raise ValueError(
+            f"{len(outcomes)} per-year outcomes for {len(years)} years"
+        )
+    ids = {outcome.reform_id for outcome in outcomes}
+    if len(ids) != 1:
+        raise ValueError(f"per-year outcomes of several measures: {ids}")
+    for outcome, year in zip(outcomes, years):
+        if outcome.years != (year,):
+            raise ValueError(
+                f"{outcome.reform_id}: an outcome for {outcome.years} in "
+                f"place of {year}"
+            )
+    first = outcomes[0]
+    merged = FlatOutcome(
+        reform_id=first.reform_id,
+        reform_name=first.reform_name,
+        messages=_unique(line for o in outcomes for line in o.messages),
+    )
+    for outcome in outcomes:
+        merged.distribution_rows.extend(outcome.distribution_rows)
+        merged.mobility_rows.extend(outcome.mobility_rows)
+    if "income_growth" in tables:
+        cells = {"baseline": {}, "reform": {}}
+        for outcome in outcomes:
+            for side in cells:
+                cells[side].update(outcome.growth_cells[side])
+        merged.growth_rows = measures_growth.growth_rows(
+            first.reform_id,
+            first.reform_name,
+            cells["baseline"],
+            cells["reform"],
+            years[1:],
+            measures_growth.deflator(),
+        )
+    return merged
 
 
 def _scatter_cells(reform, config, dataset_path, baseline, reformed, survey):
@@ -909,6 +1128,7 @@ def generate_income_distribution(
     config: Optional[DataConfig] = None,
     runner=None,
     combined_sets: Optional[list[list[Reform]]] = None,
+    by_year: bool = False,
 ) -> pd.DataFrame:
     """Write only ``income_distribution.csv`` (percentiles of equivalised
     household net income before and after each measure) and
@@ -918,12 +1138,16 @@ def generate_income_distribution(
     baselines, and runs only IncomeDistributionCalculator. ``uk-budget-data
     generate --only income_distribution`` calls it. The full run does not
     write this file. ``combined_sets`` adds one combined run per set,
-    under its manifest key (:func:`with_combined_sets`).
+    under its manifest key (:func:`with_combined_sets`). ``by_year`` runs
+    each measure's years as units of their own (:func:`flat_units`); the
+    file is the same bytes.
     """
     reforms = with_combined_sets(reforms, combined_sets, runner)
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
-    outcomes = flat_units(reforms, config, dataset_path, DISTRIBUTION, runner)
+    outcomes = flat_units(
+        reforms, config, dataset_path, DISTRIBUTION, runner, by_year=by_year
+    )
     frame = pd.DataFrame(
         [row for o in outcomes for row in o.distribution_rows]
     )
@@ -945,6 +1169,7 @@ def generate_income_growth(
     config: Optional[DataConfig] = None,
     runner=None,
     combined_sets: Optional[list[list[Reform]]] = None,
+    by_year: bool = False,
 ) -> pd.DataFrame:
     """Write only ``income_growth_with_measures.csv``: real growth of each
     income group's median (HBAI income, as the Living standards outlook's
@@ -957,14 +1182,18 @@ def generate_income_growth(
     the full run does not write this file. The first configured year is
     read only, as the year before the first year published.
     ``combined_sets`` adds one combined run per set, under its manifest
-    key (:func:`with_combined_sets`).
+    key (:func:`with_combined_sets`). ``by_year`` runs each measure's
+    years as units of their own (:func:`flat_units`); the file is the same
+    bytes.
     """
     from uk_budget_data.living_standards.measures_growth import COLUMNS
 
     reforms = with_combined_sets(reforms, combined_sets, runner)
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
-    outcomes = flat_units(reforms, config, dataset_path, GROWTH, runner)
+    outcomes = flat_units(
+        reforms, config, dataset_path, GROWTH, runner, by_year=by_year
+    )
     frame = pd.DataFrame(
         [row for o in outcomes for row in o.growth_rows], columns=COLUMNS
     )

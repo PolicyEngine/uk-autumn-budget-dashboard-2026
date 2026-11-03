@@ -1,6 +1,8 @@
 // One short plain sentence per chart card (Vahid, 26 October): the
 // finding with its number; definitions sit in each card's About this chart.
 
+import { formatBnOrM } from "./moneyFormat";
+
 const gbp = (v) => `£${Math.round(Math.abs(v)).toLocaleString("en-GB")}`;
 
 /** A decile end as the sentence rounds it: £10 steps, or 0.1% of net income. */
@@ -51,7 +53,9 @@ export function decileSentence(data, kind, later = null) {
 /** The revenue chart's line for the selected year; null without a figure. */
 export function revenueSentence(net, yearLabel) {
   if (net == null || !Number.isFinite(net)) return null;
-  const bn = Math.abs(net) >= 0.95 ? `£${Math.abs(net).toFixed(1)} billion` : `£${Math.round(Math.abs(net) * 1000).toLocaleString("en-GB")} million`;
+  // The chart's own rounding (moneyFormat: £m to the nearest £5m under
+  // £1bn, £bn to one decimal), in words, so text and tooltip agree
+  const bn = formatBnOrM(Math.abs(net)).replace(/m$/, " million").replace(/bn$/, " billion");
   // Exactly nothing (a measure not in force that year) is not "roughly balance"
   if (Math.abs(net) < 0.0005) return `In ${yearLabel}, the selected policies change no revenue.`;
   if (Math.abs(net) < 0.05) return `In ${yearLabel}, the selected policies roughly balance: they neither raise nor cost much revenue.`;
@@ -71,6 +75,12 @@ export function revenueSentence(net, yearLabel) {
 // change, as with the threshold freeze. The later effect must be clear,
 // so a measure ending or fading, or a creep from about £1 to £6, says
 // nothing.
+//
+// The year it names is the first whose own sentence shows the turn, even
+// where that year's effect is not yet clear (coordinator, 29 October): the
+// whole package's highest-income tenth gains about £100 in 2026-27, loses
+// about £10 in 2027-28 and about £50 in 2028-29, so 2026-27 points to
+// 2027-28, whose sentence already says it loses, not to 2028-29.
 
 /** A clear decile effect: at least two of the sentence's rounding steps. */
 export const CLEAR_DECILE_CHANGE = { absolute: 20, relative: 0.2 };
@@ -91,16 +101,49 @@ function turnTo(wasRounded, nowRounded, clear) {
   return was === "none" || was !== now ? now : null;
 }
 
+/**
+ * The later point to name, and what turns there. The first point with a
+ * clear turn (turnTo) in any series says there is one; each series that
+ * turns there is then dated to the first point whose own sentence shows
+ * that direction (its rounded value's sign), so no earlier point's sentence
+ * says it first. The earliest of those dates is named, with the series that
+ * turn by it. Null without a clear turn.
+ *
+ * @param {Object<string, number>} was - Each series' selected value, rounded as its sentence rounds it
+ * @param {Array<Object>} points - Later points, in order, each with every series' raw value
+ * @param {(value: number) => number} rounded - The sentence's rounding
+ * @param {number} clear - The size a turn must reach (CLEAR_DECILE_CHANGE, CLEAR_REVENUE_CHANGE)
+ * @returns {{point: Object, turns: Object<string, "gain"|"loss">}|null}
+ */
+function firstShownTurn(was, points, rounded, clear) {
+  const series = Object.keys(was);
+  const at = points.findIndex((point) => series.some((key) => turnTo(was[key], rounded(point[key]), clear)));
+  if (at < 0) return null;
+  const dated = series.flatMap((key) => {
+    const now = turnTo(was[key], rounded(points[at][key]), clear);
+    return now ? [{ key, now, index: points.findIndex((point) => sign(rounded(point[key])) === now) }] : [];
+  });
+  const index = Math.min(...dated.map((turn) => turn.index));
+  return {
+    point: points[index],
+    turns: Object.fromEntries(dated.filter((turn) => turn.index === index).map(({ key, now }) => [key, now])),
+  };
+}
+
 const TENTH_VERB = {
   one: { gain: "gains", loss: "loses" },
   both: { gain: "gain", loss: "lose" },
 };
 
 /**
- * The decile pair's pointer: the first later year in which the lowest- or
- * highest-income tenth turns from a gain to a clear loss, the other way,
- * or from almost no change to a clear gain or loss (CLEAR_DECILE_CHANGE,
- * on the values as the sentence rounds them). Returns the clause the
+ * The decile pair's pointer. The first later year in which the lowest- or
+ * highest-income tenth turns clearly (CLEAR_DECILE_CHANGE, on the values as
+ * the sentence rounds them) decides that there is one: from a gain to a
+ * loss, the other way, or from almost no change to a gain or loss. Each end
+ * that turns clearly there is dated to the first later year whose own
+ * sentence shows that turn, and the earliest of those years is named, with
+ * the ends dated to it (firstShownTurn). An end that turns only later, or
+ * never clearly, goes unnamed. Returns the clause the
  * decile sentence ends on, e.g. "in 2031-32 the highest loses"; with
  * standalone, a sentence of its own that names the tenths in full, for a
  * card with no decile line to hang it on (nothing changes this year).
@@ -115,25 +158,29 @@ export function laterDecileNote(selected, later, kind, { standalone = false } = 
   const usable = (ends) => ends && [ends.low, ends.high].every((v) => v != null && Number.isFinite(v));
   if (!usable(selected)) return null;
   const clear = CLEAR_DECILE_CHANGE[kind === "relative" ? "relative" : "absolute"];
-  for (const ends of later ?? []) {
-    if (!usable(ends)) continue;
-    const low = turnTo(decileRounded(selected.low, kind), decileRounded(ends.low, kind), clear);
-    const high = turnTo(decileRounded(selected.high, kind), decileRounded(ends.high, kind), clear);
-    if (!low && !high) continue;
-    let what;
-    if (low && high && low === high) {
-      what = `both ${standalone ? "the lowest- and highest-income tenths " : ""}${TENTH_VERB.both[low]}`;
-    } else {
-      what = [
-        low && `the lowest${standalone ? "-income tenth" : ""} ${TENTH_VERB.one[low]}`,
-        high && `the highest${standalone ? "-income tenth" : ""} ${TENTH_VERB.one[high]}`,
-      ]
-        .filter(Boolean)
-        .join(" and ");
-    }
-    return standalone ? `Later years differ: in ${ends.yearLabel}, ${what}.` : `in ${ends.yearLabel} ${what}`;
+  const rounded = (value) => decileRounded(value, kind);
+  // Skip a later year without both ends rather than read it as a turn
+  const turn = firstShownTurn(
+    { low: rounded(selected.low), high: rounded(selected.high) },
+    (later ?? []).filter(usable),
+    rounded,
+    clear,
+  );
+  if (!turn) return null;
+  const { low, high } = turn.turns;
+  let what;
+  if (low && high && low === high) {
+    what = `both ${standalone ? "the lowest- and highest-income tenths " : ""}${TENTH_VERB.both[low]}`;
+  } else {
+    what = [
+      low && `the lowest${standalone ? "-income tenth" : ""} ${TENTH_VERB.one[low]}`,
+      high && `the highest${standalone ? "-income tenth" : ""} ${TENTH_VERB.one[high]}`,
+    ]
+      .filter(Boolean)
+      .join(" and ");
   }
-  return null;
+  const { yearLabel } = turn.point;
+  return standalone ? `Later years differ: in ${yearLabel}, ${what}.` : `in ${yearLabel} ${what}`;
 }
 
 const REVENUE_WORDS = {
@@ -145,9 +192,11 @@ const REVENUE_WORDS = {
 const revenueRounded = (net) => (Math.abs(net) < 0.05 ? 0 : net);
 
 /**
- * The revenue chart's pointer: the first later year in which the selected
- * measures turn from costing revenue to clearly raising it, the other way,
- * or from roughly balancing to a clear effect (CLEAR_REVENUE_CHANGE).
+ * The revenue chart's pointer. The first later year in which the selected
+ * measures turn clearly (CLEAR_REVENUE_CHANGE) decides that there is one:
+ * from costing revenue to raising it, the other way, or from roughly
+ * balancing to an effect. It names the first later year whose own sentence
+ * shows that turn (firstShownTurn).
  *
  * @param {number|null} net - The selected year's net effect (£bn)
  * @param {Array<{yearLabel: string, net: number|null}>} later - Later years, in order
@@ -155,10 +204,7 @@ const revenueRounded = (net) => (Math.abs(net) < 0.05 ? 0 : net);
  */
 export function laterRevenueNote(net, later) {
   if (net == null || !Number.isFinite(net)) return null;
-  for (const point of later ?? []) {
-    if (point.net == null || !Number.isFinite(point.net)) continue;
-    const now = turnTo(revenueRounded(net), revenueRounded(point.net), CLEAR_REVENUE_CHANGE);
-    if (now) return `Later years differ: in ${point.yearLabel}, the selected policies ${REVENUE_WORDS[now]}.`;
-  }
-  return null;
+  const points = (later ?? []).filter((point) => point.net != null && Number.isFinite(point.net));
+  const turn = firstShownTurn({ net: revenueRounded(net) }, points, revenueRounded, CLEAR_REVENUE_CHANGE);
+  return turn ? `Later years differ: in ${turn.point.yearLabel}, the selected policies ${REVENUE_WORDS[turn.turns.net]}.` : null;
 }

@@ -10,7 +10,6 @@ import {
   fyDash,
   fyLabel,
   headlineSpan,
-  formatPounds,
   formatPoundsKAxis,
   formatPoundsWholeAxis,
   rowsPeriod,
@@ -20,6 +19,7 @@ import {
   NO_OFFICIAL_SERIES,
   chartEndYear,
   lineSeries,
+  OFFICIAL_VS_PE,
   mergeSeries,
   niceAxis,
   projectionStartYear,
@@ -53,7 +53,7 @@ function describeMetric(id, label) {
   const concept = equivalised
     ? "household net income adjusted for household size and composition (equivalised)"
     : "household net income";
-  if (/median/i.test(id)) return `${label} is the middle value when people are ranked by ${concept}.`;
+  if (/median/i.test(id)) return `${label} is the middle value of ${concept} across people.`;
   if (/mean/i.test(id)) return `${label} is the average of ${concept} across people.`;
   return "";
 }
@@ -114,17 +114,25 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     if (a != null && b != null && a !== 0) {
       const pct = ((b - a) / a) * 100;
       const verb = changeVerb(pct, "%");
-      const who = metric.startsWith("mean") ? "mean income (adjusted for household size)" : "median income (adjusted for household size)";
-      // Prices (real or cash) are said in About this chart
-      const real = ", ";
-      summary = verb ? (
+      const income = metric.startsWith("mean") ? "mean income" : "median income";
+      // Real or cash said in the sentence, so a figure quoted alone is not
+      // read as cash (W6 G1); the price base is in About this chart
+      const who = adjustment === "real" ? `real ${income} (adjusted for household size)` : `${income} in cash terms (adjusted for household size)`;
+      // A change too small to move the rounded figure ("from about £41,500
+      // to £41,500") says the level once, with the change
+      summary = verb && poundsFull(a) === poundsFull(b) ? (
         <>
-          Under current law{real}{who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
+          Under current law, {who} <strong>{verb}</strong> from {fyDash(first.year)} to {fyDash(last.year)}, staying at about{" "}
+          {poundsFull(a)} a year.
+        </>
+      ) : verb ? (
+        <>
+          Under current law, {who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
           {poundsFull(b)} in {fyDash(last.year)}.
         </>
       ) : (
         <>
-          Under current law{real}{who} <strong>stays at about {poundsFull(a)}</strong> a year from {fyDash(first.year)} to{" "}
+          Under current law, {who} <strong>stays at about {poundsFull(a)}</strong> a year from {fyDash(first.year)} to{" "}
           {fyDash(last.year)}.
         </>
       );
@@ -151,7 +159,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     notes: [
       noOutturn &&
         (realOnlyOutturn
-          ? "Official incomes after housing costs are shown in real terms only."
+          ? "Official incomes after housing costs are in real terms only."
           : `${NO_OFFICIAL_SERIES}.`),
       units && `Incomes are in ${units}.`,
       meta.headline_end_year_note,
@@ -161,12 +169,13 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     sourceText: CSV_SOURCES.hbai,
     info: {
       how: [
-        units && "Equivalised: incomes are adjusted for household size, shown as for a couple with no children.",
-        adjustment === "real" ? `Real terms, in ${priceBase} prices.` : "Cash terms, not adjusted for prices.",
+        OFFICIAL_VS_PE,
+        units && "Equivalised: incomes adjusted for household size, as for a couple with no children.",
+        adjustment === "real" ? `Real terms, in ${priceBase} prices.` : "Cash terms, with no adjustment for prices.",
       ],
       caveats: [
         noOutturn &&
-          (realOnlyOutturn ? "Official incomes after housing costs are shown in real terms only." : `${NO_OFFICIAL_SERIES}.`),
+          (realOnlyOutturn ? "Official incomes after housing costs are in real terms only." : `${NO_OFFICIAL_SERIES}.`),
         /_ahc$/.test(metric) && "Real incomes after housing costs use a PolicyEngine CPI after housing costs, not an OBR series.",
       ],
       sources: [HBAI_SOURCE],
@@ -220,13 +229,12 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
         </div>
       ) : (
         <OverTimeChart
-          compare={range}
           data={chartData}
           series={series}
           yFormat={yFormat}
-          tooltipFormat={formatPounds}
-          valueFormat={poundsFull}
+          tooltipFormat={poundsFull}
           yLabel={yLabel}
+          span={span ? [span[0].year, span[1].year] : null}
         />
       ),
   };

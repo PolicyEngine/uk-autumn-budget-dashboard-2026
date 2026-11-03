@@ -88,6 +88,14 @@ export function splitSource(text) {
   return { label: label || url, url };
 }
 
+/**
+ * The source id (src/utils/sources.js) of the OBR forecast the outlook's
+ * current-law projections were run on, read from its end-year note: the
+ * October 2026 EFO once regenerated on it, else the March 2026 EFO.
+ */
+export const outlookForecastSource = (meta) =>
+  /OBR October 2026/.test(meta?.headline_end_year_note ?? "") ? "obr_efo_october_2026" : "obr_efo_march_2026";
+
 /** End year for headline comparisons (meta.headline_end_year, e.g. "2031-32"). */
 export const headlineYear = (data) => data?.meta?.headline_end_year || null;
 

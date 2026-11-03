@@ -43,7 +43,7 @@ export const areaViewsAvailable = (routing) =>
  * @param {Object} options
  * @param {{status: string, table: Object|null}} options.data - A file's
  *   state, from useGeographyData.
- * @param {Object} options.choice - From chooseReform.
+ * @param {Object} options.choice - From chooseSelectionReform.
  * @param {number} options.year
  * @param {string} options.outcome
  * @param {string} options.place - "by region" or "by constituency".
@@ -72,40 +72,35 @@ export function viewState({ data, choice, year, outcome, place, routing = null }
     // Nor once it has failed to load: only a routing that says available
     // lets the file show.
     if (!areaViewsAvailable(routing)) {
-      return notice(`Results ${place} could not be loaded.`);
+      return notice(`The page could not load results ${place}.`);
     }
   }
   if (data.status === "loading") return { kind: "loading" };
   if (data.status === "unavailable") {
-    return notice(`Results ${place} are not yet published.`);
+    return notice(`We have not yet published results ${place}.`);
   }
   if (data.status === "stale") {
     return notice(
-      "Newer results have been published since this page loaded.",
+      "We have published newer results since this page loaded.",
       "Reload the page to see them.",
     );
   }
   if (data.status !== "ready") {
     return notice(
-      `Results ${place} are not yet published.`,
-      "The published file could not be read, so no figures are shown.",
+      `We have not yet published results ${place}.`,
+      "The page could not read the published file, so it shows no figures.",
     );
   }
   if (choice.kind === "none") {
     return notice(`Select a policy to see results ${place}.`);
   }
-  if (choice.kind === "pick") {
-    return notice(
-      `Results ${place} are shown for one policy at a time, or for all policies together.`,
-      "Select one policy, or all of them. Figures for different policies are published separately and are not added together.",
-    );
-  }
   if (choice.kind === "no-package") {
-    return notice(`Results ${place} are not yet published for the full package.`);
+    if (choice.reason) return notice(choice.reason);
+    return notice(`We have not yet published results ${place} for the full package.`);
   }
   if (!hasReform(data.table, choice.reform)) {
     return notice(
-      `Results ${place} are not yet published for this policy.`,
+      `We have not yet published results ${place} for this policy.`,
       null,
       { missingReform: true },
     );
@@ -113,7 +108,7 @@ export function viewState({ data, choice, year, outcome, place, routing = null }
   const rows = rowsFor(data.table, { reform: choice.reform, year, outcome });
   if (rows.length === 0) {
     return notice(
-      `No results ${place} are published for this policy in ${fiscalYearLabel(year)}.`,
+      `We publish no results ${place} for this policy in ${fiscalYearLabel(year)}.`,
     );
   }
   return { kind: "rows", reform: choice.reform, rows };

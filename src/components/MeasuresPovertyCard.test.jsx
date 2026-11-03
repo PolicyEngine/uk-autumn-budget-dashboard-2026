@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, waitFor, within } from "@testing-library/react";
 import fc from "fast-check";
-import { PovertyMeasuresRow, measurePovertyRows, povertyCardRows, povertyWaterfall } from "./MeasuresPovertyCard";
+import { PovertyMeasuresRow, TOGETHER, measurePovertyRows, povertyCardRows, povertyWaterfall } from "./MeasuresPovertyCard";
 import { povertyMetric } from "./SummaryMetricChart";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { FLAT_EXTRA_COLUMNS } from "../utils/publication/csv";
@@ -13,7 +13,9 @@ import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measur
 import { parseDashboardCsv } from "../utils/loadDashboard";
 
 const PUBLIC = join(__dirname, "..", "..", "public");
-const published = (file) => parseDashboardCsv(readFileSync(join(PUBLIC, "data", file), "utf8"));
+// The pre-Budget candidate run's flat CSVs (moved out of public/data by #339)
+const CANDIDATE_RUN = join(__dirname, "..", "test", "fixtures", "candidate-run");
+const published = (file) => parseDashboardCsv(readFileSync(join(CANDIDATE_RUN, file), "utf8"));
 
 // A catalogue built from the flat files' own measures, as a manifest with
 // every one approved and every artifact verified (test only, as in
@@ -68,41 +70,60 @@ describe("measurePovertyRows and povertyWaterfall", () => {
   ];
 
   it("reads each measure's own change by its short name, the package from the combined run", () => {
-    const { members, measures, total } = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
+    const { members, measures, idle, total } = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
     expect(measures.map((m) => m.name)).toContain("Student loan threshold unfrozen");
     expect(total).toBe(-0.008);
-    // Employer NI changes no household's income: in More info, not a step
+    // Employer NI changes no household's income: a "No change" row, not a step
     expect(members.find((member) => member.id === "employer_ni_relief_under_25s").muted).toBe(true);
     expect(measures.some((m) => m.id === "employer_ni_relief_under_25s")).toBe(false);
+    expect(idle.find((m) => m.id === "employer_ni_relief_under_25s")).toMatchObject({ value: 0 });
   });
 
-  it("steps by size in people out of poverty, closes the gap with an interaction step and ends at the package", () => {
-    const { measures, total } = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
+  it("draws each policy from zero by size, with no interaction row, and ends with all of them together (POV2, POV3)", () => {
+    const selected = ["state_pension_income_tax_protection", "plan_2_threshold_unfreeze", "fuel_duty_rise_deferral", "employer_ni_relief_under_25s"];
+    const { measures, idle, total } = measurePovertyRows(rows, catalogue, selected, 2027, "poverty_change_pp");
     // 70 million people: 0.001pp is 700 people
-    const { steps, zero, peopleMode } = povertyWaterfall(measures, total, 70);
+    const { steps, zero, peopleMode } = povertyWaterfall(measures, total ?? -0.008, 70, idle);
     expect(peopleMode).toBe(true);
+    // Every selected policy is a row: the steps by size, then the ones that
+    // move no one (no bar), then the package
     expect(steps.map((s) => [s.kind, s.id])).toEqual([
       ["measure", "plan_2_threshold_unfreeze"],
       ["measure", "state_pension_income_tax_protection"],
-      ["interaction", "interaction"],
+      ["none", "fuel_duty_rise_deferral"],
+      ["none", "employer_ni_relief_under_25s"],
       ["total", "package"],
     ]);
-    // A fall in poverty steps right; each step starts where the last ended
+    // A "No change" row sits at 0 and never moves the steps after it
+    expect(steps.filter((s) => s.kind === "none").every((s) => s.x === 0 && s.start === 0 && s.end === 0)).toBe(true);
+    // A fall in poverty points right; every bar starts at 0, so nothing
+    // reads as stacking
     expect(steps[0].x).toBeCloseTo(3500);
-    expect(steps[1].start).toBeCloseTo(3500);
-    expect(steps[2].x).toBeCloseTo(700);
-    expect(steps[3].start).toBe(0);
-    expect(steps[3].end).toBeCloseTo(5600);
-    // Measures that move no one are one line, not rows
-    expect(zero.map((m) => m.id)).toEqual(["fuel_duty_rise_deferral"]);
+    expect(steps.every((s) => s.start === 0)).toBe(true);
+    expect(steps[1].end).toBeCloseTo(steps[1].x);
+    // The last row is the combined run's own figure, never the bars summed
+    expect(steps.at(-1).name).toBe(TOGETHER);
+    expect(steps.at(-1).end).toBeCloseTo(5600);
+    expect(zero.map((m) => m.id)).toEqual(["fuel_duty_rise_deferral", "employer_ni_relief_under_25s"]);
   });
 
   it("falls back to percentage points without a population, and has no package for a part selection", () => {
-    const { measures } = measurePovertyRows(rows, catalogue, ["plan_2_threshold_unfreeze", "fuel_duty_rise_deferral"], 2027, "poverty_change_pp");
-    const { steps, peopleMode } = povertyWaterfall(measures, null, null);
+    const { measures, idle } = measurePovertyRows(rows, catalogue, ["plan_2_threshold_unfreeze", "fuel_duty_rise_deferral"], 2027, "poverty_change_pp");
+    const { steps, peopleMode } = povertyWaterfall(measures, null, null, idle);
     expect(peopleMode).toBe(false);
-    expect(steps.map((s) => s.kind)).toEqual(["measure"]);
+    expect(steps.map((s) => s.kind)).toEqual(["measure", "none"]);
     expect(steps[0].x).toBeCloseTo(0.005);
+  });
+
+  it("keeps a bar for a small non-zero change, and keeps exactly 0 as no change", () => {
+    const small = [
+      { id: "a", name: "A", value: -0.0001 },
+      { id: "b", name: "B", value: 0 },
+    ];
+    const { steps } = povertyWaterfall(small, null, 70);
+    expect(steps.map((s) => [s.id, s.kind])).toEqual([["a", "measure"], ["b", "none"]]);
+    // 0.0001pp of 70 million is 70 people: a step, not "No change"
+    expect(steps[0].x).toBeCloseTo(70);
   });
 });
 
@@ -130,17 +151,37 @@ describe("the Poverty sub-tab's measures pair", () => {
     }
     // The change in people, from the outlook's population
     await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28 the selected policies move about [\d,]+ people out of absolute poverty before housing costs, lowering the rate by about 0\.0075 percentage points\.$/), { timeout: 5000 });
-    // A waterfall in people: short names, the package last; the measures
-    // that move no one are in More info, not under the chart
+    // A waterfall in people: short names, the package last; every selected
+    // policy a row, the ones that move no one after the steps with "No
+    // change" and why, and no bar
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent);
     expect(rows[0]).toBe("Student loan threshold unfrozen");
-    expect(rows.at(-1)).toBe("All policies together");
-    expect(rows).not.toContain("Employer National Insurance relief, under-25s");
-    expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
+    expect(rows.at(-1)).toBe(TOGETHER);
+    expect(measures.querySelector(".wf-join")).toBeNull();
+    const shownIds = [...measures.querySelectorAll(".wf-measure, .wf-none")].length;
+    expect(shownIds).toBe(catalogue.displayable.filter((m) => ALL.includes(m.id)).length);
+    expect(rows).toContain("Employer National Insurance relief, under-25s");
+    const none = [...measures.querySelectorAll(".wf-none")];
+    expect(none.length).toBeGreaterThan(0);
+    for (const row of none) {
+      expect(row.querySelector(".wf-main")).toHaveTextContent(/^No change$/);
+      expect(row.querySelector(".wf-reason").textContent.length).toBeGreaterThan(0);
+      expect(row.querySelector(".wf-bar")).toBeNull();
+    }
+    const reasonFor = (name) => none.find((row) => row.textContent.includes(name))?.querySelector(".wf-reason")?.textContent;
+    expect(reasonFor("Business sale relief limit halved")).toBe("taxes capital gains, not incomes");
+    expect(reasonFor("Employer National Insurance relief, under-25s")).toBe("changes employers' costs; the model keeps wages fixed");
+    // The steps come first, then the no-change rows, then the total
+    const kinds = [...measures.querySelectorAll(".wf-measure, .wf-interaction, .wf-none, .wf-total")].map((r) => r.className.match(/wf-(measure|interaction|none|total)/)[1]);
+    expect(kinds.join(" ")).toMatch(/^(measure )+(none )+total$/);
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^All the policies together move about [\d,]+ people out of poverty; unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
+    // The total is the poverty rate card's sentence and the last bar, not
+    // this headline too (each fact once)
+    expect(headline).toHaveTextContent(/^Of the policies on their own, unfreezing the student loan threshold moves the most: about [\d,]+ people out of poverty\.$/);
+    expect(headline.textContent).not.toMatch(/together/);
+    expect(measures.textContent).not.toMatch(/package/i);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
@@ -153,22 +194,19 @@ describe("the Poverty sub-tab's measures pair", () => {
     fireEvent.click(within(change).getByRole("button", { name: "About this chart" }));
     expect(change.querySelector(".chart-footer")).toHaveTextContent(/relative/i);
 
-    // About this chart: the £0 measures and that the parts need not add up
+    // About this chart: that the parts need not add up; the policies that
+    // move no one are in their rows, not listed again here
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
-    expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
-    const none = measures.querySelector(".wf-none");
-    expect(none).toHaveTextContent(/^No effect on poverty: .*Business sale relief limit halved/);
-    // A reason per policy, grouped: prices for the fuel and VAT policies,
-    // capital gains for the business sale relief, each a bullet
-    expect(none).toHaveTextContent(/Business sale relief limit halved — it taxes capital gains/);
-    expect(none).toHaveTextContent(/change prices, which the poverty measure's income leaves out/);
-    expect(none.querySelectorAll(".info-sublist > li").length).toBeGreaterThan(1);
+    expect(within(measures).getByText(/so the bars need not add up to it/)).toBeInTheDocument();
+    // Why, linked to Limitations (critic W2, round 3)
+    expect(within(measures).getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
+    // The policy's own effect is said once, in the sentence, not again here
+    expect(within(measures).queryByText("Each bar is one policy on its own.")).toBeNull();
+    const about = measures.querySelector(".chart-more-info");
+    expect(about).not.toHaveTextContent(/No effect on/);
+    expect(about.querySelector("[data-zero-measure]")).toBeNull();
     // The card says each fact once: the people rule is in Methodology
-    expect(measures.querySelector(".chart-more-info")).not.toHaveTextContent(/nearest 1,000/);
-    // The £0 policies: one bullet each, by short name and why
-    const zero = measures.querySelector(`[data-zero-measure="employer_ni_relief_under_25s"]`);
-    expect(zero).toHaveTextContent(/^Employer National Insurance relief, under-25s — employers pay less National Insurance/);
-    expect(zero.closest("ul").classList.contains("info-sublist")).toBe(true);
+    expect(about).not.toHaveTextContent(/nearest 1,000/);
   });
 });
 
@@ -272,7 +310,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
   it("still says so of a measure whose run carries the measure as no change, with no note", async () => {
     const card = await renderCard(mixed, ["state_pension_income_tax_protection"]);
     expect(card.querySelector(".mp-fell-back")).toBeNull();
-    expect(card.querySelector(".wf-none")).toHaveTextContent(/^No effect on poverty: /);
+    expect(card.querySelector(".wf-none .wf-main")).toHaveTextContent(/^No change$/);
   });
 
   it("the chart beside it, each measure on its own, shows the headline rather than hide a run without the choice as no effect", async () => {
@@ -349,6 +387,37 @@ describe("a measure whose artifact predates the poverty and inequality measures"
         },
       ),
       { numRuns: 300 },
+    );
+  });
+});
+
+describe("About this chart and the sentence follow the selection (W6 G1)", () => {
+  const renderMeasures = async (selected) => {
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={metrics} policies={catalogue.measures} selectedPolicies={selected} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
+    const card = heading.closest(".mp-card");
+    fireEvent.click(within(card).getByRole("button", { name: "About this chart" }));
+    return card;
+  };
+
+  it("describes the last bar only when it is drawn", async () => {
+    // Two policies, not every one: no run of the whole selection, so no
+    // "All selected policies together" bar and no line about it
+    const card = await renderMeasures(["plan_2_threshold_unfreeze", "state_pension_income_tax_protection"]);
+    expect(card.querySelector(".wf-total")).toBeNull();
+    expect(within(card).queryByText(TOGETHER)).toBeNull();
+    expect(card.querySelector(".chart-more-info")).not.toHaveTextContent(/The last bar/);
+    expect(within(card).queryByRole("link", { name: "Policies added up" })).toBeNull();
+  });
+
+  it("names the poverty line, not 'this line', when no selected policy moves anyone", async () => {
+    const card = await renderMeasures(["fuel_duty_rise_deferral"]);
+    expect(card.querySelector(".chart-description")).toHaveTextContent(
+      /^No selected policy on its own moves anyone across the poverty line in 2027-28\.$/,
     );
   });
 });

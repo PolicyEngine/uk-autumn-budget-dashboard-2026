@@ -1,5 +1,5 @@
 /**
- * What Household impact shows, worked out from the API's answer
+ * What Household calculator shows, worked out from the API's answer
  * (normaliseHouseholdImpact): the per-policy rows, the programme table,
  * the "largest changes" sentence and the marginal tax rates. Pure
  * functions, so the page and its tests read the same numbers.
@@ -12,8 +12,10 @@ import {
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
+import { CALCULATOR_ONLY_MEASURES } from "./calculatorOnlyMeasures";
 import { CHART_COLOURS } from "./chartTheme";
-import { shortNameOf } from "./policyDetails";
+import { policyDetailsFor, shortNameOf } from "./policyDetails";
+import { inForceIn } from "./legendMembership";
 
 export const MINUS = "−";
 
@@ -60,8 +62,10 @@ export const PROGRAMME_LABELS = {
   uc_child_element: "Child element",
   uc_housing_costs_element: "Housing element",
   uc_childcare_element: "Childcare element",
+  uc_carer_element: "Carer element",
   benefit_cap: "Benefit cap",
   council_tax_reduction: "Council Tax Reduction",
+  carers_allowance: "Carer's Allowance",
   child_benefit: "Child Benefit",
   tax_free_childcare: "Tax-Free Childcare",
   housing_benefit: "Housing Benefit",
@@ -131,7 +135,7 @@ export const CHANGE_ONLY = new Set(["vat_change"]);
 // This page's note on a row, in place of the API's
 const PROGRAMME_NOTES = {
   vat_change:
-    "Only the change the measures make to VAT on the electricity, petrol and diesel spending entered, not the VAT you pay, so a cut shows as a positive amount.",
+    "Only the change the measures make to VAT on the electricity, petrol and diesel spending you enter, not the VAT you pay, so a cut shows as a positive amount.",
 };
 
 /**
@@ -196,8 +200,58 @@ export function programmeNotes(groups) {
     .map((row) => ({ id: row.id, label: row.label, note: row.note }));
 }
 
+/**
+ * The table's VAT row by what moves it (Pavel's review, HH5): "VAT change on fuel
+ * duty" when the only selected policy moving this household that touches
+ * prices at the pump is the fuel duty one (the VAT charged on duty), else
+ * "VAT change". `steps` are policyRows(...).rows; `typeOf` gives a measure's type.
+ */
+export function vatRowLabel(steps, typeOf) {
+  const types = movingTypes(steps, typeOf);
+  return !types.includes("VAT") && types.includes("Fuel duty") ? "VAT change on fuel duty" : "VAT change";
+}
+
+// The types of the selected policies that move this household
+function movingTypes(steps, typeOf) {
+  const moving = (steps ?? []).filter((step) => step.id !== "interaction" && Math.round(step.rounded ?? step.change ?? 0) !== 0);
+  return moving.map((step) => typeOf?.(step.id) ?? null);
+}
+
+/**
+ * Whether a fuel duty policy moves this household, by the policy's type as
+ * the table's VAT row reads it (vatRowLabel), never its display name: the
+ * waterfall's VAT note and the table's row name agree (round 3).
+ */
+export function movesFuelDuty(steps, typeOf) {
+  return movingTypes(steps, typeOf).includes("Fuel duty");
+}
+
 /** The interaction row shows only from this size (£), so bars add up. */
 export const INTERACTION_THRESHOLD = 1;
+
+/**
+ * Why a measure out of force in `year` has no effect on the household, for
+ * its No effect row: the Warm Home Discount top-up is paid in winter
+ * 2026-27, and the calculator starts in 2027-28 (Pavel's review, CF2; #274
+ * item 37). Null when it is in force.
+ */
+export function outOfForceReason(measure, year) {
+  const policy = policyDetailsFor(measure);
+  if (!policy?.inForce || year === null || year === undefined || inForceIn(policy, Number(year))) return null;
+  const { from, to } = policy.inForce;
+  const fy = (month) => {
+    const [y, m] = month.split("-").map(Number);
+    const start = m >= 4 ? y : y - 1;
+    return `${start}-${String(start + 1).slice(-2)}`;
+  };
+  if (to && fy(from) === fy(to)) {
+    const winter = Number(from.split("-")[1]) >= 10 || Number(from.split("-")[1]) <= 3;
+    return `${winter ? "Winter " : ""}${fy(from)} only; the calculator starts in 2027-28`;
+  }
+  const [y, m] = from.split("-").map(Number);
+  const month = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
+  return to && to < `${year}-04` ? `In force until ${fy(to)}` : `From ${month} ${y}`;
+}
 
 /**
  * The per-policy rows (the API's single-measure method): each measure's own
@@ -213,9 +267,12 @@ export const INTERACTION_THRESHOLD = 1;
  * @param {number} total - The headline change, as the tile shows it
  * @param {Array<{id: string, name: string}>} policies - The dashboard's names, by id
  */
-export function policyRows(byPolicy, total, policies) {
+export function policyRows(byPolicy, total, policies, year = null) {
   const nameOf = (row) =>
-    policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
+    policies.find((policy) => policy.id === row.id)?.name ??
+    CALCULATOR_ONLY_MEASURES[row.id]?.name ??
+    row.name ??
+    row.id.replace(/_/g, " ");
   // A short name for tight labels (policyDetails.js's, while it describes
   // the published measure), else the name
   const labelOf = (row) => {
@@ -266,14 +323,20 @@ export function policyRows(byPolicy, total, policies) {
         name: nameOf(row),
         label: labelOf(row),
         color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
-        reason: row.noteKind === "employer_cost" ? row.note : null,
+        reason:
+          row.noteKind === "employer_cost"
+            ? row.note
+            : outOfForceReason(policies.find((policy) => policy.id === row.id), year),
       })),
     // Notes on a measure's figure: an employer cost always, "if received"
-    // where the household gets the amount
+    // where the household gets the amount, and an assumption where the
+    // figure rests on it
     notes: byPolicy.measures
       .filter(
         (row) =>
-          row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
+          row.note &&
+          (row.noteKind === "employer_cost" ||
+            ((row.noteKind === "if_received" || row.noteKind === "assumption") && row.change !== 0)),
       )
       .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
@@ -462,13 +525,13 @@ export function rateAt(rates, income) {
 }
 
 /**
- * The marginal rate as money: "Of your next £1,000 of earnings, you keep
- * £324." from the rates over the next £200 (the API's own step), before
- * and after, said once when they round to the same pounds. A rate over
- * 200% is a cliff (net income falls by more than the £200 earned), which
- * a £1,000 multiple would overstate, so the sentence is then about the
- * next £200 itself. A keep below zero is a loss: "you would lose £X".
- * Null without both rates.
+ * The marginal rate as money: "Of your next £1,000 you keep £350 instead
+ * of £380." from the rates over the next £200 (the API's own step), with
+ * the policies first, said once when they round to the same pounds. A
+ * rate over 200% is a cliff (net income falls by more than the £200
+ * earned), which a £1,000 multiple would overstate, so the sentence is
+ * then about the next £200 itself. A keep below zero is a loss: "you lose
+ * £X". Null without both rates.
  */
 export function keepSentence(before, after) {
   const clause = keepClause(before, after);
@@ -477,8 +540,10 @@ export function keepSentence(before, after) {
 
 /**
  * keepSentence's words without the capital or full stop, to follow the
- * marginal rate in one sentence: "of your next £1,000 of earnings, you
- * keep £720". Null without both rates.
+ * marginal rate in one sentence: "of your next £1,000 you keep £720
+ * instead of £700". With `first` (no earnings yet) the sum is the first
+ * £200 and the sentence has already said so: "you keep £200 instead of
+ * £166". Null without both rates.
  */
 export function keepClause(before, after, { first = false } = {}) {
   if (before === null || before === undefined || after === null || after === undefined) return null;
@@ -486,12 +551,33 @@ export function keepClause(before, after, { first = false } = {}) {
   // that, not a wider sum it may not hold for
   const unit = first || before > 2 || after > 2 ? 200 : 1000;
   const kept = (rate) => Math.round(unit * (1 - rate));
-  const say = (amount) =>
-    amount < 0 ? `would lose ${money(-amount)}` : `keep ${money(amount)}`;
-  const lead = `of your ${first ? "first" : "next"} ${money(unit)} of earnings, you`;
   const [was, now] = [kept(before), kept(after)];
-  if (was === now) return `${lead} ${say(was)}`;
-  return `${lead} ${say(was)} before and ${say(now)} after`;
+  const lead = first ? "you" : `of your next ${money(unit)} you`;
+  const verb = (amount) => (amount < 0 ? "lose" : "keep");
+  if (was === now) return `${lead} ${verb(now)} ${money(Math.abs(now))}`;
+  // "keep £450 instead of £380"; across a sign, "keep £450 instead of losing £50"
+  const other =
+    verb(was) === verb(now) ? money(Math.abs(was)) : `${was < 0 ? "losing" : "keeping"} ${money(Math.abs(was))}`;
+  return `${lead} ${verb(now)} ${money(Math.abs(now))} instead of ${other}`;
+}
+
+/**
+ * The marginal rate card's one sentence: the rate under current law and
+ * with the policies, then the rate as money. "On your first £200 of
+ * earnings, your marginal tax rate falls from 17% to 0%, so you keep £200
+ * instead of £166." With earnings: "At £34,192 your marginal tax rate
+ * rises from 62% to 65%, so of your next £1,000 you keep £350 instead of
+ * £380." Rates that round to the same whole percent "stay at" it. Keep
+ * rates (the API's own, over the next £200) are optional.
+ */
+export function marginalRateSentence({ salary, before, after, keepBefore = null, keepAfter = null }) {
+  const first = salary === 0;
+  const pct = (value) => Math.round(value * 100);
+  const [was, now] = [pct(before), pct(after)];
+  const lead = first ? "On your first £200 of earnings, your" : `At ${money(salary)} your`;
+  const move = was === now ? `stays at ${now}%` : `${now > was ? "rises" : "falls"} from ${was}% to ${now}%`;
+  const keep = keepClause(keepBefore, keepAfter, { first });
+  return `${lead} marginal tax rate ${move}${keep ? `, so ${keep}` : ""}.`;
 }
 
 /**
@@ -521,21 +607,29 @@ export function areaName(brma) {
 
 /**
  * How the single-year calculation works, in one place: the Methodology
- * view's Household impact section shows these, as [term, text]; the
- * Household impact cards link there.
+ * view's Household calculator section shows these, as [term, text]; the
+ * Household calculator cards link there.
  */
 export const SINGLE_YEAR_METHOD = [
   [
     "Engine and policies",
-    "The same engine (policyengine.py and policyengine-uk) and the same policies as the national figures, applied to one household's answers.",
+    "The calculator uses the same engine (policyengine.py and policyengine-uk) as the national figures to apply the policies selected in the header to one household's answers. It also adds the savings income tax rise, which the national figures leave out.",
   ],
   [
     "One year",
-    "The year chosen in the bar above. Net income is before housing costs (rent is not taken off; no selected policy changes it), under current law and with the selected policies.",
+    "The year you choose in the bar above. Net income is before housing costs (we do not take off rent; no selected policy changes it), under current law and with the selected policies.",
   ],
   [
     "Salary",
-    "Entered for 2026 and grown to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
+    "You enter your salary for 2026, and we grow it to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
+  ],
+  [
+    "State Pension",
+    "We ask for it from State Pension age and prefill it with the full new State Pension for the chosen year, which we uprate on the OBR's October 2026 forecast; a figure you enter replaces it.",
+  ],
+  [
+    "Examples",
+    "Each example household fills every answer with fixed values, so we work out its results in advance; every answer stays editable.",
   ],
   [
     "Change by policy",

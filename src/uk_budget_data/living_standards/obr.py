@@ -343,3 +343,106 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+# --- The EFO PDF's Table A.1, before the detailed tables are out ----------
+
+# Table A.1 "Economy forecast" of the EFO PDF (its annex of detailed tables):
+# calendar-year growth, one decimal, the same 1 d.p. figures policyengine-uk
+# takes for these series. Each key's row label as the table prints it; the
+# label must match the start of the line exactly (the footnote digit after
+# "Average weekly earnings" is allowed).
+PDF_TABLE_A1_ROWS = {
+    "cpi": "CPI",
+    "rpi": "RPI",
+    "earnings": "Average weekly earnings",
+    "house_prices": "House prices",
+}
+PDF_TABLE_A1_TITLE = "Table A.1: Economy forecast"
+PDF_TABLE_A1_NEXT = "Table A.2:"
+
+# What the detailed forecast tables (economy) give that Table A.1 does not
+NOT_IN_PDF_TABLE_A1 = {
+    "cpih": "CPIH",
+    "non_labour_income": "non-labour income",
+    "rent": "actual rents for housing",
+    "mortgage_interest": "mortgage interest payments",
+}
+
+_NUMBER = re.compile(r"^-?\d+(?:\.\d+)?$")
+
+
+def read_pdf_table_a1(text: str, years: list[int]) -> tuple[dict, str]:
+    """Calendar-year growth for PDF_TABLE_A1_ROWS from the EFO PDF's text.
+
+    ``text`` is the PDF's text, one cell a line (PyMuPDF ``get_text()``),
+    with pages marked ``=====PAGE n``. Returns ({key: ParsedSeries}, the
+    PDF page number). The table's header gives its years (``Outturn``, then
+    one line a year); each row is its label and one number a year. A
+    missing table, row or year raises :class:`ForecastTableError`.
+    """
+    lines = [_norm(line) for line in text.splitlines()]
+    # The annex table, not the contents page's line for it
+    starts = [i for i, line in enumerate(lines) if line == PDF_TABLE_A1_TITLE]
+    if len(starts) != 1:
+        raise ForecastTableError(
+            f"expected one line {PDF_TABLE_A1_TITLE!r} in the PDF text, "
+            f"found {len(starts)}"
+        )
+    start = starts[0]
+    page = next(
+        (
+            lines[i].removeprefix("=====PAGE ").strip()
+            for i in range(start, -1, -1)
+            if lines[i].startswith("=====PAGE ")
+        ),
+        None,
+    )
+    end = next(
+        (
+            i
+            for i in range(start + 1, len(lines))
+            if lines[i].startswith(PDF_TABLE_A1_NEXT)
+        ),
+        len(lines),
+    )
+    block = lines[start + 1 : end]
+    if "Outturn" not in block:
+        raise ForecastTableError("Table A.1: no 'Outturn' header line")
+    header = []
+    for line in block[block.index("Outturn") + 1 :]:
+        if not re.fullmatch(r"\d{4}", line):
+            break
+        header.append(int(line))
+    if not header:
+        raise ForecastTableError("Table A.1: no year columns")
+    out = {}
+    for key, label in PDF_TABLE_A1_ROWS.items():
+        label_re = re.compile(rf"^{re.escape(label)}\d?$")
+        rows = [i for i, line in enumerate(block) if label_re.match(line)]
+        if len(rows) != 1:
+            raise ForecastTableError(
+                f"{key}: expected one Table A.1 row {label!r}, "
+                f"found {len(rows)}"
+            )
+        cells = block[rows[0] + 1 : rows[0] + 1 + len(header)]
+        if len(cells) != len(header) or not all(
+            _NUMBER.match(c) for c in cells
+        ):
+            raise ForecastTableError(
+                f"{key}: Table A.1 row {label!r} has {cells!r}, not one "
+                f"number for each of {header}"
+            )
+        by_year = dict(zip(header, (float(c) for c in cells)))
+        out[key] = ParsedSeries(
+            key=key,
+            values={
+                y: (round(by_year[y] / 100, 4) if y in by_year else None)
+                for y in years
+            },
+            source=(
+                f"{PDF_TABLE_A1_TITLE} (PDF page {page}), row {label!r} "
+                "(calendar year, per cent, 1 d.p.)"
+            ),
+        )
+    return out, page

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import PolicySelector from "./components/PolicySelector";
-import { MeasureKeyProvider, SectionMeasureKey } from "./components/MeasureKey";
 import YearSlider from "./components/YearSlider";
 import LandingPage from "./components/LandingPage";
 import LandingBackdrop from "./components/landing/LandingBackdrop";
@@ -13,8 +12,9 @@ import SectionHeading from "./components/SectionHeading";
 import TwinLink from "./components/TwinLink";
 import { GROWTH_CURRENT_LAW_ANCHOR, YOUNG_PEOPLE_ANCHOR } from "./utils/viewAnchors";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, FIRST_DISPLAY_YEAR, selectableYearOr } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, DisplayYearsContext, EARLY_YEAR, SELECTABLE_YEARS, selectableYearOr, yearsForSelection } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
+import { useNarrowViewport } from "./utils/chartTheme";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, catalogueProvisional, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
@@ -22,6 +22,16 @@ import { dashboardFromParts, loadDashboard, loadDashboardParts, loadVerifiedTabl
 import { pruneVerifiedCache } from "./utils/publication/cache";
 import { prefetchGeography } from "./hooks/useGeographyData";
 import { loadOutlook } from "./utils/livingStandards/outlook";
+import { loadGrowthWithMeasures } from "./utils/livingStandards/growthWithMeasures";
+import { selectionPackageKey } from "./utils/geography/selection";
+
+// Growth with the selected policies (Living standards) reads one flat file
+// of every run (about 90kB gzipped): on a page opened on Population impact
+// it is asked for with the manifest, not once its card has mounted behind
+// every artifact's tables, so the card draws as soon as it is shown
+if (typeof window !== "undefined" && /[?&]tab=dashboard\b/.test(window.location.search) && !/[?&]sub=(?!living\b)/.test(window.location.search)) {
+  loadGrowthWithMeasures().catch(() => {});
+}
 import { loadPresetChanges } from "./utils/householdPresets";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
@@ -29,11 +39,12 @@ import UnavailableNotice, { RemoveUnavailable } from "./components/publication/U
 import ViewSkeleton, { BootSkeleton } from "./components/publication/ViewSkeleton";
 import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
-import { provisionalLabel } from "./utils/publication/manifest";
+import { provisionalNotice } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { createSiteNavIntent, isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
+import { trackEngagement, trackEvent, trackLinkClicks } from "./utils/analytics";
+import { createBandIntent, createSiteNavIntent, isProgrammaticScroll, LANDSCAPE_PHONE_QUERY, isTouchOnly, pointerWantsSiteNav, SITE_NAV_DWELL_MS, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -59,6 +70,7 @@ const PovertyMeasuresRow = lazyView(chartViews, (m) => m.PovertyMeasuresRow);
 const PersonalImpactTab = lazyView(chartViews, (m) => m.PersonalImpactTab);
 const LivingStandardsTab = lazyView(chartViews, (m) => m.LivingStandardsTab);
 const PolicyCards = lazyView(() => import("./components/PolicyCards"));
+const UnmodelledMeasures = lazyView(() => import("./components/policies/UnmodelledMeasures"));
 const MethodologyTab = lazyView(() => import("./components/MethodologyTab"));
 
 // The code each view ("tab" or "tab:sub", as bootView names them) needs
@@ -70,7 +82,7 @@ const VIEW_CODE = {
   "dashboard:poverty": [PovertyMeasuresRow],
   household: [PersonalImpactTab],
   outlook: [LivingStandardsTab],
-  policies: [PolicyCards],
+  policies: [PolicyCards, UnmodelledMeasures],
   methodology: [MethodologyTab],
 };
 
@@ -113,7 +125,7 @@ function viewFallback(value) {
 // Population impact, without them (current law) on the Pre-measures forecast.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
-  { value: "household", label: "Household impact", year: true, policies: true },
+  { value: "household", label: "Household calculator", year: true, policies: true },
   { value: "outlook", label: "Pre-measures forecast", year: false, policies: false },
   { value: "policies", label: "Policies", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
@@ -201,13 +213,13 @@ export function viewFromLocation({ search, hash }) {
 
 
 // The ui-kit shell's sticky site nav, as globals.css selects it to hide it
-// until the reader scrolls up (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
+// until the pointer reaches the window's top (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
 // Once shown, the site nav stays this long (unless the reader scrolls down),
 // and hides this long after the pointer or focus leaves it.
-export const SITE_NAV_MIN_MS = 3000;
-export const SITE_NAV_LEAVE_MS = 1500;
+export const SITE_NAV_MIN_MS = 1500;
+export const SITE_NAV_LEAVE_MS = 750;
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
 function dropSubTab(sub, extra = {}) {
@@ -268,24 +280,63 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // the rest of the address, below.
   const readRequested = () => typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
   const requested = fromBuild ? null : readRequested();
-  const [chosenPolicies, setChosenPolicies] = useState(() => requestedPolicies(requested));
-  const [selectionChosen, setSelectionChosen] = useState(requested !== null);
+  // One policy at a time while the publication has no combined run of the
+  // whole package (no published run adds the measures up), on the
+  // population tabs only: the picker is single-select there, the default
+  // the first measure in the catalogue's order, and a link naming several
+  // opens on the first of them. Once a combined run is published it is
+  // multi-select again, by itself. The Household calculator keeps its own
+  // selection, every policy by default.
+  const singleSelect = Boolean(catalogue.manifest) && catalogue.displayable.length > 1 && !catalogue.combinedId;
+  // A link's ?policies= is the open tab's own choice while single-select:
+  // on Population impact (or the landing page) the one policy, and the
+  // household keeps every policy; on the Household calculator the
+  // household's; on a tab the policies do not change, both
+  const linkTab = () => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab"));
+  const linkSetsHousehold = (link) => link !== null && (!singleSelect || (linkTab() !== null && linkTab() !== "dashboard"));
+  const linkSetsOne = (link) => link !== null && singleSelect && linkTab() !== "household";
+  const [chosenPolicies, setChosenPolicies] = useState(() => (linkSetsHousehold(requested) ? requestedPolicies(requested) : []));
+  const [selectionChosen, setSelectionChosen] = useState(() => linkSetsHousehold(requested));
+  // The population tabs' one policy while single-select (below): its own
+  // choice, so the Household calculator's selection is kept beside it
+  const [chosenOne, setChosenOne] = useState(() => (linkSetsOne(requested) ? requestedPolicies(requested) : []));
   // The default is derived, never stored: an artifact that verifies later
   // under the same manifest joins it, as on a fresh load (review of
   // 3d52cff, finding 1). A newer manifest remounts the view instead.
+  // Every displayable measure: the default, and the Policies tab's cards
+  // whatever is chosen
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
+  const allPolicyIds = defaultPolicies;
   // A withdrawn measure in a link or a kept selection drops out silently;
-  // the address writer below then rewrites ?policies= without it
-  const selectedPolicies = useMemo(() => {
+  // the address writer below then rewrites ?policies= without it.
+  // The Household calculator's selection: every policy by default, any
+  // several (the household API runs them together, no combined run needed)
+  const householdPolicies = useMemo(() => {
     const chosen = selectionChosen ? chosenPolicies : defaultPolicies;
     return catalogue.withdrawn?.size ? chosen.filter((id) => !catalogue.withdrawn.has(id)) : chosen;
   }, [selectionChosen, chosenPolicies, defaultPolicies, catalogue]);
+  // The population tabs' selection: the same, or while single-select one
+  // policy, its own choice (the first a link names, in the catalogue's
+  // order), else the first in the catalogue's order
+  const selectedPolicies = useMemo(() => {
+    if (!singleSelect) return householdPolicies;
+    const kept = catalogue.withdrawn?.size ? chosenOne.filter((id) => !catalogue.withdrawn.has(id)) : chosenOne;
+    const first = catalogue.displayable.find((measure) => kept.includes(measure.id));
+    if (first) return [first.id];
+    // A link naming only an unavailable policy keeps it, so the page says
+    // it is unavailable rather than swapping in another
+    if (kept.length) return [kept[0]];
+    return catalogue.displayable.length ? [catalogue.displayable[0].id] : [];
+  }, [singleSelect, householdPolicies, chosenOne, catalogue]);
   // Once the first view has painted, every other view's tables load and
   // verify while the page is idle, so a tab switch need not wait
   useEffect(() => {
     if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
     // One step per idle period, the views' own tables first
     const steps = [
+      // Growth with the selected policies (Living standards): one flat
+      // file, read and parsed once, so its card draws at once
+      () => loadGrowthWithMeasures().catch(() => {}),
       // Every view's code, so a tab switch need not wait for it
       ...Object.keys(VIEW_CODE).map((view) => () => preloadView(view)),
       ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
@@ -342,9 +393,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // default view (Public finances), which stays mounted behind it, faded
   // and inert. Choosing any view leaves it.
   const [landing, setLanding] = useState(true);
-  // The overview drawer, opened by the "About" tab on the window's edge
+  // The overview drawer, opened by the "About" tab on the window's edge,
+  // or first in the view tabs row on a phone, whose margin has no room for
+  // a side tab (HomeButton.jsx)
   const [overviewOpen, setOverviewOpen] = useState(false);
   const aboutTabRef = useRef(null);
+  const aboutInRow = useNarrowViewport();
   const closeOverview = useCallback(() => setOverviewOpen(false), []);
   const PRESETS = [{ id: "autumn-budget", name: "All policies" }];
   // Cards fade and rise in as they scroll into view
@@ -375,15 +429,19 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     if (oldOutlookBaseline(window.location)) dropSubTab(null);
     setLanding(opensLanding(window.location));
     setActiveTab(view);
-    // A shared link's ?year= opens that year; one not offered (an old
-    // 2026) opens the default
+    // A shared link's ?year= opens that year; one not offered opens the
+    // default. 2026-27 is kept here and dropped below if the selection has
+    // no effect in it
     const askedYear = new URLSearchParams(window.location.search).get("year");
-    if (askedYear !== null) setDistributionalYear(selectableYearOr(askedYear));
+    if (askedYear !== null) setDistributionalYear(Number(askedYear) === EARLY_YEAR ? EARLY_YEAR : selectableYearOr(askedYear));
     if (fromBuild) {
       const linked = readRequested();
       if (linked !== null) {
-        setChosenPolicies(requestedPolicies(linked));
-        setSelectionChosen(true);
+        if (linkSetsOne(linked)) setChosenOne(requestedPolicies(linked));
+        if (linkSetsHousehold(linked)) {
+          setChosenPolicies(requestedPolicies(linked));
+          setSelectionChosen(true);
+        }
       }
     }
     setLocationReady(true);
@@ -404,7 +462,16 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       // displayable, a newly published one included.
       // (not on the landing page, whose address is the bare one; the
       // selection comes back to the address with the next view)
-      if (selectionChosen && !landing) params.set("policies", selectedPolicies.join(","));
+      // The open tab's own selection. One policy at a time on the population
+      // tabs: the address always names it, so a shared link opens on it
+      const onHousehold = activeTab === "household";
+      // Single-select: Population impact always names its one policy; the
+      // Household calculator its chosen selection; another tab the
+      // household's chosen selection, else a chosen one policy
+      if (landing) params.delete("policies");
+      else if (singleSelect && activeTab === "dashboard") params.set("policies", selectedPolicies.join(","));
+      else if (selectionChosen) params.set("policies", householdPolicies.join(","));
+      else if (singleSelect && !onHousehold && chosenOne.length > 0) params.set("policies", selectedPolicies.join(","));
       else params.delete("policies");
     }
     // The year chosen in the header, so a shared link opens on it; the
@@ -412,23 +479,34 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     if (!landing && distributionalYear !== DEFAULT_DISPLAY_YEAR) params.set("year", String(distributionalYear));
     else params.delete("year");
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
-  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable, distributionalYear]);
+  }, [selectedPolicies, householdPolicies, selectionChosen, singleSelect, chosenOne, activeTab, landing, locationReady, unavailable, distributionalYear]);
 
+  // The years shown: 2026-27 first only while a selected policy has an
+  // effect in it (yearsForSelection)
+  const shownYears = useMemo(() => yearsForSelection(published.budgetary, selectedPolicies), [published, selectedPolicies]);
+  // A year no longer shown (2026-27 after its last policy is deselected)
+  // falls back to the default, once the published figures are in (set
+  // while rendering, as `visited` is above)
+  if (published.budgetary?.length && !shownYears.includes(distributionalYear)) setDistributionalYear(DEFAULT_DISPLAY_YEAR);
   const results = useMemo(() => ({
-    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
-    // The year before the charts start (2026-27), from the same verified
-    // rows: one item in Revenue impact's "About this chart", never a bar
-    budgetBefore: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, [FIRST_DISPLAY_YEAR - 1])[0],
+    // The net line from the selected policies' combined run when one is
+    // published, else the bars' sum
+    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, shownYears, selectionPackageKey(catalogue.manifest, selectedPolicies)),
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
     // Every verified run's rows: the summary statistics read one run, not a
     // sum; an artifact's poverty_inequality table is merged into its rows
     rawMetrics: published.metrics,
-  }), [published, catalogue, selectedPolicies]);
+  }), [published, catalogue, selectedPolicies, shownYears]);
 
   const handlePolicyToggle = (policyId) => {
     if (!catalogue.byId.get(policyId)?.displayable) return;
-    setChosenPolicies(selectedPolicies.includes(policyId) ? selectedPolicies.filter((id) => id !== policyId) : [...selectedPolicies, policyId]);
+    // One at a time on the population tabs: picking a policy selects only it
+    if (singleSelect && activeTab !== "household") {
+      setChosenOne([policyId]);
+      return;
+    }
+    setChosenPolicies(householdPolicies.includes(policyId) ? householdPolicies.filter((id) => id !== policyId) : [...householdPolicies, policyId]);
     setSelectionChosen(true);
   };
   // Select all and Clear: the whole selection in one update (a run of
@@ -444,7 +522,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   };
   // Only on the reader's request: an unavailable measure leaves the selection
   const removeFromSelection = (ids) => {
-    setChosenPolicies(selectedPolicies.filter((id) => !ids.includes(id)));
+    setChosenPolicies(householdPolicies.filter((id) => !ids.includes(id)));
     setSelectionChosen(true);
   };
 
@@ -460,19 +538,21 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     return () => observer.disconnect();
   }, []);
 
-  // The site nav is hidden above the window by default, so the title band
-  // sits at the top of the page. It slides in above the band when the
-  // reader scrolls up (SITE_NAV_SHOW_UP_PX or more in one run, by their own
-  // wheel, trackpad, touch, keys or scrollbar: utils/pageScroll
-  // createSiteNavIntent), points at the top 8px of the window, or tabs into
-  // it (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
-  // slide is instant under reduced motion). The page moving by itself (tab
-  // rows going compact, charts loading, scroll anchoring, the page's own
-  // scrolls) never shows it. Once in, it stays SITE_NAV_MIN_MS, and while
-  // the pointer or focus is in it or one of its menus is open, then hides
-  // SITE_NAV_LEAVE_MS after they leave. Any scroll down by the reader hides
-  // it at once (unless it is in use), and within its own height of the
-  // page's top it is always hidden.
+  // The site nav is in the page's flow at its top (globals.css), so it is
+  // in view on load above the title band and a scroll down takes it away
+  // with the page. Scrolling never brings it back: once it has scrolled
+  // away it slides in above the band when the pointer rests at the top
+  // edge of the window (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS:
+  // utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
+  // band and tab rows move down under it, so it never covers the Year and
+  // Policies pills; the slide is instant under reduced motion). Once in, it stays
+  // SITE_NAV_MIN_MS, and while the pointer or focus is in it or one of its
+  // menus is open, then hides SITE_NAV_LEAVE_MS after they leave. Any
+  // scroll down by the reader hides it at once (unless it is in use), and
+  // within its own height of the page's top it goes back to its place in
+  // the flow. A touch-only device has no pointer to bring it in with: there
+  // it shows only while the page is at its very top (createSiteNavIntent).
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -486,14 +566,19 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     let frame = 0;
     let shownAt = 0;
     let timer = 0;
+    // The pointer resting at the window's top edge, before the nav shows
+    let edgeTimer = 0;
     let pointerIn = false;
     let touchY = null;
+    // Touch-only, at the page's very top: shown for as long as it stays there
+    let pinned = false;
     const isShown = () => root.hasAttribute("data-site-nav-shown");
     // The ui-kit menus (About, country) put a full-window overlay with
     // role="presentation" inside the nav while they are open
     const holds = () =>
       !!nav &&
       (pointerIn ||
+        pinned ||
         nav.contains(document.activeElement) ||
         !!nav.querySelector('[role="presentation"]'));
     const clear = () => {
@@ -529,12 +614,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       frame = 0;
       const y = window.scrollY;
       // A scroll the page made (utils/pageScroll) is not the reader's: it
-      // never brings the nav in over what it lined up under the bars.
-      // At the page's top the nav is always hidden, so the top looks as it
-      // does on load (unless the pointer or focus is in it), whoever scrolled
+      // never hides the nav. Near the page's top the nav is hidden, so the
+      // top looks as it does on load (unless the pointer or focus is in
+      // it), whoever scrolled; on a touch-only device it is in only at the
+      // very top
       const top = nav?.offsetHeight || 0;
       const programmatic = isProgrammaticScroll(y);
-      follow(intent.scroll(y, performance.now(), { programmatic, top }));
+      const touchOnly = isTouchOnly();
+      pinned = touchOnly && y <= 0;
+      follow(intent.scroll(y, performance.now(), { programmatic, top, touchOnly }));
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(check);
@@ -569,21 +657,47 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     };
     const onPointerUp = () => intent.input("drag", "release", performance.now());
     const onPointer = (event) => {
+      // A tap's emulated mouse events do not count on a touch-only device
+      if (isTouchOnly()) return;
+      // Over the nav, or over the title band it pushes down (the Year and
+      // Policies pills), so the band never jumps back from under the pointer
+      const bandHeight = document.querySelector(".title-row")?.offsetHeight ?? 0;
       const over =
         !!nav &&
         isShown() &&
         ((event.target instanceof Node && nav.contains(event.target)) ||
-          event.clientY <= nav.offsetHeight);
-      if (event.clientY <= 8) {
-        pointerIn = true;
-        show();
-      } else if (over) {
+          event.clientY <= nav.offsetHeight + bandHeight);
+      if (pointerWantsSiteNav(event.clientY)) {
+        if (isShown()) {
+          pointerIn = true;
+          show();
+        } else if (!edgeTimer) {
+          edgeTimer = window.setTimeout(() => {
+            edgeTimer = 0;
+            pointerIn = true;
+            show();
+          }, SITE_NAV_DWELL_MS);
+        }
+        return;
+      }
+      if (edgeTimer) {
+        window.clearTimeout(edgeTimer);
+        edgeTimer = 0;
+      }
+      if (over) {
         if (!pointerIn) clear();
         pointerIn = true;
       } else if (pointerIn) {
         pointerIn = false;
         hideAfter(SITE_NAV_LEAVE_MS);
       }
+    };
+    // The pointer leaving the window (toward the tabs and address bar)
+    // before the rest is up: the nav does not open behind it (HDR1)
+    const onPointerOut = (event) => {
+      if (event.relatedTarget || !edgeTimer) return;
+      window.clearTimeout(edgeTimer);
+      edgeTimer = 0;
     };
     const onFocusIn = () => show();
     const onFocusOut = (event) => {
@@ -599,8 +713,11 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
     window.addEventListener("mousemove", onPointer, { passive: true });
+    document.addEventListener("mouseout", onPointerOut, { passive: true });
     nav?.addEventListener("focusin", onFocusIn);
     nav?.addEventListener("focusout", onFocusOut);
+    // On a touch-only device the nav is in at the page's top from the start
+    check();
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("wheel", onWheel);
@@ -610,9 +727,11 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("mousemove", onPointer);
+      document.removeEventListener("mouseout", onPointerOut);
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
+      if (edgeTimer) window.clearTimeout(edgeTimer);
       clear();
       resize?.disconnect();
       root.removeAttribute("data-site-nav-shown");
@@ -703,6 +822,51 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     };
   }, []);
 
+  // On a phone on its side the title band tucks away above the window
+  // while the reader scrolls down and slides back on a scroll up, so the
+  // bars do not take half the window (globals.css, data-band-hidden;
+  // utils/pageScroll createBandIntent). Never while one of its pills is
+  // open or focused, nor near the page's top. Elsewhere it stays in view.
+  const [bandHidden, setBandHidden] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const query = window.matchMedia(LANDSCAPE_PHONE_QUERY);
+    const intent = createBandIntent({ y: window.scrollY });
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const y = window.scrollY;
+      if (!query.matches) {
+        intent.scroll(y, { held: true });
+        setBandHidden(false);
+        return;
+      }
+      const sentinel = titleSentinelRef.current;
+      const band = document.querySelector(".title-row");
+      // The band's own place: until the page has scrolled past it, it is
+      // not stuck, so there is nothing to tuck away
+      const top = sentinel ? sentinel.getBoundingClientRect().top + y + (band?.offsetHeight ?? 0) : 0;
+      const held =
+        !!band &&
+        (band.contains(document.activeElement) || !!band.querySelector('[aria-expanded="true"]'));
+      const next = intent.scroll(y, { top, held, programmatic: isProgrammaticScroll(y) });
+      if (next !== null) setBandHidden(next);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    query.addEventListener?.("change", onScroll);
+    // A pill opened from the tucked band's edge brings it back
+    document.addEventListener("focusin", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      query.removeEventListener?.("change", onScroll);
+      document.removeEventListener("focusin", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   // Switch view. If the reader had scrolled past the tabs, bring the new
   // view's top up under them, so it does not open part way down. The band
   // can change height with the view (compact on a phone when the view has
@@ -725,6 +889,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     }
     setLanding(false);
     setActiveTab(tab);
+    if (changing) trackEvent("view_opened", { view: tab, sub: sub ?? undefined });
     // A hash that belongs to the Young people sub-tab goes when another view
     // is chosen, so the address never opens a different view from this one
     if (tab !== DEFAULT_VIEW && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
@@ -740,6 +905,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   useEffect(() => {
     openViewRef.current = handleTabChange;
   });
+  // Clicks on the report's download, our posts and other sites, and how
+  // far and how long people stay (utils/analytics.js)
+  useEffect(() => trackLinkClicks(), []);
+  useEffect(() => trackEngagement(), []);
   useEffect(() => {
     const onOpenView = (event) => {
       const { tab, anchor } = event.detail || {};
@@ -771,16 +940,19 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // A Policies card's "See its effect": Population impact with only that
   // measure selected (the address then carries ?policies=<id>)
   const handleShowEffect = (policyId) => {
-    setChosenPolicies([policyId]);
-    setSelectionChosen(true);
-    // Open on a year the measure moves revenue in: the threshold freeze
-    // (2031-32 only) opened on 2027-28 showed only empty charts. A measure
-    // with none in the years shown (the Warm Home Discount top-up, winter
-    // 2026-27) keeps the year, and the revenue card says why it is empty
+    // One at a time: the population tabs' own choice, the household's kept
+    if (singleSelect) setChosenOne([policyId]);
+    else {
+      setChosenPolicies([policyId]);
+      setSelectionChosen(true);
+    }
+    // Open on a year the measure moves revenue in: one in force in a single
+    // later year opened on 2027-28 showed only empty charts, and the
+    // household energy payment (winter 2026-27) opens on 2026-27
     const moves = (year) =>
       published.budgetary.some((row) => row.reform_id === policyId && Number(row.year) === year && Math.abs(Number(row.value)) > 0.0005);
     if (!moves(distributionalYear)) {
-      const first = DISPLAY_YEARS.find(moves);
+      const first = yearsForSelection(published.budgetary, [policyId]).find(moves);
       if (first !== undefined) setDistributionalYear(first);
     }
     handleTabChange("dashboard");
@@ -804,7 +976,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   }, [activeTab, landing]);
 
   // An explicit URL selection is never silently narrowed into another
-  // selection. Household impact applies its own year-aware gate; Population
+  // selection. Household calculator applies its own year-aware gate; Population
   // impact with an unavailable member has no complete set of Budget figures.
   // Each opened view stays mounted, so the check is per view, not for the
   // open one only.
@@ -828,11 +1000,18 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // Both pills show on the landing page: the band stays the same from the
   // start, and they drive the view behind it
   const yearShown = landing || yearPillShown(activeTab);
+  // Household calculator's examples are published from 2027-28 only, so its
+  // year pill offers those years and a band year of 2026-27 shows 2027-28
+  const householdView = !landing && activeTab === "household";
+  const householdYear = SELECTABLE_YEARS.includes(distributionalYear) ? distributionalYear : DEFAULT_DISPLAY_YEAR;
   const policiesShown = landing || view.policies;
 
   // A caveat on the results while any shown measure is provisional: one
   // small badge on the landing page, nowhere above the views
   const provisional = catalogueProvisional(catalogue);
+  // The notice shown for it: the candidate label before the Budget, none
+  // for Budget-day statement figures
+  const notice = provisional ? provisionalNotice(catalogue.manifest) : "";
 
   // What a downloaded chart says it shows (ChartDownloadMenu's frame): the
   // band's policies on the views it drives, the provisional label while
@@ -840,10 +1019,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   const downloadContext = (value) =>
     VIEW_BY_KEY[value]?.policies
       ? {
-          policies: policiesLabel(selectedPolicies, POLICIES),
-          provisional: provisional ? provisionalLabel(catalogue.manifest) : null,
+          policies: policiesLabel(value === "household" ? householdPolicies : selectedPolicies, POLICIES),
+          provisional: notice || null,
         }
-      : { policies: value === "outlook" ? "Current law (before the Budget policies)" : null, provisional: null };
+      : { policies: value === "outlook" ? "Current law, without the Budget measures" : null, provisional: null };
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -978,10 +1157,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             subtitle="Net effect of the selected policies on government revenue and spending, by year."
           />
           <section id="revenue" className="report-section hero-chart">
-            <BudgetaryImpactChart data={results.budgetData} before={results.budgetBefore} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
+            <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
           </section>
           {/* The official costings beside our estimates: a card of its own,
-              once the official costings cover a selected measure */}
+              which says when it fills in until they are published */}
           <ObrComparisonCard
             selectedPolicies={selectedPolicies}
             selectedYear={distributionalYear}
@@ -995,12 +1174,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         {/* Two sections: by area (the constituency map) and by income (the
             decile card beside the scatter of binned groups; the
             per-household scatter stays withdrawn, as it showed survey
-            households one by one). One measure key above them all
-            (MeasureKey): the decile cards colour by measure and register
-            with it. Results by region are hidden for now (RegionView is
+            households one by one). No key above the sections: the
+            header shows the selection and each chart draws its own key.
+            Results by region are hidden for now (RegionView is
             kept, not rendered). */}
-        <MeasureKeyProvider>
-          <SectionMeasureKey />
           <SectionHeading
             id="by-area"
             icon="compass"
@@ -1035,36 +1212,38 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
                 selectedPolicies={selectedPolicies}
                 policies={POLICIES}
                 selectedYear={distributionalYear}
+                onPoliciesSet={handlePoliciesSet}
                 descriptionLink={
                   <>
                     Where would yours be?{" "}
                     <a
                       className="twin-link"
-                      href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
+                      href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: householdPolicies.join(",") } : {}) })}`}
                       onClick={(event) => {
                         event.preventDefault();
                         handleTabChange("household");
                       }}
                     >
-                      Work it out on Household impact →
+                      Work it out on Household calculator →
                     </a>
                   </>
                 }
               />
             </div>
           </section>
-        </MeasureKeyProvider>
       </div>
     );
   };
 
   return (
-    // A view without the year pill has a one-row band on a phone
+    <DisplayYearsContext.Provider value={shownYears}>
+    {/* A view without the year pill has a one-row band on a phone */}
     <div
       className="app"
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
+      data-band-hidden={bandHidden ? "" : undefined}
       data-publication={unavailable ? "unavailable" : "verified"}
       data-publication-check={checkedBy}>
       {/* A div, not <main>: the PolicyEngine shell around the page is the
@@ -1081,15 +1260,16 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           </div>
 
           {/* The year applies to every chart on Population impact (both
-              sub-tabs) and to Household impact, and
+              sub-tabs) and to Household calculator, and
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
-              applies to those views and Household impact. A pill that does
+              applies to those views and Household calculator. A pill that does
               not apply stays in its place, faded, and does not open; its
               reason is in its accessible name only. Both are on every view, so the band never moves. */}
           <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
             <YearSlider
-              selectedYear={distributionalYear}
+              years={householdView ? SELECTABLE_YEARS : shownYears}
+              selectedYear={householdView ? householdYear : distributionalYear}
               onYearChange={setDistributionalYear}
               inactiveReason={yearShown ? undefined : YEAR_INACTIVE}
             />
@@ -1097,9 +1277,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           <div className={`band-policy${policiesShown ? "" : " is-inactive"}`}>
             <PolicySelector
               policies={POLICIES}
-              selectedPolicies={selectedPolicies}
+              selectedPolicies={householdView ? householdPolicies : selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
               onPoliciesSet={handlePoliciesSet}
+              single={singleSelect && !householdView}
               loading={Boolean(unavailable?.loading)}
               noneReason={unavailable?.reason}
               inactiveReason={policiesShown ? undefined : POLICIES_INACTIVE}
@@ -1111,10 +1292,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         <UpdateToast show={updated} />
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
+        {/* "About": a tab on the window's left edge that opens the
+            overview drawer (below) from the same edge; on a phone, first
+            in the view tabs row */}
+        {!landing && !aboutInRow && (
+          <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+        )}
         <ViewTabs
-          leading={!landing && (
-            // "About": opens the overview drawer (below)
-            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+          leading={!landing && aboutInRow && (
+            <EdgeAboutTab placement="row" open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
           )}
           tabs={VIEWS}
           value={landing ? null : activeTab}
@@ -1135,9 +1321,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           <LandingPage
             onOpen={handleTabChange}
             provisionalWording={provisional}
-            provisional={provisional && (
-              <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
-            )}
+            provisional={notice ? (
+              <p className="publication-provisional" role="status">{notice}</p>
+            ) : null}
           />
         )}
         {/* Behind the landing page, a silhouette of Public finances, drawn
@@ -1183,24 +1369,29 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           <div className="results-container">
             <SectionHeading
               icon="fileText"
-              title="Policies"
-              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each policy changes, when, and how it is modelled.`}
+              title="Policies we model"
+              subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how we model it.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
                 policies={POLICIES}
-                selectedPolicies={defaultPolicies}
+                // Every modelled policy, whatever the header has chosen: the
+                // selection drives the results tabs only ("See its effect"
+                // picks one from here)
+                selectedPolicies={allPolicyIds}
                 onShowEffect={handleShowEffect}
               />
             </section>
+            {/* The Budget's measures the dashboard leaves out, as cards of the same kind */}
+            <UnmodelledMeasures />
           </div>
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
         ) : value === "household" ? (
           <PersonalImpactTab
-            selectedPolicies={selectedPolicies}
+            selectedPolicies={householdPolicies}
             policies={POLICIES}
-            year={distributionalYear}
+            year={householdYear}
             onRemoveUnavailable={removeFromSelection}
             active={activeTab === value}
           />
@@ -1226,14 +1417,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
               onOpen={handleTabChange}
               returnFocus={aboutTabRef}
               provisionalWording={provisional}
-              provisional={provisional && (
-                <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
-              )}
+              provisional={notice ? (
+                <p className="publication-provisional" role="status">{notice}</p>
+              ) : null}
             />
           </>
         )}
       </div>
     </div>
+    </DisplayYearsContext.Provider>
   );
 }
 /**
@@ -1268,7 +1460,7 @@ function App({ boot = null }) {
   const [checkedBy, setCheckedBy] = useState(fromBuild ? "build" : "page");
   const current = useRef(fromBuild);
   const confirmer = useRef(null);
-  // Stable for the page's life: each Household impact request waits on it
+  // Stable for the page's life: each Household calculator request waits on it
   const confirmPublication = useCallback(
     (snapshot) => (confirmer.current ? confirmer.current(snapshot) : Promise.resolve(false)),
     [],

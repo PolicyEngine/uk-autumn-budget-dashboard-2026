@@ -55,3 +55,13 @@ export const forecastName = (label) => String(label || "").replace(/\s*\((pre-Bu
 export const forecastSeriesLabel = (label) => forecastName(label).replace(/^OBR\s+/, "OBR, ");
 
 export const lowerFirst = (s) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
+
+/** "OBR October 2026 (Autumn Budget)" -> "October 2026 forecast": a forecast's chip and line name. */
+export const forecastChip = (label) => `${forecastName(label).replace(/^OBR,?\s+/, "")} forecast`;
+
+/**
+ * Whether a series has a published later forecast: the Budget forecast is
+ * loaded (post_published) and carries this series (post is null for one the
+ * loaded source lacks, such as CPIH before the OBR's detailed tables).
+ */
+export const hasPost = (forecast, series) => Boolean(forecast?.post_published && Array.isArray(series?.post));

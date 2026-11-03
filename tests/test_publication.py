@@ -407,12 +407,66 @@ def test_poverty_inequality_when_present_covers_every_year(world):
     assert table_problems(tables, key="alpha", years=YEARS) == []
 
 
+def test_official_basis_when_present_covers_every_year(world):
+    """#297: a measure's figure on its official costing's basis is optional,
+    one row a year, every year when present."""
+    tables = read_tables(world.write("alpha", VALUES).path)
+    assert "official_basis" not in tables
+    assert table_problems(tables, key="alpha", years=YEARS) == []
+    tables["official_basis"] = [
+        {
+            "reform_id": "alpha",
+            "reform_name": "Alpha",
+            "year": 2027,
+            "value": -0.04,
+            "variables": "income_tax",
+        }
+    ]
+    assert table_problems(tables, key="alpha", years=YEARS) == [
+        "official_basis: missing 2028"
+    ]
+
+
 def test_an_effect_before_the_start_year_is_a_problem(world):
     tables = read_tables(world.write("alpha", VALUES).path)
     problems = table_problems(
         tables, key="alpha", years=YEARS, effective_from_year=2028
     )
     assert any("before the measure starts in 2028" in p for p in problems)
+
+
+def test_a_withheld_cell_before_the_start_year_is_an_effect(world):
+    """A decile is withheld only because some household's income changed in
+    it, so a blank cell in a year before the start is an effect, not none."""
+    tables = read_tables(world.write("alpha", VALUES).path)
+    for row in tables["income_curve"]:
+        if row["year"] < 2028:
+            row["reform_net_income"] = row["baseline_net_income"]
+    for name, column in (
+        ("winners_losers", "avg_change"),
+        ("budgetary_impact", "value"),
+        ("distributional_impact", "value"),
+    ):
+        for row in tables[name]:
+            if row["year"] < 2028:
+                row[column] = 0.0
+
+    def before_start():
+        return [
+            p
+            for p in table_problems(
+                tables, key="alpha", years=YEARS, effective_from_year=2028
+            )
+            if "before the measure starts" in p
+        ]
+
+    assert before_start() == []
+    next(row for row in tables["distributional_impact"] if row["year"] < 2028)[
+        "value"
+    ] = None
+    assert [p.split(":")[0] for p in before_start()] == [
+        "distributional_impact"
+    ]
 
 
 # --- receipts -------------------------------------------------------------

@@ -900,7 +900,7 @@
   "tests/test_household_calculator_route.py::test_household_simulations_build_without_an_empty_scenario",
   "tests/test_household_calculator_route.py::test_an_empty_baseline_is_built_without_a_scenario",
   "tests/test_household_fixtures.py::test_every_fixture_loads_and_one_is_not_a_draft",
-  "tests/test_household_fixtures.py::test_a_fixture_passes_against_the_calculator_the_route_serves[PLUMBING CHECK: single employee on \\xa312,000, seven measures change nothing]",
+  "tests/test_household_fixtures.py::test_a_fixture_passes_against_the_calculator_the_route_serves[PLUMBING CHECK: single employee on \\xa312,000, six measures change nothing]",
   "tests/test_household_route.py::test_matching_answer_and_identity_passes",
   "tests/test_household_route.py::test_answer_off_by_more_than_a_penny_fails",
   "tests/test_household_route.py::test_wrong_model_version_fails_even_with_right_answers",

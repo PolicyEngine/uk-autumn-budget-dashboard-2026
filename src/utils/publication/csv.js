@@ -129,7 +129,7 @@ function typed(text, kind, where) {
  * @returns {Array<Object>} One object per row, keyed by column.
  * @throws {TableError}
  */
-export function parseTable(name, text, columns = TABLES[name]?.columns) {
+export function parseTable(name, text, columns = TABLES[name]?.columns, nullable = TABLES[name]?.nullable ?? []) {
   if (!Object.hasOwn(TABLES, name)) {
     throw new TableError(`${name} is not a published table`);
   }
@@ -151,7 +151,7 @@ export function parseTable(name, text, columns = TABLES[name]?.columns) {
     return Object.fromEntries(
       columns.map(([column, kind], position) => [
         column,
-        typed(cells[position], kind, `${name} row ${line + 1}, ${column}`),
+        cells[position] === "" && nullable.includes(column) ? null : typed(cells[position], kind, `${name} row ${line + 1}, ${column}`),
       ]),
     );
   });
@@ -218,9 +218,9 @@ export function parseFlatTable(name, text) {
   const [header] = parseCsv(text);
   const contracted = Object.hasOwn(TABLES, name) ? TABLES[name].columns.length : 0;
   if (!extras.length || !header || header.length === contracted) {
-    return parseTable(name, text);
+    return parseTable(name, text, TABLES[name]?.columns, []);
   }
-  return parseTable(name, text, [...TABLES[name].columns, ...extras]);
+  return parseTable(name, text, [...TABLES[name].columns, ...extras], []);
 }
 
 /** The table name for a published file name, or null. */

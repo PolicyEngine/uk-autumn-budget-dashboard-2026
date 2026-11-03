@@ -30,6 +30,56 @@ const NUMERIC = [
 ];
 const COLUMNS = ["reform_id", "population", "basis", "grouping", ...NUMERIC];
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
+// The file, fetched and parsed once per page: the promise is shared, so the
+// page can start it early (App's idle preloading, and as soon as the card's
+// code loads) and the card picks up the same parse
+let loading = null;
+
+/**
+ * The file's rows, fetched and parsed once per session; a failed load is
+ * forgotten so a later call tries again.
+ */
+export function loadGrowthWithMeasures({ fetchImpl = globalThis.fetch } = {}) {
+  if (!loading) {
+    loading = Promise.resolve()
+      .then(() => fetchImpl(`${BASE}/data/${GROWTH_WITH_MEASURES_FILE}`))
+      .then((response) => {
+        if (!response.ok) throw new Error(`${GROWTH_WITH_MEASURES_FILE}: ${response.status}`);
+        return response.text();
+      })
+      .then((text) => indexByReform(parseGrowthWithMeasures(text)))
+      .catch((error) => {
+        loading = null;
+        throw error;
+      });
+  }
+  return loading;
+}
+
+/** For tests: forget the loaded file. */
+export function resetGrowthWithMeasures() {
+  loading = null;
+}
+
+/**
+ * The rows, with each run's own rows indexed (`rows.byReform`), so a card
+ * filters one run's few hundred rows, not every run's thousands, on each
+ * render.
+ */
+export function indexByReform(rows) {
+  const byReform = new Map();
+  for (const row of rows) {
+    if (!byReform.has(row.reform_id)) byReform.set(row.reform_id, []);
+    byReform.get(row.reform_id).push(row);
+  }
+  return Object.assign(rows, { byReform });
+}
+
+// One run's rows: from the index when the rows carry one
+const rowsOf = (rows, reformId) => rows.byReform?.get(reformId) ?? rows.filter((r) => r.reform_id === reformId);
+
 /** The CSV as rows with numbers parsed. */
 export function parseGrowthWithMeasures(text) {
   const [header, ...body] = parseCsv(text).filter((row) => row.length > 1);
@@ -45,7 +95,7 @@ export function parseGrowthWithMeasures(text) {
 
 /** The groupings, populations and bases a run has rows for. */
 export function offerFor(rows, reformId) {
-  const mine = rows.filter((r) => r.reform_id === reformId);
+  const mine = rowsOf(rows, reformId);
   const uniq = (key) => [...new Set(mine.map((r) => r[key]))];
   return { groupings: uniq("grouping"), populations: uniq("population"), bases: uniq("basis") };
 }
@@ -60,7 +110,7 @@ export function offerFor(rows, reformId) {
  * growth, as fractions. Cumulative growth is since the first year.
  */
 export function seriesFor(rows, { reformId, population, basis, grouping }) {
-  const mine = rows.filter((r) => r.reform_id === reformId && r.population === population && r.basis === basis && r.grouping === grouping);
+  const mine = rowsOf(rows, reformId).filter((r) => r.population === population && r.basis === basis && r.grouping === grouping);
   if (!mine.length) return null;
   const years = [...new Set(mine.map((r) => r.year))].sort((a, b) => a - b);
   const n = Math.max(...mine.map((r) => r.group));
@@ -81,7 +131,7 @@ export function seriesFor(rows, { reformId, population, basis, grouping }) {
 
 /** Whether a run moves no group's growth in any year (HBAI income does not see it). */
 export function changesNothing(rows, reformId) {
-  const mine = rows.filter((r) => r.reform_id === reformId);
+  const mine = rowsOf(rows, reformId);
   return mine.length > 0 && mine.every((r) => r.growth_difference === 0);
 }
 

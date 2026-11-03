@@ -8,16 +8,35 @@ export const SOURCES = {
     label: "OBR, Fiscal risks and sustainability – July 2026",
     url: "https://obr.uk/frs/fiscal-risks-and-sustainability-july-2026/",
   },
-  // The OBR forecast the page's projections follow. On Budget day, point
-  // this at the new Economic and fiscal outlook; the Methodology text
-  // names whatever this label says.
+  // The OBR forecast the Budget figures' simulations are built on
+  // (src/uk_budget_data/forecast/obr_october_2026.json over policyengine-uk's
+  // economic assumptions; data_inputs/publication_basis.json), so every
+  // place that names it describes the Budget runs. The Pre-measures
+  // forecast tab's projections are on it too (outlookForecastSource); March
+  // 2026 (obr_efo_march_2026) stays beside it on Forecast changes.
   obr_efo_current: {
-    label: "OBR, Economic and fiscal outlook – March 2026",
-    url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+    label: "OBR, Economic and fiscal outlook – October 2026",
+    url: "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
   },
   obr_efo_march_2026: {
     label: "OBR, Economic and fiscal outlook – March 2026",
     url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+  },
+  // The Budget's OBR forecast, shown beside March 2026 on the Pre-measures
+  // forecast tab; the EFO page itself was not up on 28 October 2026, so this
+  // is the PDF it publishes
+  obr_efo_october_2026: {
+    label: "OBR, Economic and fiscal outlook – October 2026",
+    url: "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
+  },
+  // The October 2026 forecast's detailed tables (economy): the overlay's
+  // growth rates are read from them at four decimals (Table 1.6 for
+  // average earnings; src/uk_budget_data/forecast/obr_october_2026.json).
+  // The EFO page lists them under its supporting documents (checked 28
+  // October 2026)
+  obr_efo_october_2026_tables: {
+    label: "OBR, Economic and fiscal outlook – October 2026: detailed forecast tables (economy)",
+    url: "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/",
   },
   frs_2024_25: {
     label: "DWP, Family Resources Survey: financial year 2024 to 2025",
@@ -88,14 +107,35 @@ export const SOURCES = {
     url: "https://github.com/PolicyEngine/policyengine-uk/pull/2428",
   },
   policyengine_py_release: {
-    label: "policyengine.py 6.10.2",
-    url: "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.10.2",
+    label: "policyengine.py 6.11.1",
+    url: "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.11.1",
   },
   microcosm: {
     label: "Microcosm",
     url: "https://github.com/PolicyEngine/microcosm",
   },
+  // Microcosm's own site, and PolicyEngine's pages on how Microcosm UK is
+  // built, stage by stage, and on its calibration targets (all checked 27
+  // October 2026). The targets page names the release it lists.
+  microcosm_site: {
+    label: "Microcosm",
+    url: "https://microcosm.institute",
+  },
+  uk_data_pipeline: {
+    label: "PolicyEngine, UK microdata pipeline",
+    url: "https://www.policyengine.org/uk/model/data/pipeline",
+  },
+  uk_calibration_targets: {
+    label: "PolicyEngine, UK calibration targets",
+    url: "https://www.policyengine.org/uk/model/data/calibration",
+  },
   // Section 8, Equivalisation: HBAI's modified OECD scale (checked 26 October 2026)
+  // The evaluation that gives the operator participation (about 90%) the
+  // £2 bus fare cap's share is divided by (checked 29 October 2026)
+  dft_two_pound_cap_evaluation: {
+    label: "DfT, Evaluation of the £2 bus fare cap",
+    url: "https://www.gov.uk/government/publications/evaluation-of-the-2-bus-fare-cap",
+  },
   dwp_hbai_methodology: {
     label: "DWP, Households Below Average Income: background information and methodology",
     url: "https://www.gov.uk/government/statistics/households-below-average-income-for-financial-years-ending-1995-to-2025/households-below-average-income-background-information-and-methodology-report-fye-2025",
@@ -121,19 +161,19 @@ Object.assign(SOURCES, {
     label: "PolicyEngine UK",
     url: "https://policyengine.org/uk/model",
   },
-  // Where the measures and their costings are read from, linked in the intro.
-  // Update on Budget day (runbook step): the Autumn Budget 2026 document and
-  // its policy costings on gov.uk. Before the Budget, HM Treasury's page.
+  // Where the measures are read from: the Budget 2026 document on gov.uk
+  // (published 28 October 2026)
   budget_documents: {
-    label: "HM Treasury",
-    url: "https://www.gov.uk/government/organisations/hm-treasury",
+    label: "HM Treasury, Budget 2026",
+    url: "https://www.gov.uk/government/publications/budget-2026-document",
   },
-  // Published with the Budget on 28 October 2026; linked once it exists
-  // HM Treasury's policy costings, certified by the OBR: the figures the
-  // reconciliation gate compares (public/data/official_costings.json)
+  // HM Treasury's Budget 2026 policy costings, certified by the OBR,
+  // published 28 October 2026 (the policy costings PDF from gov.uk's
+  // supporting documents page): the figures the reconciliation gate compares
+  // (public/data/official_costings.json, from Table 6.1)
   obr_budget_2026_costings: {
-    label: "the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR)",
-    url: null,
+    label: "the official Autumn Budget 2026 costings (HM Treasury, with OBR certification)",
+    url: "https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf",
   },
   ons_ashe: {
     label: "ONS, Annual Survey of Hours and Earnings",

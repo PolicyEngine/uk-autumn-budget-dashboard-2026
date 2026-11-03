@@ -198,6 +198,36 @@ def test_the_candidate_uses_one_worker_per_vcpu(tmp_path, workspace):
     assert env == f"HOUSEHOLD_WORKERS={cpu}"
 
 
+@pytest.mark.parametrize(
+    "existing_service", [True, False], ids=["update", "create"]
+)
+def test_the_minimum_instances_belong_to_the_service_not_the_revision(
+    tmp_path, workspace, existing_service
+):
+    """Every build leaves its tag on its revision, and Cloud Run keeps a
+    revision's own minimum of instances running while it has a tag, with or
+    without traffic: with --min-instances 1, each deploy left one 8 vCPU
+    instance of the revision it replaced running. The service's minimum
+    (--min) goes only to the revisions in the traffic split."""
+    if existing_service:
+        script = step_script("deploy-candidate", workspace)
+        scripted_service = service()
+    else:
+        script = step_script(
+            "deploy-candidate", workspace, _ALLOW_CREATE="true"
+        )
+        scripted_service = service(exists=False, traffic=[])
+    result, log, _ = run(script, tmp_path, scripted_service)
+    assert result.returncode == 0, result.stderr
+    deploy_args = next(
+        line for line in log if line.startswith("run deploy")
+    ).split()
+    assert deploy_args.count("--min-instances") == 1
+    assert deploy_args[deploy_args.index("--min-instances") + 1] == "0"
+    assert deploy_args.count("--min") == 1
+    assert int(deploy_args[deploy_args.index("--min") + 1]) >= 1
+
+
 def test_a_failed_lookup_stops_the_build_before_any_deploy(
     tmp_path, workspace
 ):

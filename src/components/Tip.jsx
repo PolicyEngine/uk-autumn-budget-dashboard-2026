@@ -29,9 +29,10 @@ if (typeof document !== "undefined") {
  *
  * Wrap one element: <Tip content="No end date"><span … /></Tip>. The wrapper
  * is display: contents, so it changes no layout. Keep `title` only as a
- * fallback for truncated text.
+ * fallback for truncated text. `wide` lets a longer tip (a measure's whole
+ * summary) grow to 360px and wrap there.
  */
-export default function Tip({ content, children }) {
+export default function Tip({ content, wide = false, children }) {
   const id = useId();
   const wrapRef = useRef(null);
   const tipRef = useRef(null);
@@ -118,7 +119,7 @@ export default function Tip({ content, children }) {
             ref={tipRef}
             id={id}
             role="tooltip"
-            className={`tip${pos?.below ? " is-below" : ""}`}
+            className={`tip${wide ? " is-wide" : ""}${pos?.below ? " is-below" : ""}`}
             style={pos ? { top: pos.top, left: pos.left } : { visibility: "hidden" }}
           >
             {content}
@@ -134,9 +135,9 @@ export default function Tip({ content, children }) {
  * or a label. lucide's Info at 16px, muted, teal on hover and focus; its
  * tip is the shared Tip card. Every ⓘ on the page is this.
  */
-export function InfoTip({ content, label = "More information" }) {
+export function InfoTip({ content, label = "More information", wide = false }) {
   return (
-    <Tip content={content}>
+    <Tip content={content} wide={wide}>
       <button type="button" className="info-tip" aria-label={label}>
         <Info size={16} strokeWidth={1.8} aria-hidden="true" />
       </button>

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import ObrPriceCategoriesCard, { OBR_PRICE_CATEGORIES_TITLE, obrPriceSourceText } from "./ObrPriceCategoriesCard";
 import {
   categoryRows,
@@ -8,8 +8,21 @@ import {
   obrPriceCategoriesSentence,
 } from "../../utils/livingStandards/obrPriceCategories";
 
+// The props the card gives its line chart, to check what it asks it to draw
+const chartProps = vi.hoisted(() => []);
+vi.mock("./LsCharts", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    LsLineChart: (props) => {
+      chartProps.push(props);
+      return actual.LsLineChart(props);
+    },
+  };
+});
+
 // A short file of the shape tools/extract-obr-price-categories.mjs writes
-// (the published file waits on its review row), with Table 1.19's values
+// (public/data/obr_price_categories.json), with Table 1.19's values
 const series = (key, label, values) => ({ key, label, values: values.map(([year, value]) => ({ year, value })) });
 const FILE = {
   schema: "uk-budget-dashboard/obr-price-categories/v1",
@@ -33,7 +46,24 @@ const FILE = {
 };
 const NAMES = { food: "food, beverages and tobacco", utilities: "utilities", fuels: "fuels", other_tradables: "other tradables", other_non_tradables: "other non-tradables" };
 
-const serve = (status, body) => vi.stubGlobal("fetch", vi.fn(async () => new Response(body ? JSON.stringify(body) : "", { status })));
+// The October file (obr_price_categories_october_2026.json): 404 unless given
+const POST = {
+  ...FILE,
+  source: {
+    ...FILE.source,
+    release: "Economic and fiscal outlook, October 2026",
+    release_date: "2026-10-28",
+    workbook: "Economic and fiscal outlook, October 2026: detailed forecast tables, economy",
+  },
+  vintage: "OBR October 2026 forecast (the Autumn Budget 2026)",
+  series: FILE.series.map((s) => ({ ...s, values: s.values.map((v) => ({ ...v, value: v.value + 1 })) })),
+};
+const respond = (status, body) => new Response(body ? JSON.stringify(body) : "", { status });
+const serve = (status, body, post = null) =>
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url) => (String(url).includes("october_2026") ? (post ? respond(200, post) : respond(404)) : respond(status, body))),
+  );
 
 beforeEach(() => {
   clearObrPriceCategoriesCache();
@@ -44,7 +74,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Prices by spending category, OBR forecast", () => {
+describe("Prices by spending category", () => {
   it("reads the file as published, one row per fiscal year", () => {
     expect(isObrPriceCategories(FILE)).toBe(true);
     expect(isObrPriceCategories({ ...FILE, schema: "other" })).toBe(false);
@@ -69,10 +99,45 @@ describe("Prices by spending category, OBR forecast", () => {
     expect(obrPriceSourceText(FILE.source)).toBe("OBR, Economic and fiscal outlook, March 2026, Table 1.19 (CPI category inflation)");
   });
 
+  it("keys the lines by its chips alone: no end labels, no legend", async () => {
+    chartProps.length = 0;
+    render(<ObrPriceCategoriesCard />);
+    await screen.findByText(/^In 2026-27 the OBR expects/);
+    const props = chartProps.at(-1);
+    expect(props.endLabels ?? false).toBe(false);
+    expect(props.legend).toBe(false);
+    expect(props.keyContent).toBeTruthy();
+    expect(props.series.every((s) => s.endLabel === undefined)).toBe(true);
+    expect(document.querySelector(".ls-end-labels")).toBeNull();
+  });
+
   it("draws a table of fiscal years in the table view", async () => {
     render(<ObrPriceCategoriesCard view="table" onViewChange={() => {}} />);
     expect(await screen.findByRole("cell", { name: "2027-28" })).toBeTruthy();
     expect(screen.getByRole("cell", { name: "-8.0%" })).toBeTruthy();
+  });
+
+  it("draws October by default once it is published, and March faded beside it on choosing both", async () => {
+    serve(200, FILE, POST);
+    chartProps.length = 0;
+    render(<ObrPriceCategoriesCard />);
+    // The sentence reads October: food 3.06 + 1 = 4.1%
+    expect(await screen.findByText(/^In 2026-27 the OBR expects food, beverages and tobacco prices to rise 4\.1%/)).toBeTruthy();
+    // October alone by default, chosen in the Options pill (no chips)
+    expect(screen.queryByText("Show forecasts:")).toBeNull();
+    expect(chartProps.at(-1).series.map((s) => s.forecast)).toEqual(Array(5).fill("post"));
+    fireEvent.click(screen.getByRole("button", { name: "Options: October 2026 forecast" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Both" }));
+    expect(screen.getByRole("button", { name: "Options: March and October 2026" })).toBeTruthy();
+    const series = chartProps.at(-1).series;
+    expect(series).toHaveLength(10);
+    const food = series.filter((s) => s.category === "food");
+    expect(food.map((s) => [s.key, s.opacity])).toEqual([
+      ["food", 0.4],
+      ["food__post", undefined],
+    ]);
+    expect(food[1].name).toBe("Food, beverages and tobacco, OBR October 2026");
+    expect(chartProps.at(-1).data[0].food__post).toBeCloseTo(4.06, 10);
   });
 
   it("says the forecast is not yet available before the file is published", async () => {
@@ -87,5 +152,4 @@ describe("Prices by spending category, OBR forecast", () => {
     render(<ObrPriceCategoriesCard />);
     expect((await screen.findByRole("alert")).textContent).toMatch(/not an OBR price categories file/);
   });
-
 });

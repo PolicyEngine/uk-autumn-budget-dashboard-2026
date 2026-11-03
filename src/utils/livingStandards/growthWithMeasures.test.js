@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changesNothing, offerFor, parseGrowthWithMeasures, seriesFor, withMeasuresRows } from "./growthWithMeasures";
+import { changesNothing, indexByReform, loadGrowthWithMeasures, offerFor, parseGrowthWithMeasures, resetGrowthWithMeasures, seriesFor, withMeasuresRows } from "./growthWithMeasures";
 
 const HEADER =
   "reform_id,reform_name,year,population,basis,grouping,group,baseline_real_median,reform_real_median,baseline_annual_growth,reform_annual_growth,growth_difference";
@@ -60,5 +60,35 @@ describe("income_growth_with_measures.csv", () => {
     expect(w[1].cumulative[1]).toBeCloseTo(1.01 * (10403 / 10100) / (10200 / 10000) - 1, 10);
     expect(w[1].twin_cumulative[1]).toBe(0.01);
     expect(withMeasuresRows(twin, null)).toBeNull();
+  });
+});
+
+describe("the file, once per session", () => {
+  it("is fetched and parsed once, its runs indexed, and gives the same answers as unindexed rows", async () => {
+    resetGrowthWithMeasures();
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      return new Response(TEXT, { status: 200 });
+    };
+    const [a, b] = await Promise.all([loadGrowthWithMeasures({ fetchImpl }), loadGrowthWithMeasures({ fetchImpl })]);
+    expect(calls).toBe(1);
+    expect(a).toBe(b);
+    expect(a.byReform.get("fuel")).toHaveLength(2);
+    const plain = parseGrowthWithMeasures(TEXT);
+    const options = { reformId: "pkg", population: "all", basis: "bhc", grouping: "vigintile" };
+    expect(seriesFor(a, options)).toEqual(seriesFor(plain, options));
+    expect(offerFor(a, "pkg")).toEqual(offerFor(plain, "pkg"));
+    expect(changesNothing(a, "fuel")).toBe(true);
+    expect(indexByReform([]).byReform.size).toBe(0);
+    resetGrowthWithMeasures();
+  });
+
+  it("forgets a failed load, so a later call tries again", async () => {
+    resetGrowthWithMeasures();
+    await expect(loadGrowthWithMeasures({ fetchImpl: async () => new Response("", { status: 500 }) })).rejects.toThrow(/500/);
+    const rows = await loadGrowthWithMeasures({ fetchImpl: async () => new Response(TEXT, { status: 200 }) });
+    expect(rows.length).toBe(6);
+    resetGrowthWithMeasures();
   });
 });

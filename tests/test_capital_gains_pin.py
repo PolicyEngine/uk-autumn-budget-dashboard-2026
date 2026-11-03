@@ -15,30 +15,35 @@ from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.combine import combine_measures
 from uk_budget_data.reforms import (
-    AUTUMN_BUDGET_2026_COMBINED_ID,
     BADR_ID,
     BADR_LIFETIME_LIMIT,
     CAPITAL_GAINS_RESPONSES,
     STATE_PENSION_ALLOWANCE_ID,
     THRESHOLD_FREEZE_ID,
     _create_badr_lifetime_limit_cut,
+    _create_state_pension_income_tax_protection,
+    _create_threshold_freeze_2031_32,
     get_autumn_budget_2026_reforms,
     get_reform,
     static_capital_gains,
 )
 
 YEARS = [str(year) for year in POLICY_YEARS]
-# The measures that move capital gains tax: the relief's limit, the basic
-# rate band (which gains pay the lower rate) and the State Pension allowance
-# (taxable income).
-PINNED = (BADR_ID, THRESHOLD_FREEZE_ID, STATE_PENSION_ALLOWANCE_ID)
+# The measures that move capital gains tax: the relief's limit and the basic
+# rate band (which gains pay the lower rate). The Pension Tax Allowance is a
+# tax reduction, so it leaves taxable income and the capital gains rate
+# alone and carries no pin; the State Pension allowance designs (taxable
+# income) still do.
+PINNED = (BADR_ID, THRESHOLD_FREEZE_ID)
 
 
 def _pinned(measure_id):
-    # BADR is withdrawn and unregistered (27 October 2026); its factory
-    # still builds it.
+    # BADR (27 October 2026) and the threshold freeze (Budget day) are
+    # withdrawn and unregistered; their factories still build them.
     if measure_id == BADR_ID:
         return _create_badr_lifetime_limit_cut()
+    if measure_id == THRESHOLD_FREEZE_ID:
+        return _create_threshold_freeze_2031_32()
     return get_reform(measure_id)
 
 
@@ -67,11 +72,21 @@ def _responses(changes) -> dict:
 )
 def test_exactly_the_capital_gains_measures_carry_the_pin(measure):
     """On the reform side only; the combined package carries it as its
-    members do."""
-    pinned = measure.id in (*PINNED, AUTUMN_BUDGET_2026_COMBINED_ID)
+    members do, and none of its members moves capital gains tax."""
+    pinned = measure.id in PINNED
     expected = static_capital_gains() if pinned else {}
     assert _responses(measure.parameter_changes) == expected
     assert _responses(measure.baseline_parameter_changes) == {}
+
+
+def test_the_pension_tax_allowance_has_no_pin_but_the_allowance_designs_do():
+    assert (
+        _responses(get_reform(STATE_PENSION_ALLOWANCE_ID).parameter_changes)
+        == {}
+    )
+    for design in ("total_income", "tapered"):
+        reform = _create_state_pension_income_tax_protection(design)
+        assert _responses(reform.parameter_changes) == static_capital_gains()
 
 
 def test_capital_gains_measures_combine_with_the_shared_pin():

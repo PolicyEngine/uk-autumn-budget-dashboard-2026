@@ -472,6 +472,10 @@ export async function buildChartSvg(containerRef, options = {}) {
     originalLegendHeight = legendRect.height;
   }
 
+  // Marks only for the page (a hint to select a row, a selection's chevron
+  // and accent bar) are left out of the file, as exportDomAsSvg leaves them
+  clonedSvg.querySelectorAll("[data-export='skip']").forEach((node) => node.remove());
+
   // Remove the original Recharts legend from the clone (we'll add our own in the footer)
   const clonedLegend = clonedSvg.querySelector(".recharts-legend-wrapper");
   if (clonedLegend) {

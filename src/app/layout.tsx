@@ -2,6 +2,7 @@ import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
 import "@policyengine/ui-kit/styles.css";
 
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 // The PolicyEngine tokens, bundled with the page instead of fetched from
 // unpkg. After globals.css, as the unpkg sheet was: its spacing values win,
@@ -17,13 +18,14 @@ import { DEEP_LINK_SCRIPT } from '@/utils/landing';
 import { earlyManifestScript } from '@/utils/publication/early';
 import { BOOT_VIEW_SCRIPT } from '@/utils/bootView';
 import { publicationBoot } from './publicationBoot';
+import { GA_INIT_SCRIPT, GA_MEASUREMENT_ID } from '@/utils/analytics';
 import { chartChunkFiles, chartChunkScript } from '@/utils/chartChunk';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
-  'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 policies would affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast.';
+  'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 policies affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast.';
 
 // Inter, committed with the page (fonts/: the variable face, every weight,
 // Latin subset; SIL Open Font License in fonts/OFL.txt): the
@@ -106,6 +108,16 @@ export default async function RootLayout({
           {children}
           <SiteFooter />
         </PolicyEngineShell>
+        {/* Google Analytics, policyengine.org's property, in a production
+            build only (utils/analytics.js) */}
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {GA_INIT_SCRIPT}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

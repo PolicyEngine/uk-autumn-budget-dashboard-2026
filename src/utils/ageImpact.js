@@ -1,5 +1,5 @@
 /**
- * Results by age (public/data/age_impact.csv) for the "Young people"
+ * Results by age (each artifact's age_impact.csv) for the "Young people"
  * section: the rows the charts read, for the selected policies and year.
  * The file has a row per age band, one for all ages ("all"), and one per
  * single year of age ("0" to "89", then "90+").
@@ -43,13 +43,62 @@ export const AGE_BAND_SOURCE = {
   url: "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/employmentunemploymentandeconomicinactivitybyagegroupseasonallyadjusteda05sa",
 };
 
-/** A band with fewer survey records than this is not shown. */
+/** A band with fewer records in the dataset than this is not shown (records, not survey households: the age table's sample_size). */
 export const MIN_SAMPLE_SIZE = 100;
 
 const forYear = (rows, year) => rows.filter((row) => row.year === Number(year));
 
 /** Whether any row covers the year. */
 export const isPublished = (rows, year) => forYear(rows ?? [], year).length > 0;
+
+/**
+ * The package run to read in a year: `packageRun` (the published combined
+ * run of exactly the selection, selectionPackageKey) when the rows hold it
+ * for the year, else null.
+ */
+export function packageRunFor(rows, packageRun, year) {
+  if (!packageRun) return null;
+  return (rows ?? []).some((row) => row.reform_id === packageRun && row.year === Number(year)) ? packageRun : null;
+}
+
+const usableRow = (row) => Boolean(row) && row.sample_size >= MIN_SAMPLE_SIZE && Number.isFinite(row.mean_change);
+
+const seriesKeyOf = (policy) => policy.seriesKey ?? `measure:${policy.id}`;
+
+/**
+ * The selection rule for a chart of points (one per band or single age)
+ * whose `netChange` sums the selected policies' own rows, applied point by
+ * point (Vahid, 29 Oct: where one policy is withheld, show everything else
+ * that is published):
+ *
+ * - a published package (`run`): `netChange` is the package's own row, or
+ *   null where the package withholds it (it withholds the cells its members
+ *   withhold, #347). Each policy's own part stays where every member has a
+ *   row, and where the package's net is withheld: there the other policies'
+ *   own published parts are drawn with no net, so nothing can be worked out
+ *   by difference. Only where the package's net is published and a member's
+ *   part is not are the parts dropped (`partsShown` false), so no published
+ *   net ever sits beside a stack missing a member;
+ * - several policies and no package: each point keeps the parts its
+ *   policies publish, and its net (their sum) only where every one does;
+ * - one policy: its own rows, a missing point said as missing.
+ */
+function applySelectionRule(points, { rows, policies, selected, year, run, keyOf }) {
+  if (!run) return points;
+  const yearRows = forYear(rows ?? [], year).filter((row) => row.reform_id === run);
+  return points.map((point) => {
+    const row = yearRows.find((each) => each.age_band === keyOf(point));
+    const usable = usableRow(row);
+    const partsComplete = point.netChange !== null && point.netChange !== undefined;
+    const partsShown = partsComplete || !usable;
+    const next = { ...point, incomplete: false, suppressed: Boolean(point.suppressed), netChange: usable ? row.mean_change : null, fromPackage: true, partsShown };
+    if (!partsShown) {
+      for (const policy of policies) next[seriesKeyOf(policy)] = null;
+      if (next.parts) next.parts = [];
+    }
+    return next;
+  });
+}
 
 /**
  * One point per age band: each selected policy's mean change (keyed by its
@@ -59,8 +108,26 @@ export const isPublished = (rows, year) => forYear(rows ?? [], year).length > 0;
  * @param {Array<{id: string, name: string}>} policies - Every policy
  * @param {Array<string>} selected - Selected policy ids
  * @param {number} year
+ * @param {string|null} [packageRun] - The published combined run of exactly
+ *   the selection, read under the selection rule (applySelectionRule)
  */
-export function meanChangeByBand(rows, policies, selected, year) {
+export function meanChangeByBand(rows, policies, selected, year, packageRun = null) {
+  const points = sumByBand(rows, policies, selected, year);
+  const run = packageRunFor(rows, packageRun, year);
+  return applySelectionRule(points, { rows, policies, selected, year, run, keyOf: (point) => point.band });
+}
+
+/**
+ * meanChangeByBand's points for any list of single-year points
+ * (`{ label, netChange, parts }`, keyed by the age's row label): the same
+ * selection rule.
+ */
+export function singleAgeSelection(points, { rows, policies, selected, year, packageRun = null }) {
+  const run = packageRunFor(rows, packageRun, year);
+  return applySelectionRule(points, { rows, policies, selected, year, run, keyOf: (point) => point.label });
+}
+
+function sumByBand(rows, policies, selected, year) {
   const yearRows = forYear(rows ?? [], year);
   return AGE_BANDS.map((band) => {
     const point = { band: band.key, label: band.label, short: band.short };

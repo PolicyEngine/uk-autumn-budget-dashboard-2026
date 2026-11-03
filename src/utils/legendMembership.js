@@ -10,21 +10,23 @@
  */
 import { isCatalogueRowDisplayable } from "./measureCatalogue";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
+import { measureCategoryOf } from "./measureCategory";
 import { CHART_COLOURS } from "./chartTheme";
 import { DISPLAY_YEARS } from "./displayYears";
+import { isWithheldDecileValue } from "./decileWithholding";
+import { WAGES_HELD_FIXED } from "./measureModelling";
 
 /**
- * Measures that are £0 for every household by construction, and why, in the
- * model's own terms. Employer NI: the relief changes only employer
- * National Insurance (budget_measures/employer_ni_relief_ages_21_to_24.py);
- * the engine's wage pass-through reads the unchanged NI parameters, so
- * wages and household incomes are fixed.
+ * Measures that are £0 for every household by construction, and why: an
+ * employer cost whose published description says wages are held fixed.
+ * A measure that passes an employer saving on as pay does not say so, and
+ * gets the usual reasons (not in force, no change).
  */
-// (#185 on #104: told by the published name, so the page keeps no list
-// of measures)
+// (#185 on #104: told by the published description, as MODELLING_FACTS
+// reads it, so the page keeps no list of measures)
 export function zeroForHouseholds(measure) {
-  return /^employer\b/i.test(measure?.name ?? "")
-    ? "Wages are held fixed in this model, so no household's income changes"
+  return WAGES_HELD_FIXED.test(measure?.description ?? "")
+    ? "This model keeps wages fixed, so no household's income changes"
     : null;
 }
 
@@ -60,7 +62,7 @@ export function legendMembership(catalogue, selectedPolicies, hasEffect) {
 /**
  * legendMembership for a published table with a row per measure, year and
  * decile (winners_losers.csv, distributional_impact.csv): a measure has an
- * effect when any decile's `valueKey` is non-zero in `year`.
+ * effect when any decile's `valueKey` is non-zero or withheld in `year`.
  */
 export function decileMembership(catalogue, rows, valueKey, selectedPolicies, year) {
   const ids = new Set(
@@ -70,7 +72,7 @@ export function decileMembership(catalogue, rows, valueKey, selectedPolicies, ye
           row.decile !== "all" &&
           parseInt(row.year) === year &&
           isCatalogueRowDisplayable(catalogue, row.reform_id, row.year) &&
-          Math.abs(parseFloat(row[valueKey])) > 0,
+          (isWithheldDecileValue(row[valueKey]) || Math.abs(parseFloat(row[valueKey])) > 0),
       )
       .map((row) => row.reform_id),
   );
@@ -148,7 +150,37 @@ export function zeroReason(measure, year) {
   if (employer) return { kind: "employer", text: employer };
   const policy = policyDetailsFor(measure);
   if (!inForceIn(policy, year)) return { kind: "not_in_force", text: inForceText(policy) };
-  return { kind: "none", text: "no change for the households shown" };
+  return { kind: "none", text: "no change for the households we show" };
+}
+
+// Policies whose tax the poverty measure's income leaves out: they change
+// prices (VAT, fuel duty), not incomes
+const PRICE_TYPES = new Set(["VAT", "Fuel duty"]);
+
+/**
+ * Why a selected policy moves no one across the poverty line in `year`,
+ * short, for its row on a by-policy chart: "changes prices, not incomes",
+ * "winter 2026-27 only", "in force from April 2031". In order: £0 for
+ * households by construction (employer costs), out of force that year
+ * (inForceText), paid through income HBAI leaves out (outsidePovertyIncome:
+ * "not counted in poverty income"), a price policy, a capital gains tax,
+ * otherwise `fallback`
+ * ("no one crosses the poverty line").
+ */
+export function noPovertyEffectReason(measure, year, fallback = "no one crosses the poverty line") {
+  if (zeroForHouseholds(measure)) return "changes employers' costs; the model keeps wages fixed";
+  const policy = policyDetailsFor(measure);
+  // Short: "in force from April 2031", without inForceText's "(2031-32 only)"
+  if (policy && !inForceIn(policy, year)) return inForceText(policy).replace(/ \(\d{4}-\d{2} only\)$/, "");
+  // In force, but paid through a variable poverty income leaves out
+  if (policy?.outsidePovertyIncome) return "not counted in poverty income";
+  // The card's type where its details apply; else the category the
+  // publication gives the measure (measureCategoryOf), so a price policy
+  // whose description has moved on still says so
+  const type = policy?.type ?? measureCategoryOf(measure).label;
+  if (PRICE_TYPES.has(type)) return "changes prices, not incomes";
+  if (type === "Capital gains tax") return "taxes capital gains, not incomes";
+  return fallback;
 }
 
 /** The legend items (GroupedLegend `items`), greyed out where muted. */

@@ -1,20 +1,57 @@
-import { useState } from "react";
-import { CalendarCheck, CalendarX, ChartColumn, Clock, ExternalLink, Flag, FlaskConical } from "lucide-react";
+import { isValidElement, useState } from "react";
+import { ArrowRightLeft, CalendarCheck, CalendarX, ChartColumn, CircleSlash, ExternalLink, Flag, FlaskConical, Lightbulb, Users } from "lucide-react";
 import "./MeasureRowLabel.css";
+import "./PolicyCards.css";
 import { measureCategoryOf } from "../utils/measureCategory";
 import { withPolicyDetails } from "../utils/policyDetails";
+import { policyCardAnchor } from "../utils/methodLink";
 import { parameterTableFor } from "../utils/policyParameters";
-import PolicyChange, { usePolicyParameters } from "./PolicyChange";
+import PolicyChange, { changeView, usePolicyParameters } from "./PolicyChange";
+import { policyVisual } from "./policies/PolicyVisual";
 import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
+import { TABLE_6_1_URL } from "../utils/unmodelledMeasures";
+import { explainerFor } from "../utils/explainers";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
+
+/**
+ * A card's sections, top to bottom, by class: the category chip, the
+ * title, the one-line summary, At a glance (Starts, Ends or Continues, who
+ * it affects, then the timeline), What changes, a worked example (or the
+ * reach the Budget states) where its entry has one, About this result, the
+ * source, the Budget's costing row and "See its effect". A card with details has every section;
+ * one without leaves out those it has nothing for. Each section keeps its
+ * own row of the list's grid, so the sections line up across a row.
+ */
+export const CARD_SECTIONS = [
+  "policy-card-type",
+  "policy-card-name",
+  "policy-card-summary",
+  "policy-card-when",
+  "pchg",
+  "policy-card-points",
+  "policy-card-example",
+  "policy-card-why",
+  "policy-card-details",
+  "policy-card-sources",
+  "policy-card-source",
+  "policy-card-costing",
+  "policy-card-effect",
+];
+
+/** The sections only a Budget measure the dashboard does not model has. */
+export const UNMODELLED_ONLY_SECTIONS = ["policy-card-why", "policy-card-sources"];
+
+/** The heading of a Budget measure's reason for being left out of the model. */
+export const WHY_NOT_MODELLED = "Why we don't model it";
 
 /** The one name of every Policies card's disclosure. */
 export const HOW_IT_IS_MODELLED = "About this result";
 
 // A details sentence that states a limitation: one of the published
 // limitations' patterns, or the words the details use for them
-const LIMIT_WORDS = /\bapproximate\b|\bnot modelled\b|\bleaves? out\b|\bnot (?:included|identified)\b/i;
+const LIMIT_WORDS =
+  /\bapproximate\b|\bnot modelled\b|\bleaves? out\b|\bnot (?:included|identified)\b|\bassumption\b|\bheld fixed\b|\bnot the effect\b|\bnot in the model's baseline\b/i;
 const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.some(({ pattern }) => pattern.test(sentence));
 
 /**
@@ -25,27 +62,80 @@ const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.som
  * state it, else in the published description's.
  */
 export function modellingInfo(policy) {
-  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.details].filter(Boolean).join(" "));
-  const details = sentences(policy.details);
+  const details = detailPoints(policy.details);
+  const shown = [policy.summary ?? policy.description, ...cardPoints(policy.points).map(pointText), ...details].filter(Boolean).join(" ");
+  const modelling = measureModellingFacts(policy, [shown, policy.howCalculated].filter(Boolean).join(" "));
   return {
     how: [
+      policy.howCalculated,
       ...details.filter((sentence) => !isLimit(sentence)),
       modelling.facts.length > 0 && `Modelled with: ${modelling.facts.join(" · ")}.`,
     ],
     caveats: [
       ...details.filter(isLimit),
+      ...(policy.caveats ?? []),
       ...modelling.limits.filter((limit) => !limit.said).map((limit) => limit.sentence),
       ...modelling.notePoints,
     ],
   };
 }
+
+/**
+ * A card's bullets (`points`), as a list: each a string, or `{ label, text }`
+ * with a short lead-in. A lone string, as while an entry still has a
+ * sentence there, is one bullet; nothing is no bullets.
+ */
+export function cardPoints(points) {
+  const list = Array.isArray(points) ? points : points ? [points] : [];
+  return list
+    .map((point) => (typeof point === "string" ? { label: null, text: point } : { label: point?.label ?? null, text: point?.text ?? "" }))
+    .filter((point) => point.text);
+}
+
+const pointText = (point) => (point.label ? `${point.label}: ${point.text}` : point.text);
+
+/** "About this result"'s points: the entry's list, or a paragraph split into its sentences. */
+export const detailPoints = (details) => (Array.isArray(details) ? details.filter(Boolean) : sentences(details));
+
+/**
+ * The bullets, as a real list. Where every point has a label the labels
+ * form a column of their own (on a phone, each over its text); otherwise a
+ * label is a bold lead-in.
+ */
+export function CardPoints({ points, name }) {
+  const items = cardPoints(points);
+  if (!items.length) return null;
+  const labelled = items.every((point) => point.label);
+  return (
+    <ul className={`policy-card-points${labelled ? " is-labelled" : ""}`} aria-label={name ? `Key points: ${name}` : "Key points"}>
+      {items.map((point) => (
+        <li key={pointText(point)}>
+          {point.label && <strong className="policy-card-point-label">{point.label}</strong>}
+          {point.label && !labelled && " "}
+          <span className="policy-card-point-text">{point.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 import Tip from "./Tip";
 import TitleIcon from "./TitleIcon";
 
-// The cards' order by the catalogue's budgetary direction: measures that
-// raise revenue, then those that cost it, then the rest. Cards carry no
-// revenue tag or filter: one flat list.
+// The cards' order: each entry's `cardOrder` (policyDetails.js), set so
+// the two cards in a row are close in height; then the Budget's own, by
+// each measure's first row in its Table 6.1 (`budgetRows`); a measure with
+// no row follows, by the catalogue's budgetary direction (raises, then
+// costs, then the rest), then its order. The charts keep the
+// catalogue's order (measureCatalogue.jsx), which also sets the colours.
+// Cards carry no revenue tag or filter: one flat list.
 const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
+
+/** A measure's first Table 6.1 row, or Infinity without one. */
+export const budgetRank = (policy) => (policy.budgetRows?.length ? Math.min(...policy.budgetRows) : Infinity);
+
+/** "row 15", or "rows 61 and 62". */
+export const budgetRowsLabel = (rows) =>
+  rows.length === 1 ? `row ${rows[0]}` : `rows ${rows.slice(0, -1).join(", ")} and ${rows[rows.length - 1]}`;
 
 // The timeline runs over the charts' years: April 2026 to March 2032
 // (2026-27 to 2031-32), month by month
@@ -133,8 +223,7 @@ function PolicyTimeline({ policy, highlight }) {
           <span className="ptl-budget-label" style={{ left: share(BUDGET_DAY_MONTH) }}>
             <Flag className="ptl-budget-icon" size={11} aria-hidden="true" />
             Budget
-          </span>{" "}
-          {!to && <span className="ptl-continues">Continues</span>}
+          </span>
         </div>
         <div className="ptl-track">
           <svg
@@ -223,8 +312,7 @@ function PolicyTimeline({ policy, highlight }) {
 }
 
 /**
- * One measure's card: the head (type and any "Temporary" badge on one
- * line, then the name), the summary, what changes (the model's parameters,
+ * One measure's card: the head (type on one line, then the name), the summary, what changes (the model's parameters,
  * current law beside the measure), when it is in force (Starts and Ends,
  * then the timeline), and the footer ("How it is modelled", then the
  * source and "See its effect").
@@ -232,11 +320,36 @@ function PolicyTimeline({ policy, highlight }) {
  * A measure without card details (no entry in policyDetails.js, or one
  * written for another description, as when a run publishes a changed
  * measure) shows its full published description and only the blocks it
- * has content for: no labelled box is ever drawn empty, and the card is
- * as tall as its content rather than its row (`is-bare`).
+ * has content for: no labelled box is ever drawn empty (`is-bare`). Every
+ * card, bare or not, is as tall as its row, its sections always in the
+ * same order (CARD_SECTIONS) and the footer pinned to the bottom.
  */
-function PolicyCard({ policy, onShowEffect, parameters }) {
+export function PolicyCard({ policy, onShowEffect, parameters: given }) {
+  // No summary means no card details apply: the published description, in full
+  // (a Budget measure the dashboard does not model has its own sections
+  // instead: policies/UnmodelledMeasures.jsx)
+  const bare = !policy.summary && !policy.notModelled;
+  // The measure's own visual (policies/PolicyVisual.jsx), from the file's
+  // entry as published: in What changes, or as its example's body
+  // A not-modelled card brings its own drawn visual (policies/UnmodelledVisual.jsx)
+  const drawn = isValidElement(policy.visual) ? policy.visual : null;
+  const figure = bare || drawn ? null : policyVisual(policy, given ?? null);
+  const place = figure ? policy.visual.place : null;
+  // No What changes block where it would show nothing (no tiles: a single
+  // change of value is said in the card's words; Vahid, 28 Oct); a visual
+  // drawn there is something
+  const published = given && changeView(given, policy.changesText, place === "change") ? given : null;
+  // The card's own shorter words for the main row, where it has them
+  const parameters = published && policy.changeLabel
+    ? {
+        ...published,
+        rows: published.rows.map((row) =>
+          row.primary ? { ...row, label: policy.changeLabel.label, unit_words: policy.changeLabel.unitWords ?? row.unit_words } : row,
+        ),
+      }
+    : published;
   const temporary = Boolean(policy.inForce?.to);
+  const explainer = policy.id ? explainerFor(policy.id) : null;
   // Derived from the publication for any measure (utils/measureCategory.js),
   // in the same tinted tile as every per-measure row
   const category = measureCategoryOf(policy);
@@ -244,34 +357,25 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
   const [highlight, setHighlight] = useState(null);
   // What the published wording says about how it is modelled
   const modelling = modellingInfo(policy);
-  // No summary means no card details apply: the published description, in full
-  const bare = !policy.summary;
   const showModelling = hasInfo(modelling);
+  const example = place === "change" && policy.visual.replacesExample ? null : policy.example;
+  const points = cardPoints(policy.points).length ? <CardPoints points={policy.points} name={policy.label ?? policy.name} /> : null;
   return (
     <li
+      id={policy.anchorId ?? (policy.id ? policyCardAnchor(policy.id) : undefined)}
       className={`policy-card${bare ? " is-bare" : ""}`}
       style={{ "--policy-accent": policy.color }}
     >
       <div className="policy-card-head">
         <div className="policy-card-titles">
-          {(category || temporary) && (
+          {category && (
             <div className="policy-card-topline">
-              {category && (
-                <p className="policy-card-type">
-                  <span className="mrl-icon" aria-hidden="true" style={{ "--mrl-colour": policy.color }}>
-                    <TitleIcon name={category.icon} bare size={13} />
-                  </span>
-                  {category.label}
-                </p>
-              )}
-              <span className="policy-card-tags">
-                {temporary && (
-                  <span className="policy-card-badge">
-                    <Clock size={12} aria-hidden="true" />
-                    Temporary
-                  </span>
-                )}
-              </span>
+              <p className="policy-card-type">
+                <span className="mrl-icon" aria-hidden="true" style={{ "--mrl-colour": policy.color }}>
+                  <TitleIcon name={category.icon} bare size={13} />
+                </span>
+                {category.label}
+              </p>
             </div>
           )}
           <h3 className="policy-card-name">{policy.label ?? policy.name}</h3>
@@ -281,56 +385,123 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       {bare ? (
         policy.description && <p className="policy-card-summary is-full">{policy.description}</p>
       ) : (
-        <p className="policy-card-summary">{policy.summary}</p>
-      )}
-
-      {parameters && (
-        <div className="policy-card-spec">
-          <PolicyChange
-            name={policy.label ?? policy.name}
-            entry={parameters}
-            direction={policy.direction}
-            onHighlight={setHighlight}
-          />
-        </div>
+        policy.summary && <p className="policy-card-summary">{policy.summary}</p>
       )}
 
       {(policy.starts || policy.inForce) && (
       <div className="policy-card-when">
         {policy.starts && (
+        <>
+        <p className="policy-card-glance-title policy-sr-only">At a glance</p>
         <dl className="policy-card-dates">
           <div>
             <dt>
               <CalendarCheck size={13} aria-hidden="true" />
               Starts
             </dt>
-            <dd className="policy-card-start">{policy.starts}</dd>
+            <dd className="policy-card-start">{policy.starts ?? "\u2014"}</dd>
           </div>
-          {/* The Ends slot stays, empty for a lasting measure, so the
-              timeline sits at the same height in every card */}
-          <div className="policy-card-ends" aria-hidden={temporary ? undefined : "true"}>
-            {temporary && (
-              <>
-                <dt>
-                  <CalendarX size={13} aria-hidden="true" />
-                  Ends
-                </dt>
-                <dd className="policy-card-end">{policy.ends}</dd>
-              </>
-            )}
+          <div className="policy-card-ends">
+            <dt>
+              <CalendarX size={13} aria-hidden="true" />
+              Ends
+            </dt>
+            <dd className="policy-card-end">{temporary ? policy.ends : "Continues"}</dd>
           </div>
+          {policy.affects && (
+            <div className={`policy-card-affects${policy.affectsWide ? " is-wide" : ""}`}>
+              <dt>
+                <Users size={13} aria-hidden="true" />
+                Affects
+              </dt>
+              <dd>{policy.affects}</dd>
+            </div>
+          )}
         </dl>
+        </>
         )}
-        {policy.inForce && (
+        {/* No year strip by default: At a glance says when, and What changes
+            plots a change that moves over the years */}
+        {policy.inForce && policy.timeline === true && (
           <PolicyTimeline policy={policy} highlight={highlight} />
         )}
       </div>
       )}
 
+      {(parameters || drawn || example || policy.changesText || points) && (
+        <div className="policy-card-spec">
+          {/* A card's own picture of what changes, where it brings one
+              (the Budget policies we do not model) */}
+          {drawn ?? (parameters ? (
+            <PolicyChange
+              name={policy.label ?? policy.name}
+              entry={parameters}
+              direction={policy.direction}
+              onHighlight={setHighlight}
+              lead={policy.changesText}
+              figure={place === "change" ? figure : null}
+            />
+          ) : (
+            policy.changesText && (
+              <section className="pchg" aria-label={`What changes: ${policy.label ?? policy.name}`}>
+                <div className="pchg-head">
+                  <p className="pchg-title">
+                    <ArrowRightLeft size={14} aria-hidden="true" />
+                    What changes
+                  </p>
+                </div>
+                <p className="pchg-lead">{policy.changesText}</p>
+              </section>
+            )
+          ))}
+          {/* The card's bullets, under its picture, which stays first */}
+          {points}
+          {example && (
+            <section className="policy-card-example" aria-label={`${example.title}: ${policy.label ?? policy.name}`}>
+              <p className="policy-card-example-title">
+                <Lightbulb size={14} aria-hidden="true" />
+                {example.title}
+              </p>
+              {/* The visual draws the example's figures, in their place */}
+              {place === "example" ? (
+                figure
+              ) : (
+                <>
+                  <p className="policy-card-example-text">{example.text}</p>
+                  {example.items?.length > 0 && (
+                    <ul className="policy-card-example-items">
+                      {example.items.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  )}
+                </>
+              )}
+              {example.source && (
+                <p className="policy-card-example-source">
+                  <a href={example.source.href} target="_blank" rel="noopener noreferrer">
+                    {example.source.label}
+                    <span className="policy-sr-only"> (opens in a new tab)</span>
+                  </a>
+                </p>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+
       {/* The footer: how it is modelled across the card, then the source on
           the left and its effect on the right */}
       <div className="policy-card-foot">
-        {showModelling && (
+        {policy.notModelled && (
+          <section className="policy-card-why" aria-label={`${WHY_NOT_MODELLED}: ${policy.label ?? policy.name}`}>
+            <p className="policy-card-example-title">
+              <CircleSlash size={14} aria-hidden="true" />
+              {WHY_NOT_MODELLED}
+            </p>
+            <p className="policy-card-example-text">{policy.notModelled}</p>
+          </section>
+        )}
+        {policy.footExtra}
+        {showModelling && !policy.notModelled && (
         <div className="policy-card-modelling">
             <Disclosure
               compact
@@ -347,6 +518,21 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             </Disclosure>
         </div>
         )}
+        {policy.sources?.length > 0 && (
+          <p className="policy-card-sources">
+            {policy.sources.length > 1 ? "Sources: " : "Source: "}
+            {policy.sources.map((source, index) => (
+              <span key={source.label}>
+                {index > 0 && "; "}
+                <a href={source.href} target="_blank" rel="noopener noreferrer">
+                  {source.label}
+                  <span className="policy-sr-only"> (opens in a new tab)</span>
+                </a>
+              </span>
+            ))}
+          </p>
+        )}
+        {(policy.source || policy.budgetRows?.length > 0 || explainer || onShowEffect) && (
         <div className="policy-card-actions">
           {policy.source && (
             <Tip content={policy.source.label}>
@@ -358,6 +544,36 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             >
               Source
               <span className="policy-sr-only">: {policy.source.label}</span>
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="policy-sr-only"> (opens in a new tab)</span>
+            </a>
+            </Tip>
+          )}
+          {policy.budgetRows?.length > 0 && (
+            <Tip content={`The Budget's costing: Table 6.1, ${budgetRowsLabel(policy.budgetRows)}`}>
+            <a
+              className="policy-card-costing"
+              href={TABLE_6_1_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Costing
+              <span className="policy-sr-only">: Budget 2026, Table 6.1, {budgetRowsLabel(policy.budgetRows)}</span>
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="policy-sr-only"> (opens in a new tab)</span>
+            </a>
+            </Tip>
+          )}
+          {explainer && (
+            <Tip content={`Our policy brief: ${explainer.title}`}>
+            <a
+              className="policy-card-explainer"
+              href={explainer.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Read policy brief
+              <span className="policy-sr-only">: {explainer.title}</span>
               <ExternalLink size={14} aria-hidden="true" />
               <span className="policy-sr-only"> (opens in a new tab)</span>
             </a>
@@ -375,6 +591,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             </button>
           )}
         </div>
+        )}
       </div>
     </li>
   );
@@ -390,18 +607,22 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
  * one exists, and what changes: the model's parameters before and after
  * (public/data/policy_parameters.json). Revenue figures stay in the charts: "See its effect" opens
  * Population impact with only that measure selected.
+ *
+ * The Budget measures the dashboard does not model follow in a section of
+ * their own, as cards of this kind (policies/UnmodelledMeasures.jsx).
  */
 function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables }) {
   const tables = usePolicyParameters(parameterTables);
   const shown = policies.filter((policy) => policy.displayable === true && selectedPolicies.includes(policy.id));
-  // Raises first, then costs, then the rest, each in the catalogue's order
+  // The Budget's Table 6.1 order; a measure with no row after, raises
+  // first, then costs, then the rest, each in the catalogue's order
   const rank = (policy) => {
     const index = DIRECTION_ORDER.indexOf(policy.direction);
     return index < 0 ? DIRECTION_ORDER.length : index;
   };
   const items = shown
-    .sort((a, b) => rank(a) - rank(b) || a.order - b.order)
-    .map(withPolicyDetails);
+    .map(withPolicyDetails)
+    .sort((a, b) => (a.cardOrder ?? Infinity) - (b.cardOrder ?? Infinity) || budgetRank(a) - budgetRank(b) || rank(a) - rank(b) || a.order - b.order);
   if (!shown.length) return null;
   return (
     <ul className="policy-cards">

@@ -1,5 +1,5 @@
 /**
- * The Household impact form's defaults, with their sources. Every field has
+ * The Household calculator form's defaults, with their sources. Every field has
  * one, so the results show before anything is changed.
  *
  * Salary: ONS, Annual Survey of Hours and Earnings (ASHE) 2026 provisional,
@@ -59,9 +59,10 @@ export const WIZARD_DEFAULTS = {
   current_age: 30,
   current_salary: DEFAULT_SALARY,
   region: "NORTH_WEST",
-  // The constituency picked (its name, 2024 boundaries), which sets the
-  // region; null until picked. Not sent: the API reads the region
-  constituency: null,
+  // The local authority (council) picked, by its ONS name, which sets the
+  // region; null until picked. Sent as its policyengine-uk key
+  // (local_authority), for its own Council Tax Band D
+  council: null,
   tenure: "RENT_PRIVATELY",
   // null: the region's average private rent (ONS), until changed
   monthly_rent: null,
@@ -78,14 +79,30 @@ export const WIZARD_DEFAULTS = {
   children_in_education: [],
   // Entitlement: the household claims what it is due
   claims_universal_credit: true,
+  // Not a carer until answered; a carer's hours of care a week start at
+  // 35, the Carer's Allowance minimum
+  is_carer: false,
+  care_hours_per_week: 35,
   council_tax_band: "D",
   salary_sacrifice_per_year: 0,
   petrol_spending_per_year: DEFAULT_SPENDING.petrol,
   diesel_spending_per_year: DEFAULT_SPENDING.diesel,
   electricity_spending_per_year: DEFAULT_SPENDING.electricity,
+  // Bus fares, £ a year: none until answered (not sent), for the £2 bus
+  // fare cap in England outside London
+  bus_fare_spending_per_year: 0,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
+  // New money paid into cash ISAs, £ a year; none until answered
+  cash_isa_payments_per_year: 0,
+  // Net losses on gaming machines with a stake over £1 or a prize over
+  // £100, £ a year; none until answered
+  higher_stake_machine_losses_per_year: 0,
   property_income_per_year: 0,
+  // Self-employment or side income: receipts (turnover) and allowable
+  // expenses, £ a year; none until answered
+  self_employment_receipts_per_year: 0,
+  self_employment_expenses_per_year: 0,
   // Private and workplace pensions in payment, £ a year
   private_pension_per_year: 0,
   partner_private_pension_per_year: 0,

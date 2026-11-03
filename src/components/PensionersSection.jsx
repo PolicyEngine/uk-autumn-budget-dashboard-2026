@@ -7,7 +7,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
+import { measureOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -21,7 +21,7 @@ import { NoEffectList } from "./personal/PolicyBars";
 import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
 import { niceRange, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
-import { AGE_VIEWS, useAgeImpactRows } from "./YoungPeopleSection";
+import { ageViews, publishedShareRows, useAgeImpactRows } from "./YoungPeopleSection";
 import ControlBar from "./ControlBar";
 import MeasureSharesChart from "./MeasureSharesChart";
 import { SHARE_FILTER_OPTIONS, filterShareRows, sharesByMeasure } from "../utils/measureShares";
@@ -49,10 +49,10 @@ import {
   CHART_COLOURS,
   divergingAxis,
   HOVER_CURSOR,
-  noHouseholdChange,
+  emptyMeasuresNote,
 } from "../utils/chartTheme";
 import { isPublished, singleAgeKey } from "../utils/ageImpact";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { useDisplayYears } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import { formatShare, shareDecimals, visibleSegments } from "../utils/shareFormat";
 import {
@@ -74,17 +74,17 @@ const PENSIONER_MEASURES_INFO = {
 export const PENSIONERS_ANCHOR = "pensioners";
 
 const UNIT = "Average change per pensioner (£ a year)";
-const AGE_UNIT = "Average change per person (£ a year)";
+const AGE_UNIT = "Average change in household income, per person (£ a year)";
 // The pensioners' ages and the selected year: the page's highlight tint
 const HIGHLIGHT_FILL = CHART_COLOURS.highlightBand;
 const OUTCOMES = [
-  { key: "pct_better_off", label: "Better off", color: CHART_COLOURS.gain },
-  { key: "pct_unchanged", label: "Unchanged", color: CHART_COLOURS.noChange },
-  { key: "pct_worse_off", label: "Worse off", color: CHART_COLOURS.loss },
+  { key: "pct_better_off", label: "Gain", color: CHART_COLOURS.gain },
+  { key: "pct_unchanged", label: "No change", color: CHART_COLOURS.noChange },
+  { key: "pct_worse_off", label: "Loss", color: CHART_COLOURS.loss },
 ];
 const OUTCOME_KEYS = OUTCOMES.map((outcome) => outcome.key);
 const CSV_UNITS =
-  "£ per person per year; each person counts their household's change in net income (not equivalised)";
+  "£ per person per year; each person counts their household's change in net income (without equivalisation)";
 
 const selectedNames = (policies, selected) =>
   policies.filter((policy) => selected.includes(policy.id)).map((policy) => policy.name);
@@ -216,6 +216,7 @@ function AgeTooltip({ active, payload }) {
  * axis for every year, so Play shows the change between years.
  */
 function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -228,14 +229,14 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
   // always through £0, so the scale holds still under Play
   const { domain, ticks } = useMemo(() => {
     const values = [0];
-    for (const each of DISPLAY_YEARS) {
+    for (const each of shownYears) {
       for (const point of ageBars(each)) {
         if (point.netChange !== null) values.push(point.netChange);
       }
     }
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, policies, selectedPolicies]);
+  }, [rows, policies, selectedPolicies, shownYears]);
   // The measures with no effect at these ages, for About this chart
   const members = useMemo(
     () =>
@@ -249,7 +250,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
   const anyLoss = data.some((point) => (point.netChange ?? 0) < 0);
   const anyGain = data.some((point) => (point.netChange ?? 0) > 0);
   const title = `Change by age, ${yearLabel}`;
-  const description = "Average change per person, £ a year, by age.";
+  const description = "Average change in household income per person, £ a year, by age.";
   const measureIds = [...new Set(data.flatMap((point) => point.parts.map((part) => part.id)))];
   const measureName = (id) => catalogue.byId.get(id)?.label ?? id;
   const download = {
@@ -269,7 +270,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
     csv: () =>
       buildChartCsv({
         title: `Average change in household net income per person by single year of age, ${yearLabel}`,
-        units: `${CSV_UNITS}; the sum of each selected policy's own effect; the five-year average is centred on each age`,
+        units: `${CSV_UNITS}; the sum of each selected policy's own effect; the five-year average centres on each age`,
         columns: [
           { key: "label", label: "Age" },
           ...measureIds.map((id) => ({ key: id, label: measureName(id), decimals: 2 })),
@@ -281,7 +282,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
               .filter((point) => point.netChange !== null)
               .map((point) => ({ ...point, ...Object.fromEntries(point.parts.map((part) => [part.id, part.value])) }))
           : [],
-        notes: missing.length ? [`Not shown, too few survey records: ages ${missing.map((p) => p.label).join(", ")}`] : [],
+        notes: missing.length ? [`Too few survey records to show: ages ${missing.map((p) => p.label).join(", ")}`] : [],
       }),
     published,
   };
@@ -377,16 +378,14 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
       <Logo />
       {published && (
         <div className="chart-footer">
-          {missing.length > 0 && (
-            <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
-          )}
           <ChartMoreInfo
             members={members}
             year={year}
             info={{
+              caveats: [missing.length > 0 && `Too few survey records to show: ages ${missing.map((p) => p.label).join(", ")}.`],
               how: [
                 `One bar per single year of age, ${PENSIONER_AGE_FIRST} to 90 and over: the sum of each selected policy's own effect.`,
-                "The line averages the five ages centred on each one, as single ages rest on few survey records.",
+                "At each age, the line averages the five ages with that age in the middle, as single ages rest on few survey records.",
                 `The dashed line marks State Pension age (${from} in ${yearLabel}); pensioners are the ages from it.`,
               ],
               method: AGE_METHOD,
@@ -413,8 +412,8 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
     maxSteps: DUMBBELL_MAX_STEPS,
   });
   const title = `Effect of each policy, ${yearLabel}`;
-  const description = "Each policy's average change per person: pensioners vs all ages.";
-  const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
+  const description = "Average change in household income from each policy, for pensioners and people of all ages.";
+  const notes = suppressed.length ? [`Too few survey records to show: ${suppressed.join(", ")}`] : [];
   // As in MeasuresCard: each by its short name, and when it is in force
   // where that is not this year
   const noEffectItems = noEffect.map((policy) => ({
@@ -437,7 +436,7 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
     csv: () =>
       buildChartCsv({
         title: `Average change in household net income per person by policy, ${yearLabel}`,
-        units: `£ per person per year; each policy's own effect; each person counts their household's change in net income (not equivalised); pensioners are aged ${pensionerAge(year)} and over`,
+        units: `£ per person per year; each policy's own effect; each person counts their household's change in net income (without equivalisation); pensioners are aged ${pensionerAge(year)} and over`,
         columns: [
           { key: "name", label: "Policy" },
           { key: "group", label: "Pensioners", decimals: 2 },
@@ -446,9 +445,8 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
         rows: published ? shown : [],
         notes,
       }),
+    // The dumbbell is HTML: its images are redrawn from the page
     published: published && shown.length > 0,
-    // The dumbbell is HTML, not a Recharts SVG: the CSV only
-    image: false,
   };
 
   return (
@@ -468,7 +466,7 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>{noHouseholdChange(yearLabel)}</p>
+            <p>{emptyMeasuresNote({ noEffect, selectedPolicies, yearLabel })}</p>
           </div>
         )}
       </div>
@@ -488,8 +486,11 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
       {/* Notes and About this chart in the card's footer row, level across a pair */}
       {published && (
         <div className="chart-footer">
-          {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={PENSIONER_MEASURES_INFO} />
+          <NoEffectList
+            items={noEffectItems}
+            title={`No effect in ${yearLabel}`}
+            info={{ ...PENSIONER_MEASURES_INFO, caveats: [...(PENSIONER_MEASURES_INFO.caveats || []), ...notes.map((note) => `${note}.`)] }}
+          />
         </div>
       )}
     </div>
@@ -582,16 +583,26 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
   const published = isPublished(rows, year);
   // By group (pensioners, under State Pension age, all ages) or by single
   // year of age from State Pension age, as Young people's card
-  const [view, setView] = useState("band");
+  const [chosenView, setView] = useState("band");
   // With no run for the whole selection: one row per measure, its own
   // shares for one group (pensioners first), filtered in the Options pill
   const [groupKey, setGroupKey] = useState("pensioners");
-  const [hide, setHide] = useState("hide");
+  const [hide, setHide] = useState("show");
   const [order, setOrder] = useState("size");
   const [direction, setDirection] = useState("both");
   const perMeasure = sharesByMeasure(pensionerShares, rows, policies, selectedPolicies, year, catalogue.combinedId, groupKey);
   const groupLabel = perMeasure?.groups.find((group) => group.key === groupKey)?.label ?? "Pensioners";
   const filtered = perMeasure ? filterShareRows(perMeasure.rows, { hide, order, direction }) : null;
+  // Every single age withheld while the groups are published: the groups
+  // instead, with By single year of age disabled and no note (as Average
+  // change by age, 8db101aa); the reader's choice is kept otherwise
+  const fallback =
+    !perMeasure &&
+    published &&
+    // The pensioners' total row is not a single age
+    !pensionerSharesBySingleAge(rows, policies, selectedPolicies, year, catalogue.combinedId)?.groups.some((group) => group.age !== null && !group.suppressed) &&
+    publishedShareRows(pensionerShares(rows, policies, selectedPolicies, year, catalogue.combinedId));
+  const view = fallback ? "band" : chosenView;
   const single = !perMeasure && view === "single";
   const from = pensionerAge(year);
   const shares = perMeasure ? null : (single ? pensionerSharesBySingleAge : pensionerShares)(rows, policies, selectedPolicies, year, catalogue.combinedId);
@@ -618,16 +629,15 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
           ),
         )
     : [];
-  const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
-  const title = `Better and worse off, ${yearLabel}`;
+  const title = `Winners and losers, ${yearLabel}`;
   const description = perMeasure
-    ? `Share of people better or worse off (a change over 0.01%), ${groupLabel.toLowerCase()}, each selected policy on its own.`
+    ? `Share of people who gain or lose (a change over 0.01%), ${groupLabel.toLowerCase()}, each selected policy on its own.`
     : single
-    ? `Share of people better or worse off (a change over 0.01%), by single year of age from State Pension age (${from}) to 90 and over, then all pensioners.`
-    : "Share of people better or worse off (a change over 0.01%): pensioners, people under State Pension age and all ages.";
+    ? `Share of people who gain or lose (a change over 0.01%), at each age from State Pension age (${from}) to 90 and over, then all pensioners.`
+    : "Share of people who gain or lose (a change over 0.01%): pensioners, people under State Pension age and all ages.";
   const download = {
     chartRef,
-    name: `pensioners-better-worse-off-${single ? "single-age-" : ""}${year}`,
+    name: `pensioners-winners-losers-${single ? "single-age-" : ""}${year}`,
     exportOptions: {
       title,
       description,
@@ -638,19 +648,16 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
     csv: () =>
       buildChartCsv({
         title: perMeasure
-          ? `People better off, unchanged and worse off, ${groupLabel.toLowerCase()}, each policy on its own, ${yearLabel}`
+          ? `Winners, losers and no change, ${groupLabel.toLowerCase()}, each policy on its own, ${yearLabel}`
           : single
-          ? `People better off, unchanged and worse off by single year of age, pensioners, ${yearLabel}`
-          : `People better off, unchanged and worse off, pensioners and others, ${yearLabel}`,
+          ? `Winners, losers and no change by single year of age, pensioners, ${yearLabel}`
+          : `Winners, losers and no change, pensioners and others, ${yearLabel}`,
         units: `% of people in the group; a change of more than 0.01% of household net income; pensioners are aged ${pensionerAge(year)} and over`,
         columns: [
           { key: "group", label: perMeasure ? "Policy" : single ? "Age" : "Group" },
           ...OUTCOMES.map((outcome) => ({ key: outcome.key, label: `${outcome.label} (%)`, decimals: 2 })),
         ],
         rows: data.map((row) => ({ group: row.group, measure: row.measure, groupLabel: row.groupLabel, ...row.real })),
-        notes: thin.length
-          ? [`Not shown, too few survey records: ${thin.map((group) => ageLabel(group.label)).join(", ")}`]
-          : [],
       }),
     published: data.length > 0,
   };
@@ -675,13 +682,13 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
                 onChange: setGroupKey,
                 options: perMeasure.groups.map((group) => ({ value: group.key, label: group.label })),
               },
-              { label: "Policies with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "hide" },
+              { label: "Policies with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "show" },
               { label: "Order", value: order, onChange: setOrder, options: SHARE_FILTER_OPTIONS.order },
               { label: "Show", value: direction, onChange: setDirection, options: SHARE_FILTER_OPTIONS.direction },
             ]}
           />
         ) : (
-          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: ageViews(fallback) }]} />
         )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
@@ -744,7 +751,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>No shares are published for this selection in {yearLabel}.</p>
+            <p>We have not published {yearLabel} shares for this selection.</p>
           </div>
         )}
       </SwapTransition>
@@ -764,12 +771,9 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
       </div>
       <Logo />
       <div className="chart-footer">
-        {published && thin.length > 0 && (
-          <Note>Not shown, as too few survey records: {thin.map((group) => ageLabel(group.label)).join(", ")}.</Note>
-        )}
         {filtered?.hidden > 0 && (
           <Note>
-            {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect hidden
+            Hiding {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect
           </Note>
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
@@ -778,13 +782,10 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
           info={{
             how: perMeasure
               ? [
-                  "No published run covers this selection together, so each row is one policy simulated on its own.",
-                  "The rows' shares can't be added up across policies.",
+                  "No published run covers this selection together, so each row shows one policy we simulate on its own.",
+                  "You can't add up the rows' shares across policies.",
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
-            caveats: [
-              perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
-            ],
             method: AGE_METHOD,
           }}
         />
@@ -796,9 +797,9 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
 /**
  * "Pensioners": how the selected policies change household incomes for
  * people at or over State Pension age, from the single years of age in
- * public/data/age_impact.csv (pensioners/pensionersData.js). It follows the
+ * each artifact's age_impact.csv (pensioners/pensionersData.js). It follows the
  * page's policy and year pills, and links to the pensioner example
- * household on Household impact.
+ * household on Household calculator.
  *
  * @param {Object} props
  * @param {Array<string>} props.selectedPolicies
@@ -830,24 +831,20 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         title="Change for pensioners"
         subtitle="Pensioners are people at State Pension age or over (67 from 2027-28)."
       />
-      {/* Both cards colour by measure: one key above the pair, not a long
-          legend in each */}
-      <MeasureKeyProvider>
-        <section className="report-section young-people-section" aria-label="Change for pensioners">
-          <SectionMeasureKey />
-          <div className="charts-grid">
-            <PensionerTrendCard {...props} height={narrow ? 340 : 400} />
-            <AgeCard {...props} height={narrow ? 340 : 400} />
-          </div>
-        </section>
-      </MeasureKeyProvider>
+      {/* The trend card draws its own measure key (MeasureKey) */}
+      <section className="report-section young-people-section" aria-label="Change for pensioners">
+        <div className="charts-grid">
+          <PensionerTrendCard {...props} height={narrow ? 340 : 400} />
+          <AgeCard {...props} height={narrow ? 340 : 400} />
+        </div>
+      </section>
       <SectionHeading
         id="pensioners-who-gains"
         icon="userPlus"
-        title="Who is better or worse off, and from what"
-        subtitle="Which policies drive the change for pensioners, and how many are better or worse off."
+        title="Winners and losers, and which policies drive them"
+        subtitle="How many pensioners gain or lose, and from which policies."
       />
-      <section className="report-section young-people-section" aria-label="Who is better or worse off, and from what">
+      <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
         <div className="charts-grid">
           <MeasuresCard {...props} height={narrow ? 460 : 400} />
           <PensionerSharesCard {...props} height={narrow ? 260 : 400} />

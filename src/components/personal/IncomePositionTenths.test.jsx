@@ -1,5 +1,5 @@
 // "Where you sit"'s tenths read the verified artifacts the decile charts
-// read, never the root flat files, so Household impact's lowest tenth is
+// read, never the root flat files, so Household calculator's lowest tenth is
 // Population impact's (#228: £75.12 from the root file against £73.27).
 import { describe, expect, it } from "vitest";
 import { buildMeasureCatalogue, verifiedTableRows } from "../../utils/measureCatalogue";
@@ -28,7 +28,7 @@ function catalogue({ withdrawn = null } = {}) {
   });
 }
 
-describe("the tenths' averages on Household impact", () => {
+describe("the tenths' averages on Household calculator", () => {
   it("are the sum of the selected measures' verified rows, as the decile charts add them", () => {
     const rows = verifiedTableRows(catalogue(), "winners_losers");
     expect(decileAverages(rows, PAIR, 2027)[1]).toBe(73);

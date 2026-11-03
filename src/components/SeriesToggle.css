@@ -119,7 +119,7 @@
 /* A component with nothing to draw for this household, kept so two keys
    line up: faint, its swatch grey, not clickable */
 .series-toggle-chip.is-disabled {
-  border-style: dashed;
+  border-color: var(--card-border);
   color: var(--pe-gray-400);
   background: var(--c-surface);
   opacity: 0.75;
@@ -134,23 +134,21 @@
   border-color: var(--pe-gray-300);
 }
 
-/* "N more with no effect for you": a quiet text toggle (not a chip) that
-   opens the folded chips in place; its chevron turns when open */
+/* "N more with no effect for you": a secondary chip, as the measure key's
+   "+N with no effect" (MeasureKey.css): same height and solid border, its
+   text muted; it opens the folded chips in place and its chevron turns */
 .series-toggle-chip.series-toggle-more {
-  gap: 4px;
-  padding: 0 6px;
-  border: none;
-  background: none;
+  gap: 5px;
+  border-color: var(--card-border);
   color: var(--pe-gray-600);
   font-weight: 500;
-  text-decoration: underline;
-  text-decoration-color: var(--pe-gray-300);
-  text-underline-offset: 3px;
 }
 
-.series-toggle-chip.series-toggle-more:hover {
-  color: var(--pe-teal-700);
-  background: none;
+.series-toggle-chip.series-toggle-more:hover,
+.series-toggle-chip.series-toggle-more[aria-expanded="true"] {
+  border-color: var(--pe-gray-400);
+  background: var(--c-hover);
+  color: var(--c-text);
 }
 
 .series-toggle-more-chevron {

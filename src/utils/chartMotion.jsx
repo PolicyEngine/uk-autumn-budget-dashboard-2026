@@ -55,7 +55,7 @@ export function chartTransition(...properties) {
  * Not a Line's dot: a Line hides its dots while it animates.
  */
 export function netDot({ cx, cy }) {
-  if (cx === undefined || cy === undefined || Number.isNaN(cx) || Number.isNaN(cy)) {
+  if (![cx, cy].every(Number.isFinite)) {
     return null;
   }
   return <circle cx={cx} cy={cy} r={3.5} fill={CHART_COLOURS.net} stroke={CHART_COLOURS.surface} strokeWidth={1.5} />;

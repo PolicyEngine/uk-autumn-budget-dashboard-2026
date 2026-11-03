@@ -24,7 +24,8 @@ describe("the example households", () => {
       // The measure its card features: an id the registry defines (the card
       // shows it only while the catalogue publishes it), named short enough
       // for a tag
-      expect(REGISTRY, example.id).toContain(`"${example.measure}"`);
+      for (const id of example.measures ?? [example.measure]) expect(REGISTRY, example.id).toContain(`"${id}"`);
+      expect(example.measures ?? [example.measure], example.id).toContain(example.measure);
       expect(example.tag.length, example.id).toBeLessThanOrEqual(25);
       expect(Object.keys(EXAMPLE_ICONS), example.id).toContain(example.icon);
     }

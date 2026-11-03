@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
+  BUS_FARE_CAP_YEARS,
   EngineMismatchError,
   STAGE_ENGINE_PACKAGES,
   StageMismatchError,
@@ -8,6 +9,7 @@ import {
   buildHouseholdRequest,
   consistentRound,
   engineDifferences,
+  inBusFareCapArea,
   mergeStages,
   normaliseHouseholdImpact,
   requestKey,
@@ -60,6 +62,38 @@ describe("buildHouseholdRequest", () => {
     expect(couple.household.partner_private_pension_income).toBe(5000);
   });
 
+
+  it("sends caring only for a carer, so every other household's request is as it was", () => {
+    const options = { year: 2031, policies: ["carers_allowance_earnings_taper"] };
+    const before = buildHouseholdRequest(WIZARD_DEFAULTS, options);
+    expect(before.household).not.toHaveProperty("is_carer");
+    expect(before.household).not.toHaveProperty("care_hours_per_week");
+    // Hours entered, then "No" to caring: not sent, the same request key
+    const notCarer = buildHouseholdRequest({ ...WIZARD_DEFAULTS, care_hours_per_week: 50 }, options);
+    expect(requestKey(notCarer)).toBe(requestKey(before));
+    // A request built from answers that predate the question: the same too
+    const { is_carer: _carer, care_hours_per_week: _hours, ...older } = WIZARD_DEFAULTS;
+    expect(requestKey(buildHouseholdRequest(older, options))).toBe(requestKey(before));
+    const carer = buildHouseholdRequest({ ...WIZARD_DEFAULTS, is_carer: true, care_hours_per_week: 50 }, options);
+    expect(carer.household).toMatchObject({ is_carer: true, care_hours_per_week: 50 });
+    // A carer whose hours box is empty is sent the form's 35
+    const empty = buildHouseholdRequest({ ...WIZARD_DEFAULTS, is_carer: true, care_hours_per_week: null }, options);
+    expect(empty.household.care_hours_per_week).toBe(35);
+  });
+
+  it("sends self-employment receipts and expenses only when answered", () => {
+    const options = { year: 2027, policies: ["trading_allowance_raise"] };
+    const none = buildHouseholdRequest(WIZARD_DEFAULTS, options);
+    expect(none.household).not.toHaveProperty("self_employment_receipts");
+    expect(none.household).not.toHaveProperty("self_employment_expenses");
+    const { self_employment_receipts_per_year: _r, self_employment_expenses_per_year: _e, ...older } = WIZARD_DEFAULTS;
+    expect(requestKey(buildHouseholdRequest(older, options))).toBe(requestKey(none));
+    // Max's household (#290): £30,000 of pay and £3,000 of receipts
+    const side = buildHouseholdRequest({ ...WIZARD_DEFAULTS, current_salary: 30000, self_employment_receipts_per_year: 3000 }, options);
+    expect(side.household).toMatchObject({ employment_income: 30000, self_employment_receipts: 3000, self_employment_expenses: 0 });
+    const expenses = buildHouseholdRequest({ ...WIZARD_DEFAULTS, self_employment_expenses_per_year: 400 }, options);
+    expect(expenses.household).toMatchObject({ self_employment_receipts: 0, self_employment_expenses: 400 });
+  });
 
   it("sends rent only for renters and childcare only with children", () => {
     const owner = buildHouseholdRequest(
@@ -123,10 +157,27 @@ describe("buildHouseholdRequest", () => {
     expect(requestKey(family)).toBe(requestKey({ ...family, include: [] }));
   });
 
+  it("sends bus fares only when entered, in England outside London", () => {
+    const options = { year: 2027, policies: ["bus_fare_cap_2027"] };
+    // Not answered: not sent, so the request (and its key) is as before
+    const none = buildHouseholdRequest(WIZARD_DEFAULTS, options);
+    expect(none.household).not.toHaveProperty("bus_fare_spending");
+    expect(requestKey(none)).toBe(requestKey(buildHouseholdRequest({ ...WIZARD_DEFAULTS, bus_fare_spending_per_year: 0 }, options)));
+    const north = buildHouseholdRequest({ ...WIZARD_DEFAULTS, region: "NORTH_WEST", bus_fare_spending_per_year: 500 }, options);
+    expect(north.household.bus_fare_spending).toBe(500);
+    for (const region of ["LONDON", "SCOTLAND", "WALES", "NORTHERN_IRELAND"]) {
+      const outside = buildHouseholdRequest({ ...WIZARD_DEFAULTS, region, bus_fare_spending_per_year: 500 }, options);
+      expect(outside.household).not.toHaveProperty("bus_fare_spending");
+    }
+    expect(inBusFareCapArea("SOUTH_WEST")).toBe(true);
+    expect(inBusFareCapArea("LONDON")).toBe(false);
+    expect(BUS_FARE_CAP_YEARS).toEqual([2026, 2027]);
+  });
+
   it("sends a State Pension only as entered, and only at State Pension age", () => {
     const { age, full } = statePensionFor(2029);
     expect(age).toBe(67);
-    expect(full).toBeCloseTo(13696.98, 2);
+    expect(full).toBeCloseTo(13817.3, 2);
     expect(atStatePensionAge(67, 2029)).toBe(true);
     expect(atStatePensionAge(66, 2029)).toBe(false);
     expect(atStatePensionAge(66, 2026)).toBe(true);

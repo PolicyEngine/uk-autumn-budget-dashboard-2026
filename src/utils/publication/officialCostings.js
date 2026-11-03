@@ -18,7 +18,10 @@ const isMap = (value) => value !== null && typeof value === "object" && !Array.i
 
 /**
  * Check an official costings document against the manifest the page loaded
- * and return its rows: { reform_id, year, obr_static, obr_behavioural }.
+ * and return its rows: { reform_id, year, obr_static, obr_behavioural }, and
+ * `not_comparable` (the reviewer's reason) for a year a reviewer classified
+ * not comparable: figures the Treasury prints in a year the measure is not
+ * in force, which a static costing does not score (data_inputs/treasury).
  *
  * The document must name the manifest's release and Budget, which must be
  * this Budget, and only the manifest's measures; every figure is a finite
@@ -55,7 +58,16 @@ export function officialCostingRows(document, manifest) {
         }
         return value;
       });
-      rows.push({ reform_id: key, year: Number(year), obr_static: staticValue, obr_behavioural: behavioural });
+      const row = { reform_id: key, year: Number(year), obr_static: staticValue, obr_behavioural: behavioural };
+      if (Object.hasOwn(figures, "not_comparable")) {
+        // A year with no comparison names why, and has no figure to pair
+        const reason = figures.not_comparable?.reason;
+        if (!isMap(figures.not_comparable) || typeof reason !== "string" || !reason.trim() || staticValue !== null || behavioural !== null) {
+          throw new Error(`The official costings for ${key} in ${year} are malformed`);
+        }
+        row.not_comparable = reason.trim();
+      }
+      rows.push(row);
     }
   }
   return rows;
@@ -67,7 +79,7 @@ export function officialCostingRows(document, manifest) {
  */
 export async function loadOfficialCostings(catalogue, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal } = {}) {
   const manifest = catalogue?.manifest;
-  if (!manifest) throw new Error("No Budget results are published yet");
+  if (!manifest) throw new Error("We have published no Budget results yet");
   const response = await fetchImpl(`${basePath}/data/${OFFICIAL_COSTINGS_FILE}`, { signal, cache: "no-cache" });
   if (response.status === 404) throw new OfficialCostingsPendingError();
   if (!response.ok) throw new Error("The official costings are unavailable");

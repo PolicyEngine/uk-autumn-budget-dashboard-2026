@@ -2,9 +2,11 @@
 // in a circle tinted with the measure's colour, chosen from the measure's
 // category (derived from the publication for any measure: see
 // utils/measureCategory.js), the short name (three lines at most on a narrow
-// card) with the category as a muted caption under it, and the full name in
-// a Tip. `compact` drops the caption and shrinks the tile for dense lists
-// (keys, tooltips, tables); `tip={false}` where the row already has one.
+// card) and the full name in a Tip. The icon already says the category, so
+// the muted category caption under the name is opt-in (`caption`), for a
+// list where it is the only explanation of a measure (the policy picker).
+// `compact` shrinks the tile for dense lists (keys, tooltips, tables);
+// `tip={false}` where the row already has one.
 
 import Tip from "./Tip";
 import TitleIcon, { titleIconPaths } from "./TitleIcon";
@@ -38,14 +40,14 @@ export function MeasureIcon({ measure, colour, compact = false }) {
  *   The catalogue's measure (id, label or name, color); `name` overrides the
  *   short name
  */
-export default function MeasureRowLabel({ measure, colour, name, compact = false, tip = true, nameClassName }) {
+export default function MeasureRowLabel({ measure, colour, name, compact = false, caption = false, tip = true, nameClassName }) {
   const { label: category } = measureCategoryOf(measure);
   const short = name ?? shortNameOf(measure);
   const full = measure?.label ?? measure?.name ?? short;
   const text = (
     <span className="mrl-text" tabIndex={tip ? 0 : undefined}>
       <span className={nameClassName ? `mrl-name ${nameClassName}` : "mrl-name"}>{short}</span>
-      {!compact && <span className="mrl-caption">{category}</span>}
+      {caption && !compact && <span className="mrl-caption">{category}</span>}
     </span>
   );
   return (
@@ -61,10 +63,11 @@ export const SVG_LABEL_INDENT = { full: 32, compact: 26 };
 
 /**
  * The same label drawn inside a chart's own SVG (so an exported PNG keeps
- * it): the tinted tile and icon, the short name and, unless `compact`, the
- * category under it. `y` is the label's vertical centre.
+ * it): the tinted tile and icon, the short name and, with `caption` (not
+ * `compact`), the category under it. `y` is the label's vertical centre.
  */
-export function SvgMeasureLabel({ measure, colour, name, x = 0, y, fontSize = 13, compact = false, textProps = {}, nameColour, captionColour }) {
+export function SvgMeasureLabel({ measure, colour, name, x = 0, y, fontSize = 13, compact = false, caption = false, textProps = {}, nameColour, captionColour }) {
+  const withCaption = caption && !compact;
   const { label: category, icon } = measureCategoryOf(measure);
   const fill = colour ?? measure?.color ?? CHART_COLOURS.noChange;
   const radius = compact ? 9 : 12;
@@ -76,10 +79,10 @@ export function SvgMeasureLabel({ measure, colour, name, x = 0, y, fontSize = 13
       <svg x={x + radius - glyph / 2} y={y - glyph / 2} width={glyph} height={glyph} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke={fill} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         {titleIconPaths(icon)}
       </svg>
-      <text className="mrl-svg-name" x={textX} y={compact ? y : y - 6} dy="0.35em" {...textProps} fill={nameColour} fontSize={fontSize} fontWeight={500}>
+      <text className="mrl-svg-name" x={textX} y={withCaption ? y - 6 : y} dy="0.35em" {...textProps} fill={nameColour} fontSize={fontSize} fontWeight={500}>
         {name ?? shortNameOf(measure)}
       </text>
-      {!compact && (
+      {withCaption && (
         <text className="mrl-svg-caption" x={textX} y={y + 9} dy="0.35em" {...textProps} fill={captionColour} fontSize={11}>
           {category}
         </text>

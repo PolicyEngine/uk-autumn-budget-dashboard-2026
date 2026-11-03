@@ -1,6 +1,6 @@
 /**
- * Every answer the Household impact form sends, at a fixed value, for the
- * example households (householdExamples.js and youngPersonPresets.js) to
+ * Every answer the Household calculator form sends, at a fixed value, for the
+ * example households (householdExamples.js) to
  * start from.
  *
  * The examples do not take the form's defaults (WIZARD_DEFAULTS) or any
@@ -32,15 +32,25 @@ export const EXAMPLE_ANSWERS = Object.freeze({
   children_ages: "",
   children_in_education: [],
   claims_universal_credit: true,
+  // Not a carer (nothing sent); a carer's hours start at the minimum, 35
+  is_carer: false,
+  care_hours_per_week: 35,
   council_tax_band: "D",
   salary_sacrifice_per_year: 0,
   // ONS Family Spending FYE 2025 averages, as the form's defaults
   petrol_spending_per_year: 620,
   diesel_spending_per_year: 340,
   electricity_spending_per_year: 1040,
+  // No bus fares (nothing sent)
+  bus_fare_spending_per_year: 0,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
+  cash_isa_payments_per_year: 0,
+  higher_stake_machine_losses_per_year: 0,
   property_income_per_year: 0,
+  // No self-employment (nothing sent)
+  self_employment_receipts_per_year: 0,
+  self_employment_expenses_per_year: 0,
   private_pension_per_year: 0,
   partner_private_pension_per_year: 0,
   monthly_childcare: 0,

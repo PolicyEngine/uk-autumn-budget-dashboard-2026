@@ -1,13 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  SITE_NAV_SHOW_UP_PX,
+  SITE_NAV_EDGE_PX,
   STICKY_GAP,
   clearHeadings,
   createSiteNavIntent,
   isProgrammaticScroll,
+  isTouchOnly,
+  pointerWantsSiteNav,
   resetPageScroll,
   scrollBelowBars,
   scrollTopFor,
+  siteNavInFlow,
   stickyBottom,
 } from "./pageScroll";
 
@@ -67,6 +70,33 @@ describe("pageScroll", () => {
     nav.getBoundingClientRect.mockReturnValue({ top: 0, bottom: 58, height: 58 });
     title.getBoundingClientRect.mockReturnValue({ top: 58, bottom: 122, height: 64 });
     expect(stickyBottom()).toBe(122);
+  });
+
+  it("lines a target up from the page's top as the bars will be once the site nav in its place has scrolled away", () => {
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true, writable: true });
+    const shell = document.createElement("div");
+    shell.className = NAV_SHELL;
+    document.body.append(shell);
+    // On load: the nav in the page's flow at its top, the band and tabs under it
+    const nav = bar("", 0, 58, shell);
+    nav.setAttribute("style", "position: sticky");
+    bar("title-row", 58, 116);
+    bar("view-tabs-bar", 116, 166);
+    const heading = at(423);
+    expect(siteNavInFlow()).toBe(58);
+    // There, the band sticks at the window's top and the tabs under it
+    expect(scrollTopFor(heading)).toBe(423 - (166 - 58) - STICKY_GAP);
+    scrollBelowBars(heading);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 299, behavior: "auto" });
+    // Part of the way down, only what is left of it counts
+    nav.getBoundingClientRect.mockReturnValue({ top: -30, bottom: 28, height: 58 });
+    expect(siteNavInFlow()).toBe(28);
+    // Shown over the page it stays, and gone it is not there to count
+    document.documentElement.setAttribute("data-site-nav-shown", "");
+    expect(siteNavInFlow()).toBe(0);
+    document.documentElement.removeAttribute("data-site-nav-shown");
+    nav.getBoundingClientRect.mockReturnValue({ top: -58, bottom: 0, height: 58 });
+    expect(siteNavInFlow()).toBe(0);
   });
 
   it("leaves out bars not shown and, for a sentinel, the bars below it", () => {
@@ -145,72 +175,76 @@ describe("pageScroll", () => {
   });
 });
 
-describe("createSiteNavIntent: the reader's own scroll up shows the site nav", () => {
+describe("createSiteNavIntent: scrolling hides the site nav, and never shows it with a mouse", () => {
   const TOP = 58;
 
-  it("shows only after the reader scrolls up SITE_NAV_SHOW_UP_PX in one run", () => {
-    expect(SITE_NAV_SHOW_UP_PX).toBe(24);
-    const nav = createSiteNavIntent({ y: 1000 });
-    expect(nav.input("wheel", "up", 0)).toBe(null);
-    expect(nav.scroll(990, 10, { top: TOP })).toBe(null);
-    expect(nav.scroll(977, 20, { top: TOP })).toBe(null);
-    expect(nav.scroll(976, 30, { top: TOP })).toBe("show");
+  it("never shows on a scroll up, however far, by any input", () => {
+    const nav = createSiteNavIntent({ y: 3000 });
+    for (const kind of ["wheel", "key", "touch"]) {
+      expect(nav.input(kind, "up", 0)).toBe(null);
+      expect(nav.scroll(2000, 10, { top: TOP })).toBe(null);
+      expect(nav.scroll(500, 20, { top: TOP })).toBe(null);
+      nav.scroll(3000, 30, { top: TOP, programmatic: true });
+    }
+    nav.input("drag", "hold", 0);
+    expect(nav.scroll(1000, 50, { top: TOP })).toBe(null);
   });
 
-  it("hides at once on any scroll down by the reader, and starts the run again", () => {
+  it("hides at once on any scroll down by the reader", () => {
     const nav = createSiteNavIntent({ y: 1000 });
-    nav.input("wheel", "up", 0);
-    nav.scroll(980, 10, { top: TOP });
-    expect(nav.input("wheel", "down", 20)).toBe("hide");
-    expect(nav.scroll(981, 30, { top: TOP })).toBe("hide");
-    nav.input("wheel", "up", 40);
-    expect(nav.scroll(961, 50, { top: TOP })).toBe(null);
-    expect(nav.scroll(957, 60, { top: TOP })).toBe("show");
-    // A touch moving the page down hides it too
-    expect(nav.input("touch", "down", 70)).toBe("hide");
+    expect(nav.input("wheel", "down", 0)).toBe("hide");
+    expect(nav.scroll(1001, 10, { top: TOP })).toBe("hide");
+    expect(nav.input("touch", "down", 20)).toBe("hide");
+    expect(nav.input("key", "down", 30)).toBe("hide");
+    // Dragging the scrollbar down
+    nav.input("drag", "hold", 40);
+    expect(nav.scroll(1100, 5000, { top: TOP })).toBe("hide");
   });
 
-  it("ignores the page moving up with no input: layout shifts and scroll anchoring", () => {
+  it("ignores the page moving with no input, and scrolls the page made", () => {
     const nav = createSiteNavIntent({ y: 120 });
-    nav.input("wheel", "down", 0);
-    // Anchoring moving scrollY up 7px, then 2px, while the reader scrolls down
-    expect(nav.scroll(113, 90, { top: TOP })).toBe(null);
-    expect(nav.scroll(111, 100, { top: TOP })).toBe(null);
-    // Long after any input, a chart above the window shrinking 300px
     expect(nav.scroll(500, 1000, { top: TOP })).toBe(null);
-    expect(nav.scroll(200, 5000, { top: TOP })).toBe(null);
+    nav.input("key", "up", 2000);
+    expect(nav.scroll(900, 2010, { top: TOP, programmatic: true })).toBe(null);
   });
 
-  it("ignores scrolls the page made, and resets the run on them", () => {
-    const nav = createSiteNavIntent({ y: 1000 });
-    nav.input("key", "up", 0);
-    expect(nav.scroll(980, 10, { top: TOP })).toBe(null);
-    expect(nav.scroll(600, 20, { top: TOP, programmatic: true })).toBe(null);
-    expect(nav.scroll(590, 30, { top: TOP })).toBe(null);
-    expect(nav.scroll(576, 40, { top: TOP })).toBe("show");
-  });
-
-  it("never shows within the nav's height of the page's top", () => {
+  it("hides within the nav's height of the page's top", () => {
     const nav = createSiteNavIntent({ y: 300 });
-    nav.input("wheel", "up", 0);
-    expect(nav.scroll(200, 10, { top: TOP })).toBe("show");
     expect(nav.scroll(57, 20, { top: TOP })).toBe("hide");
     expect(nav.scroll(0, 30, { top: TOP })).toBe("hide");
   });
 
-  it("counts a scrollbar drag either way while it is held", () => {
-    const nav = createSiteNavIntent({ y: 1000 });
-    nav.input("drag", "hold", 0);
-    expect(nav.scroll(1100, 5000, { top: TOP })).toBe("hide");
-    expect(nav.scroll(1070, 6000, { top: TOP })).toBe("show");
-    nav.input("drag", "release", 7000);
-    expect(nav.scroll(1000, 9000, { top: TOP })).toBe(null);
+  it("on a touch-only device, shows only at the page's very top", () => {
+    const nav = createSiteNavIntent({ y: 300 });
+    const touchOnly = true;
+    nav.input("touch", "up", 0);
+    expect(nav.scroll(100, 10, { top: TOP, touchOnly })).toBe("hide");
+    expect(nav.scroll(1, 20, { top: TOP, touchOnly })).toBe("hide");
+    expect(nav.scroll(0, 30, { top: TOP, touchOnly })).toBe("show");
+    expect(nav.scroll(2, 40, { top: TOP, touchOnly })).toBe("hide");
+  });
+});
+
+describe("pointerWantsSiteNav: the pointer at the window's top", () => {
+  it("asks for the nav within SITE_NAV_EDGE_PX of the top, not below", () => {
+    expect(SITE_NAV_EDGE_PX).toBe(2);
+    expect(pointerWantsSiteNav(0)).toBe(true);
+    expect(pointerWantsSiteNav(2)).toBe(true);
+    expect(pointerWantsSiteNav(3)).toBe(false);
+    expect(pointerWantsSiteNav(400)).toBe(false);
+    expect(pointerWantsSiteNav(undefined)).toBe(false);
   });
 
-  it("lets a touch fling's glide count after the finger lifts", () => {
-    const nav = createSiteNavIntent({ y: 1000 });
-    nav.input("touch", "up", 0);
-    expect(nav.scroll(900, 1000, { top: TOP })).toBe("show");
-    expect(nav.scroll(800, 2000, { top: TOP })).toBe(null);
+  it("does not ask for it below the window's top 2px, wherever the pointer left from", () => {
+    expect(pointerWantsSiteNav(20)).toBe(false);
+    expect(pointerWantsSiteNav(-3)).toBe(true);
+  });
+
+  it("knows a touch-only device by its media query", () => {
+    vi.stubGlobal("matchMedia", (q) => ({ matches: q === "(hover: none) and (pointer: coarse)" }));
+    expect(isTouchOnly()).toBe(true);
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    expect(isTouchOnly()).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

@@ -28,19 +28,23 @@ Every chart downloads as CSV, PNG, SVG or plain text.
 
 The measures on the page, each compared against current law in policyengine-uk. On Budget day this list becomes the measures the Chancellor announces, published one by one (see [Budget day](#budget-day)). They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures/`](src/uk_budget_data/budget_measures/), one module per modifier. `autumn_budget_2026_combined` simulates them all together, with their interactions.
 
-The list on `main` today:
+The list on `budget-day-measures` (PR #290), the measures announced in Budget 2026 on 28 October 2026:
 
 | Id | Measure |
 |---|---|
-| `fuel_duty_rise_deferral` | Fuel duty rises deferred: 52.95p held through winter 2026-27, the 5p restored in 2027-28 |
-| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension for people over State Pension age whose only income is the State Pension, from April 2027 |
-| `warm_home_discount_top_up` | Warm Home Discount top-up: £150 to £250 for winter 2026-27 |
-| `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
-| `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
-| `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
-| `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 |
+| `fuel_duty_rise_deferral` | Fuel duty cut extended: 52.95p to 1 July 2027, then current law, RPI from April 2028 |
+| `state_pension_income_tax_protection` | Pension Tax Allowance: a non-refundable income tax reduction for people over State Pension age, withdrawn £1 per £3 of income above the full new State Pension, 2027-28 to 2029-30 (hand-written) |
+| `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, 1 October 2026 to 1 July 2027: Great Britain, UK-wide from April 2027 (hand-written) |
+| `property_income_rates_up` | Property income tax rates up 2 points from 6 April 2027, in England, Wales and Northern Ireland; finance cost relief follows the basic rate UK-wide (Table 6.1 row 61) |
+| `savings_income_rates_up` | Savings income tax rates up 2 points from 6 April 2027, UK-wide (Table 6.1 row 62) |
+| `carers_allowance_earnings_taper` | Carer's Allowance earnings taper: 100% above 16 x the National Living Wage, England and Wales, from within 2030-31 (hand-written) |
+| `household_energy_payment_2026` | Household Energy Payment: £100 to households in bands A to D in England, winter 2026-27 (hand-written) |
+| `trading_allowance_raise` | Trading allowance raised to £3,000 from 6 April 2027 |
+| `bus_fare_cap_2027` | Single bus fares capped at £2 instead of £3 in England outside London, 1 January to 31 December 2027: the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London (10.0% of spending at £3 fares while the cap runs; London residents get £0), counted as income (hand-written; added 29 October 2026) |
+| `cash_isa_limit_kept` | Cash ISA limit kept at £20,000: the planned £12,000 cash limit for under-65s from 6 April 2027 does not go ahead; the tax on the interest of what it would have left out, for the Household calculator only (Table 6.1 row 11; hand-written) |
+| `machine_games_duty_rise` | Machine Games Duty up from 20% to 25% on machines with a stake over £1 or a prize over £100 from 1 April 2027, as the standard rate, for the Household calculator only (Table 6.1 row 56) |
 
-These seven are the combined package (`autumn_budget_2026_combined`, key `combined--5c77771791661e11`). Business Asset Disposal Relief restricted and employer NI relief for under-25s were withdrawn on 27 October 2026 and are not registered.
+Eight of these are the combined package (`autumn_budget_2026_combined`, key `combined--7baf4e89377bcc9c`): `savings_income_rates_up` is held back from the release (Vahid, 28 October 2026), registered but not combined, and `cash_isa_limit_kept` (29 October 2026) is registered for the Household calculator only, as the survey data hold no payments into ISAs, and so is `machine_games_duty_rise` (2 November 2026), as the survey data hold no gambling and the model has no input for higher-stake machines; the calculator always adds all three to a household's request (`src/utils/calculatorOnlyMeasures.js`). Before the £2 bus fare cap was added on 29 October 2026 (left out on Budget day only because runs were in flight), the released package was seven (key `combined--f91fe847275730cb`). With the savings rates it was eight (key `combined--92701a68cf080aa8`); before the savings and property rates were split into one measure per Table 6.1 row (`unearned_income_rates_up`, withdrawn with its factory kept), the package was seven (key `combined--4e3e325c74977848`). Withdrawn on Budget day, not in the Budget 2026 document, with their factories kept but unregistered: the Warm Home Discount top-up, the threshold freeze to 2031-32, the Plan 2 threshold unfreeze and the employer NI secondary threshold raise. Earlier the pre-Budget package was eight measures (key `combined--894152ce8c83f1d8`, chosen on the evening of 27 October 2026).
 
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 
@@ -50,7 +54,7 @@ List them from the command line with `uv run uk-budget-data generate --list-refo
 - **Data package** (`src/uk_budget_data/`, CLI `uk-budget-data`): Python 3.13. Runs the measures through [policyengine.py](https://github.com/PolicyEngine/policyengine.py) and writes `public/data/`.
 - **Household API** (`uk-budget-api`, `src/uk_budget_data/api.py`): FastAPI on Cloud Run (`uk-budget-api-2026`, `europe-west1`). Its `POST /api/household-impact` route is documented in [`docs/budget-day-publication.md`](docs/budget-day-publication.md#household-route-post-apihousehold-impact).
 
-**Engine.** The project depends on `policyengine[uk]` 6.10.2 (`pyproject.toml`, `uv.lock`), which pins policyengine-uk 2.132.6 and the certified Microcosm national dataset that goes with it. Population results are built with `pe.uk.managed_microsimulation()`, which downloads that dataset from a private Hugging Face repository and so needs `HUGGING_FACE_TOKEN`. Household calculations need no dataset. Upgrade the bundle, never policyengine-uk alone (see [`.claude/CLAUDE.md`](.claude/CLAUDE.md)).
+**Engine.** The project depends on `policyengine[uk]` 6.11.1 or later (`pyproject.toml`), locked at 6.11.1 (`uv.lock`), which pins policyengine-uk 2.151.0 and the certified Microcosm national dataset that goes with it. Population results are built with `pe.uk.managed_microsimulation()`, which downloads that dataset from a private Hugging Face repository and so needs `HUGGING_FACE_TOKEN`. Household calculations need no dataset. Upgrade the bundle, never policyengine-uk alone (see [`.claude/CLAUDE.md`](.claude/CLAUDE.md)).
 
 ## Publication and verified routes
 
@@ -66,7 +70,7 @@ Measure definitions do not authorise publication. The page builds its measure ca
 
 The first row's figures are verified twice. The build runs `public/data` through the same loader (`loadDashboardParts`: manifest checks, every receipt check, every file's SHA-256 against its receipt) and bakes the verified tables into the static HTML (`src/app/publicationBoot.ts`), so the page paints them with no request. Once the opened view's code has loaded, the page loads the live manifest and every artifact through the same checks and compares: identical figures stay, different ones replace them, and a failed check withdraws them as a failed load always has. `data-publication-check` on `.app` reads `build` until then, `page` after. A deploy whose manifest the build cannot verify bakes nothing in, and the page loads and checks before it shows, as before.
 
-The page shell, Methodology, Living standards baseline and March 2026 forecast remain available without a Budget manifest. The Budget-day forecast remains unavailable until verified provenance exists; `post_published` alone does not authorise it. Missing, invalid, unreachable or other-Budget manifests remove Budget figures, with no fallback to unverified flat files. Focus and five-minute checks replace changed snapshots or restore verified results after recovery; Household impact caches are bound to the publication snapshot.
+The page shell, Methodology, Living standards baseline and the OBR forecasts remain available without a Budget manifest. Once `obr-forecast` loads the Budget's OBR forecast (its file and SHA-256 in the outlook, the file's review row pending), the Forecast changes sub-tab draws it beside the March 2026 forecast, for comparison (decided 28 October 2026). Missing, invalid, unreachable or other-Budget manifests remove Budget figures, with no fallback to unverified flat files. Focus and five-minute checks replace changed snapshots or restore verified results after recovery; Household impact caches are bound to the publication snapshot.
 
 Before simulation, the area run compares its actual baseline and reform identities with approved receipts. `uk-budget-data publish index` binds exactly the CSV files the run wrote, their aliases and the provenance sidecar to the manifest revision and bytes; the page verifies those digests before showing figures. A changed or incomplete area snapshot stays unavailable until its matching index is published.
 
@@ -123,7 +127,7 @@ The web app's population figures are files in `public/data/`, written by the `uk
 | `constituencies` | `constituency.csv` from Microcosm's published local-area cut: `geography`'s seats pass with each measure in a fresh process, resumable, with a timing and memory table (`--dry-run` checks the cut and the gates only; see the runbook's "Results by constituency on the local-area cut") |
 | `income-curve` | `income_curve.csv`, the example households' net income across their income grids (no dataset needed) |
 | `living-standards` | `living_standards_outlook.json`, the Pre-measures forecast tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
-| `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Pre-measures forecast tab's Forecast changes series |
+| `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Pre-measures forecast tab's Forecast changes series; before those tables are out, `--efo-pdf <pdf> --efo-text <txt>` reads the EFO PDF's Table A.1 (CPI, RPI, earnings, house prices) |
 | `scripts/precompute_household_presets.py` (not the CLI; reads `bun scripts/household-preset-requests.mjs`) | `household_presets.json`, the Household impact examples' answers with every measure selected, 2027-28 to 2031-32, shown at once when an example is chosen (no dataset needed; about ten minutes locally) |
 | `publish …` | Reconciles, stages, approves and checks entries in the publication manifest |
 
@@ -139,15 +143,15 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 | OBR tables | Download the OBR workbooks **in a browser** (obr.uk refuses scripts) and import them | [Documents arrive](docs/budget-day-runbook.md#documents-arrive-1340), [OBR forecast](docs/budget-day-runbook.md#budget-day-obr-forecast-living-standards-tab-from-1340) |
 | Generate | `generate --artifacts`, one receipted artifact per measure, locally or on Modal | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315) |
 | Stage | `publish reconcile` and `publish stage`; each measure needs a signed expected-effects row (in #140, after #104) | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315), [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
-| Attest | Hand-written modifiers (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`) and any package holding them are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
-| Approve | The Reconciler runs `publish approve`, then `publish review-rows` | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
+| Attest | Only while sign-off is on (it is off; see [Review and sign-off](#review-and-sign-off)): hand-written modifiers (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`) and any package holding them are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
+| Approve | `publish approve --by <name>`; `publish review-rows` writes the review rows sign-off needs, and deletes the artifacts no entry names | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
 | Combined | `generate --combined` over the approved measures, staged and approved | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Results by area | `geography` over the approved ids locally, or `constituencies --backend modal` for seats on Microcosm's local-area cut; both write `area_provenance.json` for `publish index` | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Publish | `publish index`, `publish check`, then the pull request whose merge deploys | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Sources | Point the page's OBR and Budget-document links at the day's publications (config keys `obr_efo_current` and `budget_documents`, in #128 and #127) | — |
 | Corrections | Withdraw, fix, regenerate | [G5](docs/budget-day-runbook.md#g5-corrections-whenever-one-arrives), [Rollback](docs/budget-day-runbook.md#rollback) |
 
-**Who signs what.** The expected-effects rows (`data_inputs/treasury/expected_effects.csv`, in #140) carry a reviewer's name. Each attestation needs two distinct people. Approval and review rows are the Reconciler's. See [Roles](docs/budget-day-runbook.md#roles).
+**Who signs what.** Nobody, from Budget day evening (28 October 2026): sign-off is off, and a pull request merges once `main`'s required checks pass, with no review rows, no attestations and no second signer; the ruleset requires no approving review (see [Review and sign-off](#review-and-sign-off)). The expected-effects rows (`data_inputs/treasury/expected_effects.csv`, in #140) still name whoever declared them, and the manifest records who approved each entry. With sign-off on, each attestation needs two distinct people, and approval and review rows are the Reconciler's. See [Roles](docs/budget-day-runbook.md#roles).
 
 ### Running it
 
@@ -159,13 +163,22 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 
 The figures derive from UKDS-licensed survey microdata, and this repository and the site are public, so every file under `public/` is a publication.
 
-- Each file under `public/` must be listed in [`data_inputs/public_data_review.csv`](data_inputs/public_data_review.csv) with the sha256 of the bytes a person reviewed (`shasum -a 256 <file>`). Any change fails until it is reviewed again. A `pending` entry passes only until its expiry date, at most 14 days after it was added. No public file may carry household, benefit unit or person ids or weights.
-- The one exception is `public/data/area-routing.json`, written from the installed bundle by `uk_budget_data.area_routing`: it takes no review entry, and may hold only one of the few texts that module writes.
-- Tables written by `policyengine.disclosure` (`regional.csv`, `constituency.csv`) are reviewed as kind `disclosure_table` and must also pass its `validate_public`. Results by area go through that layer only; the legacy constituency calculators (`generate --legacy-geography`) write only to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, outside any git repository.
-- `area_provenance.json` is reviewed as `publication_provenance` under its closed metadata schema; each area CSV still passes disclosure validation.
-- Two checks enforce the list: `uv run python scripts/check_public_data.py` (CI's Public data check) and `bun scripts/check-public-files.mjs` (run by `bun run build`, so a deploy fails too). They print file paths and rule names, never values.
-- `uv run uk-budget-data publish check` re-runs every publication gate on the manifest (CI's Publication gate).
-- `main` requires a pull request and six checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint.
+**Sign-off is off** from Budget day, 28 October 2026: `REQUIRED = False` in [`src/uk_budget_data/sign_off.py`](src/uk_budget_data/sign_off.py), the one switch. A pull request merges once `main`'s required checks pass, with no signing step. No public file needs a review row, no hand-written modifier is held for a two-person attestation, and there is no second signer: an attestation already in the manifest must still be well formed, with two different names, but none is needed. Every automated check still blocks:
+
+- No public file may carry household, benefit unit or person ids or weights.
+- No artifact may keep a cell resting on fewer survey households than the floor in its tables (`uk_budget_data.publication.disclosure_floor`), and every cell its receipt withholds must stay blank.
+- Tables written by `policyengine.disclosure` (`regional.csv`, `constituency.csv`) must pass its `validate_public`. Results by area go through that layer only; the legacy constituency calculators (`generate --legacy-geography`) write only to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, outside any git repository.
+- No file may carry more than 20 constituency, local-authority or small-area codes, unless it is a validated table, a reference input under `data_inputs/`, or reference geography whose exact bytes have a `reference_geography` row in [`data_inputs/public_data_review.csv`](data_inputs/public_data_review.csv) (or a `pending` row, until its expiry date). That row is the area-code guard's record that the file holds no survey figures, not a sign-off, so a changed boundary file needs a new one.
+- A file under `public/data/artifacts/` must be one the page lists: a listed manifest entry's receipt, or a file that receipt binds. A staged, stale, withdrawn or superseded generation stays out of the commit (`publish review-rows` deletes them).
+- `public/data/area-routing.json`, written from the installed bundle by `uk_budget_data.area_routing`, may hold only one of the few texts that module writes, and `area_provenance.json` must keep to its closed metadata schema.
+- Two checks enforce these rules. `uv run python scripts/check_public_data.py` (CI's Public data check, and a Python test on this repository) runs all of them. `bun scripts/check-public-files.mjs`, run by `bun run build` so that a deploy which skips CI fails too, runs all but `validate_public`, which needs Python: it accepts a disclosure-layer table carrying area codes only as a file the release index binds to the area run that validated it. Both print file paths and rule names, never values.
+- `uv run uk-budget-data publish check` re-runs every publication gate on the manifest (CI's Publication gate): receipts, file digests, certification, responsiveness, the floor, completeness, reconciliation and combined-run membership.
+- `main` requires a pull request and six checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint. It requires no approving review; requiring one is a change to the repository's ruleset, which only an admin can make.
+
+**To turn sign-off back on**, set `REQUIRED = True` in `src/uk_budget_data/sign_off.py` and regenerate the page's contract, which carries the switch to the page and to the build's check (a test fails until the two agree): `uv run python -m uk_budget_data.publication.contract > src/utils/publication/contract.json`. Then add what the checks ask for:
+
+- each file under `public/` needs a row in the review list with the sha256 of the bytes a person reviewed (`shasum -a 256 <file>`; `uv run uk-budget-data publish review-rows --reviewer NAME` writes the publication's), and any change fails until it is reviewed again. A `pending` row passes only until its expiry date, at most 14 days after it was added. The area routing status takes no row; disclosure tables are reviewed as `disclosure_table`, and `area_provenance.json` as `publication_provenance`;
+- while a data limit is active, a hand-written modifier, and any package holding one, is held until two different people attest its exact receipt (`scripts/draft_attestation.py`); restage any entry staged without its attestation.
 
 ## Deployment
 

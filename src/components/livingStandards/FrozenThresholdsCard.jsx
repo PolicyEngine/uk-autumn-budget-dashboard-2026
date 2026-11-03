@@ -1,69 +1,91 @@
-// Frozen thresholds against pay: the personal allowance, the higher rate
-// threshold and the Plan 2 student loan repayment threshold under current
-// law, against the OBR's average earnings, each indexed to 2026-27 = 100.
+// Frozen thresholds against pay: the personal allowance and the higher
+// rate threshold under current law, relative to the OBR's average earnings
+// (2026-27 = 100), and the trading allowance the Budget sets, relative to
+// earnings from its first year.
 // Drawn beside "Earnings and other income" (ForecastSeriesSection). The
-// thresholds are the current-law values the Policies tab reads
-// (public/data/policy_parameters.json), earnings the outlook file's OBR
-// March 2026 growth; the index is computed in frozenThresholds.js. The
-// pound values are not repeated here: Policies lists them.
+// thresholds are the current-law values in policy_parameters.json's
+// current_law block (the engine's parameters) and its trading allowance
+// measure, earnings the OBR October 2026
+// growth the runs use; the index is computed in frozenThresholds.js.
 
 import { useEffect, useState } from "react";
 import LsCard from "./LsCard";
 import ViewToggle from "../ViewToggle";
 import SeriesToggle from "../SeriesToggle";
 import { LsLineChart, lineLegendItems } from "./LsCharts";
-import { CHART_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
+import { CHART_COLOURS, SERIES_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
 import { DASH } from "../../utils/livingStandards/baseline";
 import { fyLabel, formatOneDp } from "../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { loadPolicyParameters } from "../../utils/policyParameters";
-import { OPEN_VIEW_EVENT } from "../../utils/methodLink";
 import { SOURCES } from "../../utils/sources";
 import { METHOD_ANCHORS } from "../methodology/anchors";
-import { BASE_YEAR, indexAxis, thresholdRows, thresholdsSentence } from "../../utils/livingStandards/frozenThresholds";
+import {
+  BASE_YEAR,
+  TRADING,
+  relativeAxis,
+  sameThresholds,
+  thresholdRows,
+  thresholdsHeadline,
+  thresholdsSentence,
+  tradingAllowance,
+} from "../../utils/livingStandards/frozenThresholds";
 
 export const FROZEN_THRESHOLDS_TITLE = "Frozen thresholds against pay";
 
-// Each line, in drawing order. The thresholds are solid lines in their own
-// hues; while frozen they lie on one another at 100, so each is drawn a
-// little narrower than the one under it and all three show as nested
-// stripes. Earnings, the comparison, is the dashed neutral reference line.
-const LINES = [
-  {
-    key: "personal_allowance",
-    name: "Personal allowance",
-    short: "Allowance",
-    colour: CHART_COLOURS.gain,
-    width: 11,
-    meaning: "The income on which no income tax is paid.",
-  },
-  {
-    key: "higher_rate",
-    name: "Higher rate threshold",
-    short: "Higher rate",
-    colour: CHART_COLOURS.marketIncome,
-    width: 5,
-    meaning: "The income above which income tax is paid at the higher rate (the personal allowance plus the basic rate band).",
-  },
-  {
-    key: "plan_2",
-    name: "Plan 2 student loan threshold",
-    short: "Plan 2",
-    colour: CHART_COLOURS.ageOlder,
-    width: 2.5,
-    meaning: "The income above which Plan 2 student loan repayments are made (9% of income over it).",
-  },
-  {
-    key: "earnings",
-    name: "Average earnings",
-    short: "Earnings",
-    colour: CHART_COLOURS.reference,
-    dash: DASH.long,
-    meaning: "The OBR's forecast of average earnings (wages and salaries per employee).",
-  },
+// Each threshold relative to average earnings. While the personal
+// allowance and higher rate threshold move together (both frozen) one line
+// draws both (sameThresholds); the trading allowance has its own, from
+// its first year. Average earnings is the
+// flat dashed reference at 100: keeping pace with pay. The two income tax
+// thresholds lie almost on one another once they part (2031-32), so the
+// personal allowance is a wide teal band and the higher rate threshold a
+// thin dark blue dash drawn on top of it: both stay visible. The trading
+// allowance takes the amber chart token, apart from the blues and teals.
+const PA = {
+  key: "personal_allowance",
+  name: "Personal allowance",
+  short: "Allowance",
+  colour: SERIES_COLOURS[0],
+  width: 5,
+  meaning: "The income on which people pay no income tax.",
+};
+const HR = {
+  key: "higher_rate",
+  name: "Higher rate threshold",
+  short: "Higher rate",
+  colour: SERIES_COLOURS[1],
+  dash: DASH.short,
+  width: 2,
+  meaning: "The income above which people pay income tax at the higher rate (the personal allowance plus the basic rate band).",
+};
+const BOTH = { ...PA, width: undefined, name: "Personal allowance and higher rate threshold", short: "Income tax" };
+const TA = {
+  key: TRADING.key,
+  name: "Trading allowance",
+  short: "Trading",
+  colour: CHART_COLOURS.loss,
+  meaning:
+    "Trading income up to this amount a year is free of income tax and Class 4 National Insurance. The line is the level the Budget sets, flat in cash, from the year it takes effect.",
+};
+const PAY = {
+  key: "pay",
+  name: "Keeps pace with pay",
+  short: "Pay",
+  colour: CHART_COLOURS.reference,
+  dash: DASH.long,
+  meaning: "A threshold that rises with the OBR's forecast of average earnings (wages and salaries per employee) stays at 100.",
+};
+/**
+ * The lines to draw: one for both income tax thresholds while they are
+ * equal, else one each; the trading allowance when its measure is in the
+ * file.
+ */
+const linesFor = (rows) => [
+  ...(sameThresholds(rows) ? [BOTH] : [PA, HR]),
+  ...(rows.some((r) => r[TA.key] != null) ? [TA] : []),
+  PAY,
 ];
-// End labels in a half-width card: short names in a narrow right margin
-const END_LABELS = { width: 92, minWidth: 420 };
 
 const indexText = (v) => (v == null ? "–" : formatOneDp(v));
 const indexTick = (v) => String(v);
@@ -83,29 +105,13 @@ function usePolicyParameters() {
   return state;
 }
 
-/** A link to the Policies view: a real link, switched in place on a plain click. */
-function PoliciesLink() {
-  return (
-    <a
-      href="?tab=policies"
-      onClick={(event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-        event.preventDefault();
-        window.dispatchEvent(new CustomEvent(OPEN_VIEW_EVENT, { detail: { tab: "policies" } }));
-      }}
-    >
-      Policies
-    </a>
-  );
-}
-
-export default function FrozenThresholdsCard({ data, view = "chart", onViewChange }) {
+export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
   const { loading, document } = usePolicyParameters();
   const narrow = useNarrowViewport();
-  const [shown, setShown] = useState(() => LINES.map((l) => l.key));
+  const [hidden, setHidden] = useState([]);
   const [hovered, setHovered] = useState(null);
   const base = { id: "forecast-frozen-thresholds", title: FROZEN_THRESHOLDS_TITLE, icon: "briefcase" };
-  const rows = document && thresholdRows(document, data);
+  const rows = document && thresholdRows(document)?.map((r) => ({ ...r, pay: 100 }));
 
   if (!rows) {
     // The card holds its place in the pair while the file loads
@@ -120,18 +126,33 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
 
   const end = rows.at(-1).year;
   const period = `${fyLabel(BASE_YEAR)} to ${fyLabel(end)}`;
-  const preSource = data?.forecast?.pre_source;
-  const obrName = preSource?.release ?? "OBR, Economic and fiscal outlook (March 2026)";
+  // Earnings growth comes from the detailed forecast tables, Table 1.6
+  const obr = SOURCES.obr_efo_october_2026_tables;
+  const obrName = obr.label;
   const engine = document.engine?.policyengine_uk;
-  const sourceText = `${obrName}: average earnings growth; policyengine-uk${engine ? ` ${engine}` : ""} parameters (current law); indexed by PolicyEngine`;
-  const lines = LINES.filter((l) => shown.includes(l.key)).map((l) => ({ ...l, endLabel: l.short }));
+  const trading = tradingAllowance(document);
+  const sourceText = `${obrName}, Table 1.6: average earnings growth; policyengine-uk${engine ? ` ${engine}` : ""} parameters (current law${trading ? "; the trading allowance as the Budget sets it" : ""}); PolicyEngine's indexing`;
+  const lineSet = linesFor(rows);
+  const shown = lineSet.map((l) => l.key).filter((k) => !hidden.includes(k));
+  const setShown = (keys) => setHidden(lineSet.map((l) => l.key).filter((k) => !keys.includes(k)));
+  const lines = lineSet.filter((l) => shown.includes(l.key));
+  // Drawn in reverse, so the income tax lines lie on top, the higher rate
+  // threshold's dash last of all, over the personal allowance's band (and
+  // the tooltip lists the lines top to bottom, as they end)
+  const drawn = [...lines].reverse().sort((a, b) => (a.key === HR.key) - (b.key === HR.key));
+  const earningsColumn = { key: "earnings", label: `Average earnings (index, ${fyLabel(BASE_YEAR)} = 100)` };
+  const thresholdLines = lineSet.filter((l) => l.key !== "pay");
 
   const csv = () =>
     buildChartCsv({
       title: FROZEN_THRESHOLDS_TITLE,
-      units: `Index, ${fyLabel(BASE_YEAR)} = 100; fiscal years`,
+      units: `Thresholds: value relative to average earnings, ${fyLabel(BASE_YEAR)} = 100; average earnings: index, ${fyLabel(BASE_YEAR)} = 100; fiscal years`,
       source: sourceText,
-      columns: [{ key: "year", label: "Year" }, ...LINES.map((l) => ({ key: l.key, label: l.name, decimals: 2 }))],
+      columns: [
+        { key: "year", label: "Year" },
+        { ...earningsColumn, decimals: 2 },
+        ...thresholdLines.map((l) => ({ key: l.key, label: `${l.name} (relative to average earnings)`, decimals: 2 })),
+      ],
       rows: rows.map((r) => ({ ...r, year: fyLabel(r.year) })),
       notes: [],
     });
@@ -139,34 +160,51 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
   const common = {
     ...base,
     period,
-    summary: thresholdsSentence(rows),
-    about: `Each line indexed to ${fyLabel(BASE_YEAR)} = 100, under current law.`,
+    // One short line; each threshold's own figure is in What it shows
+    summary: thresholdsHeadline(rows),
+    about: `Each threshold's value relative to average earnings, ${fyLabel(BASE_YEAR)} = 100${trading ? ` (the trading allowance from ${fyLabel(trading.start)} = 100)` : ""}.`,
     sourceText,
     info: {
       shows: (
         <>
-          How the personal allowance, the higher rate threshold and the Plan 2 student loan repayment threshold move under
-          current law against average earnings, each as an index with {fyLabel(BASE_YEAR)} = 100. A threshold that stays
-          flat while earnings rise takes a larger share of income into tax or repayments. The pound values are on{" "}
-          <PoliciesLink />.
+          The personal allowance and the higher rate threshold under current law, each relative to average earnings with{" "}
+          {fyLabel(BASE_YEAR)} = 100
+          {trading && (
+            <>
+              , and the trading allowance at the level the Budget sets, relative to average earnings with its first
+              year, {fyLabel(trading.start)}, = 100
+            </>
+          )}
+          . A threshold that keeps pace with pay stays at 100; one that falls below it takes a larger share of income
+          into tax. {thresholdsSentence(rows, trading)}
         </>
       ),
       how: [
-        "Each threshold's current-law value for a year divided by its 2026-27 value, times 100; the values are policyengine-uk's parameters at 6 April of each year.",
-        "Earnings: the OBR gives growth in each calendar year's average. As the baseline does, a fiscal year takes the growth of the calendar year it starts in (2027-28 grows on 2026-27 by 2027's rate), chained from 2026-27 = 100.",
+        "We divide each income tax threshold's current-law value for a year by its 2026-27 value and multiply by 100; the values are policyengine-uk's parameters at 6 April of each year.",
+        ...(trading
+          ? [
+              `The trading allowance starts in ${fyLabel(trading.start)}, the year the Budget's new level takes effect, rather than in ${fyLabel(BASE_YEAR)}: if we indexed it to ${fyLabel(BASE_YEAR)}, its rise would dwarf the rest of the chart. We index both its value and average earnings to ${fyLabel(trading.start)} = 100, so the line shows how far the cash level falls behind pay from then.`,
+            ]
+          : []),
+        "Earnings: the OBR gives growth in each calendar year's average. As the baseline does, a fiscal year takes the growth of the calendar year it starts in (2027-28 grows on 2026-27 by 2027's rate); we chain this growth from 2026-27 = 100.",
+        "We divide each threshold's index by the earnings index and multiply by 100 to find its value relative to average earnings: 100 while it keeps pace with pay, below 100 when it falls behind. A frozen threshold in a year when the earnings index is 110 is at 100 / 110 × 100 = 90.9.",
+        "Where the personal allowance and higher rate threshold have the same value relative to earnings in every year, one line draws both.",
       ],
-      definitions: LINES.map((l) => ({ term: l.name, meaning: l.meaning })),
+      definitions: [PA, HR, ...(trading ? [TA] : []), PAY].map((l) => ({ term: l.name, meaning: l.meaning })),
       caveats: [
-        `The OBR's March 2026 earnings forecast ends in 2030, so the chart ends in ${fyLabel(end)}; 2031-32, when current law uprates the thresholds again and a candidate measure would freeze them for one more year, is not shown.`,
+        `The OBR's October 2026 earnings forecast ends in ${end}, so the chart ends in ${fyLabel(end)}.`,
         "Taking a calendar year's growth for the fiscal year starting in it is an approximation: the fiscal year runs from April to March.",
-        "The earnings forecast is the OBR's from before the Autumn Budget.",
       ],
       sources: [
-        { label: `${obrName}: average earnings growth (calendar years)`, href: preSource?.url },
+        { label: `${obrName}, Table 1.6: average earnings growth (calendar years)`, href: obr.url },
         {
           label: `policyengine-uk${engine ? ` ${engine}` : ""} parameters`,
-          href: SOURCES.policyengine_uk_parameters.url,
-          note: "gov.hmrc.income_tax.allowances.personal_allowance.amount, gov.hmrc.income_tax.rates.uk[1].threshold, gov.hmrc.student_loans.thresholds.plan_2",
+          // The parameters at the release the outlook was built with (tags are
+          // the bare version); the main branch when it is not recorded
+          href: engine
+            ? `https://github.com/PolicyEngine/policyengine-uk/tree/${engine}/policyengine_uk/parameters`
+            : SOURCES.policyengine_uk_parameters.url,
+          note: "gov.hmrc.income_tax.allowances.personal_allowance.amount, gov.hmrc.income_tax.rates.uk[1].threshold, gov.hmrc.income_tax.allowances.trading_allowance (as the Budget sets it)",
         },
       ],
       method: { anchor: METHOD_ANCHORS.forecastFeed, label: "How the forecast feeds the baseline" },
@@ -176,7 +214,7 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
 
   const chips = (
     <SeriesToggle
-      series={LINES.map((l) => ({ key: l.key, label: l.name, short: l.short, colour: l.colour, dash: l.dash }))}
+      series={lineSet.map((l) => ({ key: l.key, label: l.name, short: l.short, colour: l.colour, dash: l.dash }))}
       shown={shown}
       onChange={setShown}
       onHover={setHovered}
@@ -187,24 +225,30 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
 
   if (view === "table") {
     return (
-      <LsCard {...common} download={{ filename: "frozen-thresholds", image: false, csv }}>
+      <LsCard {...common} download={{ filename: "frozen-thresholds", csv }}>
         <div className="chart-plot ls-table-wrapper">
           <table className="ls-table">
             <thead>
               <tr>
                 <th>Year</th>
-                {lines.map((l) => (
-                  <th key={l.key}>{l.name}</th>
-                ))}
+                <th>Average earnings (index)</th>
+                {thresholdLines
+                  .filter((l) => shown.includes(l.key))
+                  .map((l) => (
+                    <th key={l.key}>{l.name}</th>
+                  ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.year}>
-                  <td>{fyLabel(row.year)}</td>
-                  {lines.map((l) => (
-                    <td key={l.key}>{indexText(row[l.key])}</td>
-                  ))}
+                  <td className="ls-nowrap">{fyLabel(row.year)}</td>
+                  <td>{indexText(row.earnings)}</td>
+                  {thresholdLines
+                    .filter((l) => shown.includes(l.key))
+                    .map((l) => (
+                      <td key={l.key}>{indexText(row[l.key])}</td>
+                    ))}
                 </tr>
               ))}
             </tbody>
@@ -215,19 +259,18 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
     );
   }
 
-  const axis = indexAxis(rows.flatMap((r) => lines.map((l) => r[l.key])).filter((v) => v != null));
+  const axis = relativeAxis(rows.flatMap((r) => lines.map((l) => r[l.key])));
   return (
     <LsCard {...common} download={{ filename: "frozen-thresholds", legendItems: lineLegendItems(lines), csv }}>
       <LsLineChart
         data={rows}
-        series={lines}
+        series={drawn}
         baseYear={BASE_YEAR}
         yFormat={indexTick}
         tooltipFormat={indexText}
-        yLabel={`Index, ${fyLabel(BASE_YEAR)} = 100`}
+        yLabel={`Value relative to average earnings (${fyLabel(BASE_YEAR)} = 100)`}
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        endLabels={END_LABELS}
         legend={false}
         focusKey={hovered}
         onLineHover={setHovered}

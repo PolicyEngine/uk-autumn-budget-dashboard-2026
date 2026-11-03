@@ -155,11 +155,18 @@ steps:
         # use more memory. 8 vCPU / 8 GiB / 8 workers for Budget week (#141):
         # a full answer runs 11 simulations, which took about 6 rounds on 2.
         # Each worker peaks near 0.4 GB, so 8 fit in 8 GiB with headroom.
-        # --min-instances 1 keeps one instance warm (no 30 s cold start) and
-        # costs an always-on instance: set it back to 0 after Budget week.
+        # Minimum instances: --min 1 keeps one instance of the revision that
+        # takes traffic running (no 30 s cold start), and costs an always-on
+        # instance: set it back to 0 after Budget week. --min is the
+        # service's minimum, which Cloud Run divides among the revisions in
+        # the traffic split only. A revision's own minimum (--min-instances)
+        # keeps that many instances of the revision running for as long as
+        # it has a tag, with or without traffic, and every build leaves its
+        # tag on its revision, so it is 0 here. Where both are set, the
+        # larger applies: the serving revision still keeps one.
         common="--image $$image --region ${_REGION} --platform managed \
           --no-invoker-iam-check --memory 8Gi --cpu 8 --timeout 300 \
-          --min-instances 1 --cpu-boost \
+          --min 1 --min-instances 0 --cpu-boost \
           --update-env-vars HOUSEHOLD_WORKERS=8 \
           --tag $$tag \
           --labels commit-sha=${_GIT_SHA},gcb-build-id=${BUILD_ID}"

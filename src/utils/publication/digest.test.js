@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fc from "fast-check";
 import contract from "./contract.json";
 import {
@@ -202,7 +202,7 @@ describe("binding a receipt to its manifest entry", () => {
       const expected = entry.data_limits?.length
         ? [
             "the receipt records data limits: not computable on current " +
-              "data, so its figures cannot be shown",
+              "data, so we cannot show its figures",
           ]
         : [];
       expect(await receiptProblems(receipt, key, entry)).toEqual(expected);
@@ -214,7 +214,7 @@ describe("binding a receipt to its manifest entry", () => {
     const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
     receipt.dashboard.data_limits_registry_sha256 = "0".repeat(64);
     expect(await receiptProblems(receipt, "alpha", entry)).toContain(
-      "the receipt was generated against another data-limit registry",
+      "we generated the receipt against another data-limit registry",
     );
   });
 
@@ -232,7 +232,7 @@ describe("binding a receipt to its manifest entry", () => {
     const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
     receipt.dashboard.model_limits_registry_sha256 = "0".repeat(64);
     expect(await receiptProblems(receipt, "alpha", entry)).toContain(
-      "the receipt was generated against another model-limit registry",
+      "we generated the receipt against another model-limit registry",
     );
   });
 
@@ -258,8 +258,8 @@ describe("binding a receipt to its manifest entry", () => {
       expect(await receiptProblems(receipt, key, entry)).toEqual([]);
       entry.status = "approved";
       expect(await receiptProblems(receipt, key, entry)).toEqual([
-        "the receipt records model limits: held at provisional, so it " +
-          "cannot be shown as approved",
+        "the receipt records model limits: it stays provisional, so we " +
+          "cannot show it as approved",
       ]);
     },
   );
@@ -279,8 +279,8 @@ describe("binding a receipt to its manifest entry", () => {
           .model_limits[0],
       ];
       expect(await receiptProblems(receipt, key, entry)).toContain(
-        "the receipt records model limits: held at provisional, so it " +
-          "cannot be shown as approved",
+        "the receipt records model limits: it stays provisional, so we " +
+          "cannot show it as approved",
       );
     },
   );
@@ -335,6 +335,15 @@ describe("binding a receipt to its manifest entry", () => {
 });
 
 describe("the automatic modifier hold", () => {
+  // The hold applies only while sign-off is on; the committed switch is off.
+  const signOff = contract.sign_off_required;
+  beforeEach(() => {
+    contract.sign_off_required = true;
+  });
+  afterEach(() => {
+    contract.sign_off_required = signOff;
+  });
+
   it("checks the fixture's attestation using Python's full receipt digest", async () => {
     const entry = entries.delta;
     const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
@@ -480,5 +489,49 @@ describe("the automatic modifier hold", () => {
     } finally {
       contract.data_limits_active = active;
     }
+  });
+
+  it.each(["baseline", "reform"])(
+    "with sign-off off, shows a hand-written %s modifier without an attestation",
+    async (side) => {
+      const { entry, receipt } = await handwritten("alpha", side);
+      contract.sign_off_required = false;
+      expect(await receiptProblems(receipt, "alpha", entry)).toEqual([]);
+    },
+  );
+
+  it("with sign-off off, ignores an attestation of another receipt", async () => {
+    const { entry, receipt } = await handwritten();
+    entry.attestation = await attest("alpha", receipt);
+    entry.attestation.receipt_sha256 = "0".repeat(64);
+    contract.sign_off_required = false;
+    expect(await receiptProblems(receipt, "alpha", entry)).toEqual([]);
+  });
+
+  it("with sign-off off, still refuses a malformed template proof", async () => {
+    const { entry, receipt } = await handwritten();
+    receipt.dashboard.modifier_templates.reform = [];
+    entry.artifact_sha256 = await artifactSha256(receipt);
+    contract.sign_off_required = false;
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt's reform modifier templates do not match its bound modifiers",
+    );
+  });
+
+  it("with sign-off off, shows a combined receipt with a hand-written member", async () => {
+    const key = "combined--alpha+beta";
+    const { entry, receipt } = await handwritten(key);
+    receipt.dashboard.members[0].reform.binding = "code_revision";
+    receipt.dashboard.members[0].reform.representation =
+      "policyengine-uk.scenario/v1";
+    entry.artifact_sha256 = await artifactSha256(receipt);
+    contract.sign_off_required = false;
+    expect(await receiptProblems(receipt, key, entry)).toEqual([]);
+  });
+});
+
+describe("the sign-off switch", () => {
+  it("is in the contract as a boolean", () => {
+    expect(typeof contract.sign_off_required).toBe("boolean");
   });
 });

@@ -213,7 +213,13 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
           string(s?.key, `${path}.key`);
           string(s?.label, `${path}.label`);
           keys.push(s?.key);
-          for (const side of ["pre", "post"]) {
+          // post is null for a series the loaded Budget forecast lacks (the
+          // EFO PDF's Table A.1 has no CPIH, for example); post_source says why
+          if (s?.post === null) {
+            if (!fc.post_published) fail(`${path}.post`, "is null while post_published is false");
+            string(s?.post_source, `${path}.post_source`);
+          }
+          for (const side of s?.post === null ? ["pre"] : ["pre", "post"]) {
             const points = array(s?.[side], `${path}.${side}`);
             points.forEach((p, k) => {
               if (!/^\d{4}(-\d{2})?$/.test(String(p?.year))) fail(`${path}.${side}[${k}].year`, "is not a year");

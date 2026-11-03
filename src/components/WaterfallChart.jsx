@@ -10,6 +10,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import UnavailableNotice from "./publication/UnavailableNotice";
+import { NET_GAP_DASH, isWithheldDecileValue, netGapBridges } from "../utils/decileWithholding";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   barShape,
@@ -25,8 +26,9 @@ import {
   divergingAxis,
   tickDecimals,
   noHouseholdChange,
+  noFigures,
 } from "../utils/chartTheme";
-import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, useDisplayYears } from "../utils/displayYears";
 import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -69,6 +71,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   // The measure whose segment is hovered: the others dim
   const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
+  const shownYears = useDisplayYears();
   const {
     displayable: POLICIES,
     allPolicyNames: ALL_POLICY_NAMES,
@@ -98,6 +101,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       const dataPoint = { decile };
       let netChange = 0;
       let incomplete = hasUnavailableSelection;
+      let unavailable = hasUnavailableSelection;
+      let withheld = false;
       POLICIES.forEach((policy) => {
         const isSelected = selectedPolicies.includes(policy.id);
         const dataRow = waterfallSelectedYear.find(
@@ -105,27 +110,41 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         );
         const parsedValue = dataRow ? Number.parseFloat(dataRow.avg_change) : NaN;
         const value = isSelected && Number.isFinite(parsedValue) ? parsedValue : null;
-        if (isSelected && value === null) incomplete = true;
+        if (isSelected && value === null) {
+          incomplete = true;
+          if (dataRow && isWithheldDecileValue(dataRow.avg_change)) withheld = true;
+          else unavailable = true;
+        }
         dataPoint[policy.seriesKey] = value;
         if (value !== null) netChange += value;
       });
+      // A decile where a selected policy is withheld: every other policy's
+      // own bar is still drawn (each is published in its own results), the
+      // withheld policy's is not, and there is no net (null below), so no
+      // total of the bars shown is ever given as the selection's (Vahid,
+      // 29 Oct; the package withholds the deciles its members withhold)
       dataPoint.netChange = incomplete ? null : netChange;
       dataPoint.incomplete = incomplete;
+      dataPoint.unavailable = unavailable;
+      dataPoint.withheld = withheld;
       return dataPoint;
     });
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
+  // The net line's dashed bridges across withheld deciles: from one
+  // published dot to the next, never off either end (netGapBridges)
+  const { data: plotted, keys: gapKeys } = useMemo(() => netGapBridges(data), [data]);
 
   // "Later years differ": the first later year whose lowest- or
   // highest-income tenth moves the other way (plainSentences.js), as the
   // decile sentence's last clause, or alone when there is no sentence
   const { laterNote, laterNoteAlone } = useMemo(() => {
     const ends = { low: data[0]?.netChange, high: data[data.length - 1]?.netChange };
-    const later = laterDecileEnds(rawData, { valueKey: "avg_change", ends: ["1", "10"], selectedPolicies, catalogue, selectedYear });
+    const later = laterDecileEnds(rawData, { valueKey: "avg_change", ends: ["1", "10"], selectedPolicies, catalogue, selectedYear, years: shownYears });
     return {
       laterNote: laterDecileNote(ends, later, "absolute"),
       laterNoteAlone: laterDecileNote(ends, later, "absolute", { standalone: true }),
     };
-  }, [data, rawData, selectedPolicies, catalogue, selectedYear]);
+  }, [data, rawData, selectedPolicies, catalogue, selectedYear, shownYears]);
 
   // Every selected measure is in the legend in every year (so the legend,
   // and the plot's height, hold still on a year change or Play); one with
@@ -137,11 +156,17 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   );
   const activePolicies = drawnNames(members);
   const netLabel = activePolicies.length > 1 ? "Net change" : undefined;
-  // In a section with a shared key (MeasureKey), the card draws no legend
+  // In a section with a shared key (MeasureKey), the card draws no legend.
+  // No MeasureKeyProvider wraps DecileImpactCard (only AgeSection has one;
+  // All households dropped its section key on 27 Oct), so in the app
+  // key.shared is false and the chart draws its own legend under its axis.
+  // The key.shared branches here and below run only under a provider, as
+  // in CatalogueCharts.test.jsx.
   const key = useMeasureKey(members, netLabel);
-  // The legend took about 160px (300 on a phone) of the chart's height;
-  // with the section's key above the pair, the plot keeps its own size
-  // With no legend under the plot, room below the axis for the logo
+  // With its own legend the chart is 480px (620 on a phone); the legend
+  // takes its height from those, between the axis and the logo. Under a
+  // section key there is no legend to make room for, so the chart is
+  // shorter, 410px (390 on a phone), with room below the axis for the logo
   const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
   const plotHeight = key.shared ? (narrow ? 390 : 410) : narrow ? 620 : 480;
 
@@ -174,7 +199,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
             (row) => row.reform_id === policy.id && row.decile === decile,
           );
           const parsedValue = isSelected && dataRow ? Number.parseFloat(dataRow.avg_change) : NaN;
-          const value = Number.isFinite(parsedValue) ? parsedValue : 0;
+          if (!Number.isFinite(parsedValue)) return;
+          const value = parsedValue;
           if (value > 0) positiveSum += value;
           else negativeSum += value;
         });
@@ -190,6 +216,12 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
   const hasIncompleteResults = data.some((point) => point.incomplete);
+  const hasUnavailableResults = data.some((point) => point.unavailable);
+  // Nothing to draw in any decile (every selected policy withheld in every
+  // one): a plain empty plot, never a row of zero slots
+  const allWithheld =
+    data.length > 0 &&
+    data.every((point) => point.withheld && POLICIES.every((policy) => point[policy.seriesKey] === null));
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -289,7 +321,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       {controls && <div className="chart-controls ls-controls">{controls}</div>}
 
       <div ref={chartRef} className="chart-plot">
-        {published && hasIncompleteResults && (
+        {published && hasUnavailableResults && (
           <UnavailableNotice reason="Some selected policies have no published results for this chart. The net change is unavailable." />
         )}
         {nothingChanges ? (
@@ -300,11 +332,17 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
             <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
           </div>
+        ) : published && allWithheld ? (
+          <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
+            <p>{noFigures(formatYearRange(selectedYear))}</p>
+          </div>
         ) : published ? (
-          // As tall as the plot rows in a pair (globals.css), else plotHeight
-          <ResponsiveContainer width="100%" height="100%" minHeight={plotHeight}>
+          // Its own fixed height, never 100%: at 100% it would take the
+          // plot's height, anything above it included, and grow on every
+          // resize, without end (#290, 6479887743, 28 Oct)
+          <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
-              data={data}
+              data={plotted}
               margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}
               stackOffset="sign"
             >
@@ -393,6 +431,27 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 {...chartMotion()}
                 hide={activePolicies.length <= 1}
               />
+              {/* Dashed across a withheld decile, joining the two published
+                  dots either side; no dot or tooltip at the withheld decile */}
+              {gapKeys.map((gapKey) => (
+                <Line
+                  key={gapKey}
+                  type="linear"
+                  dataKey={gapKey}
+                  connectNulls
+                  stroke={CHART_COLOURS.net}
+                  strokeWidth={2}
+                  strokeDasharray={NET_GAP_DASH}
+                  strokeOpacity={netOpacity(key.highlight)}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
+                  tooltipType="none"
+                  isAnimationActive={false}
+                  className="net-gap-bridge"
+                  hide={activePolicies.length <= 1}
+                />
+              ))}
               {/* The net dots as a Scatter: Recharts hides a Line's own dots while
                   it animates, so they would vanish and pop back on every year
                   change; a Scatter's points tween with the line instead */}

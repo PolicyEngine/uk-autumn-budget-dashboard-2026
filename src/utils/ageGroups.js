@@ -5,8 +5,8 @@
  * "Pensioners" are different groups: 65 and over is a band; pensioners are
  * 66 and over in 2026-27 and 67 and over from 2027-28.
  */
-import { AGE_BANDS, ALL_BAND, SINGLE_AGE_TOP, YOUNG_BAND } from "./ageImpact";
-import { pensionerAge, pensionerMeasureSeries } from "../components/pensioners/pensionersData";
+import { AGE_BANDS, ALL_BAND, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP, YOUNG_BAND } from "./ageImpact";
+import { pensionerAge, pensionerMeasureSeries, pensionerRow } from "../components/pensioners/pensionersData";
 import { groupMeasureSeries } from "../components/youngPeople/youngPeopleData";
 
 export const PENSIONERS = "pensioners";
@@ -58,20 +58,40 @@ export function groupAges(key, year) {
 }
 
 /**
- * The single-year-of-age chart's window for a group: its ages and ten
- * years either side (55 to 90 and over for pensioners and 65 and over; every
- * age for all ages), within 0 to 90 and over.
+ * The single-year-of-age chart's window for a group: the group's own ages
+ * and nothing either side (every age for all ages; State Pension age to 90
+ * and over for pensioners).
  */
 export function ageWindow(key, year) {
-  if (key === ALL_BAND) return [0, SINGLE_AGE_TOP];
-  if (key === PENSIONERS || key === "65+") return [55, SINGLE_AGE_TOP];
-  const [first, last] = groupAges(key, year);
-  return [Math.max(0, first - 10), Math.min(SINGLE_AGE_TOP, last + 10)];
+  return groupAges(key, year);
 }
 
-/** The group's change in every year with each measure's part (groupMeasureSeries' shape). */
-export function groupSeries(rows, policies, selected, years, key) {
-  return key === PENSIONERS
+/**
+ * The group's change in every year with each measure's part (groupMeasureSeries' shape).
+ * With `packageRun` (the published combined run of exactly the selection,
+ * selectionPackageKey) and its rows loaded, `net` is that run's own figure,
+ * never the singles summed. Each policy's own part is kept in a year where
+ * every member has the group's row, and in a year whose package net is
+ * withheld (there the others' parts are drawn with no net, so nothing can
+ * be worked out by difference); only beside a published net with a member
+ * missing are the parts dropped (`partsShown` false).
+ */
+export function groupSeries(rows, policies, selected, years, key, packageRun = null) {
+  const singles = key === PENSIONERS
     ? pensionerMeasureSeries(rows, policies, selected, years)
     : groupMeasureSeries(rows, policies, selected, years, key);
+  if (!packageRun || !(rows ?? []).some((row) => row.reform_id === packageRun)) return singles;
+  return singles.map((point) => {
+    const row = key === PENSIONERS
+      ? pensionerRow(rows, packageRun, point.year)
+      : (rows ?? []).find((each) => each.reform_id === packageRun && each.year === Number(point.year) && each.age_band === key);
+    const usable = row && Number.isFinite(row.mean_change) && (key === PENSIONERS || row.sample_size >= MIN_SAMPLE_SIZE);
+    const partsShown = point.net !== null || !usable;
+    const next = { ...point, published: Boolean(usable), net: usable ? row.mean_change : null, fromPackage: true, partsShown };
+    if (!partsShown) {
+      next.parts = [];
+      for (const part of point.parts) delete next[part.key];
+    }
+    return next;
+  });
 }

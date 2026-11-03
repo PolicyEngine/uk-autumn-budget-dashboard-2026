@@ -9,7 +9,8 @@ import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick, useNarrowViewport } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
-import { STAGE_TIMES } from "../../utils/householdTiming";
+import { STAGE_TIMES, STILL_WORKING_SECONDS, STILL_WORKING_TEXT } from "../../utils/householdTiming";
+import { isStartingUp } from "../../utils/householdImpactApi";
 import NetIncomeWaterfall, { waterfallScaleStart } from "./NetIncomeWaterfall";
 import { layerRows, layersInUse } from "./netIncomeParts";
 import { partsInUse } from "./marginalRateParts";
@@ -21,6 +22,8 @@ import IncomePositionChart, { ResultTiles } from "./IncomePositionChart";
 import MarginalRateChart from "./MarginalRateChart";
 import "./SingleYear.css";
 import { scrollBelowBars } from "../../utils/pageScroll";
+import { policyDetailsFor } from "../../utils/policyDetails";
+import { resultPolicies } from "../../utils/calculatorOnlyMeasures";
 
 /** True once `active` has held for `delay` ms (no flash of a loading line). */
 function useDelayed(active, delay = 300) {
@@ -36,14 +39,27 @@ function useDelayed(active, delay = 300) {
   return active && shown;
 }
 
+// What the page says while the calculator is starting up (a cold service
+// answered with nothing, a 5xx or not in time, and is being asked again),
+// and once it has asked again and still had no answer
+export const STARTING_UP_TITLE = "The calculator is starting up";
+export const STARTING_UP_TEXT = "This can take up to a minute. Your result will appear here.";
+export const STILL_STARTING_TITLE = "The calculator is still starting up.";
+export const STILL_STARTING_TEXT = "This can take up to a minute after a quiet spell. Please try again shortly.";
+
+const ERROR_TITLE = "Results are not available here.";
+
 /** What went wrong, in words, with the answers to check when it names them. */
-export function SingleYearError({ error, onRetry, title = "Results are not available here." }) {
+export function SingleYearError({ error, onRetry, title = ERROR_TITLE }) {
   const fields = error?.fields ?? [];
   const canRetry = ["timeout", "network", "server"].includes(error?.kind);
+  // A service that never answered after the page's own retries: calm words
+  // and Try again, not the technical cause; a part's own title is kept
+  const starting = isStartingUp(error);
   return (
     <div className="household-error single-year-error" role="alert">
-      <p className="household-error-title">{title}</p>
-      <p>{error?.message ?? "Something stopped the calculation."}</p>
+      <p className="household-error-title">{starting && title === ERROR_TITLE ? STILL_STARTING_TITLE : title}</p>
+      <p>{starting ? STILL_STARTING_TEXT : (error?.message ?? "Something stopped the calculation.")}</p>
       {fields.length > 0 && (
         <>
           <p>Check these answers:</p>
@@ -116,8 +132,8 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       label: `Salary in ${yearLabel}`,
       value: data.partnerSalaryUsed !== null ? `${money(own)}, partner ${money(partner)}` : money(own),
       detail: salarySource
-        ? `${salarySource}; grown from ${data.salaryYear} with OBR earnings`
-        : `grown from ${data.salaryYear} with OBR earnings`,
+        ? `${salarySource}; we apply OBR earnings growth from ${data.salaryYear}`
+        : `we apply OBR earnings growth from ${data.salaryYear}`,
     });
   }
   if (renting && data.area?.brmaDefault && data.area.brma) {
@@ -128,7 +144,7 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       id: "council-tax",
       label: "Council Tax",
       value: `${money(data.councilTax.amount)} · band ${data.councilTax.band}`,
-      detail: data.councilTax.source === "estimated" ? "region average" : "as entered",
+      detail: data.councilTax.source === "estimated" ? "region average" : "your entry",
     });
   }
   // The spending the fuel and electricity measures act on: prefilled with
@@ -153,17 +169,17 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       // An example's own figures say where they come from
       detail:
         assumed === "example" && spendingSource
-          ? `${spendingSource}. Fuel and electricity policies scale with what you spend; change these in More details to match your household.`
+          ? `${spendingSource}. Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household.`
           : assumed
-            ? "Fuel and electricity policies scale with what you spend; change these in More details to match your household."
-            : "petrol, diesel and electricity, from More details",
+            ? "Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household."
+            : "petrol, diesel and electricity, from the Spending step",
     });
   }
   if (showDependantsNote(data)) {
     items.push({
       id: "children",
       label: "Children 16 to 19",
-      value: "counted only in school or college",
+      value: "count only in school or college",
       detail: null,
     });
   }
@@ -219,6 +235,7 @@ function useElapsedSeconds(active, startedAt) {
 export function timeText(seconds, stage = "headline") {
   const times = STAGE_TIMES[stage];
   if (seconds > times.slow) return "Taking longer than usual; still working";
+  if (seconds > STILL_WORKING_SECONDS) return STILL_WORKING_TEXT;
   return times.text;
 }
 
@@ -240,16 +257,16 @@ export function progressShare(seconds, typical = STAGE_TIMES.headline.typical) {
  * is happening, the usual time with the seconds so far, and a slim bar that
  * fills over the usual time.
  */
-function ProcessingPanel({ seconds }) {
+function ProcessingPanel({ seconds, startingUp = false }) {
   return (
-    <div className="processing-panel" role="status">
+    <div className="processing-panel" role="status" data-starting-up={startingUp || undefined}>
       <span className="processing-icon" aria-hidden="true">
         <TitleIcon name="calculator" bare size={22} />
         <span className="processing-spinner" />
       </span>
       <div className="processing-text">
-        <p className="processing-title">Calculating your household</p>
-        <p className="processing-time">{timeText(seconds)}</p>
+        <p className="processing-title">{startingUp ? STARTING_UP_TITLE : "Calculating your household"}</p>
+        <p className="processing-time">{startingUp ? STARTING_UP_TEXT : timeText(seconds)}</p>
         <div className="processing-bar" aria-hidden="true">
           <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
         </div>
@@ -339,7 +356,8 @@ function AboutResult({ items, caution, bars, totals }) {
               </h4>
               <ul className="result-no-effect-chips">
                 {noEffect.map((item) => (
-                  <li key={item.id} className="result-no-effect-chip" title={item.name}>
+                  // The why tip is the chip's one tip: the native title only without it
+                  <li key={item.id} className="result-no-effect-chip" title={item.reason ? undefined : item.name}>
                     {item.label ?? item.name}
                     {item.reason && <InfoTip content={shortReason(item.reason)} label={`Why ${item.name} has no effect`} />}
                   </li>
@@ -387,10 +405,11 @@ function AboutResult({ items, caution, bars, totals }) {
 
 /**
  * The two "Across earnings" cards, in step, side by side (stacked on a
- * phone): one Before | After | Change choice, one "Show:" control above
- * both for the components they share (a chip switches a component on
- * both cards, hovering one brings it forward on both), and the salary
- * hovered on one marked on the other.
+ * phone): one Before | After | Change choice, the same "Show:" chips under
+ * each card's plot for the components they share (one state here, so a
+ * chip switches a component on both cards and both keys, and hovering one
+ * brings it forward on both), and the salary hovered on one marked on the
+ * other.
  */
 export function AcrossEarnings({ sweep, salary, yearLabel }) {
   const narrow = useNarrowViewport();
@@ -400,40 +419,53 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
   const [focus, setFocus] = useState(null);
   // "N more with no effect for you", open or not
   const [expanded, setExpanded] = useState(false);
-  // The components that apply on either card
-  const union = useMemo(() => {
+  // Each card's parts in use (as each chart draws them), and the
+  // components that apply on either card
+  const { netInUse, rateInUse, union } = useMemo(() => {
     const points = sweepPoints(sweep);
     const net = sweep.netParts
       ? new Set(layersInUse([...layerRows(points, sweep.netParts, "before"), ...layerRows(points, sweep.netParts, "after")]).map((layer) => layer.key))
       : new Set();
     const rate = sweep.parts ? new Set(partsInUse([...sweep.parts.before, ...sweep.parts.after]).map((part) => part.name)) : new Set();
-    return componentsInUse(net, rate);
+    return { netInUse: net, rateInUse: rate, union: componentsInUse(net, rate) };
   }, [sweep]);
   // One control only when both cards draw their parts; else each its own key
   const shared = Boolean(sweep.netParts && sweep.parts);
-  const chips = useMemo(() => sharedSweepChips(union), [union]);
-  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union, focus, setFocus: shared ? setFocus : undefined, sharedLegend: shared };
+  const chips = useMemo(() => sharedSweepChips(netInUse, rateInUse), [netInUse, rateInUse]);
+  // The one key both cards draw under their plots: the same chips, the
+  // same state; a card adds only its own non-chip items (`extras`)
+  const legend = shared
+    ? (extras = []) => (
+        <SeriesToggle
+          lead="Show:"
+          label="Components"
+          series={chips}
+          shown={chips.filter((chip) => !chip.disabled && !hidden.includes(chip.key)).map((chip) => chip.key)}
+          onChange={(next) => {
+            const mine = chips.filter((chip) => !chip.disabled).map((chip) => chip.key);
+            setHidden(mine.filter((key) => !next.includes(key)));
+          }}
+          onHover={setFocus}
+          collapseDisabled
+          expanded={expanded}
+          onExpandedChange={setExpanded}
+          noEffectOn="either chart"
+          narrow={narrow}
+          extras={extras}
+        />
+      )
+    : null;
+  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union, focus, setFocus: shared ? setFocus : undefined, legend };
+  // An answer without the parts (a calculation server deployed before they
+  // were added) draws the totals alone: said here, never silently
+  const missing = [!sweep.netParts && "net income", !sweep.parts && "the marginal tax rate"].filter(Boolean);
   return (
     <>
-      {shared && (
-        <div className="across-earnings-show">
-          <SeriesToggle
-            placement="section"
-            lead="Show on both charts"
-            label="Components"
-            series={chips}
-            shown={chips.filter((chip) => !chip.disabled && !hidden.includes(chip.key)).map((chip) => chip.key)}
-            onChange={(next) => {
-              const mine = chips.filter((chip) => !chip.disabled).map((chip) => chip.key);
-              setHidden(mine.filter((key) => !next.includes(key)));
-            }}
-            onHover={setFocus}
-            collapseDisabled
-            expanded={expanded}
-            onExpandedChange={setExpanded}
-            narrow={narrow}
-          />
-        </div>
+      {missing.length > 0 && (
+        <p className="single-year-quiet across-earnings-no-parts" role="note">
+          The calculation server did not send the breakdown of {missing.join(" or ")} by tax and benefit, so{" "}
+          {missing.length === 2 ? "both charts show" : "that chart shows"} the total only.
+        </p>
       )}
       <div className="charts-grid single-year-chart-pair">
         <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
@@ -452,7 +484,7 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [] }) {
+function ResultCard({ totals, yearLabel, requestPolicies = [], items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [], catalogue = [] }) {
   const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   return (
@@ -471,7 +503,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           <>
             {`In ${yearLabel}, with `}
             <a className="result-policies-link" href="#change-by-policy" onClick={(event) => scrollToSection(event, "change-by-policy")}>
-              {policyCount} {policyCount === 1 ? "policy" : "policies"}
+              {resultPolicies(requestPolicies).text}
             </a>
           </>
         }
@@ -485,6 +517,11 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           steps={bars ? bars.rows : null}
           yearLabel={yearLabel}
           splitFailed={splitFailed}
+          // A measure's type from the catalogue's measures (objects), as the
+          // table's VAT row reads it: `selected` is the selected ids only, so
+          // looking measures up there found none and the fuel duty note never
+          // showed (chart and table audit, 28 October)
+          typeOf={(id) => policyDetailsFor(catalogue.find((policy) => policy.id === id))?.type ?? null}
         />
       </div>
       <AboutResult items={items} caution={caution} bars={bars} totals={totals} />
@@ -508,7 +545,7 @@ export function SingleYearHeadline({
   spending = null,
   submitted = true,
   changed = false,
-  policyCount = 0,
+  requestPolicies = [],
   startedAt = null,
   salarySource = null,
   spendingSource = null,
@@ -542,7 +579,9 @@ export function SingleYearHeadline({
   if (running) {
     return (
       <div className="single-year-headline" aria-busy="true">
-        <div className="card processing-card">{showLoading && <ProcessingPanel seconds={seconds} />}</div>
+        <div className="card processing-card">
+          {(showLoading || result.startingUp) && <ProcessingPanel seconds={seconds} startingUp={Boolean(result.startingUp)} />}
+        </div>
       </div>
     );
   }
@@ -559,18 +598,19 @@ export function SingleYearHeadline({
             icon="wallet"
             id="your-result"
             title={`Your result, ${yearLabel}`}
-            subtitle="How the selected policies change your household's net income, and each policy's part in it."
+            subtitle="How the selected policies change your net income, policy by policy."
           />
           <ResultCard
             totals={totals}
             yearLabel={yearLabel}
-            policyCount={policyCount}
+            requestPolicies={requestPolicies}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
             requestHousehold={requestHousehold}
             year={data.year ?? year}
             selected={selected}
-            bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
+            catalogue={policies}
+            bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies, data.year ?? year) : null}
             splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
         </div>
@@ -592,17 +632,17 @@ const WAITING_TEXT = {
  * across the row, so its message is said once. Shown after 300ms, so a
  * quick answer never flashes it.
  */
-function PendingSkeleton({ kind, startedAt }) {
+function PendingSkeleton({ kind, startedAt, startingUp = false }) {
   const shown = useDelayed(true);
   // Part of the same wait as the headline: counted from Calculate
   const seconds = useElapsedSeconds(true, startedAt);
   return (
     <div className={`card single-year-card waiting-card is-${kind}`} aria-busy="true">
-      {shown && (
-        <div className="waiting" role="status">
+      {(shown || startingUp) && (
+        <div className="waiting" role="status" data-starting-up={startingUp || undefined}>
           <span className="processing-spinner is-small" aria-hidden="true" />
-          <p className="waiting-title">{WAITING_TEXT[kind]}</p>
-          <p className="waiting-time">{timeText(seconds, "detail")}</p>
+          <p className="waiting-title">{startingUp ? STARTING_UP_TITLE : WAITING_TEXT[kind]}</p>
+          <p className="waiting-time">{startingUp ? STARTING_UP_TEXT : timeText(seconds, "detail")}</p>
           <div className="processing-bar waiting-bar" aria-hidden="true">
             <span style={{ transform: `scaleX(${progressShare(seconds, STAGE_TIMES.detail.typical)})` }} />
           </div>
@@ -628,7 +668,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
   // The figures' own year (see SingleYearHeadline)
   const yearLabel = fiscalYearTick(data.year ?? year);
   const totals = headlineTotals(data.net);
-  const bars = data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null;
+  const bars = data.byPolicy ? policyRows(data.byPolicy, totals.change, policies, data.year ?? year) : null;
   const detailFailed = detailStatus === "error";
 
   // While newer inputs load, every section shows the last figures greyed,
@@ -645,6 +685,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
           policies={selected ?? []}
           yearLabel={yearLabel}
           you={you}
+          policySteps={bars?.rows ?? null}
         />
       )}
 
@@ -656,6 +697,12 @@ export function SingleYearDetails({ result, year, policies, household = null, se
             programmes={data.programmes}
             totals={totals}
             bars={bars?.all}
+            split={bars}
+            splitStatus={bars ? "ready" : detailFailed ? "error" : "loading"}
+            policies={policies}
+            household={household}
+            salaryUsed={data.salaryUsed}
+            year={data.year ?? year}
             yearLabel={yearLabel}
             engine={data.engine}
           />
@@ -674,7 +721,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
       <SectionHeading
         icon="briefcase"
         title="Across earnings"
-        subtitle="How your household's net income, its change from the selected policies and its marginal tax rate vary with employment income."
+        subtitle="How your net income, its change and your marginal tax rate vary with earnings."
       />
       <section className="report-section">
         {data.sweep ? (
@@ -686,7 +733,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
             <SingleYearError error={detailError} onRetry={retry} title="The earnings charts are not available." />
           </div>
         ) : (
-          <PendingSkeleton kind="earnings" startedAt={startedAt} />
+          <PendingSkeleton kind="earnings" startedAt={startedAt} startingUp={Boolean(result.detailStartingUp)} />
         )}
       </section>
     </div>

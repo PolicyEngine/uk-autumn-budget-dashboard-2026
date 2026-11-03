@@ -73,7 +73,7 @@ async function chooseExampleAfterClearing() {
   await new Promise((resolve) => setTimeout(resolve, 50));
   rerender(<PersonalImpactTab selectedPolicies={SUPPORTED} policies={MEASURES} year={2029} />);
   await new Promise((resolve) => setTimeout(resolve, 50));
-  fireEvent.click(householdItem(/^A graduate on £35,000/));
+  fireEvent.click(householdItem(/^A carer working part time/));
   await waitFor(() => expect(headlineCard()).not.toBeNull(), { timeout: 3000 });
 }
 
@@ -97,7 +97,7 @@ describe("the examples' precomputed answers and the receipts' engine", () => {
     render(<PersonalImpactTab selectedPolicies={SUPPORTED} policies={MEASURES} year={2029} />, { wrapper: Wrapper });
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 50));
-    fireEvent.click(householdItem(/^A graduate on £35,000/));
+    fireEvent.click(householdItem(/^A carer working part time/));
     await waitFor(() => expect(headlineCard()).not.toBeNull(), { timeout: 3000 });
     await waitFor(() => expect(document.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), { timeout: 3000 });
     expect(household.length).toBeGreaterThan(0);

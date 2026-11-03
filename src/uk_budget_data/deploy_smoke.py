@@ -187,8 +187,9 @@ HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
 # seconds on a warm instance.
 SMOKE_HOUSEHOLD_IMPACT = {
     "year": 2028,
-    # A kept parameter-only measure (BADR is withdrawn and unregistered)
-    "policies": ["threshold_freeze_2031_32"],
+    # A released parameter-only measure (the threshold freeze was withdrawn
+    # on Budget day and is unregistered)
+    "policies": ["trading_allowance_raise"],
     "household": {"employment_income": 30_000, "salary_year": 2028},
     "include": [],
 }

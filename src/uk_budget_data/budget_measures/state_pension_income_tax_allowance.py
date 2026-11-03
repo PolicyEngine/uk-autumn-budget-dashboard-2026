@@ -21,15 +21,15 @@ from uk_budget_data.measure_templates import apply_age_conditioned_allowance
 def state_pension_income_tax_allowance(
     sim,
     allowance_2027={"2027": 13040},
-    allowance_2028={"2028": 13370},
-    allowance_2029={"2029": 13700},
-    allowance_2030={"2030": 14040},
-    allowance_2031={"2031": 14400},
+    allowance_2028={"2028": 13490},
+    allowance_2029={"2029": 13820},
+    allowance_2030={"2030": 14170},
+    allowance_2031={"2031": 14520},
     threshold_2027=13040,
-    threshold_2028=13370,
-    threshold_2029=13700,
-    threshold_2030=14040,
-    threshold_2031=14400,
+    threshold_2028=13490,
+    threshold_2029=13820,
+    threshold_2030=14170,
+    threshold_2031=14520,
     taper_rate=1.0,
 ):
     sim = apply_age_conditioned_allowance(

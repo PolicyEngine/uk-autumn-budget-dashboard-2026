@@ -73,11 +73,25 @@ export function isProgrammaticScroll(y = typeof window === "undefined" ? 0 : win
 const siteNavShown = () => document.documentElement.hasAttribute("data-site-nav-shown");
 
 /**
+ * How much of the site nav is in view in its place in the page's flow (px):
+ * at the page's top, before a scroll down takes it away (globals.css). The
+ * bars below it sit that much lower now than once the page has scrolled
+ * past it. 0 when it is shown over the page (it stays) or has gone.
+ */
+export function siteNavInFlow() {
+  if (typeof document === "undefined" || siteNavShown()) return 0;
+  const nav = document.querySelector(SITE_NAV);
+  return nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+}
+
+/**
  * Where the page has to be scrolled to for `target` to sit `gap` px below
- * the bars (unclamped: below 0 it cannot get there).
+ * the bars (unclamped: below 0 it cannot get there). The bars are measured
+ * as they will be there: a site nav in its place at the page's top will
+ * have scrolled away.
  */
 export function scrollTopFor(target, { gap = STICKY_GAP, above } = {}) {
-  return target.getBoundingClientRect().top + window.scrollY - stickyBottom({ above }) - gap;
+  return target.getBoundingClientRect().top + window.scrollY - (stickyBottom({ above }) - siteNavInFlow()) - gap;
 }
 
 /** Scroll the page to `top`, marked as not the reader's own scroll. */
@@ -103,7 +117,9 @@ const NEAR_TOP = 80;
  */
 export function clearOfHeadings(top) {
   if (typeof document === "undefined") return top;
-  const bottom = stickyBottom();
+  // The bars as they are once a site nav in the page's flow has gone (it
+  // covers nothing while it is there)
+  const bottom = stickyBottom() - siteNavInFlow();
   const y = window.scrollY;
   const headings = [];
   for (const heading of document.querySelectorAll(HEADINGS)) {
@@ -218,33 +234,60 @@ export function scrollBelowBars(target, { behavior = "auto", gap = STICKY_GAP, o
   }, 5);
 }
 
-/** How far the reader has to scroll up (px, in one run) for the site nav. */
-export const SITE_NAV_SHOW_UP_PX = 24;
 // How long a reader's input counts as the cause of the scrolls after it
 // (ms): a wheel or key's own scroll (smooth, or a trackpad's momentum,
 // which keeps sending wheel events), and a touch fling's glide
 const INTENT_MS = { wheel: 250, key: 800, touch: 1200 };
 
+/** How close to the window's top edge the pointer brings the site nav (px). */
+export const SITE_NAV_EDGE_PX = 2;
+
 /**
- * Which way the reader is scrolling the page, from their own input, and
- * whether that should show or hide the site nav. The page also moves by
- * itself: the tab rows go compact as they stick, charts load and change
- * height, and the browser's scroll anchoring shifts scrollY to keep the
- * view in place, by a few px up or down at a time. Those moves come with
- * no input, so they never show the nav. Only a scroll up made by the
- * reader (wheel or trackpad, touch, keys, or dragging the scrollbar) of
- * SITE_NAV_SHOW_UP_PX or more in one run shows it, and any scroll down by
- * the reader hides it and starts the run again.
+ * How long the pointer rests at that edge before the nav shows (ms): a
+ * pointer passing through it on its way to the Year pill never opens it
+ */
+export const SITE_NAV_DWELL_MS = 300;
+
+/**
+ * Whether the pointer at clientY `y` asks for the site nav: at the top
+ * SITE_NAV_EDGE_PX of the window. Leaving the window through its top edge
+ * does not: a pointer on its way from the address bar to the Year pill
+ * crosses it. Scrolling never shows the nav.
+ */
+export function pointerWantsSiteNav(y) {
+  if (typeof y !== "number" || Number.isNaN(y)) return false;
+  return y <= SITE_NAV_EDGE_PX;
+}
+
+/** A touch-only device: no mouse to point at the window's top with. */
+export function isTouchOnly() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: none) and (pointer: coarse)").matches
+  );
+}
+
+/**
+ * Whether the reader's scrolling should hide the site nav, or (on a
+ * touch-only device) show it. Scrolling never shows it with a mouse: the
+ * pointer at the window's top does (App.jsx). Any scroll down by the
+ * reader (wheel or trackpad, touch, keys, or dragging the scrollbar) hides
+ * it. The page also moves by itself (tab rows going compact, charts
+ * loading, scroll anchoring): those moves come with no input and leave it
+ * as it is. Within the nav's height of the page's top it never lies over
+ * the page: it goes back to its place in the page's flow (globals.css), so
+ * the top looks as on load; except on a touch-only device, where the very
+ * top of the page (scrollY 0) is the one place it shows.
  *
  * input(kind, way, t): the reader's wheel/key/touch input ("up"/"down"),
  *   or "drag" (the scrollbar held: either way counts; "release" ends it).
- * scroll(y, t, { programmatic, top }): a scroll event at scrollY `y`;
- *   `top` is the nav's height, within which of the page's top it hides.
+ * scroll(y, t, { programmatic, top, touchOnly }): a scroll event at
+ *   scrollY `y`; `top` is the nav's height.
  * Each returns "show", "hide" or null (leave it as it is).
  */
-export function createSiteNavIntent({ showAfter = SITE_NAV_SHOW_UP_PX, y = 0 } = {}) {
+export function createSiteNavIntent({ y = 0 } = {}) {
   let prev = y;
-  let run = 0;
   let way = null;
   let until = 0;
   const live = (t) => way !== null && t <= until;
@@ -261,32 +304,69 @@ export function createSiteNavIntent({ showAfter = SITE_NAV_SHOW_UP_PX, y = 0 } =
       }
       way = dir;
       until = t + (INTENT_MS[kind] ?? INTENT_MS.wheel);
-      if (dir === "down") {
-        run = 0;
-        return "hide";
-      }
-      return null;
+      return dir === "down" ? "hide" : null;
     },
-    scroll(at, t = now(), { programmatic = false, top = 0 } = {}) {
+    scroll(at, t = now(), { programmatic = false, top = 0, touchOnly = false } = {}) {
       const delta = at - prev;
       prev = at;
-      if (at < top) {
+      if (touchOnly) return at <= 0 ? "show" : "hide";
+      if (at < top) return "hide";
+      if (programmatic || delta <= 0) return null;
+      return live(t) && way !== "up" ? "hide" : null;
+    },
+  };
+}
+
+/**
+ * A phone on its side: a short, wide window, where the title band and the
+ * tab rows took about half the height. There the band tucks away on a
+ * scroll down (globals.css, the same query; App.jsx).
+ */
+export const LANDSCAPE_PHONE_QUERY = "(orientation: landscape) and (max-height: 500px)";
+
+/** Whether the window is a phone on its side (LANDSCAPE_PHONE_QUERY). */
+export function isLandscapePhone() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(LANDSCAPE_PHONE_QUERY).matches
+  );
+}
+
+/** How far the reader scrolls down, in one go, before the band tucks away (px). */
+export const BAND_HIDE_AFTER_PX = 24;
+/** How far up brings it back (px): a finger's jitter does not. */
+export const BAND_SHOW_AFTER_PX = 8;
+
+/**
+ * Whether the title band should be tucked away, on a phone on its side:
+ * hidden once the reader has scrolled down BAND_HIDE_AFTER_PX in one go,
+ * back on a scroll up of BAND_SHOW_AFTER_PX, and always in view while the
+ * page is within `top` px of its top (the band's own place) or while the
+ * band is in use (`held`: a pill's list open, or focus in it). A scroll
+ * the page made (`programmatic`, utils/pageScroll) changes nothing: it was
+ * lined up under the bars as they were.
+ *
+ * scroll(y, { top, programmatic, held }) returns true (tuck it away),
+ * false (show it) or null (leave it as it is).
+ */
+export function createBandIntent({ y = 0 } = {}) {
+  let prev = y;
+  // The distance moved in the current direction (+ down, - up)
+  let run = 0;
+  return {
+    scroll(at, { top = 0, programmatic = false, held = false } = {}) {
+      const delta = at - prev;
+      prev = at;
+      if (at <= top || held) {
         run = 0;
-        return "hide";
+        return false;
       }
-      if (programmatic || delta === 0) {
-        if (programmatic) run = 0;
-        return null;
-      }
-      const reader = live(t);
-      if (delta > 0) {
-        run = 0;
-        return reader && way !== "up" ? "hide" : null;
-      }
-      // A move up with no input from the reader (a layout shift) is not theirs
-      if (!reader || way === "down") return null;
-      run -= delta;
-      return run >= showAfter ? "show" : null;
+      if (programmatic || delta === 0) return null;
+      run = Math.sign(delta) === Math.sign(run) ? run + delta : delta;
+      if (run >= BAND_HIDE_AFTER_PX) return true;
+      if (run <= -BAND_SHOW_AFTER_PX) return false;
+      return null;
     },
   };
 }

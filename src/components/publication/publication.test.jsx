@@ -64,7 +64,7 @@ describe("CombinedStats (UI regression)", () => {
       "Combined figures are unavailable for this selection.",
     );
     expect(container.textContent).toContain(
-      "Combined runs are published for: Alpha and Beta.",
+      "We publish combined runs for: Alpha and Beta.",
     );
     expect(container.textContent).not.toContain("-0.11pp");
   });
@@ -75,13 +75,10 @@ describe("CombinedStats (UI regression)", () => {
     expect(container.textContent).not.toMatch(/pp/);
   });
 
-  it("labels a provisional measure's statistics", () => {
-    renderStats(["gamma"], IN_DATA);
-    expect(
-      screen.getByText(
-        "Provisional: statement figures, awaiting Treasury costing",
-      ),
-    ).toBeInTheDocument();
+  it("shows no banner on a provisional measure's statistics from Budget day", () => {
+    const { container } = renderStats(["gamma"], IN_DATA);
+    expect(container.querySelector(".publication-provisional")).toBeNull();
+    expect(container.textContent).not.toContain(PROVISIONAL_LABEL);
   });
 });
 
@@ -108,6 +105,7 @@ describe("FiscalSummary", () => {
     expect(screen.getByText("-£2.20bn")).toBeInTheDocument();
     expect(screen.getByText("-£2.75bn")).toBeInTheDocument();
     expect(screen.getByText("£0.55bn")).toBeInTheDocument();
+    expect(screen.getByText("Interaction")).toBeInTheDocument();
     // The year beyond the data: every figure unavailable, with the reason,
     // never £0.00bn.
     expect(screen.queryByText("£0.00bn")).not.toBeInTheDocument();
@@ -229,10 +227,10 @@ describe("BinnedHouseholdScatter", () => {
     expect(colourFor({ changeBand: -5000, changeBandUpper: -5000 })).toBe(CHART_COLOURS.loss);
   });
 
-  it("labels a provisional scatter and explains the groups", async () => {
+  it("shows no banner on a Budget-day provisional scatter and explains the groups", async () => {
     const { default: BinnedHouseholdScatter } =
       await import("./BinnedHouseholdScatter");
-    render(
+    const { container } = render(
       <BinnedHouseholdScatter
         series={{
           status: "available",
@@ -251,11 +249,8 @@ describe("BinnedHouseholdScatter", () => {
         }}
       />,
     );
-    expect(
-      screen.getByText(
-        "Provisional: statement figures, awaiting Treasury costing",
-      ),
-    ).toBeInTheDocument();
+    expect(container.querySelector(".publication-provisional")).toBeNull();
+    expect(container.textContent).not.toContain(PROVISIONAL_LABEL);
     expect(
       screen.getByText(/Groups with fewer than 10 surveyed households/),
     ).toBeInTheDocument();
@@ -276,7 +271,7 @@ describe("the provisional label follows the manifest's dates", () => {
 
   it.each([
     ["before the Budget", manifest, CANDIDATE_PROVISIONAL_LABEL],
-    ["from Budget day", budgetDay, PROVISIONAL_LABEL],
+    ["from Budget day", budgetDay, null],
   ])("labels CombinedStats, FiscalSummary and BinnedHouseholdScatter %s", async (_, shown, label) => {
     const { default: BinnedHouseholdScatter } = await import("./BinnedHouseholdScatter");
     const stats = combinedStats({ manifest, tablesByKey, selectedIds: ["gamma"], year: IN_DATA });
@@ -287,7 +282,13 @@ describe("the provisional label follows the manifest's dates", () => {
       render(<BinnedHouseholdScatter series={scatter} manifest={shown} />),
     ];
     for (const view of views) {
-      expect(view.container.querySelector(".publication-provisional")).toHaveTextContent(label);
+      if (label) {
+        expect(view.container.querySelector(".publication-provisional")).toHaveTextContent(label);
+      } else {
+        // Budget-day statement figures carry no banner on the page
+        expect(view.container.querySelector(".publication-provisional")).toBeNull();
+        expect(view.container.textContent).not.toContain(PROVISIONAL_LABEL);
+      }
       view.unmount();
     }
   });

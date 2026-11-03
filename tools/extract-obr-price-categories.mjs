@@ -15,6 +15,12 @@
 // The output holds no timestamp: the same xlsx gives the same bytes.
 //
 //   node tools/extract-obr-price-categories.mjs [xlsx] [out.json]
+//   node tools/extract-obr-price-categories.mjs --release october-2026
+//
+// --release october-2026 reads the October 2026 tables
+// (data_inputs/living_standards/efo-october-2026-detailed-forecast-tables-
+// economy.xlsx) into public/data/obr_price_categories_october_2026.json,
+// which the card draws beside March's with the "Show forecasts" chips.
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -23,8 +29,35 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const XLSX = process.argv[2] ?? join(ROOT, "data_inputs/living_standards/efo-march-2026-detailed-forecast-tables-economy.xlsx");
-const OUT = process.argv[3] ?? join(ROOT, "public/data/obr_price_categories.json");
+// Each release the card can draw: its workbook, output and source record
+const RELEASES = {
+  "march-2026": {
+    xlsx: "data_inputs/living_standards/efo-march-2026-detailed-forecast-tables-economy.xlsx",
+    out: "public/data/obr_price_categories.json",
+    release: "Economic and fiscal outlook, March 2026",
+    release_date: "2026-03-03",
+    workbook: "Economic and fiscal outlook, March 2026: detailed forecast tables, economy",
+    url: "https://obr.uk/download/march-2026-economic-and-fiscal-outlook-detailed-forecast-tables-economy/",
+    page_url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+    vintage: "OBR March 2026 forecast (before the Autumn Budget 2026)",
+  },
+  "october-2026": {
+    xlsx: "data_inputs/living_standards/efo-october-2026-detailed-forecast-tables-economy.xlsx",
+    out: "public/data/obr_price_categories_october_2026.json",
+    release: "Economic and fiscal outlook, October 2026",
+    release_date: "2026-10-28",
+    workbook: "Economic and fiscal outlook, October 2026: detailed forecast tables, economy",
+    url: "https://obr.uk/download/october-2026-economic-and-fiscal-outlook-detailed-forecast-tables-economy/",
+    page_url: "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/",
+    vintage: "OBR October 2026 forecast (the Autumn Budget 2026)",
+  },
+};
+const releaseFlag = process.argv.indexOf("--release");
+const RELEASE = RELEASES[releaseFlag >= 0 ? process.argv[releaseFlag + 1] : "march-2026"];
+if (!RELEASE) throw new Error(`--release must be one of ${Object.keys(RELEASES).join(", ")}`);
+const positional = releaseFlag >= 0 ? [] : process.argv.slice(2);
+const XLSX = positional[0] ?? join(ROOT, RELEASE.xlsx);
+const OUT = positional[1] ?? join(ROOT, RELEASE.out);
 
 const SHEET = "1.19";
 const TITLE = "1.19 CPI category inflation";
@@ -116,17 +149,17 @@ const out = {
   schema: "uk-budget-dashboard/obr-price-categories/v1",
   source: {
     publisher: "Office for Budget Responsibility",
-    release: "Economic and fiscal outlook, March 2026",
-    release_date: "2026-03-03",
+    release: RELEASE.release,
+    release_date: RELEASE.release_date,
     table: "Table 1.19",
     table_title: "CPI category inflation",
-    workbook: "Economic and fiscal outlook, March 2026: detailed forecast tables, economy",
-    url: "https://obr.uk/download/march-2026-economic-and-fiscal-outlook-detailed-forecast-tables-economy/",
-    page_url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+    workbook: RELEASE.workbook,
+    url: RELEASE.url,
+    page_url: RELEASE.page_url,
     file: relative(ROOT, XLSX),
     file_sha256: createHash("sha256").update(bytes).digest("hex"),
   },
-  vintage: "OBR March 2026 forecast (before the Autumn Budget 2026)",
+  vintage: RELEASE.vintage,
   units: "Year-on-year growth in the category's CPI index (%), fiscal years (April to March)",
   decimals: 4,
   generated_by: "tools/extract-obr-price-categories.mjs",

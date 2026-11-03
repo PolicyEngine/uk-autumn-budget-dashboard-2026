@@ -509,7 +509,7 @@
   white-space: nowrap;
 }
 
-:is(.ls-dot-plot, .ls-bars) .dot-chip {
+.ls-dot-plot .dot-chip {
   min-width: 52px;
   padding: 1px 6px;
   border-radius: 10px;
@@ -518,21 +518,21 @@
   text-align: center;
 }
 
-:is(.ls-dot-plot, .ls-bars) .dot-chip.good {
+.ls-dot-plot .dot-chip.good {
   background: var(--pe-teal-50);
   color: var(--pe-teal-700);
 }
 
-:is(.ls-dot-plot, .ls-bars) .dot-chip.bad {
+.ls-dot-plot .dot-chip.bad {
   background: var(--c-loss-soft);
   color: var(--c-loss-text);
 }
 
-:is(.ls-dot-plot, .ls-bars) .dot-chip {
+.ls-dot-plot .dot-chip {
   white-space: nowrap;
 }
 
-:is(.ls-dot-plot, .ls-bars) .dot-chip.flat {
+.ls-dot-plot .dot-chip.flat {
   background: var(--pe-gray-100);
   color: var(--pe-gray-500);
 }
@@ -768,13 +768,6 @@
   stroke-width: 2.5;
 }
 
-.tile-trend-value {
-  font-size: 11px;
-  font-weight: 600;
-  fill: var(--c-gain-text);
-  font-variant-numeric: tabular-nums;
-}
-
 .tile-trend-hover {
   fill: var(--c-gain-text);
   stroke: var(--c-surface);
@@ -838,113 +831,57 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Who is in poverty: a bar per group for the end year, a dark tick at the
-   start year, a change chip on the right, and a dashed reference line */
-.ls-card .chart-plot:has(> .ls-bars) {
-  container-type: inline-size;
+/* Who is in poverty: the dumbbell of MeasureDumbbell.css with a value
+   beside each mark, a dashed reference line, and a narrower right column
+   (the change chip alone) */
+.ls-poverty-dumbbell {
+  --md-values: 88px;
+  /* The row's background, behind each value label so no gridline or the
+     reference line runs through it */
+  --ls-row-bg: var(--c-surface);
 }
 
-.ls-bars {
-  display: grid;
-  grid-template-columns: minmax(120px, 30%) minmax(0, 1fr) 88px;
-  column-gap: 12px;
-  font-size: var(--fs-caption);
+@media (min-width: 601px) {
+  .ls-poverty-dumbbell .measure-dumbbell-row {
+    grid-template-columns: var(--md-label) minmax(0, 1fr) var(--md-values);
+  }
+
+  .ls-poverty-dumbbell .measure-dumbbell-unit {
+    padding-right: calc(6px + var(--md-values) + var(--md-gap));
+  }
 }
 
-.ls-bar-row {
-  display: contents;
+.ls-poverty-dumbbell .row-band.is-banded {
+  --ls-row-bg: var(--c-row-band);
 }
 
-.ls-bar-row > * {
-  display: flex;
-  align-items: center;
-  min-height: 34px;
+.ls-poverty-dumbbell .row-band:hover,
+.ls-poverty-dumbbell .row-band:focus-within {
+  --ls-row-bg: var(--c-hover);
 }
 
-.ls-bar-label {
-  color: var(--pe-gray-700);
-  line-height: 1.3;
+.ls-poverty-dumbbell .ls-dumbbell-head {
+  min-height: 20px;
 }
 
-.ls-bar-area {
-  position: relative;
-  min-width: 0;
+.ls-poverty-dumbbell .ls-dumbbell-head .measure-dumbbell-plot {
+  min-height: 20px;
 }
 
-.ls-bar-area:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
+.ls-poverty-dumbbell .ls-dumbbell-head .measure-dumbbell-values {
+  align-self: end;
+  color: var(--c-tick);
+  font-size: var(--fs-micro);
 }
 
-.ls-bar-grid {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-left: 1px solid var(--pe-gray-100);
-}
-
-.ls-bar-fill {
-  position: relative;
-  height: 18px;
-  min-width: 2px;
-  border-radius: 0 3px 3px 0;
-  background: var(--c-after);
-}
-
-/* Above the dashed reference line, on the card's colour, so the line never
-   runs through the figure */
-.ls-bar-value {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  left: 100%;
-  margin-left: 4px;
-  padding: 0 3px;
-  background: var(--c-surface);
-  border-radius: 3px;
-  transform: translateY(-50%);
-  color: var(--pe-gray-800);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.ls-bar-value.inside {
-  left: auto;
-  right: 6px;
-  margin-left: 0;
-  padding: 0;
-  background: none;
-  color: var(--c-surface);
-  font-weight: 600;
-}
-
-.ls-bar-start {
-  position: absolute;
-  top: 50%;
-  width: 3px;
-  height: 26px;
-  margin-left: -1.5px;
-  transform: translateY(-50%);
-  border-radius: 1px;
-  background: var(--pe-gray-800);
-}
-
-.ls-bar-all {
+.ls-dumbbell-all {
   position: absolute;
   top: 0;
   bottom: 0;
   border-left: 1px dashed var(--c-reference);
 }
 
-.ls-bar-chip-cell {
-  justify-content: flex-end;
-}
-
-.ls-bar-head > * {
-  min-height: 20px;
-}
-
-.ls-bar-all-label {
+.ls-dumbbell-all-label {
   position: absolute;
   bottom: 2px;
   transform: translateX(-50%);
@@ -953,54 +890,56 @@
   white-space: nowrap;
 }
 
-.ls-bar-axis > * {
-  min-height: 22px;
-}
-
-.ls-bar-tick {
+.ls-dumbbell-value {
   position: absolute;
-  top: 4px;
-  transform: translateX(-50%);
+  z-index: 2;
+  top: 50%;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--ls-row-bg);
   font-size: 12px;
-  color: var(--pe-gray-500);
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.ls-card .ls-bar-legend i.ls-key-bar {
-  width: 16px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--c-after);
+.ls-dumbbell-value.right {
+  transform: translate(8px, -50%);
 }
 
-.ls-card .ls-bar-legend i.ls-key-start {
-  width: 3px;
-  height: 14px;
-  border-radius: 1px;
-  background: var(--pe-gray-800);
+.ls-dumbbell-value.left {
+  transform: translate(calc(-100% - 8px), -50%);
 }
 
-.ls-card .ls-bar-legend i.ls-key-all {
+/* The end year in the dot's colour, the start year in the ring's */
+.ls-dumbbell-value.to,
+.ls-dumbbell-value.both {
+  color: var(--c-gain-text);
+  font-weight: 600;
+}
+
+.ls-dumbbell-value.from {
+  color: var(--c-reference);
+}
+
+.ls-card .measure-dumbbell-legend i.ls-key-all {
   width: 0;
   height: 12px;
   border-radius: 0;
   border-left: 1px dashed var(--c-reference);
 }
 
-/* A phone or half-width card: the label above its bar, the chip still right */
-@container (max-width: 520px) {
-  .ls-bars {
-    grid-template-columns: minmax(0, 1fr) 80px;
+/* Phones: the change heading has no column of its own */
+@media (max-width: 600px) {
+  .ls-poverty-dumbbell .ls-dumbbell-head .measure-dumbbell-values {
+    display: none;
   }
 
-  .ls-bar-row > .ls-bar-label {
-    grid-column: 1 / -1;
-    min-height: 0;
-    padding-top: 6px;
+  .ls-poverty-dumbbell .ls-dumbbell-head {
+    grid-template-areas: "plot plot";
   }
 
-  .ls-bar-head > .ls-bar-label,
-  .ls-bar-axis > .ls-bar-label {
+  .ls-poverty-dumbbell .ls-dumbbell-head .measure-dumbbell-name {
     display: none;
   }
 }

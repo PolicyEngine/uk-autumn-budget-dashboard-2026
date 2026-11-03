@@ -17,12 +17,13 @@ describe("By age's age groups", () => {
     expect(groupSubject("pensioners")).toBe("Pensioners");
   });
 
-  it("gives each group its ages and a window around them for the single-year chart", () => {
+  it("gives each group its ages, and the single-year chart only those ages", () => {
     expect(groupAges("16-24", 2027)).toEqual([16, 24]);
     expect(groupAges("pensioners", 2026)).toEqual([66, 90]);
     expect(groupAges("pensioners", 2027)).toEqual([67, 90]);
-    expect(ageWindow("16-24", 2027)).toEqual([6, 34]);
-    expect(ageWindow("pensioners", 2027)).toEqual([55, 90]);
+    expect(ageWindow("16-24", 2027)).toEqual([16, 24]);
+    expect(ageWindow("pensioners", 2027)).toEqual([67, 90]);
+    expect(ageWindow("65+", 2027)).toEqual([65, 90]);
     expect(ageWindow("all", 2027)).toEqual([0, 90]);
   });
 
@@ -59,5 +60,32 @@ describe("By age's cards share one age group", async () => {
     fireEvent.click(within(group).getByRole("radio", { name: /50 to 64/ }));
     for (const pill of pills()) expect(pill.getAttribute("aria-label")).toMatch(/^Options: 50 to 64/);
     expect(new URLSearchParams(window.location.search).get("age")).toBe("50-64");
+  });
+
+  it("with All ages against All ages, Effect of each policy's pill reads All ages once", async () => {
+    const { default: AgeSection } = await import("./AgeSection");
+    window.history.replaceState({}, "", "/?sub=age&age=all");
+    render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
+    const pills = screen.getAllByRole("button", { name: /^Options:/ });
+    // Average change by age, Change by year, Effect of each policy, Winners and losers
+    // By age opens Compare with on 25 to 34; with All ages chosen there too,
+    // the pill reads All ages once
+    expect(pills[2].getAttribute("aria-label")).toMatch(/25 to 34/);
+    fireEvent.click(pills[2]);
+    const compare = within(screen.getByRole("dialog")).getAllByRole("radiogroup")[1];
+    fireEvent.click(within(compare).getByRole("radio", { name: "All ages" }));
+    expect(screen.getAllByRole("button", { name: /^Options:/ })[2].getAttribute("aria-label")).toBe("Options: All ages");
+  });
+
+  it("opens Effect of each policy on 16 to 24 compared with 25 to 34", async () => {
+    const { default: AgeSection } = await import("./AgeSection");
+    window.history.replaceState({}, "", "/?sub=age");
+    render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
+    const pill = screen.getAllByRole("button", { name: /^Options:/ })[2];
+    expect(pill.getAttribute("aria-label")).toBe("Options: 16 to 24 · 25 to 34");
+    fireEvent.click(pill);
+    const [group, compare] = within(screen.getByRole("dialog")).getAllByRole("radiogroup");
+    expect(within(group).getByRole("radio", { name: "16 to 24" })).toHaveAttribute("aria-checked", "true");
+    expect(within(compare).getByRole("radio", { name: "25 to 34" })).toHaveAttribute("aria-checked", "true");
   });
 });

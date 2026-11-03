@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render as renderReact, screen, waitFor } from "@testing-library/react";
+import { render as renderReact, screen, waitFor } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import { geographyFetch, geographyFixture } from "../test/geographyFixture";
@@ -70,17 +70,17 @@ describe("ConstituencyMap on Budget day", () => {
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
     );
     expect(
-      await screen.findByText("Results by constituency are not yet published."),
+      await screen.findByText("We have not yet published results by constituency."),
     ).toBeInTheDocument();
     // A plain notice, not a failure
-    expect(screen.queryByText(/could not be (read|loaded)/)).toBeNull();
+    expect(screen.queryByText(/could not (be )?(read|load)/)).toBeNull();
     expect(fetchImpl.calls).not.toContain("/data/constituency.csv");
     // No figures: no coloured seat, no key, search off, no downloads
     expect(container.querySelector("path.constituency-path[data-state]")).toBeNull();
     expect(screen.queryByRole("group", { name: "Key" })).toBeNull();
     expect(screen.getByRole("searchbox")).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /Available when results are published/ }),
+      screen.getByRole("button", { name: /Available when we publish results/ }),
     ).toBeDisabled();
   });
 
@@ -91,9 +91,9 @@ describe("ConstituencyMap on Budget day", () => {
     try {
       render(<ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
       expect(
-        await screen.findByText("Results by constituency are not yet published."),
+        await screen.findByText("We have not yet published results by constituency."),
       ).toBeInTheDocument();
-      expect(screen.queryByText(/could not be (read|loaded)/)).toBeNull();
+      expect(screen.queryByText(/could not (be )?(read|load)/)).toBeNull();
       // The notice alone: no empty table, count or "no match" line behind it
       expect(screen.queryByRole("table")).toBeNull();
       expect(screen.queryByText(/0 of 0|No constituency or region matches/)).toBeNull();
@@ -102,7 +102,7 @@ describe("ConstituencyMap on Budget day", () => {
     }
   });
 
-  it("shows one measure when no package is published, and offers no measure that moves no seat", async () => {
+  it("with no package, stacks the selected policies' own rows, with no Policy pill", async () => {
     vi.stubGlobal(
       "fetch",
       // No region file on Budget day either: the region view's run is separate
@@ -111,14 +111,19 @@ describe("ConstituencyMap on Budget day", () => {
     const { container } = render(
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
     );
+    // The map is never left on "not published" while a selected policy has rows
     await waitFor(() =>
       expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8),
     );
-    // The title names the one measure shown, never "all measures"
-    expect(container.querySelector(".map-title-focus")).toHaveTextContent("2 child limit repeal");
-    // The flat measure is not offered, so there is nothing to pick between
-    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-    expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
+    expect(screen.queryByText(/combination of policies are not published/)).toBeNull();
+    expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
+    expect(screen.queryByRole("button", { name: /^Policy:/ })).toBeNull();
+    // Fuel duty has no constituency rows, and rail fares is withheld in
+    // some seats: counted as zero, so every figure is approximate
+    const states = [...container.querySelectorAll("path.constituency-path[data-state]")].map(
+      (path) => path.getAttribute("data-state"),
+    );
+    expect(states).not.toContain("reported");
   });
 
   it("draws a measure that moves no seat as no change and withheld, never as a figure", async () => {
@@ -139,16 +144,17 @@ describe("ConstituencyMap on Budget day", () => {
     const states = [...container.querySelectorAll("path.constituency-path[data-state]")].map(
       (path) => path.getAttribute("data-state"),
     );
-    // A seat the table has no row for is drawn as no data
-    expect(new Set(states)).toEqual(new Set(["withheld", "reported", "no-data"]));
+    // Its published seats are all exactly zero while others are withheld,
+    // so the zeros say nothing about where it lands: they are drawn as
+    // withheld too, never as "no change" (Vahid, 28 Oct). A seat the table
+    // has no row for is drawn as no data
+    expect(new Set(states)).toEqual(new Set(["withheld", "no-data"]));
     const categories = [...container.querySelectorAll("path.constituency-path[data-category]")]
       .map((path) => path.getAttribute("data-category"))
       .filter(Boolean);
-    expect(categories.every((category) => category === "no_change")).toBe(true);    // One line under the map says why every seat is grey or hatched
+    expect(categories).toEqual([]);    // One line under the map says why every seat is grey or No data
     expect(
-      screen.getByText(
-        "No constituency shows a change large enough to publish for this policy in 2029-30.",
-      ),
+      screen.getByText(/^Rail fares freeze: no constituency shows a change large enough to publish for this policy in 2029-30\./),
     ).toBeInTheDocument();
   });
 

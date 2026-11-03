@@ -139,6 +139,11 @@ code {
   --tab-row-height: 48px;
   /* The view tabs under the intro; they stick under the band */
   --view-tabs-height: var(--tab-row-height);
+  /* The title band's, the view tab bar's and the sub-tab band's side
+     padding, which puts their content in the page column: one value, so
+     the sub-tab row's --view-tab-x, measured in the bar, starts it under
+     the chosen view tab (ViewTabs.jsx, SubTabs.css) */
+  --bar-pad-x: max(40px, calc((100vw - 1120px) / 2));
   /* The two tab rows' one spacing (view tabs, sub-tabs and About): the gap
      between items, the padding inside each (chosen or not) and the gap
      from icon to label */
@@ -152,6 +157,9 @@ code {
   --tab-underline-inset: 8px;
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
+  /* A chart row's band (the zebra and hover bands of the per-policy row
+     charts, chartTheme ROW_RADIUS) */
+  --row-radius: 6px;
   --sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height));
   /* The landing page (LandingPage.css): how much of the page background
      lies over the Public finances view behind it (more at the top, behind
@@ -192,6 +200,8 @@ code {
   --shadow-faint: rgba(17, 24, 39, 0.04);
   --shadow-soft: rgba(17, 24, 39, 0.08);
   --shadow-strong: rgba(17, 24, 39, 0.12);
+  /* Behind a phone's sheet (the policies menu) */
+  --scrim: rgba(17, 24, 39, 0.36);
   /* Every hover or tap box (Tip.css's tips, the chart tooltips, the map's
      seat card): one card style, white with a soft border and shadow */
   --tip-bg: var(--c-surface);
@@ -225,8 +235,9 @@ code {
   --c-reference: #6b7280; /* a reference series, such as "All ages" (dashed) */
   --c-highlight: #285e61; /* the highlighted group, such as the age band */
   --c-highlight-band: #eaf5f4; /* behind a highlighted group */
-  --c-tenth-band: #dde6f3; /* your income tenth behind a teal or grey distribution */
+  --c-tenth-band: #e0f2fe; /* your income tenth behind a teal or grey distribution (ui-kit blue-100) */
   --c-hover: #eef6f6; /* behind the hovered bar or row */
+  --c-row-band: #f9fafb; /* every second row of a chart with one row per policy: --pe-gray-50, fainter than --c-grid and --c-hover */
   --c-obr: #9ca3af; /* the OBR's figure (a ring) */
   --c-obr-text: #6b7280;
   --c-net: #000000; /* the net line and its dots */
@@ -238,41 +249,61 @@ code {
   --c-text: #374151;
   --c-surface: #ffffff;
   --c-muted-fill: #f3f4f6; /* a shaded area with no data */
-  /* How far PolicyEngine is from the OBR */
-  --c-diff-small: #10b981;
-  --c-diff-medium: #fbbf24;
-  --c-diff-large: #ef4444;
-  /* Categorical series: age bands (blues under 50, purples from 50, each
-     darker with age; 16 to 24 is --c-gain), the household breakdown's
-     market income and pension contributions */
-  --c-age-children: #8db8e3;
-  --c-age-young-adults: #5a8fcb;
-  --c-age-adults: #3165a8;
-  --c-age-older: #7c5cb8;
-  --c-age-pension: #2e1f5e;
-  --c-market-income: #4a7ba7;
-  --c-pension-contributions: #b8875a;
-  --c-gain-light: #81e6d9; /* a small gain; a light teal series */
+  --c-hatch-line: #b8bdc5; /* the map's "Not published" hatch: a faded grey, 1.9:1 on white */
+  /* Categorical series, from the @policyengine/ui-kit palette (teals,
+     blues, slate): age bands, the household breakdown's income layers.
+     Age bands, each its own line: blues and teals, 16 to 24 is --c-gain */
+  --c-age-children: #4fd1c5; /* ui-kit teal-300 */
+  --c-age-young-adults: #0ea5e9; /* ui-kit blue-500 */
+  --c-age-adults: #026aa2; /* ui-kit blue-700 */
+  --c-age-older: #285e61; /* ui-kit teal-700 */
+  --c-age-pension: #1d4044; /* ui-kit teal-900 */
+  --c-market-income: #94a3b8; /* gray-400 */
+  --c-pension-contributions: #cbd5e1; /* gray-300 */
+  --c-gain-light: #81e6d9; /* a small gain on the map; a light teal series (ui-kit teal-200) */
   --c-map-gain: #14b8a6; /* the constituency map scale's gain end, as on the 2025 dashboard */
-  --c-loss-light: #fbbf24; /* a small loss */
+  --c-no-data: #f1f5f9; /* a constituency with no data on the map: a faint cool grey (slate-100), lighter than the scale's 0 grey (--c-grid) and every colour on the scale */
+  --c-loss-light: #fbbf24; /* a small loss on the map */
   --c-ink: #1f2937; /* the map's approximate-figure dots */
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
   --c-vintage: #9fb8b3; /* an earlier OBR forecast: a thin grey-green dashed line */
-  /* The measures' colour ramps, darkest to lightest: each group's measures,
-     largest first, take evenly spaced OKLab steps along its ramp
-     (chartTheme.js POLICY_RAMPS, measureRamp) */
+  /* The measures' colour ramps, darkest to lightest, as on the 2025 Autumn
+     Budget dashboard (PolicyEngine/uk-autumn-budget-dashboard,
+     src/utils/policyConfig.js): measures that raise revenue (households
+     lose) in ambers 900 to 400, those that cost revenue (households gain)
+     in teals 600 to 300. Each group's measures, largest first, take the
+     steps in order; more measures than steps take evenly spaced OKLab
+     steps along the ramp (chartTheme.js POLICY_RAMPS, measureRamp) */
   --ramp-raise-1: #78350f;
-  --ramp-raise-2: #b45309;
-  --ramp-raise-3: #f59e0b;
-  --ramp-cost-1: #0d4359;
-  --ramp-cost-2: #016768;
-  --ramp-cost-3: #088075;
-  --ramp-cost-4: #00997f;
-  --ramp-cost-5: #28b084;
-  --ramp-cost-6: #4ac685;
-  --ramp-cost-7: #75d987;
+  --ramp-raise-2: #92400e;
+  --ramp-raise-3: #b45309;
+  --ramp-raise-4: #d97706;
+  --ramp-raise-5: #f59e0b;
+  --ramp-raise-6: #fbbf24;
+  --ramp-cost-1: #0d9488;
+  --ramp-cost-2: #14b8a6;
+  --ramp-cost-3: #2dd4bf;
+  --ramp-cost-4: #5eead4;
+  /* Size by intensity, darkest to lightest (chartTheme.js MAGNITUDE_RAMPS,
+     magnitudeColours): a per-policy row takes its direction's ramp, the
+     largest effect the darkest step and the smallest the lightest. The
+     2025 dashboard's teals and ambers, from their dark ends: gain teal
+     700, 600, 500; loss amber 900, 700, 600 */
+  --ramp-gain-1: #0f766e;
+  --ramp-gain-2: #0d9488;
+  --ramp-gain-3: #14b8a6;
+  --ramp-loss-1: #78350f;
+  --ramp-loss-2: #b45309;
+  --ramp-loss-3: #d97706;
+  /* Categorical lines with no meaning of their own (a forecast's series),
+     in this order: ui-kit chart colours (chartTheme.js SERIES_COLOURS) */
+  --series-1: #319795;
+  --series-2: #026aa2;
+  --series-3: #0ea5e9;
+  --series-4: #285e61;
+  --series-5: #64748b;
   /* Income groups, lowest to highest income: amber through a grey
      midpoint to teal (chartTheme.js INCOME_RAMP) */
   --income-ramp-1: #8a3a0c;
@@ -282,21 +313,23 @@ code {
   --income-ramp-5: #5fb3aa;
   --income-ramp-6: #2a8c84;
   --income-ramp-7: #0f5f59;
-  /* The marginal tax rate's parts, stacked: taxes and benefit withdrawals
-     in teals and greens, the student loan in orange, the rest grey */
-  --c-mtr-income-tax: #5fb3a8;
-  --c-mtr-child-benefit: #4fd1c5;
-  --c-mtr-allowance-taper: #285e61;
-  --c-mtr-national-insurance: #a7e3da;
-  --c-mtr-student-loan: #e8b66a;
-  --c-mtr-universal-credit: #2f855a;
-  --c-mtr-other-benefits: #9ae6b4;
-  --c-mtr-other: #d1d5db;
-  --c-net-state-pension: #22543d;
-  --c-net-warm-home-discount: #68d391;
-  --c-net-council-tax: #8e7cc3;
-  --c-net-fuel-duty: #553c9a;
-  --c-net-vat: #b794f4;
+  /* A household's income, stacked, in the 2025 dashboard's families:
+     benefits (what a household gains) in teals, taxes and deductions (what
+     it pays) in ambers, earnings and the rest in slate greys. The marginal
+     tax rate card takes the same colour for each programme */
+  --c-mtr-income-tax: #b45309; /* amber-700 */
+  --c-mtr-child-benefit: #14b8a6; /* teal-500 */
+  --c-mtr-allowance-taper: #78350f; /* amber-900 */
+  --c-mtr-national-insurance: #d97706; /* amber-600 */
+  --c-mtr-student-loan: #fbbf24; /* amber-400 */
+  --c-mtr-universal-credit: #0d9488; /* teal-600 */
+  --c-mtr-other-benefits: #5eead4; /* teal-300 */
+  --c-mtr-other: #e2e8f0; /* gray-200 */
+  --c-net-state-pension: #0f766e; /* teal-700 */
+  --c-net-warm-home-discount: #2dd4bf; /* teal-400 */
+  --c-net-council-tax: #92400e; /* amber-800 */
+  --c-net-fuel-duty: #f59e0b; /* amber-500 */
+  --c-net-vat: #fde68a; /* amber-200 */
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;
@@ -316,16 +349,25 @@ body {
 }
 
 /* The two bars: the ui-kit site nav (PolicyEngineShell renders it with an
-   inline position:sticky; top:0) and the title band. The site nav is out
-   of the page's flow and hidden above the window by default, so the band
-   sits at the very top of the page with the tab rows under it, from the
-   first paint. App.jsx shows it (data-site-nav-shown on <html>) when the reader
-   scrolls up 24px (their own input: never the page moving by itself),
-   points at the top 8px of the window or tabs into it, keeps it 3s and
-   while it is in use, and hides it on any scroll down by the reader or
-   once the pointer or focus has left; it measures the nav into
-   --site-nav-height. Shown, it overlays the top of the band (above it,
-   with a shadow); the band and tab rows never move, so --nav-offset is 0.
+   inline position:sticky; top:0) and the title band. The site nav sits in
+   the page's flow, at its top, from the first paint: on load it is in view
+   above the band, as on every policyengine.org page (app-v2's app-zone
+   shell audit looks for its Research, Model, API and Donate links in the
+   window's top 140px). A scroll down takes it away with the page, and the
+   band then sticks at the window's top. Once scrolled away it waits just
+   above the window: sticky at minus its own height (--site-nav-height,
+   which App.jsx measures; until then the ui-kit's --spacing-header, the
+   height it gives the nav). App.jsx brings it back
+   (data-site-nav-shown on <html>) when the pointer rests at the window's
+   top edge (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS, utils/pageScroll), or
+   the reader tabs into it (never on a scroll up; on a touch-only device,
+   only at the page's very top), keeps it 1.5s and while it is in use, and
+   lets it go on any scroll down by the reader or once the pointer or focus
+   has left. Shown, it sticks at the window's top (top: 0, sliding down from
+   above) and sits above the band: --nav-offset becomes its height, so the
+   band and tab rows move down under it and the Year and Policies pills
+   stay in view. Within its own height of the page's top it is never laid
+   over the page: there it is back in its place in the flow.
    --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
@@ -336,26 +378,55 @@ body {
   --nav-offset: 0px;
 }
 
-/* The nav overlays the band when shown: it never moves the band or the
-   tab rows, so nothing under them is pushed or covered by the stack
-   (--nav-offset stays 0; App.jsx keeps the nav hidden at the page's top) */
+/* Shown, the nav pushes the band and tab rows down by its own height, so it
+   never covers the Year and Policies pills. On html, not :root[...]: the
+   CSS build folds a :root[attr] custom property rule into :root. */
+html[data-site-nav-shown] {
+  --nav-offset: var(--site-nav-height, 0px);
+}
+
 :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  top: 0 !important;
   box-shadow: 0 2px 8px var(--shadow-faint) !important;
 }
 
 .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0;
-  right: 0;
+  position: sticky !important;
+  top: calc(0px - var(--site-nav-height, var(--spacing-header, 58px))) !important;
   /* Above the title band (1100), so its About menu opens over it */
   z-index: 1110 !important;
-  transition: transform var(--motion-slide) var(--ease-out);
+  transition: top var(--motion-slide) var(--ease-out);
 }
 
 :root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  transform: translateY(-100%);
   box-shadow: none !important;
+}
+
+/* A touch-only device (a phone or tablet): the site nav is part of the
+   page, at its top, and scrolls away with it; it is never laid over the
+   page, not even when focus is in it. Laid over the page and pushing the
+   bars down by its height, it hid the
+   first 58px of every view under the tab rows on load: the bars moved
+   down, the content did not (team review, Budget day). In the flow, the
+   band, the tab rows and the content all start below it, and once it has
+   scrolled away the band sticks at the window's top. --nav-offset stays 0:
+   nothing is over the band. Same selectors as above, so these win. */
+@media (hover: none) and (pointer: coarse) {
+  html[data-site-nav-shown] {
+    --nav-offset: 0px;
+  }
+
+  .min-h-screen.flex.flex-col > div:first-child[style*="sticky"],
+  :root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"],
+  :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+    /* Relative, not static: it keeps its z-index, so its menus still
+       open over the band */
+    position: relative !important;
+    top: 0 !important;
+    transform: none;
+    box-shadow: none !important;
+    transition: none;
+  }
 }
 
 .app {
@@ -404,6 +475,7 @@ body {
 .title-row {
   position: sticky;
   top: var(--nav-offset);
+  transition: top var(--motion-slide) var(--ease-out);
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
   /* One row on a wide screen: the title, then the year and policy pills
@@ -419,7 +491,7 @@ body {
   /* Full-bleed with real edges: the band spans the window, and its padding
      lines its content up with the page column. */
   margin-inline: calc(50% - 50vw);
-  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  padding-inline: var(--bar-pad-x);
   /* The site header's gradient and rule, from the same tokens */
   background: var(--band-gradient);
   border-bottom: var(--band-rule);
@@ -548,10 +620,11 @@ body {
 .view-tabs-bar {
   position: sticky;
   top: calc(var(--nav-offset) + var(--title-row-height));
+  transition: top var(--motion-slide) var(--ease-out);
   /* Under the band and its pill lists, above the charts */
   z-index: 1090;
   margin-inline: calc(50% - 50vw);
-  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  padding-inline: var(--bar-pad-x);
   /* A strip of its own: the page's main navigation */
   background: var(--pe-surface);
   border-top: 1px solid var(--card-border);
@@ -573,6 +646,14 @@ body {
 
 .view-tabs::-webkit-scrollbar {
   display: none;
+}
+
+/* In the bar, the row is pulled a tab's padding into the margin, so the
+   first tab's icon starts on the left edge of PolicyEngine's mark in the
+   band above (.title-mark) and of the page content; the sub-tab row
+   follows it (--view-tab-x, ViewTabs.jsx) */
+.view-tabs-bar > .view-tabs {
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
 }
 
 /* Tabs out of sight at either end of a scrolling row fade out there */
@@ -772,11 +853,12 @@ body {
 }
 
 /* The band's two controls (year, measures; YearSlider.jsx and
-   PolicySelector.jsx): the card Options pill's shape (a full pill, a
-   1px border, an icon, the value, a chevron) on the teal band, as a
-   translucent dark pill with a white border and white text. The label and the value share
-   one line, the label regular and muted, the value bold. Their lists stay
-   white. */
+   PolicySelector.jsx): the page's selectable-row box (--pe-radius-md,
+   40px high, like the Show all households button and the household
+   rows), a 1px border, an icon, the value, a chevron, on the teal band as
+   a translucent dark box with a white border and white text. The label
+   and the value share one line, the label regular and muted, the value
+   bold. Their lists stay white, in the same box shape. */
 .title-row .band-control {
   height: 40px;
   min-width: 0;
@@ -785,7 +867,7 @@ body {
   color: var(--band-ink);
   background: var(--band-control-fill);
   border: 1px solid var(--band-ink-border);
-  border-radius: 999px;
+  border-radius: var(--pe-radius-md);
 }
 
 .title-row .band-control:disabled {
@@ -1234,9 +1316,11 @@ body {
   min-width: 0;
 }
 
-/* Cards stacked one above the other, each full width (All households'
-   map, then its household scatter). Not a charts-grid, so the paired-card
-   subgrid rules never apply: the scatter keeps its own 400px plot. */
+/* Cards stacked one above the other, each full width: All households' By
+   area section (the constituency map, alone) and the Poverty sub-tab's
+   two cards (Which policies move poverty, then Change in the poverty
+   rate). Not a charts-grid, so the paired-card subgrid rules never
+   apply. */
 .charts-stack {
   display: flex;
   flex-direction: column;
@@ -1337,13 +1421,22 @@ body {
     grid-row: 7;
   }
 
-  /* A Recharts plot with no legend of its own beside a card that has one
-     (By age's Average change by age, whose key is above the section; All
-     households' income decile card beside the scatter): the plot takes the
-     empty legend row too (and the logo row when its logo is in the SVG)
-     and, when its chart is drawn at height="100%", grows to fill them, so
-     no empty band opens under its axis. Its size is contained, so it
-     follows the shared rows and never props them open. */
+  /* A Recharts plot with no legend of its own beside a card that has one:
+     the plot takes the empty legend row too (and the logo row when its
+     SVG draws the logo), and its chart's container stretches to fill
+     them. The container has size containment, so it follows the shared
+     rows and never props them open. A chart at a percentage height grows
+     with its container; one at a numeric height keeps that height. In By
+     age either card can meet these rules: Change by year in its Policies
+     view, whose key then sits in Average change by age's legend row, and
+     Average change by age in Age groups showing a published package's
+     net while Change by year shows Lines, as neither card then gives the
+     shared key a member and Change by year's line key fills its own row.
+     Both draw at their height prop (400px), so the legend row's height
+     stays blank under the matched card's axis. All households' income
+     decile pair never meets them, as neither card has a legend row: the
+     decile chart's Recharts legend sits under its axis, within its
+     plotHeight, and the scatter's key sits in its sentence. */
   .charts-grid:has(> div > .chart-legend:not(:empty))
     > div:not(:only-child)
     > .chart-plot:has(.recharts-responsive-container):not(:has(~ .chart-legend:not(:empty))) {
@@ -1647,9 +1740,8 @@ body {
     padding: 0 24px 48px;
   }
 
-  .title-row,
-  .view-tabs-bar {
-    padding-inline: 24px;
+  :root {
+    --bar-pad-x: 24px;
   }
 }
 
@@ -1672,7 +1764,7 @@ body {
     justify-self: start;
   }
 
-  /* A view without the year pill (Household impact, Living standards,
+  /* A view without the year pill (Household calculator, Living standards,
      Methodology) has one row: no empty second row. App.jsx sets
      data-band and keeps the reader's place when the height changes. */
   .app[data-band="compact"] {
@@ -1692,15 +1784,11 @@ body {
   :root {
     --card-padding: 16px;
     --title-row-height: 100px;
+    --bar-pad-x: 16px;
   }
 
   .main-content {
     padding: 0 16px 48px;
-  }
-
-  .title-row,
-  .view-tabs-bar {
-    padding-inline: 16px;
   }
 
   .title-row h1 {
@@ -1797,6 +1885,58 @@ body {
   }
 }
 
+/* A phone on its side (a short, wide window: LANDSCAPE_PHONE_QUERY in
+   utils/pageScroll.js, the same query): the title band and both tab rows
+   took about half the window (104 + 42 + 41px of 390). The band is one
+   compact row, as on a wide screen, with the pills' icon, value and
+   chevron only; and it tucks away above the window while the reader
+   scrolls down and slides back on any scroll up (App.jsx sets
+   data-band-hidden on .app). Tucked, --nav-offset is minus the band's
+   height, so the band's sticky top puts it just above the window and the
+   tab rows, --sticky-offset and every scroll that clears the bars move up
+   with it: one variable, so nothing gets out of step. Sticky offsets move
+   no content, so the page never jumps; the bars slide on their `top`
+   transition (--motion-slide, 0 under reduced motion). After the 899,
+   768 and 480px blocks, so it wins. Desktop and portrait phones keep the
+   band always in view (27 October). */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root,
+  .app[data-band="compact"] {
+    --title-row-height: 52px;
+  }
+
+  .title-row,
+  .app[data-band="compact"] .title-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "title year policy";
+    column-gap: 8px;
+  }
+
+  .title-row .band-control {
+    width: auto;
+    min-width: 0;
+    height: 36px;
+    gap: 6px;
+    padding: 0 12px 0 10px;
+  }
+
+  .band-control-label,
+  .band-control-unit {
+    display: none;
+  }
+
+  .title-row h1 {
+    font-size: var(--fs-card-title);
+  }
+
+  .app[data-band-hidden] {
+    --nav-offset: calc(0px - var(--title-row-height));
+  }
+
+  .app[data-band-hidden] .title-row {
+    box-shadow: none;
+  }
+}
 
 /* The page fills the window without overshooting it: the shell's main
    grows to the window, and the app grows inside it, just above the
@@ -1846,7 +1986,7 @@ body {
 .site-footer-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px 40px;
+  padding: 16px 40px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1884,23 +2024,39 @@ body {
 
 @media (max-width: 1024px) {
   .site-footer-inner {
-    padding: 20px 24px;
+    padding: 16px 24px;
   }
 }
 
+/* Tablet and phone: the logo and the copyright share the first line, the
+   links follow in one tight wrapping row. Each link keeps a 28px-tall tap
+   row (WCAG 2.5.8 asks for 24px) from its own height, not from extra gaps,
+   so the band stays short. */
 @media (max-width: 768px) {
   .site-footer-inner {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 20px 16px;
+    padding: 12px 16px 8px;
+    gap: 4px 12px;
   }
 
-  .site-footer-links {
-    gap: 6px 16px;
+  .site-footer-logo img {
+    height: 18px;
   }
 
   .site-footer-copy {
-    margin: 0;
+    order: 2;
+  }
+
+  .site-footer-links {
+    order: 3;
+    flex-basis: 100%;
+    gap: 0 14px;
+  }
+
+  .site-footer-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    font-size: var(--fs-caption);
   }
 }
 
@@ -1944,22 +2100,8 @@ body {
   gap: 6px;
 }
 
-.policy-card-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .ptl-budget-icon {
   flex: none;
-}
-
-/* A card's tags: Temporary */
-.policy-card-tags {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
 }
 
 /* One size and structure for every card, two to a row: fixed slots
@@ -1969,6 +2111,9 @@ body {
 .policy-cards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Every card in a row as tall as the row, a card with less in it too:
+     the footer, pinned to the bottom, takes up the slack */
+  align-items: stretch;
   gap: 20px;
   margin: 0;
   padding: 0;
@@ -1979,10 +2124,14 @@ body {
    and the footer. */
 .policy-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 26px 24px 20px;
+  /* The card's five sections (head, summary, At a glance, What changes,
+     footer) on the list's rows, so each lines up with its neighbour's */
+  display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
+  row-gap: 16px;
+  align-content: start;
+  padding: 24px 24px 20px;
   overflow: hidden;
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
@@ -2030,7 +2179,7 @@ body {
   min-width: 0;
 }
 
-/* The type and any "Temporary" badge share the first line */
+/* The type on the first line */
 .policy-card-topline {
   display: flex;
   align-items: center;
@@ -2040,13 +2189,22 @@ body {
   margin-bottom: 2px;
 }
 
+/* The category as a chip in the measure's colour */
 .policy-card-type {
   margin: 0;
+  padding: 3px 10px 3px 4px;
   font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--pe-gray-500);
+  color: var(--pe-gray-700);
+  background: color-mix(in srgb, var(--policy-accent, var(--c-no-change)) 12%, var(--c-surface));
+  border: 1px solid color-mix(in srgb, var(--policy-accent, var(--c-no-change)) 35%, var(--c-surface));
+  border-radius: 999px;
+}
+
+.policy-card-topline {
+  margin-bottom: 8px;
 }
 
 .policy-card-name {
@@ -2055,21 +2213,6 @@ body {
   font-weight: 600;
   line-height: 1.3;
   color: var(--pe-gray-900);
-}
-
-.policy-card-badge {
-  flex: 0 0 auto;
-  padding: 3px 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--c-notice-text);
-  background: var(--c-notice-bg);
-  border: 1px solid var(--c-loss-border);
-  border-radius: 999px;
-  /* Overhangs its line by a pixel each way, so a card with the tag keeps
-     the same height of head as one without */
-  margin: -2px 0;
 }
 
 .policy-card-summary {
@@ -2093,26 +2236,43 @@ body {
   line-clamp: none;
 }
 
-/* ... and a card only as tall as what it has, not its row */
-.policy-card.is-bare {
-  align-self: start;
-}
-
-/* When: start and end in words, then the timeline */
+/* At a glance: Starts, Ends (or Continues) and who it affects in one
+   compact row, then the timeline */
 .policy-card-when {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 12px 14px;
   background: var(--pe-gray-50);
   border-radius: 10px;
 }
 
-.policy-card-dates {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 28px;
+/* Each section on its own row of the list, so a card that leaves one out
+   keeps the rest in line with its neighbour's */
+.policy-card > .policy-card-head { grid-row: 1; }
+.policy-card > .policy-card-summary { grid-row: 2; }
+.policy-card > .policy-card-when { grid-row: 3; }
+.policy-card > .policy-card-spec { grid-row: 4; }
+.policy-card > .policy-card-foot { grid-row: 5; }
+
+.policy-card-glance-title {
   margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+.policy-card-dates {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(0, 1.4fr);
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.policy-card-dates > div {
+  min-width: 0;
 }
 
 .policy-card-dates dt {
@@ -2126,17 +2286,17 @@ body {
   color: var(--pe-gray-700);
 }
 
-.policy-card-start {
-  font-size: var(--fs-xl);
+.policy-card-dates dd {
+  margin-top: 2px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  line-height: 1.25;
-  color: var(--pe-gray-900) !important;
+  line-height: 1.35;
+  color: var(--pe-gray-900);
 }
 
-.policy-card-end {
-  padding-top: 6px;
-  font-size: var(--fs-body);
+.policy-card-affects dd {
   font-weight: 500;
+  color: var(--pe-gray-700);
 }
 
 /* The in-force timeline (PolicyTimeline): an axis of months and years,
@@ -2183,14 +2343,6 @@ body {
 
 .ptl-budget-label {
   font-weight: 600;
-  color: var(--pe-gray-600);
-}
-
-.ptl-continues {
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-weight: 500;
   color: var(--pe-gray-600);
 }
 
@@ -2348,7 +2500,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: auto;
+  align-self: end;
   padding-top: 14px;
   font-size: var(--fs-small);
   border-top: 1px solid var(--c-grid);
@@ -2635,86 +2787,9 @@ body {
   transform: translate(-50%, -2px);
 }
 
-/* A change, before and after: a label row with the parameter's icon, then
-   two tiles, current law muted and the measure in its colour */
-.pchg-ba {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.pchg-ba-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-gray-600);
-}
-
-.pchg-ba-label svg {
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
-/* Both tiles one size: the row stretches them to the taller, and the
-   change sits in the last slot of the second, so the labels and values
-   line up across the two */
-.pchg-ba-tiles {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: stretch;
-  gap: 10px;
-}
-
-.pchg-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-  padding: 10px 14px 12px;
-  border-radius: 10px;
-  font-variant-numeric: tabular-nums;
-}
-
-.pchg-tile.is-before {
-  background: var(--pe-gray-50);
-  border: 1px solid var(--c-grid);
-}
-
-.pchg-tile.is-after {
-  background: color-mix(in srgb, var(--policy-accent, var(--c-after)) 10%, var(--c-surface));
-  border: 1px solid color-mix(in srgb, var(--policy-accent, var(--c-after)) 45%, var(--c-surface));
-}
-
-.pchg-tile-name {
-  font-size: var(--fs-micro);
-  font-weight: 500;
-  /* Grey 600: grey 500 on the tiles' tints is 4.2 to 4.5:1, under the
-     4.5 WCAG 1.4.3 needs; 600 is 6.5:1 or more */
-  color: var(--pe-gray-600);
-}
-
-.pchg-tile-value {
-  font-size: var(--fs-xl);
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--pe-gray-900);
-}
-
-.pchg-tile.is-before .pchg-tile-value {
-  font-weight: 500;
-  color: var(--pe-gray-500);
-  text-decoration: line-through;
-  text-decoration-color: var(--c-before);
-  text-decoration-thickness: 2px;
-}
-
-.pchg-ba-arrow {
-  align-self: center;
-  color: var(--pe-gray-400);
+/* The plot's caption and key, above the plot */
+.pchg-head.is-plot {
+  margin-top: 6px;
 }
 
 /* Several values side by side, only where the measure differs */
@@ -2842,17 +2917,6 @@ body {
 }
 
 @media (max-width: 768px) {
-  .pchg-tile {
-    padding: 8px 10px 10px;
-  }
-
-  .pchg-tile-value {
-    font-size: var(--fs-section);
-  }
-
-}
-
-@media (max-width: 768px) {
   .policy-cards {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
@@ -2862,8 +2926,26 @@ body {
      empty source slot */
   .policy-card {
     display: flex;
+    flex-direction: column;
+    gap: 16px;
     grid-row: auto;
     padding: 22px 16px 16px;
+  }
+
+  .policy-card-dates {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  /* One column: the summary in full, never cut off */
+  .policy-card-summary {
+    display: block;
+    min-height: 0;
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+  }
+
+  .policy-card-affects {
+    grid-column: 1 / -1;
   }
 
   .policy-card > .policy-card-foot {
@@ -2880,9 +2962,6 @@ body {
     display: none;
   }
 
-  .policy-card-start {
-    font-size: var(--fs-section);
-  }
 
   /* "26-27" rather than "2026-27", so the years fit on one line */
   .policy-timeline-label-full {
@@ -3190,4 +3269,40 @@ body {
   .info-tip::before {
     inset: -10px;
   }
+}
+
+/* The per-policy row charts drawn in HTML (Effect of each policy, Better
+   and worse off, the poverty waterfall, the by-year statistic's bars):
+   every second row on a faint band, and the hovered or focused row on a
+   stronger one with its name and value emphasised, so a row's marks and
+   value read with its name across the empty middle. The SVG row charts
+   (the official costings dumbbell, Change by policy) draw the same bands
+   from CHART_COLOURS.rowBand and .hover. */
+.row-band {
+  border-radius: var(--row-radius);
+}
+
+.row-band.is-banded {
+  background: var(--c-row-band);
+}
+
+.row-band:hover,
+.row-band:focus-within,
+.row-band.is-active {
+  background: var(--c-hover);
+}
+
+/* A heavier name without a heavier font, so it never rewraps */
+.row-band:hover .mrl-name,
+.row-band:focus-within .mrl-name,
+.row-band.is-active .mrl-name {
+  color: var(--pe-gray-900);
+  -webkit-text-stroke: 0.35px currentColor;
+}
+
+.row-band:hover .row-band-value,
+.row-band:focus-within .row-band-value,
+.row-band.is-active .row-band-value {
+  color: var(--pe-gray-900);
+  font-weight: 700;
 }

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Bar, CartesianGrid, Cell, ComposedChart, Customized, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Bar, CartesianGrid, Cell, ComposedChart, Customized, Line, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Tooltip } from "../ViewportTooltip";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
@@ -27,16 +27,16 @@ import {
   axisWidth,
   barShape,
   fiscalYearTick,
+  noFigures,
 } from "../../utils/chartTheme";
-import { ALL_BAND, isPublished, singleAgeKey } from "../../utils/ageImpact";
-import { DISPLAY_YEARS } from "../../utils/displayYears";
+import { ALL_BAND, SINGLE_AGE_TOP, isPublished, singleAgeKey, singleAgeSelection } from "../../utils/ageImpact";
+import { selectionPackageKey } from "../../utils/geography/selection";
 import { legendMembership } from "../../utils/legendMembership";
-import { PENSIONERS, ageWindow, groupAges, groupLabel } from "../../utils/ageGroups";
+import { PENSIONERS, ageWindow } from "../../utils/ageGroups";
 
-const AGE_UNIT = "Average change per person (£ a year)";
+const AGE_UNIT = "Average change in household income, per person (£ a year)";
 const CSV_UNITS =
-  "£ per person per year; each person counts their household's change in net income (not equivalised)";
-const GROUP_FILL = CHART_COLOURS.highlightBand;
+  "£ per person per year; each person counts their household's change in net income (without equivalisation)";
 const SHOW_OPTIONS = [
   { value: "net", label: "Net change", summary: "Net change" },
   { value: "measures", label: "Each policy", summary: "By policy" },
@@ -50,15 +50,43 @@ export const changeText = (value) => {
   return rounded > 0 ? `+${text}` : `−${text}`;
 };
 
-/** Ticks every five years (ten on a phone) across the window, and the group's ends. */
-function windowTicks([first, last], ends, narrow) {
+/**
+ * Ticks every five years (ten on a phone) across the window, ending at 90+,
+ * with the group's ends; a five-year tick too close to an end is dropped so
+ * no two labels touch (a wide window packs its ages tighter).
+ */
+export function windowTicks([first, last], ends, narrow) {
   const every = narrow ? 10 : 5;
+  const near = narrow ? 4 : last - first > 60 ? 3 : 2;
   const ticks = new Set();
   for (let age = Math.ceil(first / every) * every; age < last; age += every) {
-    if (ends.every((end) => Math.abs(age - end) >= (narrow ? 4 : 2))) ticks.add(age);
+    if (ends.every((end) => Math.abs(age - end) >= near) && last - age >= near) ticks.add(age);
   }
   for (const end of [first, ...ends, last]) ticks.add(end);
   return [...ticks].sort((a, b) => a - b).map(singleAgeKey);
+}
+
+/** "16 to 24", "67 to 90 and over": the window's ages in words. */
+export const agesText = ([first, last]) => `${first} to ${last >= SINGLE_AGE_TOP ? "90 and over" : last}`;
+
+/**
+ * Whether the chosen group's single ages are all withheld in the year (too
+ * few survey records at every one, under the selection rule) while the year
+ * is published and the combination is: By age then shows the age bands
+ * instead (AgeChangeCard).
+ */
+export function everySingleAgeWithheld({ catalogue, rows, policies, selectedPolicies, selectedYear, group = PENSIONERS }) {
+  const year = Number(selectedYear);
+  if (!isPublished(rows, year)) return false;
+  const [first, last] = ageWindow(group, year);
+  const points = singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, year, first, last), {
+    rows,
+    policies,
+    selected: selectedPolicies,
+    year,
+    packageRun: selectionPackageKey(catalogue?.manifest, selectedPolicies),
+  });
+  return points.length > 0 && points.every((point) => point.netChange === null);
 }
 
 /** An age tick, the group's ends in bold teal. */
@@ -78,17 +106,23 @@ function AgeTick({ x, y, payload, ends }) {
   );
 }
 
-/** "Age 72: +£15 a year", the five-year average, and the top measures in the breakdown. */
+/**
+ * "Age 72: +£15 a year", the five-year average, and the top measures in the
+ * breakdown. At an age whose net is withheld, By policy gives the published
+ * policies' own parts alone, with no net.
+ */
 function AgeTooltip({ active, payload, nameOf, byMeasure }) {
   const point = payload?.[0]?.payload;
-  if (!active || !point || point.netChange === null) return null;
+  if (!active || !point) return null;
+  const withheldNet = point.netChange === null;
+  if (withheldNet && !(byMeasure && point.parts.length > 0)) return null;
   const top = byMeasure
     ? [...point.parts].filter((part) => Math.abs(part.value) >= 0.5).sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 3)
     : [];
   return (
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">
-        Age {point.label}: {changeText(point.netChange)} a year
+        {withheldNet ? `Age ${point.label}` : `Age ${point.label}: ${changeText(point.netChange)} a year`}
       </p>
       {point.smooth !== null && !byMeasure && (
         <p className="chart-tooltip-note">Five-year average around this age: {changeText(point.smooth)} a year</p>
@@ -101,13 +135,14 @@ function AgeTooltip({ active, payload, nameOf, byMeasure }) {
 }
 
 /**
- * The average change per person by single year of age, in a window around
- * the chosen age group (By age's Age group): one bar per age, gains and
- * losses in their colours, a five-year average through them so the shape
- * reads through single-year noise, the group's ages shaded and State
- * Pension age marked. Options: each measure's part stacked instead (the
- * section's measure key highlights them). One axis for every year, so Play
- * shows the change between years.
+ * The average change per person by single year of age, for the chosen age
+ * group's own ages (By age's Age group): one bar per age, gains and losses
+ * in their colours, a five-year average through them so the shape reads
+ * through single-year noise, and State Pension age marked. Options: each
+ * measure's part stacked instead (the section's measure key highlights
+ * them). At an age where a selected policy is withheld, the net is not
+ * drawn, and By policy still stacks the other policies' own published
+ * parts there. The £ axis fits the year shown.
  */
 export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age", keyInLegend = false }) {
   const chartRef = useRef(null);
@@ -118,48 +153,88 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const published = isPublished(rows, year);
   const spa = pensionerAge(year);
   const window = ageWindow(group, year);
-  const [groupFirst, groupLast] = groupAges(group, year);
-  const ageBars = (each) => smoothByAge(singleAgeBars(rows, policies, selectedPolicies, each, window[0], window[1]));
+  // The selection rule (singleAgeSelection): the published package of
+  // exactly the selection reads its own net; each policy's own published
+  // part is kept wherever no published net would sit beside a missing part
+  const packageRun = selectionPackageKey(catalogue?.manifest, selectedPolicies);
+  const selectAges = (each, first, last) =>
+    singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, each, first, last), {
+      rows,
+      policies,
+      selected: selectedPolicies,
+      year: each,
+      packageRun,
+    });
+  // The bars are the window's own ages, under the selection rule as one
+  // set. The five-age average at each end also reads the two ages beyond
+  // it (their net only, under the same rule), then only the window is kept
+  const ageBars = (each) => {
+    const inner = selectAges(each, window[0], window[1]);
+    const first = Math.max(0, window[0] - 2);
+    const last = Math.min(SINGLE_AGE_TOP, window[1] + 2);
+    const outer = selectAges(each, first, last);
+    const padded = [
+      ...outer.filter((point) => point.age < window[0]),
+      ...inner,
+      ...outer.filter((point) => point.age > window[1]),
+    ];
+    return smoothByAge(padded).filter((point) => point.age >= window[0] && point.age <= window[1]);
+  };
   const data = ageBars(year);
+  // By policy is offered when any policy part is published at an age
+  // shown. Where a policy is withheld, the others' parts are drawn with no
+  // net (the package withholds that age too, #347), so no part can be
+  // worked out by difference; where the package's net is published, the
+  // parts are drawn only when every member has one (singleAgeSelection)
+  const partsOffered = data.some((point) => point.parts.length > 0);
+  const stacked = byMeasure && partsOffered;
   const partKeys = [...new Set(data.flatMap((point) => point.parts.map((part) => part.key)))];
-  // Round £ ticks from the lowest to the highest in any year shown, through
-  // £0, so the scale holds still under Play
+  // Round £ ticks from the lowest to the highest in the year shown, through
+  // £0: an axis fitted to every year zoomed one year's bars out to nothing
   const { domain, ticks } = useMemo(() => {
     const values = [0];
-    for (const each of DISPLAY_YEARS) {
-      for (const point of ageBars(each)) {
-        if (point.netChange === null) continue;
+    for (const point of data) {
+      if (point.netChange !== null) {
         values.push(point.netChange);
-        if (byMeasure) {
-          values.push(point.parts.reduce((sum, part) => sum + Math.max(0, part.value), 0));
-          values.push(point.parts.reduce((sum, part) => sum + Math.min(0, part.value), 0));
-        }
+        // The five-age line at an end reads ages beyond the window, so it
+        // can pass the bars: the axis holds it too
+        if (!stacked && Number.isFinite(point.smooth)) values.push(point.smooth);
+      }
+      if (byMeasure) {
+        values.push(point.parts.reduce((sum, part) => sum + Math.max(0, part.value), 0));
+        values.push(point.parts.reduce((sum, part) => sum + Math.min(0, part.value), 0));
       }
     }
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, policies, selectedPolicies, group, byMeasure]);
+  }, [rows, policies, selectedPolicies, group, byMeasure, stacked, year, packageRun]);
+  // With no policy parts (the package's own net, or a combination not
+  // published by age) the parts are empty, not zero: no policy is then
+  // listed as having no effect, as Age groups does (MeanChangeCard)
   const members = useMemo(
     () =>
-      legendMembership(catalogue, selectedPolicies, (id) =>
-        data.some((point) => point.parts.some((part) => part.id === id && Math.abs(part.value) > 0)),
-      ),
+      partsOffered
+        ? legendMembership(catalogue, selectedPolicies, (id) =>
+            data.some((point) => point.parts.some((part) => part.id === id && Math.abs(part.value) > 0)),
+          )
+        : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, policies, selectedPolicies, year, group],
+    [rows, policies, selectedPolicies, year, group, packageRun, partsOffered],
   );
-  const key = useMeasureKey(byMeasure ? members : [], byMeasure ? "Net change" : undefined);
-  const missing = data.filter((point) => point.netChange === null);
+  const key = useMeasureKey(stacked ? members : [], stacked ? "Net change" : undefined);
+  // Nothing drawn at any age: no net, and no policy part in By policy
+  const nothingDrawn = data.every((point) => point.netChange === null && !(stacked && point.parts.length > 0));
   const anyLoss = data.some((point) => (point.netChange ?? 0) < 0);
   const anyGain = data.some((point) => (point.netChange ?? 0) > 0);
   const nameOf = (id) => catalogue.byId.get(id)?.label ?? id;
-  const showSpa = spa >= window[0] && spa <= window[1] && (group === PENSIONERS || group === "65+" || group === ALL_BAND || window[1] >= spa);
-  const ends = group === ALL_BAND ? [] : [singleAgeKey(groupFirst), singleAgeKey(groupLast)];
-  const tickEnds = [...ends, ...(showSpa ? [singleAgeKey(spa)] : [])];
+  const showSpa = spa > window[0] && spa <= window[1] && (group === PENSIONERS || group === "65+" || group === ALL_BAND || window[1] >= spa);
+  // The window is the group's own ages, so no end is picked out on the axis
+  const tickEnds = [];
   const title = `${titleBase}, ${yearLabel}`;
   const description =
     group === ALL_BAND
-      ? "Average change per person, £ a year, at each age."
-      : `Average change per person, £ a year, at each age; ${group === PENSIONERS ? "pensioners' ages" : groupLabel(group)} shaded.`;
+      ? "Average change in household income per person, £ a year, at each age."
+      : `Average change in household income per person, £ a year, at each age from ${agesText(window)}${group === PENSIONERS ? " (pensioners)" : ""}.`;
   const measureIds = [...new Set(data.flatMap((point) => point.parts.map((part) => part.id)))];
   const download = {
     chartRef,
@@ -169,7 +244,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
       description,
       logo: CHART_LOGO,
       reservedLegendHeight: 0,
-      legendItems: byMeasure
+      legendItems: stacked
         ? []
         : [
             ...(anyGain ? [{ color: CHART_COLOURS.gain, label: "Gain", type: "rect" }] : []),
@@ -180,19 +255,23 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     csv: () =>
       buildChartCsv({
         title: `Average change in household net income per person by single year of age, ${yearLabel}`,
-        units: `${CSV_UNITS}; the sum of each selected policy's own effect; the five-year average is centred on each age`,
+        // Not "the sum of each policy's own effect": with a published run of
+        // the whole selection (the default), Net change is that run's own row
+        // (singleAgeSelection)
+        units: `${CSV_UNITS}; the five-year average centres on each age`,
         columns: [
           { key: "label", label: "Age" },
           ...measureIds.map((id) => ({ key: id, label: nameOf(id), decimals: 2 })),
           { key: "netChange", label: "Net change", decimals: 2 },
           { key: "smooth", label: "Five-year average", decimals: 2 },
         ],
+        // Each policy's published part at every age; the net (and its
+        // five-year average) blank where it is withheld
         rows: published
           ? data
-              .filter((point) => point.netChange !== null)
+              .filter((point) => point.netChange !== null || point.parts.length > 0)
               .map((point) => ({ ...point, ...Object.fromEntries(point.parts.map((part) => [part.id, part.value])) }))
           : [],
-        notes: missing.length ? [`Not shown, too few survey records: ages ${missing.map((p) => p.label).join(", ")}`] : [],
       }),
     published,
   };
@@ -212,21 +291,35 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <ControlBar name={title} options={[...extraOptions, { label: "Show", value: show, onChange: setShow, options: SHOW_OPTIONS }]} />
+        <ControlBar
+          name={title}
+          options={[
+            ...extraOptions,
+            // Offered only when every selected policy has rows at every age
+            // shown: else no Show choice at all (one usable option reads as
+            // broken), and About this chart's caveats say why
+            ...(partsOffered
+              ? [{ label: "Show", value: show, onChange: setShow, options: SHOW_OPTIONS }]
+              : []),
+          ]}
+        />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
+        ) : nothingDrawn ? (
+          // Nothing to draw at any age shown: a plain empty plot, with no
+          // wording on why
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{noFigures(yearLabel)}</p>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
             <ComposedChart data={data} margin={plotMargin(narrow)} barCategoryGap="12%" stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
-              {group !== ALL_BAND && (
-                <ReferenceArea x1={singleAgeKey(Math.max(groupFirst, window[0]))} x2={singleAgeKey(groupLast)} fill={GROUP_FILL} ifOverflow="visible" />
-              )}
               <XAxis
                 dataKey="label"
-                ticks={windowTicks(window, [groupFirst, groupLast, ...(showSpa ? [spa] : [])].filter((age) => age >= window[0] && age <= window[1]), narrow)}
+                ticks={windowTicks(window, [], narrow)}
                 interval={0}
                 tick={<AgeTick ends={tickEnds} />}
                 axisLine={AXIS_LINE}
@@ -243,8 +336,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<AgeTooltip nameOf={nameOf} byMeasure={byMeasure} />} />
-              {byMeasure ? (
+              <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<AgeTooltip nameOf={nameOf} byMeasure={stacked} />} />
+              {stacked ? (
                 partKeys.map((each) => (
                   <Bar
                     key={each}
@@ -268,7 +361,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                 </Bar>
               )}
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-              {!byMeasure && (
+              {!stacked && (
                 <Line
                   type="monotone"
                   dataKey="smooth"
@@ -288,7 +381,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                   strokeDasharray="4 3"
                   label={{
                     value: narrow ? `Pension age ${spa}` : `State Pension age, ${spa}`,
-                    position: "insideTopRight",
+                    // Near the left end, the label reads to the right of the line
+                    position: spa - window[0] < (window[1] - window[0]) / 2 ? "insideTopLeft" : "insideTopRight",
                     fill: CHART_COLOURS.highlight,
                     fontSize: TICK_STYLE.fontSize,
                     fontWeight: 600,
@@ -301,7 +395,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
         )}
       </div>
       <div className="chart-legend">
-        {published && !byMeasure && (
+        {published && !stacked && (
           <span className="measure-dumbbell-legend age-change-legend">
             {anyGain && (
               <span>
@@ -327,18 +421,15 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
       </div>
       {published && (
         <div className="chart-footer">
-          {missing.length > 0 && (
-            <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
-          )}
           <ChartMoreInfo
             members={members}
             year={year}
             info={{
               how: [
-                `One bar per single year of age, ${window[0]} to ${window[1] >= 90 ? "90 and over" : window[1]}: the sum of each selected policy's own effect.`,
-                "The line averages the five ages centred on each one, as single ages rest on few survey records.",
-                showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}); pensioners are the ages from it.`,
-                "Each policy shows every selected policy's own part at each age, stacked.",
+                `One bar per single year of age, ${agesText(window)}.`,
+                "At each age, the line averages the five ages with that age in the middle, as single ages rest on few survey records.",
+                showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}), where pensioners start.`,
+                partsOffered && "When Show is Each policy, each age's bar stacks each selected policy's part.",
               ],
               method: AGE_METHOD,
             }}

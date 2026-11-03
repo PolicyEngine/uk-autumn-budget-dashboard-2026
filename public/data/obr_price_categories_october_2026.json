@@ -1,0 +1,151 @@
+{
+  "schema": "uk-budget-dashboard/obr-price-categories/v1",
+  "source": {
+    "publisher": "Office for Budget Responsibility",
+    "release": "Economic and fiscal outlook, October 2026",
+    "release_date": "2026-10-28",
+    "table": "Table 1.19",
+    "table_title": "CPI category inflation",
+    "workbook": "Economic and fiscal outlook, October 2026: detailed forecast tables, economy",
+    "url": "https://obr.uk/download/october-2026-economic-and-fiscal-outlook-detailed-forecast-tables-economy/",
+    "page_url": "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/",
+    "file": "data_inputs/living_standards/efo-october-2026-detailed-forecast-tables-economy.xlsx",
+    "file_sha256": "96795d1747bb5a4978c7fb768689d5fd31f568e5223db8a94b1bd92ba7f6c118"
+  },
+  "vintage": "OBR October 2026 forecast (the Autumn Budget 2026)",
+  "units": "Year-on-year growth in the category's CPI index (%), fiscal years (April to March)",
+  "decimals": 4,
+  "generated_by": "tools/extract-obr-price-categories.mjs",
+  "series": [
+    {
+      "key": "food",
+      "label": "Food, beverages and tobacco",
+      "values": [
+        {
+          "year": "2026-27",
+          "value": 3.0196
+        },
+        {
+          "year": "2027-28",
+          "value": 4.4612
+        },
+        {
+          "year": "2028-29",
+          "value": 2.3997
+        },
+        {
+          "year": "2029-30",
+          "value": 2.0888
+        },
+        {
+          "year": "2030-31",
+          "value": 2.1181
+        }
+      ]
+    },
+    {
+      "key": "utilities",
+      "label": "Utilities",
+      "values": [
+        {
+          "year": "2026-27",
+          "value": 2.1761
+        },
+        {
+          "year": "2027-28",
+          "value": 2.7714
+        },
+        {
+          "year": "2028-29",
+          "value": -6.6831
+        },
+        {
+          "year": "2029-30",
+          "value": 4.0561
+        },
+        {
+          "year": "2030-31",
+          "value": 1.6159
+        }
+      ]
+    },
+    {
+      "key": "fuels",
+      "label": "Fuels",
+      "values": [
+        {
+          "year": "2026-27",
+          "value": 27.269
+        },
+        {
+          "year": "2027-28",
+          "value": 0.0168
+        },
+        {
+          "year": "2028-29",
+          "value": -0.2541
+        },
+        {
+          "year": "2029-30",
+          "value": 0.2771
+        },
+        {
+          "year": "2030-31",
+          "value": 1.3579
+        }
+      ]
+    },
+    {
+      "key": "other_tradables",
+      "label": "Other tradables",
+      "values": [
+        {
+          "year": "2026-27",
+          "value": 1.1795
+        },
+        {
+          "year": "2027-28",
+          "value": 1.9531
+        },
+        {
+          "year": "2028-29",
+          "value": 0.9777
+        },
+        {
+          "year": "2029-30",
+          "value": 0.7299
+        },
+        {
+          "year": "2030-31",
+          "value": 0.6633
+        }
+      ]
+    },
+    {
+      "key": "other_non_tradables",
+      "label": "Other non-tradables",
+      "values": [
+        {
+          "year": "2026-27",
+          "value": 3.6482
+        },
+        {
+          "year": "2027-28",
+          "value": 3.7209
+        },
+        {
+          "year": "2028-29",
+          "value": 3.505
+        },
+        {
+          "year": "2029-30",
+          "value": 3.2554
+        },
+        {
+          "year": "2030-31",
+          "value": 3.0702
+        }
+      ]
+    }
+  ]
+}

@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
-import { meanChangeByBand } from "../utils/ageImpact";
+import { AGE_BANDS, meanChangeByBand } from "../utils/ageImpact";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import BudgetaryImpactChart from "./BudgetaryImpactChart";
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
 import YoungPeopleSection from "./YoungPeopleSection";
 import GroupedLegend from "./GroupedLegend";
-import ChartTooltip from "./ChartTooltip";
+import ChartTooltip, { SegmentTooltip } from "./ChartTooltip";
+import { decileCsv } from "../utils/chartCsv";
+import { decileMembership } from "../utils/legendMembership";
 import PolicySelector from "./PolicySelector";
 import { MeasureKeyProvider } from "./MeasureKey";
 import { LOGO_ROOM as SCATTER_LOGO_ROOM } from "./HouseholdScatter";
@@ -175,6 +177,53 @@ describe("published measure catalogue in population views", () => {
   });
 
   it.each([
+    ["relative", DistributionalChart, "distributional", "value", "1st"],
+    ["absolute", WaterfallChart, "winnersLosers", "avg_change", "1"],
+  ])("renders a withheld %s decile, keeps the other deciles, and downloads its blank", (kind, Chart, source, valueKey, decile) => {
+    const fixture = measureCatalogueFixture({ held: false });
+    const rows = fixture[source].map((row) => row.reform_id === ALPHA && row.decile === decile ? { ...row, [valueKey]: null } : row);
+    const catalogue = catalogueFor(fixture);
+    const { container } = render(withCatalogue(catalogue,
+      <Chart rawData={rows} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
+    ));
+    // No note, asterisk or mark: an empty slot (decileWithheld.test.jsx)
+    expect(container.textContent).not.toMatch(/Not published|confidential/i);
+    expect(screen.queryByRole("status")).toBeNull();
+    const points = chartRows(container);
+    expect(points[0]).toMatchObject({ withheld: true, [`measure:${ALPHA}`]: null, netChange: null });
+    expect(points[1].netChange).toBeTypeOf("number");
+    expect(container.querySelector(".chart-description")).not.toHaveTextContent("almost no change");
+    const csv = decileCsv(points, catalogue.displayable, { kind, year: YEAR }).split("\r\n");
+    const fields = csv[3].split(",");
+    const alphaColumn = catalogue.displayable.findIndex((policy) => policy.id === ALPHA) + 1;
+    expect(fields[alphaColumn]).toBe("");
+    expect(fields.at(-1)).toBe("");
+    expect(csv[4].split(",").at(-1)).not.toBe("");
+  });
+
+  it("keeps a measure with only withheld changes active in the decile legend", () => {
+    const fixture = measureCatalogueFixture({ held: false });
+    const rows = fixture.distributional.map((row) => ({ ...row, value: row.decile === "1st" ? null : 0 }));
+    const members = decileMembership(catalogueFor(fixture), rows, "value", [ALPHA], YEAR);
+    expect(members).toHaveLength(1);
+    expect(members[0].muted).toBe(false);
+  });
+
+  it("does not turn a withheld net value into zero in a published segment's tooltip", () => {
+    const catalogue = catalogueFor(measureCatalogueFixture());
+    render(withCatalogue(catalogue, <SegmentTooltip
+      active
+      payload={[{ dataKey: `measure:${ALPHA}`, value: 20, payload: { decile: "1", netChange: null } }]}
+      labelOf={(row) => `Decile ${row.decile}`}
+      format={(value) => `£${value}`}
+      netKey="netChange"
+    />));
+    expect(screen.getByText("+£20")).toBeInTheDocument();
+    expect(screen.queryByText("Net change")).toBeNull();
+    expect(screen.queryByText("+£0")).toBeNull();
+  });
+
+  it.each([
     ["relative", DistributionalChart, "distributional"],
     ["absolute", WaterfallChart, "winnersLosers"],
   ])("enforces unsupported years in the %s view", (_name, Chart, source) => {
@@ -238,7 +287,7 @@ describe("published measure catalogue in population views", () => {
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
     expect(shares.querySelector('[data-testid="chart-rows"]')).toBeNull();
-    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("aria-label"));
     expect(names.length).toBeGreaterThan(0);
     expect(names.every((name) => [catalogue.byId.get(ALPHA), catalogue.byId.get(BETA)].some((m) => [m.label, m.name].includes(name)))).toBe(true);
     // the average change and trend cards still chart (the measures card is a
@@ -254,12 +303,15 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue,
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(await screen.findByText(/The net change is unavailable for those age groups/)).toBeInTheDocument();
-    expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
+    // Two policies, one with no figures this year: its parts and the net are
+    // null, the other's own parts still drawn
+    await screen.findAllByText(/no published results by age/);
+    expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] == null && point.netChange == null)).toBe(true);
+    expect(chartRows(container).some((point) => Number.isFinite(point[`measure:${BETA}`]))).toBe(true);
     // The combined run is refused: no package shares, only each measure's own
     expect(screen.getByText(/each selected policy on its own/)).toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
-    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("aria-label"));
     const alpha = catalogue.byId.get(ALPHA);
     // Alpha has no supported figures this year, so it draws no row
     expect(names.some((name) => [alpha.label, alpha.name].includes(name))).toBe(false);
@@ -307,7 +359,8 @@ describe("measure chart keys", () => {
       fc.array(fc.record({ label: fc.string(), value: fc.integer({ min: -100000, max: 100000 }) }), { minLength: 1, maxLength: 15 }),
       (entries) => {
         const policies = entries.map((entry, index) => ({ id: String(index), name: entry.label, seriesKey: `measure:${index}` }));
-        const rows = entries.map((entry, index) => ({ reform_id: String(index), year: YEAR, age_band: "16-24", mean_change: entry.value, sample_size: 5000 }));
+        // Every band published (£0 outside 16 to 24), as a complete publication is
+        const rows = entries.flatMap((entry, index) => AGE_BANDS.map((band) => ({ reform_id: String(index), year: YEAR, age_band: band.key, mean_change: band.key === "16-24" ? entry.value : 0, sample_size: 5000 })));
         const point = meanChangeByBand(rows, policies, policies.map((policy) => policy.id), YEAR).find((candidate) => candidate.band === "16-24");
         expect(point.label).toBe("16 to 24");
         expect(point.incomplete).toBe(false);

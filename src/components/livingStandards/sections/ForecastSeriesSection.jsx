@@ -1,21 +1,26 @@
 // The forecast series by group (prices, pay and other income, housing),
 // as comparable charts or tables: one card per group of series on a shared
 // axis (forecastWords.FORECAST_GROUPS), each line named at its end, with
-// one plain sentence leading with the finding. The Budget-day forecast is
-// held (ForecastPanel), so the cards draw the one published forecast. The
-// source is said once, in the panel's intro, and in each card's "About
+// one plain sentence leading with the finding. Once a later OBR forecast
+// is loaded (forecast.post_published), each series it carries is drawn
+// twice, the earlier forecast (pre, March 2026) faded and the later one
+// (post, October 2026) full, with a second row of chips to show either; a
+// series the later source lacks (post null) keeps its one line and says so.
+// The source is said once, in the panel's intro, and in each card's "About
 // this chart" and downloads.
 
 import LsCard from "../LsCard";
 import { useState } from "react";
 import ViewToggle from "../../ViewToggle";
 import SeriesToggle from "../../SeriesToggle";
+import ControlBar from "../../ControlBar";
+import { forecastsOption } from "../controlOptions";
 import { useNarrowViewport } from "../../../utils/chartTheme";
 import SectionHeading from "../../SectionHeading";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH } from "../../../utils/livingStandards/baseline";
-import { CHART_COLOURS } from "../../../utils/chartTheme";
-import { pctLabel, percentAxis, toRows } from "../../../utils/livingStandards/forecast";
+import { CHART_COLOURS, SERIES_COLOURS } from "../../../utils/chartTheme";
+import { forecastChip, hasPost, pctLabel, percentAxis, toRows } from "../../../utils/livingStandards/forecast";
 import { FORECAST_GROUPS, SERIES_NAMES, cardSentence, seriesName } from "../../../utils/livingStandards/forecastWords";
 import { formatOneDp } from "../../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../../utils/chartCsv";
@@ -56,18 +61,18 @@ const SERIES_NOTES = {
 
 // Each line's colour and pattern: on one chart they differ in both
 const LINE_STYLE = {
-  cpi: { colour: CHART_COLOURS.gain },
-  cpih: { colour: CHART_COLOURS.highlight, dash: DASH.long },
-  cpi_ahc: { colour: CHART_COLOURS.marketIncome, dash: DASH.short },
+  cpi: { colour: SERIES_COLOURS[0] },
+  cpih: { colour: SERIES_COLOURS[3], dash: DASH.long },
+  cpi_ahc: { colour: SERIES_COLOURS[1], dash: DASH.short },
   rpi: { colour: CHART_COLOURS.reference, dash: DASH.dashDot },
-  earnings: { colour: CHART_COLOURS.gain },
-  non_labour_income: { colour: CHART_COLOURS.marketIncome, dash: DASH.long },
-  house_prices: { colour: CHART_COLOURS.highlight },
-  rent: { colour: CHART_COLOURS.gain, dash: DASH.long },
-  social_rent: { colour: CHART_COLOURS.marketIncome, dash: DASH.short },
-  mortgage_interest: { colour: CHART_COLOURS.gain },
+  earnings: { colour: SERIES_COLOURS[0] },
+  non_labour_income: { colour: SERIES_COLOURS[1], dash: DASH.long },
+  house_prices: { colour: SERIES_COLOURS[3] },
+  rent: { colour: SERIES_COLOURS[0], dash: DASH.long },
+  social_rent: { colour: SERIES_COLOURS[1], dash: DASH.short },
+  mortgage_interest: { colour: SERIES_COLOURS[0] },
 };
-const FALLBACK_STYLES = [CHART_COLOURS.gain, CHART_COLOURS.highlight, CHART_COLOURS.marketIncome, CHART_COLOURS.reference];
+const FALLBACK_STYLES = [SERIES_COLOURS[0], SERIES_COLOURS[3], SERIES_COLOURS[1], CHART_COLOURS.reference];
 
 // Chip labels on a phone, for the long names
 const SHORT_NAMES = { cpi_ahc: "CPI after housing", non_labour_income: "Non-labour", social_rent: "Social rent" };
@@ -75,15 +80,24 @@ const SHORT_NAMES = { cpi_ahc: "CPI after housing", non_labour_income: "Non-labo
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pctText = (v) => `${formatOneDp(v)}%`;
 
-/** One row per year with each series' growth in percent, keyed by series key. */
-function joinRows(seriesList) {
+// The later forecast's line for a series: its key in the joined rows
+const POST_SUFFIX = "__post";
+const postKey = (key) => `${key}${POST_SUFFIX}`;
+// The earlier forecast's lines, faded, beside the later one's
+const PRE_OPACITY = 0.4;
+
+/**
+ * One row per year with each series' growth in percent, keyed by series key,
+ * and with the later forecast as `<key>__post` for each series in `withPost`.
+ */
+function joinRows(seriesList, withPost = []) {
   const years = [...new Set(seriesList.flatMap((s) => (s.pre || []).map((p) => p.year)))].sort();
-  const byKey = Object.fromEntries(
-    seriesList.map((s) => [s.key, Object.fromEntries(toRows(s, false).map((r) => [r.year, r.previous]))]),
-  );
+  const rowsOf = (s) => Object.fromEntries(toRows(s, true).map((r) => [r.year, r]));
+  const byKey = Object.fromEntries(seriesList.map((s) => [s.key, rowsOf(s)]));
   return years.map((year) => ({
     year,
-    ...Object.fromEntries(seriesList.map((s) => [s.key, byKey[s.key][year] ?? null])),
+    ...Object.fromEntries(seriesList.map((s) => [s.key, byKey[s.key][year]?.previous ?? null])),
+    ...Object.fromEntries(withPost.map((s) => [postKey(s.key), byKey[s.key][year]?.updated ?? null])),
   }));
 }
 
@@ -94,26 +108,71 @@ function cardSourceText(forecast, seriesList) {
   return other.length ? `${obr}; ${other.join(" and ")}: ${CSV_SOURCES.peDerived}` : obr;
 }
 
-function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
+// A forecast card's x axis title and its year basis in "About this chart",
+// where it sits beside the OBR prices by spending category, by financial year
+const CALENDAR_YEAR = { term: "Calendar year", meaning: "January to December, as the OBR publishes these measures; the spending categories beside them are by financial year." };
+
+function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yearBasis = false }) {
   const narrow = useNarrowViewport();
-  // The lines drawn (chips, at least one on) and the one a chip's hover brings forward
+  // The series shown (chips, at least one on) and the one a chip's hover brings forward
   const [shown, setShown] = useState(() => seriesList.map((s) => s.key));
+  // With a later forecast: which forecasts are drawn (the card's Options
+  // pill: both, the earlier or the later)
+  // October alone by default; March or both in the Options pill
+  const [forecastsShown, setForecastsShown] = useState(["post"]);
   const [hovered, setHovered] = useState(null);
-  const rows = joinRows(seriesList);
+  const withPost = seriesList.filter((s) => hasPost(forecast, s));
+  const both = withPost.length > 0;
+  const rows = joinRows(seriesList, withPost);
   if (!rows.length) return null;
-  const allLines = seriesList.map((s, i) => ({
-    key: s.key,
-    name: seriesName(s),
+  const preName = forecastChip(forecast.pre_label);
+  const postName = forecastChip(forecast.post_label);
+  const styleOf = (s, i) => ({
     colour: LINE_STYLE[s.key]?.colour ?? FALLBACK_STYLES[i % FALLBACK_STYLES.length],
     dash: LINE_STYLE[s.key]?.dash,
-  }));
-  const lines = allLines.filter((l) => shown.includes(l.key));
+  });
+  // One line per series, or, with a later forecast, the earlier one (faded)
+  // and the later one for each series that has it; `series` is the chip it
+  // belongs to and `forecast` the forecast chip
+  const allLines = seriesList.flatMap((s, i) => {
+    const style = styleOf(s, i);
+    const has = withPost.includes(s);
+    const pre = {
+      key: s.key,
+      series: s.key,
+      forecast: "pre",
+      name: both ? `${seriesName(s)}, ${preName}` : seriesName(s),
+      ...style,
+      ...(has ? { opacity: PRE_OPACITY, width: 2 } : {}),
+    };
+    if (!has) return [pre];
+    return [pre, { key: postKey(s.key), series: s.key, forecast: "post", group: s.key, name: `${seriesName(s)}, ${postName}`, ...style }];
+  });
+  // A series with only the earlier forecast keeps its line whatever the
+  // forecast chips say: it is the only one it has
+  const drawn = (l) =>
+    l.forecast === "post" ? forecastsShown.includes("post") : !withPost.some((s) => s.key === l.series) || forecastsShown.includes("pre");
+  const lines = allLines.filter((l) => shown.includes(l.series) && drawn(l));
   const sourceText = cardSourceText(forecast, seriesList);
   const period = `${rows[0].year} to ${rows[rows.length - 1].year}`;
+  // The sentence reads the latest forecast each series has
   const sentence = cardSentence(
     card.id,
-    Object.fromEntries(seriesList.map((s) => [s.key, rows.map((r) => ({ year: r.year, value: r[s.key] }))])),
+    Object.fromEntries(
+      seriesList.map((s) => [
+        s.key,
+        rows.map((r) => ({ year: r.year, value: withPost.includes(s) ? r[postKey(s.key)] : r[s.key] })),
+      ]),
+    ),
   );
+  // A series the later forecast does not carry yet, said once
+  const notYet =
+    forecast.post_published && seriesList.some((s) => !withPost.includes(s))
+      ? `${seriesList
+          .filter((s) => !withPost.includes(s))
+          .map(seriesName)
+          .join(", ")}: not in the ${postName}'s summary table yet; it follows with the OBR's detailed forecast tables, so we show only the ${preName}.`
+      : null;
   const csv = () =>
     buildChartCsv({
       title: card.title,
@@ -130,7 +189,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
     period,
     summary: sentence,
     about: forecast.basis ? `${forecast.basis}, in percent.` : undefined,
-    notes: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
+    notes: [...seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]), notYet],
     sourceText,
     source: (
       <>
@@ -140,8 +199,11 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
       </>
     ),
     info: {
-      definitions: seriesList.filter((s) => MEASURES[s.key]).map((s) => ({ term: seriesName(s), meaning: MEASURES[s.key] })),
-      caveats: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
+      definitions: [
+        ...seriesList.filter((s) => MEASURES[s.key]).map((s) => ({ term: seriesName(s), meaning: MEASURES[s.key] })),
+        yearBasis && CALENDAR_YEAR,
+      ].filter(Boolean),
+      caveats: [...seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]), notYet].filter(Boolean),
       sources: [
         ...forecastSources(forecast),
         seriesList.some((s) => NOT_OBR[s.key]) && {
@@ -153,24 +215,28 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
     },
     // Chart or table: one choice for every card, as icons in its header
     viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={card.title} />,
+    // With a later forecast, which forecasts are drawn: the Options pill
+    // the other tabs' cards have (ControlBar), its face naming the choice
+    controls: both && <ControlBar name={card.title} options={[forecastsOption(forecastsShown, setForecastsShown, preName, postName)]} />,
   };
   // One chip per line, in its colour: the card's key, under the plot (as
   // every chart's key), so no legend repeats the names. A card of one line
   // needs none: its title names it.
-  const chips = allLines.length > 1 && (
-      <SeriesToggle
-        series={allLines.map((l) => ({ key: l.key, label: l.name, short: SHORT_NAMES[l.key], colour: l.colour, dash: l.dash }))}
-        shown={shown}
-        onChange={setShown}
-        onHover={setHovered}
-        label="Lines"
-        narrow={narrow}
-      />
+  const seriesChips = seriesList.length > 1 && (
+    <SeriesToggle
+      series={seriesList.map((s, i) => ({ key: s.key, label: seriesName(s), short: SHORT_NAMES[s.key], ...styleOf(s, i) }))}
+      shown={shown}
+      onChange={setShown}
+      onHover={setHovered}
+      label="Lines"
+      narrow={narrow}
+    />
   );
+  const chips = seriesChips;
 
   if (view === "table") {
     return (
-      <LsCard {...common} download={{ filename: `forecast-${card.id}`, image: false, csv }}>
+      <LsCard {...common} download={{ filename: `forecast-${card.id}`, csv }}>
         <div className="chart-plot ls-table-wrapper">
           <table className="ls-table">
             <thead>
@@ -208,10 +274,10 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
         xFormat={String}
         yFormat={pctTick}
         tooltipFormat={pctText}
+        xLabel={yearBasis ? CALENDAR_YEAR.term : undefined}
         yLabel="Annual growth (%)"
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        endLabels={allLines.length > 1}
         legend={false}
         focusKey={hovered}
         keyContent={chips || null}
@@ -261,6 +327,7 @@ export default function ForecastSeriesSection({ data, view, onViewChange }) {
               forecast={forecast}
               view={view}
               onViewChange={onViewChange}
+              yearBasis={History === ObrPriceCategoriesCard}
             />
           ))}
           {History && <History data={data} view={view} onViewChange={onViewChange} />}

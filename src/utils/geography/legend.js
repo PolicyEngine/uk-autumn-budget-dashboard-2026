@@ -6,17 +6,14 @@
  * from a stylesheet, so the exported file renders on its own.
  */
 
-import { CATEGORIES, CATEGORY_LABELS, TOO_UNCERTAIN } from "./classify";
+import { CATEGORIES, TOO_UNCERTAIN } from "./classify";
 import { OUTCOME_LABELS } from "./format";
 import {
   APPROXIMATE_DOT_COLOUR,
   CATEGORY_COLOURS,
   HATCH_COLOURS,
   NO_DATA_FILL,
-  NO_DATA_STROKE,
-  WITHHELD_FILL,
   WITHHELD_PATTERN_ID,
-  UNCERTAIN_FILL,
   approximateColourPatternId,
   approximatePatternId,
 } from "./palette";
@@ -24,7 +21,8 @@ import { SCALE_COLOURS, scaleLabels } from "./scale";
 import { CHART_COLOURS } from "../chartTheme";
 
 const FONT = "system-ui, -apple-system, sans-serif";
-const HATCH_SIZE = 4;
+const HATCH_SIZE = 5;
+const HATCH_STROKE_WIDTH = 1;
 const DOT_SIZE = 4;
 
 /** The legend's class, so exports and tests can find it. */
@@ -73,7 +71,7 @@ export function appendWithheldHatch(defs) {
     .attr("x2", HATCH_SIZE / 2)
     .attr("y2", HATCH_SIZE)
     .attr("stroke", HATCH_COLOURS.line)
-    .attr("stroke-width", 1.5);
+    .attr("stroke-width", HATCH_STROKE_WIDTH);
   return pattern;
 }
 
@@ -134,19 +132,13 @@ const BAR_HEIGHT = 10;
 const GRADIENT_ID = "map-legend-gradient";
 
 /**
- * The legend's status entries, after the scale: too uncertain, then the
- * textures, each over a gain and a loss colour, so they cannot be read as
- * a size of change.
+ * The legend's entries after the scale, as the page's key: one No data
+ * swatch (not published, or too uncertain to place on the scale). Little
+ * change is on the scale, at its 0; approximate figures are plain colour.
  */
 export function legendEntries() {
   return [
-    { fill: UNCERTAIN_FILL, label: CATEGORY_LABELS[TOO_UNCERTAIN] },
-    {
-      halves: [`url(#${approximatePatternId("large_gain")})`, `url(#${approximatePatternId("large_loss")})`],
-      label: "Approximate: dotted, few survey households",
-    },
-    { fill: WITHHELD_FILL, label: "Not published: hatched, confidentiality" },
-    { fill: NO_DATA_FILL, stroke: NO_DATA_STROKE, label: "No data: blank" },
+    { fill: NO_DATA_FILL, label: "No data: not published, or too few survey households" },
   ];
 }
 

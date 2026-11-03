@@ -28,7 +28,7 @@ import {
   tickDecimals,
   useNarrowViewport,
 } from "../utils/chartTheme";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { DISPLAY_YEARS, useDisplayYears } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
@@ -67,7 +67,7 @@ export const SUMMARY_METRICS = {
     format: (value) => formatPp(Math.abs(value)).replace(/^[+−]/, ""),
     csvUnits: "percentage points; people in households below the absolute poverty line, before housing costs",
     file: "poverty-rate-change",
-    noChange: "The selected policies do not change the poverty rate in any year shown.",
+    noChange: "The selected policies do not change the poverty rate in any year we show.",
     choices: "poverty",
   },
   inequality: {
@@ -83,7 +83,7 @@ export const SUMMARY_METRICS = {
     format: (value) => `${sigFigs(Math.abs(value), 3)}%`,
     csvUnits: "% change in the Gini coefficient (equivalised household net income)",
     file: "gini-change",
-    noChange: "The selected policies do not change income inequality in any year shown.",
+    noChange: "The selected policies do not change income inequality in any year we show.",
     choices: "inequality",
   },
 };
@@ -123,7 +123,7 @@ export const POVERTY_CHOICES = [
 const POVERTY_DEFAULT = { basis: "absolute", housing: "bhc", group: "all" };
 
 const POVERTY_LINES = {
-  absolute: "the absolute poverty line (60% of 2024-25 median income, held constant in real terms)",
+  absolute: "the absolute poverty line (60% of 2024-25 median income, constant in real terms)",
   // policyengine-uk's in_relative_poverty_*: 60% of the median in the same
   // simulation, so under the policies the line is their own median's
   relative:
@@ -204,7 +204,7 @@ export function povertyMetric({ basis, housing, group }) {
       (children ? " Children are dependent children as DWP counts them: under 16, or 16 to 19 in full-time non-advanced education." : ""),
     csvUnits: `percentage points; ${people} in households below ${POVERTY_LINES[basis]}, ${HOUSING[housing]}`,
     file: `${children ? "child-" : ""}poverty-rate-change-${basis}-${housing}`,
-    noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
+    noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year we show.`,
     // "Change in absolute poverty (before housing costs), pp": the card's short subtitle
     short: `Change in ${basis} ${children ? "child " : ""}poverty (${housing.toUpperCase()}), pp`,
     // What the long description adds, for About this chart
@@ -253,12 +253,12 @@ export const INEQUALITY_METRICS = {
     title: "Change in the top 10% income share",
     key: "top_10_share_change_pp",
     description:
-      "Change in the share of equivalised household net income received by the 10% of people with the highest incomes, each year, in percentage points.",
+      "Change in the share of equivalised household net income that the 10% of people with the highest incomes receive, each year, in percentage points.",
     unit: "Change (pp)",
     scale: 1,
     decimals: 3,
     format: (value) => `${sigFigs(Math.abs(value), 3)}pp`,
-    csvUnits: "percentage points; share of equivalised household net income received by the top 10% of people",
+    csvUnits: "percentage points; share of equivalised household net income that the top 10% of people receive",
     file: "top-10-share-change",
   },
   "top-1": {
@@ -267,12 +267,12 @@ export const INEQUALITY_METRICS = {
     title: "Change in the top 1% income share",
     key: "top_1_share_change_pp",
     description:
-      "Change in the share of equivalised household net income received by the 1% of people with the highest incomes, each year, in percentage points.",
+      "Change in the share of equivalised household net income that the 1% of people with the highest incomes receive, each year, in percentage points.",
     unit: "Change (pp)",
     scale: 1,
     decimals: 3,
     format: (value) => `${sigFigs(Math.abs(value), 3)}pp`,
-    csvUnits: "percentage points; share of equivalised household net income received by the top 1% of people",
+    csvUnits: "percentage points; share of equivalised household net income that the top 1% of people receive",
     file: "top-1-share-change",
   },
   "90-10": {
@@ -428,9 +428,9 @@ export function metricValue(row, key) {
  * @param {string|null} run - The run to read (wholeSelectionRun)
  * @param {{key: string, scale?: number}} metric
  */
-export function metricByYear(rows, run, metric) {
+export function metricByYear(rows, run, metric, years = DISPLAY_YEARS) {
   if (!run) return [];
-  return DISPLAY_YEARS.map((year) => {
+  return years.map((year) => {
     const row = (rows ?? []).find(
       (candidate) => candidate.reform_id === run && Number(candidate.year) === year,
     );
@@ -447,6 +447,7 @@ export function metricByYear(rows, run, metric) {
  * statistics are never added up across measures.
  */
 function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   // The whole selection's run: one measure's own, or the package's combined
   // run (the catalogue's, #104) when every displayable measure is selected
@@ -470,18 +471,18 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           name: shortNameOf(policy),
           fullName: policy.label ?? policy.name,
           colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
-          points: metricByYear(rows, policy.id, metric),
+          points: metricByYear(rows, policy.id, metric, shownYears),
         }))
     : null;
   const measureData = byMeasure
-    ? DISPLAY_YEARS.map((year, i) => ({
+    ? shownYears.map((year, i) => ({
         year,
         ...Object.fromEntries(byMeasure.map((m) => [m.id, m.points[i]?.value ?? null])),
       }))
     : null;
-  // Every year shown, from 2027-28 (FIRST_DISPLAY_YEAR)
-  const years = DISPLAY_YEARS;
-  const data = byMeasure ? [] : metricByYear(rows, run, metric).filter((point) => years.includes(point.year));
+  // Every year shown (2026-27 first while a selected policy has an effect in it)
+  const years = shownYears;
+  const data = byMeasure ? [] : metricByYear(rows, run, metric, years).filter((point) => years.includes(point.year));
   const shown = byMeasure
     ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
     : data.filter((point) => point.value !== null);
@@ -568,7 +569,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                     {metric.format(top.value)}.
                   </>
                 ) : (
-                  <>{metric.short ?? metric.description} Each selected policy on its own.</>
+                  <>{fiscalYearTick(selectedYear)}, each policy on its own.</>
                 );
               })()
             ) : (
@@ -598,7 +599,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           <MeasureEffectsView byMeasure={byMeasure} metric={metric} selectedYear={selectedYear} view={effectView} narrow={narrow} years={years} />
         ) : !run && !byMeasure ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>No policy is selected that this chart covers</p>
+            <p>This chart covers none of the selected policies</p>
           </div>
         ) : shown.length === 0 ? (
           // On Budget day a run (the combined one last) can be named
@@ -688,10 +689,15 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             shows: metric.description,
             how: byMeasure
               ? [
-                  "No published run covers this selection together, so each bar is one policy simulated on its own.",
-                  "These changes can't be added up across policies.",
+                  "No published run covers this selection together, so each bar comes from a run of one policy on its own.",
+                  "You can't add up these changes across policies.",
                 ]
               : [],
+            // Pavel's review MT1: why VAT and fuel duty move this but not poverty
+            caveats:
+              metric.choices === "inequality"
+                ? ["VAT and fuel duty count here but not in the poverty figures, so they can move inequality without moving poverty."]
+                : [],
             method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty and inequality" },
           }}
         />

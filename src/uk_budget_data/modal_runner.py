@@ -15,6 +15,7 @@ manifest holds must come from the same place, or staging needs
 ``--adopt-execution``, which marks every other entry stale.
 """
 
+import contextlib
 import io
 import os
 import shutil
@@ -96,12 +97,16 @@ class Timed:
             self.times.append(time.perf_counter() - started)
 
 
-def phase_line(key: str, total: float, builds: list, processes: list) -> str:
+def phase_line(
+    key: str, total: float, builds: list, processes: list, rows=()
+) -> str:
     """Where a container's time went. The first build also downloads and
     checks the dataset in a fresh container, so the difference between the
     two builds is roughly the download."""
     built = sum(builds)
     processed = sum(processes)
+    # The national run's package-file rows (``generate --national``).
+    read = sum(rows)
     parts = [
         (
             "builds " + " + ".join(f"{s:.0f}" for s in builds) + " s"
@@ -109,7 +114,8 @@ def phase_line(key: str, total: float, builds: list, processes: list) -> str:
             else None
         ),
         f"tables {processed:.0f} s" if processes else None,
-        f"checks and receipt {max(total - built - processed, 0):.0f} s",
+        f"checks and receipt {max(total - built - processed - read, 0):.0f} s",
+        f"package-file rows {read:.0f} s" if rows else None,
     ]
     return (
         f"{key}: {total:.0f} s in its Modal container ("
@@ -118,14 +124,42 @@ def phase_line(key: str, total: float, builds: list, processes: list) -> str:
     )
 
 
+# Per-year units (``flat_units`` with ``by_year``: --only income_distribution
+# or income_growth on Modal) run one container per measure and year, so a
+# published package of seven measures and its combined run over six years
+# is 48 containers. At the artifacts' 16 at once they would run in three
+# waves and save little, so per-year units may run this many at once: two
+# such commands side by side fit in one wave each. The cap changes how many
+# run at once, not how much is simulated.
+YEAR_MAX_CONTAINERS = 64
+# One year in a fresh container is about 3 minutes (builds about 82 s, the
+# year's tables about 82 s, measured 26 October), so a container still
+# running after this has gone wrong: worst case 64 containers x 15 min at
+# about $0.35 a container-hour (2 CPU, 32 GiB) is about $5.60.
+YEAR_TIMEOUT_S = 15 * 60
+
+
+def _per_year(units: Sequence) -> bool:
+    return any(getattr(unit, "years", None) is not None for unit in units)
+
+
 def _modal_remote(units: Sequence) -> Iterable:
-    """Run the units in an ephemeral Modal app, one container each."""
+    """Run the units in an ephemeral Modal app, one container each.
+    Per-year units run under their own cap and timeout
+    (``YEAR_MAX_CONTAINERS``, ``YEAR_TIMEOUT_S``); the image, memory, CPU,
+    secret and no-retries are the same ``Generator``'s."""
     modal = _import_modal()
     from uk_budget_data import modal_generate
 
     try:
         with modal.enable_output(), modal_generate.app.run():
-            generator = modal_generate.Generator()
+            cls = modal_generate.Generator
+            if _per_year(units):
+                cls = cls.with_options(
+                    max_containers=YEAR_MAX_CONTAINERS,
+                    timeout=YEAR_TIMEOUT_S,
+                )
+            generator = cls()
             yield from generator.run.map(units, order_outputs=True)
     except modal.exception.NotFoundError as error:
         raise ModalUnavailable(f"{SECRET_MISSING} ({error})") from error
@@ -283,7 +317,14 @@ class ModalRunner:
                     "--backend modal runs on the bundle's dataset only: a "
                     "local --dataset is not in the container"
                 )
-        self.say(f"Modal: {len(units)} measures, one container each")
+        if _per_year(units):
+            measures = len(dict.fromkeys(_unit_id(unit) for unit in units))
+            self.say(
+                f"Modal: {len(units)} units ({measures} measures, one "
+                "container per measure and year)"
+            )
+        else:
+            self.say(f"Modal: {len(units)} measures, one container each")
         results = []
         for index, outcome in enumerate(self.remote(units)):
             if index >= len(units):
@@ -294,6 +335,13 @@ class ModalRunner:
                 raise ModalUnavailable(
                     f"Modal returned {outcome.reform_id} in place of "
                     f"{_unit_id(units[index])}"
+                )
+            expected = getattr(units[index], "years", None)
+            if getattr(outcome, "years", None) != expected:
+                raise ModalUnavailable(
+                    f"Modal returned {outcome.reform_id} for years "
+                    f"{getattr(outcome, 'years', None)} in place of "
+                    f"{expected}"
                 )
             results.append(outcome)
             on_result(index, outcome)
@@ -386,3 +434,90 @@ class ModalRunner:
 
 def _unit_id(unit) -> str:
     return unit.reform.id
+
+
+# --- The national run (``generate --national --backend modal``) ----------
+
+
+@contextlib.contextmanager
+def national_modal_session(say: Callable[[str], None] = print):
+    """One ephemeral app for the whole national run
+    (``modal_generate.national_app``). Yields ``remote(jobs, smoke)``,
+    which runs artifacts and their package-file rows, one container each,
+    and yields ``(outcome, relative, files, rows)`` or an exception per job
+    in job order. The dataset cache is primed once, before the first jobs
+    on the bundle's dataset. The app, and every container in it, stops when
+    the block ends."""
+    modal = _import_modal()
+    from uk_budget_data import modal_generate
+
+    try:
+        with modal.enable_output(), modal_generate.national_app.run():
+            generator = modal_generate.NationalGenerator()
+            primed = []
+
+            def remote(jobs, smoke):
+                if smoke:
+                    raise ModalUnavailable(
+                        "the national run is for the bundle's dataset; test "
+                        "the plumbing with scripts/budget_day/modal_smoke.py"
+                    )
+                if not primed:
+                    started = time.perf_counter()
+                    done = modal_generate.prime_dataset.remote()
+                    say(
+                        "Dataset cache: "
+                        + ", ".join(
+                            f"{digest[:12]} {how}"
+                            for digest, how in done.items()
+                        )
+                        + f" ({time.perf_counter() - started:.0f} s)"
+                    )
+                    primed.append(True)
+                yield from generator.run.map(
+                    jobs, order_outputs=True, return_exceptions=True
+                )
+
+            yield remote
+    except modal.exception.NotFoundError as error:
+        raise ModalUnavailable(f"{SECRET_MISSING} ({error})") from error
+
+
+class NationalModalRunner(ModalRunner):
+    """``ModalRunner`` for the national run: the same checks, ordering,
+    write-once assembly and failure handling for artifacts
+    (``_map_artifacts``), with each container's package-file rows kept in
+    ``stash`` by key. ``remote_national`` is the open session's ``remote``
+    (``national_modal_session``); tests give a fake."""
+
+    def __init__(
+        self,
+        stash: dict,
+        remote_national: Callable,
+        say: Callable[[str], None] = print,
+    ):
+        super().__init__(say=say, remote_artifacts=self._artifacts)
+        self.stash = stash
+        self.remote_national = remote_national
+
+    def map(self, function, units, on_result=lambda i, r: None) -> list:
+        from uk_budget_data.publication.generate import run_artifact
+
+        if function is not run_artifact:
+            raise ModalUnavailable("the national runner runs artifacts only")
+        return super().map(function, units, on_result)
+
+    def _artifacts(self, jobs: Sequence, smoke: bool) -> Iterable:
+        for returned in self.remote_national(jobs, smoke):
+            if isinstance(returned, BaseException):
+                yield returned
+                continue
+            outcome, relative, files, rows = returned
+            if rows is not None:
+                if rows.reform_id != outcome.key:
+                    raise ModalUnavailable(
+                        f"Modal returned {rows.reform_id}'s rows with "
+                        f"{outcome.key}"
+                    )
+                self.stash[outcome.key] = rows
+            yield outcome, relative, files

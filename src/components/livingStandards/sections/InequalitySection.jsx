@@ -12,6 +12,7 @@ import OverTimeChart from "../OverTimeChart";
 import {
   EMPTY,
   lineSeries,
+  OFFICIAL_VS_PE,
   mergeSeries,
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
@@ -55,7 +56,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     const same = fmt(a.value) === fmt(b.value);
     const what =
       measure === "gini"
-        ? "income inequality, measured by the Gini coefficient,"
+        ? "income inequality (Gini coefficient)"
         : "the gap between top and bottom incomes (90:10 ratio)";
     summary = same ? (
       <>
@@ -72,18 +73,23 @@ export default function useInequalityView(data, range = null, setRange = null) {
   return {
     period: rowsPeriod(rows),
     summary,
-    about:
-      "Gini: 0 is perfect equality, 1 is one person holding all income. 90/10 ratio: income at the 90th percentile over income at the 10th. Official figures: Households Below Average Income, Table 1.2b.",
+    // What it shows; the two measures are defined once, under Definitions
+    about: "How unequal household incomes are each year under current law. We compare the shaded years.",
     notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
     info: {
+      how: [OFFICIAL_VS_PE],
+      // Both measures, whichever is shown, next to the Inequality measure
+      // choice (Pavel's review, LS5)
       definitions: [
-        measure === "gini"
-          ? { term: "Gini coefficient", meaning: "0 when everyone has the same income, 1 when one person has it all." }
-          : { term: "90:10 ratio", meaning: "Income at the 90th percentile over income at the 10th." },
+        { term: "Gini coefficient", meaning: "0 when everyone has the same income, 1 when one person has it all." },
+        {
+          term: "90:10 ratio",
+          meaning: "Income of someone 90% of the way up the income scale as a multiple of that of someone 10% of the way up.",
+        },
       ],
-      caveats: ["Our 2024-25 inequality sits below official figures, so read the projection as a change, not a level."],
+      caveats: ["Our 2024-25 inequality sits below official figures, so read PolicyEngine's figures as a change, not a level."],
       sources: [{ ...HBAI_SOURCE, note: "Table 1.2b" }],
       method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the inequality data" },
     },
@@ -117,12 +123,12 @@ export default function useInequalityView(data, range = null, setRange = null) {
     },
     chart: (
       <OverTimeChart
-        compare={range}
         data={rows}
         series={series}
         yFormat={(v) => (measure === "gini" ? v.toFixed(2) : v.toFixed(1))}
         tooltipFormat={fmt}
         yLabel={label(measure)}
+        span={span ? [span[0].year, span[1].year] : null}
       />
     ),
   };

@@ -1,6 +1,6 @@
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { useNarrowViewport } from "../../utils/chartTheme";
+import { CHART_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
 import {
   groupTotals,
   money,
@@ -12,8 +12,16 @@ import {
 import { ChevronRight } from "lucide-react";
 import TitleIcon from "../TitleIcon";
 import ChartDownloadMenu from "../ChartDownloadMenu";
+import { htmlImageFormats } from "../../utils/chartDownloads";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
+import MeasureRowLabel from "../MeasureRowLabel";
+import Tip from "../Tip";
+import { usePolicyParameters } from "../PolicyChange";
+import { parameterChange, policyBridge, policyTabs } from "../../utils/policyBreakdown";
+import { vatRowLabel } from "../../utils/singleYear";
+import { policyDetailsFor } from "../../utils/policyDetails";
+import { formatValue } from "../../utils/policyParameters";
 
 // A row's note from the API, without any internal constant's name in
 // brackets ("(COUNCIL_TAX_BAND_D)")
@@ -107,9 +115,55 @@ export function breakdownSentence(groups) {
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
 }
 
-export default function ProgrammeTable({ programmes, totals, bars = [], yearLabel, engine = {} }) {
+export default function ProgrammeTable({
+  programmes,
+  totals,
+  bars = [],
+  split = null,
+  splitStatus = null,
+  policies = [],
+  household = null,
+  salaryUsed = null,
+  year = null,
+  yearLabel,
+  engine = {},
+  parameterTables,
+}) {
   const narrow = useNarrowViewport();
-  const groups = groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars));
+  // The VAT row named by what moves it: VAT on fuel duty when only the fuel
+  // duty policy does (HH5)
+  const vatLabel = vatRowLabel(split?.rows, (id) => policyDetailsFor(policies.find((policy) => policy.id === id))?.type);
+  const relabel = (rows) => rows?.map((row) => ({ ...row, ...(row.id === "vat_change" ? { label: vatLabel } : {}), ...(row.rows ? { rows: relabel(row.rows) } : {}), ...(row.children ? { children: relabel(row.children) } : {}) }));
+  const groups = relabel(groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars)));
+  // One tab per selected policy that changes this household, from the
+  // split by policy once it is in (policyBreakdown.js)
+  const parameters = usePolicyParameters(parameterTables);
+  const { tabs: policyTabList, noEffect } = policyTabs({
+    bars: split,
+    groups,
+    policies,
+    parameters,
+    year,
+    household,
+    salaryUsed,
+  });
+  // The chart's split by policy, with the rows each policy moves: the
+  // By policy tab, second once the split is in. The table opens on Summary
+  // until a tab is chosen.
+  const bridge = split ? policyBridge({ split, tabs: policyTabList, groups, totals }) : null;
+  const [chosen, setTab] = useState(null);
+  const tab = chosen ?? "summary";
+  const byPolicy = tab === "by_policy" && bridge !== null;
+  // The tab row whenever the page asks for the split by policy: until it is
+  // in (or if it fails), Summary alone with a quiet note why
+  const showTabs = policyTabList.length > 0 || splitStatus !== null || noEffect.length > 0;
+  const pendingNote =
+    split || !splitStatus || splitStatus === "ready"
+      ? null
+      : splitStatus === "error"
+        ? "The breakdown by policy is unavailable"
+        : "Breakdown by policy loading…";
+  const activePolicy = policyTabList.find((item) => item.id === tab) ?? null;
   // Open at first: each group shows its taxes or benefits
   const [open, setOpen] = useState(
     () => new Set(groups.filter((group) => (group.rows ?? []).length > 0).map((group) => group.id)),
@@ -125,7 +179,11 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
       return next;
     });
 
-  const formats = {
+  // The table, for its image downloads
+  const [table, setTable] = useState(null);
+  const summaryFormats = {
+    // The table as an image, as every card's (chartDownloads)
+    ...htmlImageFormats(() => table, `household-net-income-breakdown-${yearLabel}`),
     csv: () =>
       downloadFile(
         buildChartCsv({
@@ -135,8 +193,8 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
           columns: [
             { key: "group", label: "Group" },
             { key: "item", label: "Item" },
-            { key: "before", label: "Before (£)", decimals: 0 },
-            { key: "after", label: "After (£)", decimals: 0 },
+            { key: "before", label: "Current law (£)", decimals: 0 },
+            { key: "after", label: "With the policies (£)", decimals: 0 },
             { key: "change", label: "Change (£)", decimals: 0 },
           ],
           rows: [
@@ -158,6 +216,60 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
         "text/csv;charset=utf-8",
       ),
   };
+  const policyTitle = activePolicy ? `${title}: ${activePolicy.name}` : byPolicy ? `${title}: by policy` : title;
+  const policyFile = activePolicy ? `household-${activePolicy.id.replace(/_/g, "-")}-${yearLabel}` : "";
+  const bridgeFile = `household-change-by-policy-${yearLabel}`;
+  const bridgeFormats = bridge && {
+    ...htmlImageFormats(() => table, bridgeFile),
+    csv: () =>
+      downloadFile(
+        buildChartCsv({
+          title: policyTitle,
+          units: "£ a year; the change in the household's net income, by policy, and the tax and benefit rows each policy moves",
+          source: "PolicyEngine UK household calculation, UK Autumn Budget 2026 dashboard",
+          columns: [
+            { key: "policy", label: "Policy" },
+            { key: "item", label: "Item" },
+            { key: "change", label: "Change (£)", decimals: 0 },
+          ],
+          rows: [
+            ...bridge.rows.flatMap((step) => [
+              { policy: step.name, item: "Change in net income", change: step.rounded },
+              ...step.parts.map((part) => ({ policy: step.name, item: part.label, change: part.change })),
+            ]),
+            { policy: "All selected policies", item: "Change in net income", change: bridge.total },
+          ],
+        }),
+        `${bridgeFile}.csv`,
+        "text/csv;charset=utf-8",
+      ),
+  };
+  const formats = byPolicy
+    ? bridgeFormats
+    : activePolicy
+    ? {
+        ...htmlImageFormats(() => table, policyFile),
+        csv: () =>
+          downloadFile(
+            buildChartCsv({
+              title: policyTitle,
+              units:
+                "As shown in each row (£ a year, pence a litre or a rate); taxes as negative amounts; the effect is the change in the household's net income from this policy alone",
+              source: "PolicyEngine UK household calculation and the model's policy parameters, UK Autumn Budget 2026 dashboard",
+              columns: [
+                { key: "section", label: "Section" },
+                { key: "item", label: "Item" },
+                { key: "before", label: "Current law" },
+                { key: "after", label: "With the policies" },
+                { key: "change", label: "Change" },
+              ],
+              rows: policyCsvRows(activePolicy),
+            }),
+            `${policyFile}.csv`,
+            "text/csv;charset=utf-8",
+          ),
+      }
+    : summaryFormats;
 
   // On a phone the table is Item | Change; Before and After open together
   // with one switch above it
@@ -203,7 +315,9 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
 
   return (
     // Headed as every other card: icon, title with its year and the
-    // download, then one sentence on what the policies change
+    // download, then one sentence on what the policies change. With the
+    // split by policy in, tabs under the title: Summary (this table) and
+    // one per policy that changes the household
     <div className="card single-year-card breakdown-card">
       <div className="chart-header">
         <div>
@@ -211,22 +325,66 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
             <TitleIcon name="layers" />
             <span className="title-text">{title}</span>
           </h3>
-          <p className="chart-description">{sentence}</p>
+          {!showTabs && <p className="chart-description">{sentence}</p>}
         </div>
-        <ChartDownloadMenu formats={formats} chartTitle={title} ariaLabel={`Download table: ${title}`} />
+        <ChartDownloadMenu formats={formats} chartTitle={policyTitle} ariaLabel={`Download table: ${policyTitle}`} />
       </div>
-      {narrow && (
+      {showTabs && (
+        <BreakdownTabs
+          tabs={policyTabList}
+          byPolicy={bridge !== null}
+          value={activePolicy ? activePolicy.id : byPolicy ? "by_policy" : "summary"}
+          onChange={setTab}
+          noEffect={noEffect}
+          note={pendingNote}
+        />
+      )}
+      {/* Each tab's one line: the Summary's sentence, or the policy's
+          one-line summary (policyDetails.js; none for a measure it does
+          not describe) */}
+      {showTabs && !activePolicy && !byPolicy && <p className="chart-description breakdown-tab-line">{sentence}</p>}
+      {byPolicy && (
+        <p className="chart-description breakdown-tab-line">
+          Each policy&apos;s change, as in the chart above, and the taxes and benefits it moves. Summary adds up the same
+          changes row by row.
+        </p>
+      )}
+      {activePolicy?.how && (
+        <p className="chart-description breakdown-tab-line">
+          <span className="breakdown-how">How it works:</span> {activePolicy.how}
+        </p>
+      )}
+      {narrow && !byPolicy && (
         <button
           type="button"
           className="light-pill-button breakdown-columns-toggle"
           aria-pressed={showBoth}
           onClick={() => setShowBoth((value) => !value)}
         >
-          {showBoth ? "Hide before and after" : "Show before and after"}
+          {showBoth ? "Show change only" : "Show all columns"}
         </button>
       )}
-      <div className="programme-table-wrap">
-        <table className={`programme-table breakdown-table${wide ? "" : " is-change-only"}`} aria-label={title}>
+      {byPolicy ? (
+        <div className="programme-table-wrap" role="tabpanel" id="breakdown-panel-by_policy" aria-labelledby="breakdown-tab-by_policy">
+          <BridgeTable bridge={bridge} setTable={setTable} title={policyTitle} />
+        </div>
+      ) : activePolicy ? (
+        <div
+          className="programme-table-wrap"
+          role="tabpanel"
+          id={`breakdown-panel-${activePolicy.id}`}
+          aria-labelledby={`breakdown-tab-${activePolicy.id}`}
+        >
+          <PolicyTable tab={activePolicy} wide={wide} setTable={setTable} title={policyTitle} />
+        </div>
+      ) : (
+      <div
+        className="programme-table-wrap"
+        {...(showTabs
+          ? { role: "tabpanel", id: "breakdown-panel-summary", "aria-labelledby": "breakdown-tab-summary" }
+          : {})}
+      >
+        <table ref={setTable} className={`programme-table breakdown-table${wide ? "" : " is-change-only"}`} aria-label={title}>
           <thead>
             <tr>
               <th scope="col">
@@ -234,12 +392,12 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
               </th>
               {wide && (
                 <th scope="col" className="num">
-                  Before
+                  Current law
                 </th>
               )}
               {wide && (
                 <th scope="col" className="num">
-                  After
+                  With the policies
                 </th>
               )}
               <th scope="col" className="num">
@@ -264,6 +422,7 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
           </tbody>
         </table>
       </div>
+      )}
       <div id={HOUSEHOLD_ABOUT_ID} className="chart-footer">
         <ChartMoreInfo
           info={{
@@ -278,6 +437,274 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
           }}
         />
       </div>
+    </div>
+  );
+}
+
+/** A policy tab's rows as CSV rows, with each figure as the table shows it. */
+export function policyCsvRows(tab) {
+  const rows = [];
+  for (const row of tab.parameters) {
+    rows.push({
+      section: "What changes",
+      item: row.label,
+      before: formatValue(row.before, row.unit),
+      after: formatValue(row.after, row.unit),
+      change: parameterChange(row) ?? "",
+    });
+  }
+  for (const row of tab.household) {
+    if (row.kind === "heading") {
+      rows.push({ section: "For your household", item: row.label, before: "", after: "", change: "" });
+      continue;
+    }
+    const cells = householdCells(row);
+    rows.push({ section: "For your household", item: row.label, before: cells.before, after: cells.after, change: cells.change });
+  }
+  rows.push({ section: "Effect on your net income", item: "Effect on your net income", before: "", after: "", change: signedMoney(tab.effect) });
+  const blank = (value) => (value === "—" ? "" : value);
+  return rows.map((row) => ({ ...row, before: blank(row.before), after: blank(row.after), change: blank(row.change) }));
+}
+
+/** A household row's three cells as text. */
+function householdCells(row) {
+  if (row.kind === "part") {
+    // A part of the effect: its before and after where it has them (a
+    // change-only row, VAT change, has no before)
+    const none = row.before === null || row.before === undefined;
+    return {
+      before: none || row.changeOnly ? "—" : money(row.before),
+      after: none ? "—" : row.changeOnly ? changeText(row.after) : money(row.after),
+      change: changeText(row.change),
+      changeClass: changeClass(row.change),
+    };
+  }
+  if (row.kind === "step") {
+    const diff = Math.round(row.after) - Math.round(row.before);
+    return { before: money(row.before), after: money(row.after), change: diff === 0 ? "—" : signedMoney(diff), changeClass: diff === 0 ? "is-zero" : "is-neutral" };
+  }
+  // An input: the same before and after
+  return { before: money(row.before), after: money(row.after), change: "—", changeClass: "is-zero" };
+}
+
+const sectionRow = (label, wide) => (
+  <tr className="programme-row depth-0 is-group is-section">
+    <th scope="rowgroup" colSpan={wide ? 4 : 2}>
+      <span className="programme-leaf">
+        <span className="programme-chevron-space" aria-hidden="true" />
+        <span className="programme-name">{label}</span>
+      </span>
+    </th>
+  </tr>
+);
+
+const leaf = (label) => (
+  <span className="programme-leaf">
+    <span className="programme-chevron-space" aria-hidden="true" />
+    <span className="programme-name">{label}</span>
+  </span>
+);
+
+/**
+ * One policy's table, in the Summary's style: What changes (its
+ * parameters for the year), For your household (inputs, checked steps and
+ * the rows it alone moves) and the highlighted effect on net income.
+ */
+function PolicyTable({ tab, wide, setTable, title }) {
+  return (
+    <table ref={setTable} className={`programme-table breakdown-table policy-table${wide ? "" : " is-change-only"}`} aria-label={title}>
+      <thead>
+        <tr>
+          <th scope="col">
+            <span className="visually-hidden">Item</span>
+          </th>
+          {wide && (
+            <th scope="col" className="num">
+              Before
+            </th>
+          )}
+          {wide && (
+            <th scope="col" className="num">
+              After
+            </th>
+          )}
+          <th scope="col" className="num">
+            Change
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {tab.parameters.length > 0 && sectionRow("What changes", wide)}
+        {tab.parameters.map((row) => {
+          const change = parameterChange(row);
+          return (
+            <tr key={`p-${row.id}`} className="programme-row depth-1">
+              <th scope="row">{leaf(row.label)}</th>
+              {wide && <td className="num">{formatValue(row.before, row.unit)}</td>}
+              {wide && <td className="num">{formatValue(row.after, row.unit)}</td>}
+              <td className={`num change ${change ? "is-neutral" : "is-zero"}`}>{change ?? "—"}</td>
+            </tr>
+          );
+        })}
+        {tab.household.length > 0 && sectionRow("For your household", wide)}
+        {tab.household.map((row) => {
+          // A heading inside the section: its name alone
+          if (row.kind === "heading") {
+            return (
+              <tr key={`h-${row.id}`} className="programme-row depth-1 is-subheading">
+                <th scope="rowgroup" colSpan={wide ? 4 : 2}>
+                  {leaf(row.label)}
+                </th>
+              </tr>
+            );
+          }
+          const cells = householdCells(row);
+          return (
+            <tr key={`h-${row.id}`} className={`programme-row depth-${row.depth ?? 1}`}>
+              <th scope="row">{leaf(row.label)}</th>
+              {wide && <td className={`num${cells.before === "—" ? " is-none" : ""}`}>{cells.before}</td>}
+              {wide && <td className={`num${cells.after === "—" ? " is-none" : ""}`}>{cells.after}</td>}
+              <td className={`num change ${cells.changeClass}`}>{cells.change}</td>
+            </tr>
+          );
+        })}
+        <tr className="breakdown-effect-row">
+          <th scope="row">{leaf("Effect on your net income")}</th>
+          {wide && <td className="num is-none">—</td>}
+          {wide && <td className="num is-none">—</td>}
+          <td className={`num change ${changeClass(tab.effect)}`}>{changeText(tab.effect)}</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * The By policy tab: each of the chart's steps with its change in net
+ * income (the chart's whole pounds), the tax and benefit rows it moves
+ * under it, then the total, the chart's end minus its start.
+ */
+function BridgeTable({ bridge, setTable, title }) {
+  return (
+    <table ref={setTable} className="programme-table breakdown-table bridge-table is-change-only" aria-label={title}>
+      <thead>
+        <tr>
+          <th scope="col">
+            <span className="visually-hidden">Policy</span>
+          </th>
+          <th scope="col" className="num">
+            Change
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {bridge.rows.map((step) => (
+          <Fragment key={step.id}>
+            <tr className="programme-row depth-0 is-group" data-policy={step.id}>
+              <th scope="row">{leaf(step.label ?? step.name)}</th>
+              <td className={`num change ${changeClass(step.rounded)}`}>{step.rounded === 0 ? "£0" : changeText(step.rounded)}</td>
+            </tr>
+            {step.parts.map((part) => (
+              <tr key={`${step.id}/${part.id}`} className="programme-row depth-1" data-part={part.id}>
+                <th scope="row">{leaf(part.label)}</th>
+                <td className={`num change ${changeClass(part.change)}`}>{changeText(part.change)}</td>
+              </tr>
+            ))}
+          </Fragment>
+        ))}
+        <tr className="breakdown-net-row">
+          <th scope="row">{leaf("Change in net income")}</th>
+          <td className={`num change ${changeClass(bridge.total)}`}>{changeText(bridge.total)}</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * The Summary tab's label in the policy tabs' badge style (MeasureRowLabel,
+ * compact): a list icon in a tinted circle of the same size, then its name.
+ */
+function SummaryTabLabel({ label, icon = "list" }) {
+  return (
+    <span className="mrl mrl--compact breakdown-tab-summary" style={{ "--mrl-colour": CHART_COLOURS.highlight }}>
+      <span className="mrl-icon mrl-icon--compact" aria-hidden="true">
+        <TitleIcon name={icon} bare size={11} />
+      </span>
+      <span className="mrl-text">
+        <span className="mrl-name breakdown-tab-text">{label}</span>
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The card's tabs: Summary, then one per policy that changes the household
+ * (the policy's badge label: its tinted icon and short name), and the rest
+ * folded into a muted "+N with no effect for you". A WAI-ARIA tablist with
+ * automatic activation: Left/Right (wrapping) and Home/End move to a tab
+ * and show it; only the chosen tab is in the Tab order. On a phone the row
+ * scrolls sideways.
+ */
+function BreakdownTabs({ tabs, value, onChange, noEffect, note = null, byPolicy = false }) {
+  const refs = useRef({});
+  const all = [
+    { id: "summary", label: "Summary" },
+    ...(byPolicy ? [{ id: "by_policy", label: "By policy" }] : []),
+    ...tabs,
+  ];
+  const onKeyDown = (event) => {
+    const current = all.findIndex((tab) => tab.id === value);
+    const last = all.length - 1;
+    const next = {
+      ArrowRight: current === last ? 0 : current + 1,
+      ArrowLeft: current <= 0 ? last : current - 1,
+      Home: 0,
+      End: last,
+    }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    const tab = all[next];
+    onChange(tab.id);
+    refs.current[tab.id]?.focus();
+  };
+  return (
+    <div className="breakdown-tabs-bar">
+      <div className="breakdown-tabs" role="tablist" aria-label="Summary or one policy" onKeyDown={onKeyDown}>
+        {all.map((tab) => {
+          const selected = tab.id === value;
+          return (
+            <button
+              key={tab.id}
+              ref={(node) => {
+                refs.current[tab.id] = node;
+              }}
+              type="button"
+              role="tab"
+              id={`breakdown-tab-${tab.id}`}
+              aria-selected={selected}
+              aria-controls={selected ? `breakdown-panel-${tab.id}` : undefined}
+              tabIndex={selected ? 0 : -1}
+              className={`breakdown-tab${selected ? " is-selected" : ""}`}
+              onClick={() => onChange(tab.id)}
+            >
+              {tab.measure ? <MeasureRowLabel measure={tab.measure} compact tip={false} /> : <SummaryTabLabel label={tab.label} icon={tab.id === "by_policy" ? "bars" : "list"} />}
+            </button>
+          );
+        })}
+      </div>
+      {note && (
+        <span className="breakdown-no-effect" role="status">
+          {note}
+        </span>
+      )}
+      {noEffect.length > 0 && (
+        <Tip content={`No effect for your household: ${noEffect.map((item) => item.name).join("; ")}`}>
+          <span className="breakdown-no-effect" tabIndex={0}>
+            +{noEffect.length} with no effect for you
+          </span>
+        </Tip>
+      )}
     </div>
   );
 }

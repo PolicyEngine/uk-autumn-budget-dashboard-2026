@@ -168,7 +168,10 @@ def build_outlook(
             f"{pe_uk} needs."
         )
     HEADLINE_END_YEAR = headline_end_year(pe_uk)
-    params = system.parameters.gov.economic_assumptions
+    # The OBR October 2026 forecast the projections are run on.
+    from uk_budget_data.forecast import forecast_parameters
+
+    params = forecast_parameters().gov.economic_assumptions
 
     # Real terms: chained OBR CPI index (BHC) and CPI after housing costs (AHC)
     # from the pinned package; the value for calendar key Y is applied to
@@ -618,7 +621,12 @@ def build_outlook(
         },
     }
 
-    obr = params.yoy_growth.obr
+    # The pre-Budget series are the OBR March 2026 forecast, as
+    # policyengine-uk ships it: its own parameters, not the October forecast
+    # the projections run on (forecast_parameters), or the Forecast changes
+    # sub-tab would draw October twice. check_pre_is_march holds them to the
+    # committed March 2026 EFO tables below.
+    obr = system.parameters.gov.economic_assumptions.yoy_growth.obr
     sections = []
     for title, series in SECTIONS:
         out_series = []
@@ -744,6 +752,11 @@ def build_outlook(
         "obr_rhdi": obr_rhdi,
         "income_growth_by_group": income_growth_by_group,
     }
+    from uk_budget_data.living_standards import INPUTS_DIR
+    from uk_budget_data.living_standards.forecast import check_pre_is_march
+    from uk_budget_data.living_standards.obr import EFO_FILE_NAME
+
+    check_pre_is_march(outlook["forecast"], INPUTS_DIR / EFO_FILE_NAME)
     for note in outlook["meta"]["notes"] + CAVEATS:
         assert len(note) <= 160, note
     return outlook
@@ -838,14 +851,20 @@ def outlook_text(outlook: dict) -> str:
 EQ_UNIT = "£ a year, adjusted for household size (shown for a couple with no children)"
 
 # Projection caveats and baseline gaps found in policyengine-uk 2.130.1 (issue #1)
-# and unchanged in 2.132.6, shown as their own list on the page.
+# and unchanged in 2.132.6, shown as their own list on the page. The Universal
+# Credit standard allowance one is gone: policyengine-uk 2.151.0 adds the
+# legislated uplifts (gov.dwp.universal_credit.rebalancing.standard_allowance_uplift,
+# 2.3% to 4.8%) to CPI, and they survive the October forecast
+# (uk_budget_data.forecast): the single over-25 rate is £443.21 a month in
+# 2027-28, 4.3% above 2026-27's £424.90. The UC health element one is gone
+# too: 2.151.0 counts claimants only and gives one element per joint claim,
+# where 2.130.1 summed it per person. The four left were re-checked against
+# 2.151.0 and still hold.
 CAVEATS = [
     "Ages and benefit take-up are held fixed, so the State Pension age rise to 67 removes State Pension from 66-year-olds with no work response.",
     "The population is uprated uniformly, so its age structure stays as in 2025.",
     "Results for small groups are noisy: calibration roughly halves the effective sample, so family-size figures are approximate.",
     "The September 2026 free school meals expansion to all Universal Credit families in England is not modelled, so child poverty from 2026-27 is a little high.",
-    "The Universal Credit health element is assigned too widely (through disabled children, and twice to some couples), so child poverty is a little low.",
-    "The above-inflation rises in the Universal Credit standard allowance from 2027-28 are missing, so UC is about £0.6bn too low by 2029-30.",
 ]
 
 
