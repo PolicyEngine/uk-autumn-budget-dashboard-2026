@@ -426,6 +426,9 @@ describe("the example cards' background figures, checked against the approved de
 // (publishedRequest), and the cards check it as a selected measure's
 describe("the example cards' background figures, once the publication names the savings rise", () => {
   const SAVINGS = "savings_income_rates_up";
+  // The other calculator-only measures, which the publication names no
+  // definition for, so they are asked with but left unchecked
+  const UNNAMED = ["cash_isa_limit_kept", "machine_games_duty_rise"];
   const savingsDefinition = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "e".repeat(64) } };
   const WITH_SAVINGS = { ...DEFINITIONS, [SAVINGS]: savingsDefinition };
 
@@ -436,7 +439,7 @@ describe("the example cards' background figures, once the publication names the 
     await act(async () => api.answer(api.calls[0], 5));
     await waitFor(() => expect(api.calls.length).toBeGreaterThan(1));
     for (const call of api.calls) {
-      expect(call.body.policies).toEqual([...POLICIES, SAVINGS]);
+      expect(call.body.policies).toEqual([...POLICIES, SAVINGS, ...UNNAMED]);
       expect(call.definitions).toEqual({ fuel_duty_rise_deferral: approvedDefinition(), [SAVINGS]: savingsDefinition });
     }
     expect(result.current.figures[EXAMPLES[0].id][YEAR].change).toBe(5);
@@ -452,7 +455,7 @@ describe("the example cards' background figures, once the publication names the 
     await act(async () => api.answer(api.calls[0], 88, reported));
     await waitFor(() => expect(result.current.failed.has(`${EXAMPLES[0].id}:${YEAR}`)).toBe(true));
     expect(result.current.figures[EXAMPLES[0].id]?.[YEAR]).toBeUndefined();
-    const cell = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, SAVINGS] });
+    const cell = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, SAVINGS, ...UNNAMED] });
     expect(sessionStorage.getItem(`ab2026:example-headline:v1:${cell}`)).toBeNull();
   });
 
@@ -487,7 +490,7 @@ describe("the example cards' background figures, once the publication names the 
       ),
     );
     await waitFor(() => expect(api.calls).toHaveLength(2));
-    expect(api.calls[1].body.policies).toEqual(POLICIES);
+    expect(api.calls[1].body.policies).toEqual([...POLICIES, ...UNNAMED]);
     await act(async () => api.answer(api.calls[1], 7));
     await waitFor(() => expect(result.current.figures[EXAMPLES[0].id]?.[YEAR]?.change).toBe(7));
     expect(result.current.reduced).toBeNull();

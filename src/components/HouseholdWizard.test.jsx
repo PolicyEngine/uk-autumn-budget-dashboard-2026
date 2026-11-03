@@ -917,12 +917,16 @@ describe("the selected policies' questions", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url === API) bodies.push(JSON.parse(init.body));
+        // Every request names each measure's approved commit in its query
+        if (route(url) === API) bodies.push(JSON.parse(init.body));
         return new Response("{}", { status: 404 });
       }),
     );
+    // The definition the measure's receipt approved: without it the
+    // calculator asks nothing (useHouseholdImpact)
+    const expectedDefinitions = { bus_fare_cap_2027: approvedDefinition() };
     try {
-      const { unmount } = form(["bus_fare_cap_2027"], { year: 2027 });
+      const { unmount } = form(["bus_fare_cap_2027"], { year: 2027, expectedDefinitions });
       openSteps();
       // The North West, by default: asked first in Spending, with its note
       expect(asked("Spending")[0]).toBe("bus_fare_spending_per_year");
@@ -942,7 +946,7 @@ describe("the selected policies' questions", () => {
       expect(yours().policies).toContain("bus_fare_cap_2027");
       // Kept for the session, as every answer is
       unmount();
-      form(["bus_fare_cap_2027"], { year: 2027 });
+      form(["bus_fare_cap_2027"], { year: 2027, expectedDefinitions });
       openSteps();
       expect(value("Bus fares")).toBe(500);
       // In London the cap does not apply: not asked, and not sent
