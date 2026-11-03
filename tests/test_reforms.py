@@ -10,6 +10,7 @@ import inspect
 import math
 from importlib import import_module
 
+import numpy as np
 import pytest
 from policyengine_uk import Simulation
 
@@ -64,13 +65,20 @@ CANDIDATES = (
     "trading_allowance_raise",
     "bus_fare_cap_2027",
     "cash_isa_limit_kept",
+    "machine_games_duty_rise",
 )
 # Individual candidates that are not components of the combined package.
 # Registered but held back from the package: the savings rates' yield is
 # about 60% of Table 6.1 because the data miss ISA interest (Vahid and Max,
 # 28 Oct); the data hold no payments into cash ISAs, so the cash ISA limit
-# is the Household calculator's only (María, 29 Oct).
-NOT_IN_PACKAGE = ("savings_income_rates_up", "cash_isa_limit_kept")
+# is the Household calculator's only (María, 29 Oct); so is the Machine
+# Games Duty rise, whose engine change reaches lower-stake machines too
+# on survey data (2 Nov).
+NOT_IN_PACKAGE = (
+    "savings_income_rates_up",
+    "cash_isa_limit_kept",
+    "machine_games_duty_rise",
+)
 # Withdrawn on 27 October 2026 (Vahid): out of the registry and the
 # package, so no default command runs or publishes them. Their factories
 # stay, unregistered, and are still tested here as code.
@@ -171,8 +179,9 @@ def test_the_package_is_the_eight_announced_measures():
     # back (Table 6.1 row 62); property rates are row 61. Eight from
     # 29 October 2026 with the £2 bus fare cap. Ten registered: the savings
     # rates held back and the cash ISA limit, Household calculator only.
+    # Eleven with the Machine Games Duty rise, likewise (2 November 2026).
     assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
-    assert len(reforms._MEASURE_FACTORIES) == 10
+    assert len(reforms._MEASURE_FACTORIES) == 11
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
     assert key == "combined--7baf4e89377bcc9c"
     # The area run's package alias stands for that key
@@ -208,6 +217,7 @@ ANNOUNCED = (
     "trading_allowance_raise",
     "bus_fare_cap_2027",
     "cash_isa_limit_kept",
+    "machine_games_duty_rise",
 )
 
 
@@ -1119,6 +1129,71 @@ def test_cash_isa_limit_needs_the_calculators_answer():
     assert before == pytest.approx(after, abs=PENNY)
 
 
+def test_cash_isa_limit_on_survey_data_taxes_a_share_at_the_deposit_rate():
+    """Survey data that store cash ISA payments (policyengine-uk 2.164.1 has
+    the variable; defined here first, as it is there) and other investment
+    income: the interest goes into taxable savings interest, 46% of the
+    excess at the OBR's deposit rate. One under-65 paying £20,000 in
+    2031-32: £8,000 a year over the planned limit, held 4.5 years, 3.01%
+    and 46%, is £498.46. Adjusted net income moves with it; market income
+    does not (María, #377)."""
+    from policyengine_core.reforms import Reform as CoreReform
+    from policyengine_uk.model_api import Variable
+    from policyengine_uk.utils.scenario import _apply_reform_class
+
+    from uk_budget_data.budget_measures.planned_cash_isa_limit import (
+        planned_cash_isa_limit,
+    )
+
+    year = 2031
+
+    def built(modify: bool):
+        sim = Simulation(
+            situation=situation(
+                {
+                    "p": _person(
+                        year,
+                        employment_income=70_000,
+                        other_investment_income=0,
+                    )
+                }
+            )
+        )
+        person_entity = sim.tax_benefit_system.get_variable("age").entity
+
+        class cash_isa_subscriptions(Variable):
+            value_type = float
+            entity = person_entity
+            definition_period = "year"
+            label = "Cash ISA subscriptions"
+
+        class Define(CoreReform):
+            def apply(self):
+                self.add_variable(cash_isa_subscriptions)
+
+        _apply_reform_class(Define, sim)
+        sim.set_input("cash_isa_subscriptions", year, np.array([20_000.0]))
+        if modify:
+            planned_cash_isa_limit(sim)
+        return sim
+
+    before, after = built(True), built(False)
+
+    def moved(variable):
+        return float(
+            before.calculate(variable, year)[0]
+            - after.calculate(variable, year)[0]
+        )
+
+    expected = 0.46 * 0.0301 * 4.5 * 8_000
+    assert expected == pytest.approx(498.46, abs=PENNY)
+    assert moved("taxable_savings_interest_income") == pytest.approx(
+        expected, abs=0.05
+    )
+    assert moved("adjusted_net_income") == pytest.approx(expected, abs=0.05)
+    assert moved("market_income") == pytest.approx(0, abs=PENNY)
+
+
 # --- Every year the policy differs is covered ---------------------------------
 # The 2025 placeholders set their pre-Budget side from a year after
 # policyengine-uk already applied the new rates, so they showed no effect in
@@ -1216,7 +1291,36 @@ FIRST_YEARS = {
         },
         {},
     ),
+    # £1,000 a year of standard-rate machine takings: 5 points more duty,
+    # £50, from 2027-28
+    "machine_games_duty_rise": (
+        2027,
+        "household_net_income",
+        {"employment_income": 30_000},
+        {"machine_games_standard_rate_net_takings": 1_000},
+    ),
 }
+
+
+def test_machine_games_duty_rise_is_five_points_on_the_standard_rate():
+    """The standard rate (the higher-stake machines' in the Household
+    calculator) is 25% from 2027-28, and the lower and higher rates are as
+    they were: £1,000 of standard-rate takings pay £250 of duty, not £200."""
+    year = 2029
+    sit = situation(
+        {"p": _person(year, employment_income=30_000)},
+        {"machine_games_standard_rate_net_takings": {year: 1_000}},
+    )
+    before, after = change(
+        "machine_games_duty_rise", sit, "machine_games_duty", year
+    )
+    assert before == pytest.approx(200, abs=PENNY)
+    assert after == pytest.approx(250, abs=PENNY)
+    changes = get_reform("machine_games_duty_rise").parameter_changes
+    assert list(changes) == [reforms.MACHINE_GAMES_STANDARD_RATE]
+    assert changes[reforms.MACHINE_GAMES_STANDARD_RATE] == {
+        str(y): 0.25 for y in POLICY_YEARS if y >= 2027
+    }
 
 
 def test_every_measure_has_a_first_year_check():

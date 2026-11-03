@@ -86,6 +86,7 @@ def gen(n, seed=2026):
             dividend_income=r.choice([0, 0, 2000]),
             savings_interest_income=r.choice([0, 0, 1500]),
             cash_isa_subscriptions=r.choice([0, 0, 12000, 20000]),
+            higher_stake_machine_losses=r.choice([0, 0, 500]),
         )
         out.append(kw)
     return out

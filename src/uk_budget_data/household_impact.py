@@ -94,6 +94,8 @@ from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_ID,
     CASH_ISA_LIMIT_ID,
     EMPLOYER_NI_ID,
+    MACHINE_GAMES_DUTY_FROM,
+    MACHINE_GAMES_DUTY_ID,
     TRADING_ALLOWANCE_FROM,
     WARM_HOME_DISCOUNT_ID,
     get_autumn_budget_2026_reforms,
@@ -204,6 +206,15 @@ HOUSEHOLD_NOTES: dict[str, dict] = {
             "as the OBR forecasts it, with the interest paid out each year. "
             "The change is the income tax on that interest, which stays "
             "tax-free in a cash ISA up to £20,000."
+        ),
+    },
+    MACHINE_GAMES_DUTY_ID: {
+        "kind": "assumption",
+        "text": (
+            "Counts the extra duty against you, as the share of your losses "
+            "on higher-stake gaming machines that goes in duty, with no "
+            "change in how much you play. The duty is paid by the machine's "
+            "operator, who may pass it on through lower payouts."
         ),
     },
 }
@@ -347,6 +358,17 @@ PROGRAMMES = (
             "The change in VAT the measures make on the spending entered "
             "(electricity, petrol and diesel). The form asks about no other "
             "spending, so VAT itself is not shown: £0 before the Budget."
+        ),
+    ),
+    Programme(
+        "gambling_duty",
+        "Gambling duty",
+        "tax",
+        "gambling_duty",
+        "household",
+        note=(
+            "Machine Games Duty on the losses on higher-stake gaming "
+            "machines entered. The form asks about no other gambling."
         ),
     ),
     Programme("tv_licence", "TV licence", "tax", "tv_licence", "household"),
@@ -835,6 +857,11 @@ class HouseholdAnswers:
     # bus_fare_spending), for the £2 bus fare cap. 0 (not asked) sets
     # nothing, so every other household is exactly as before.
     bus_fare_spending: float = 0
+    # Net losses (stakes less prizes) on gaming machines with a stake over
+    # £1 or a prize over £100, £ a year, for the Machine Games Duty rise.
+    # Set as the household's standard-rate machine takings, which only
+    # these machines' are in the form; 0 (not asked) sets nothing
+    higher_stake_machine_losses: float = 0
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)
@@ -1284,6 +1311,15 @@ def household_entities(
         # household total to bus_fare_spending_reported on loading and
         # gives it back unchanged without journeys
         household["bus_fare_spending"] = answers.bus_fare_spending
+    if answers.higher_stake_machine_losses:
+        # Only when answered, so every other household is exactly as
+        # before. policyengine-uk has no input for higher-stake machines
+        # (policyengine-uk#2731 adds one in 2.167.0): the measure raises the
+        # standard rate, and these are the household's only standard-rate
+        # takings, so its change is exact
+        household["machine_games_standard_rate_net_takings"] = (
+            answers.higher_stake_machine_losses
+        )
     if answers.brma is not None:
         household["brma"] = answers.brma
     household["local_authority"] = (
@@ -2080,6 +2116,9 @@ SKIP_REASONS = {
         "no bus fares, not in England outside London, or outside 2026-27 "
         "to 2027-28"
     ),
+    "machine_games_duty_rise": (
+        "no losses on higher-stake gaming machines, or before 2027-28"
+    ),
 }
 
 
@@ -2169,6 +2208,13 @@ def provably_unaffected(
             not answers.bus_fare_spending
             or answers.region not in BUS_FARE_CAP_REGIONS
             or year not in BUS_FARE_CAP_YEARS
+        )
+    if measure_id == MACHINE_GAMES_DUTY_ID:
+        # The duty reads the household's machine takings, which only its
+        # losses on higher-stake machines give.
+        return (
+            year < MACHINE_GAMES_DUTY_FROM
+            or not answers.higher_stake_machine_losses
         )
     return False
 

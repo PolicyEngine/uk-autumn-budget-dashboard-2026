@@ -483,6 +483,18 @@ class HouseholdAnswersRequest(BaseModel):
             "out: none, as before the form asked."
         ),
     )
+    higher_stake_machine_losses: float = Field(
+        default=0,
+        ge=0,
+        le=100_000,
+        description=(
+            "Net losses (stakes less prizes) on gaming machines with a "
+            "stake over £1 or a prize over £100, £ a year, for the Machine "
+            "Games Duty rise from 20% to 25% on those machines: set as the "
+            "household's standard-rate machine takings (policyengine-uk's "
+            "machine_games_standard_rate_net_takings). Left out: none."
+        ),
+    )
     salary_sacrifice_pension_contributions: float = Field(
         default=0,
         ge=0,

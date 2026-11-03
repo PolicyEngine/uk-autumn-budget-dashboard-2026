@@ -138,7 +138,11 @@ HOUSEHOLD_ENERGY_PAYMENT_ID = "household_energy_payment_2026"
 TRADING_ALLOWANCE_ID = "trading_allowance_raise"
 BUS_FARE_CAP_ID = "bus_fare_cap_2027"
 CASH_ISA_LIMIT_ID = "cash_isa_limit_kept"
+MACHINE_GAMES_DUTY_ID = "machine_games_duty_rise"
 TRADING_ALLOWANCE = "gov.hmrc.income_tax.allowances.trading_allowance"
+MACHINE_GAMES_STANDARD_RATE = (
+    "gov.hmrc.gambling_duty.machine_games.rates.standard"
+)
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
@@ -1079,6 +1083,62 @@ def _create_cash_isa_limit_kept() -> Reform:
 
 
 # =============================================================================
+# MACHINE GAMES DUTY UP FROM 20% TO 25% ON HIGHER-STAKE MACHINES
+# =============================================================================
+
+# Budget 2026 (2.49, 6.225; Table 6.1 row 56; policy costings p. 67): the
+# Machine Games Duty rate on machines with a maximum stake above £1 or a
+# maximum prize above £100 rises from 20% to 25% from 1 April 2027; lower
+# stake machines stay at 20%. Row 56 also carries moving the liability to
+# machine suppliers from 1 April 2028 (+£20m, +£15m, +£15m, +£10m), which
+# changes who pays, not the rate, and is not modelled.
+#
+# policyengine-uk 2.151.0 and 2.164.2 split takings only by the duty's
+# existing bands (lower 5%, standard 20%, higher 25%), with no input for
+# the higher-stake part of the standard band (policyengine-uk#2731 adds
+# one in 2.167.0). So the measure raises the standard rate, from 2027-28:
+# - In the Household calculator this is exact: the form asks only for
+#   losses on higher-stake machines and sets them as the household's
+#   standard-rate takings.
+# - On survey data it reaches every standard-rate machine, pubs' Category C
+#   and D machines too, so it is an upper bound on the static cost (about
+#   1 / 0.757 of it on the Gambling Commission's Category B share; María,
+#   policyengine.py#731, 2 November 2026). Held back from the national
+#   results (calculatorOnlyMeasures.js) until the engine and the data carry
+#   the split. The certified data the dashboard runs on today hold no
+#   gambling takings at all (data limit machine_games_standard_rate).
+# Annual keys: the engine applies the change from 6 April 2027, so
+# 2026-27, which the Treasury also scores at £0, has none of it.
+MACHINE_GAMES_DUTY_FROM = 2027
+MACHINE_GAMES_DUTY_HIGHER_STAKE_RATE = 0.25
+
+
+def _create_machine_games_duty_rise() -> Reform:
+    return Reform(
+        id=MACHINE_GAMES_DUTY_ID,
+        name="Machine Games Duty up to 25% on higher-stake machines",
+        description=(
+            "The Machine Games Duty rate on gaming machines with a stake "
+            "over £1 or a prize over £100 rises from 20% to 25% of net "
+            "takings from 1 April 2027; lower-stake machines stay at 20%. "
+            "The duty is counted against the households whose gambling "
+            "losses make up the takings, with no change in play. The model "
+            "has no separate input for higher-stake machines, so the "
+            "change raises its standard rate: exact for one household, "
+            "whose losses on higher-stake machines the form asks for, but "
+            "on survey data it also reaches lower-stake machines, so there "
+            "is no national figure yet."
+        ),
+        parameter_changes=rate_change(
+            MACHINE_GAMES_STANDARD_RATE,
+            _years_from(
+                MACHINE_GAMES_DUTY_FROM, MACHINE_GAMES_DUTY_HIGHER_STAKE_RATE
+            ),
+        ),
+    )
+
+
+# =============================================================================
 # STATE PENSION DOUBLE LOCK FROM APRIL 2030 (not registered)
 # =============================================================================
 
@@ -1197,7 +1257,12 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
 # savings measures, Table 6.1 rows 61 and 62. Nine registered since the £2
 # bus fare cap (29 October 2026); eight in the package (savings held back).
 # The cash ISA limit kept at £20,000 (Table 6.1 row 11) joined on
-# 29 October, for the Household calculator only: ten registered.
+# 29 October, for the Household calculator only: ten registered. The
+# Machine Games Duty rise (row 56) joined on 2 November, likewise for the
+# Household calculator only: eleven registered. Each of the three held
+# back joins the package by adding its id to
+# AUTUMN_BUDGET_2026_COMBINED_COMPONENTS (and leaving
+# calculatorOnlyMeasures.js).
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,
@@ -1209,6 +1274,7 @@ _MEASURE_FACTORIES = (
     _create_trading_allowance_raise,
     _create_bus_fare_cap_2027,
     _create_cash_isa_limit_kept,
+    _create_machine_games_duty_rise,
 )
 
 
