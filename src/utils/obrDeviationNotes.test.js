@@ -230,18 +230,21 @@ describe("why our estimates differ from the official costings", () => {
     // 0.2 / 1.2 of our cost
     const vatRate = Number(readFileSync("src/uk_budget_data/budget_measures/pump_vat_on_fuel_duty_deferral.py", "utf8").match(/^ROAD_FUEL_VAT_RATE = ([\d.]+)$/m)[1]);
     const fuelVat = (year) => (our("fuel_duty_rise_deferral", year) * vatRate) / (1 + vatRate);
-    expect(note("fuel_duty_rise_deferral")).toContain(`Ours includes £${m(fuelVat("2026-27"))} million and £${m(fuelVat("2027-28"))} million of VAT on the lower pump price`);
+    expect(note("fuel_duty_rise_deferral")).toContain(`We also count £${m(fuelVat("2026-27"))} million and £${m(fuelVat("2027-28"))} million of VAT on the lower pump price`);
     // Scaled to all fuel: our fuel duty cost, without that VAT, times the
     // OBR's fuel duty receipts (EFO October 2026 receipts table 4.8) over our
-    // households' fuel duty, to the nearest £10m. We don't publish that base
-    // in the release, so we took it from a baseline run of #290 at 9b98370e
-    // on 28 October
+    // households' fuel duty, to the nearest £10m. The OBR's receipts include
+    // the deferral, so we take our households' fuel duty after it too: their
+    // duty before it, which we don't publish in the release and took from a
+    // baseline run of #290 at 9b98370e on 28 October, less our duty cost
     const receipts = { "2026-27": 23.95, "2027-28": 25.713 };
-    const householdDuty = { "2026-27": 13.3635, "2027-28": 14.6503 };
-    const allFuel = (year) => m(((our("fuel_duty_rise_deferral", year) - fuelVat(year)) * receipts[year]) / householdDuty[year] / 10) * 10;
-    expect(note("fuel_duty_rise_deferral")).toContain(`about £${m(householdDuty["2026-27"])} billion of the £${m(receipts["2026-27"])} billion of fuel duty the OBR forecasts for 2026-27`);
-    expect(point("fuel_duty_rise_deferral", 2026)).toContain(`Households pay about £${m(householdDuty["2026-27"])}bn of £${m(receipts["2026-27"])}bn duty`);
-    expect(note("fuel_duty_rise_deferral")).toContain(`we would estimate a fuel duty cost of about £${allFuel("2026-27")} million in 2026-27 and £${allFuel("2027-28")} million in 2027-28.`);
+    const baselineDuty = { "2026-27": 13.3635, "2027-28": 14.6503 };
+    const ourDuty = (year) => our("fuel_duty_rise_deferral", year) - fuelVat(year);
+    const householdDuty = (year) => baselineDuty[year] - ourDuty(year) / 1000;
+    const allFuel = (year) => m((ourDuty(year) * receipts[year]) / householdDuty(year) / 10) * 10;
+    expect(note("fuel_duty_rise_deferral")).toContain(`about £${m(householdDuty("2026-27"))} billion of the £${m(receipts["2026-27"])} billion of fuel duty the OBR forecasts for 2026-27`);
+    expect(point("fuel_duty_rise_deferral", 2026)).toContain(`Households pay about £${m(householdDuty("2026-27"))}bn of £${m(receipts["2026-27"])}bn duty`);
+    expect(note("fuel_duty_rise_deferral")).toContain(`Without that VAT, if we scaled ours to the OBR's fuel duty receipts, we would estimate a fuel duty cost of about £${allFuel("2026-27")} million in 2026-27 and £${allFuel("2027-28")} million in 2027-28.`);
     expect(point("fuel_duty_rise_deferral", 2026)).toContain(`If we scaled to all fuel, we would estimate about £${allFuel("2026-27")}m`);
     expect(point("fuel_duty_rise_deferral", 2027)).toContain(`If we scaled to all fuel, we would estimate about £${allFuel("2027-28")}m`);
 
@@ -258,7 +261,8 @@ describe("why our estimates differ from the official costings", () => {
     for (const year of CA_YEARS) {
       expect(total(7, year), year).toBeCloseTo(caSpend(year) + caBlock(year), 3);
       expect(caTax(year), year).toBeGreaterThan(0);
-      expect(caGross(year) / caSpend(year) - 1, year).toBeCloseTo(1 / 6, 1);
+      // "about a sixth": within 2.5 points of it
+      expect(Math.abs(caGross(year) / caSpend(year) - 1 - 1 / 6), year).toBeLessThan(0.025);
     }
     expect(note("carers_allowance_earnings_taper")).toContain(`The OBR gives £${m(total(7, "2030-31"))} million and £${m(total(7, "2031-32"))} million before the Treasury rounds them. They include £${m(caBlock("2030-31"))} million and £${m(caBlock("2031-32"))} million of extra block grant for Scotland`);
     expect(note("carers_allowance_earnings_taper")).toContain(`The UK government spends the rest, £${m(caSpend("2030-31"))} million and £${m(caSpend("2031-32"))} million, on Carer's Allowance and Universal Credit, and the costing has no line for income tax`);
@@ -289,7 +293,11 @@ describe("why our estimates differ from the official costings", () => {
     const ptaGross = (year) => gross("state_pension_income_tax_protection", year);
     const pta = (year) => our("state_pension_income_tax_protection", year);
     for (const value of Object.values(t11.find((l) => l.measure === 52 && l.category === "Welfare inside cap").values)) expect(value).toBe(0);
-    for (const year of PTA_YEARS) expect(1 - pta(year) / ptaGross(year), year).toBeCloseTo(0.25, 1);
+    // "about a quarter": 25.6% to 28.7% at revision 60
+    for (const year of PTA_YEARS) {
+      expect(1 - pta(year) / ptaGross(year), year).toBeGreaterThanOrEqual(0.25);
+      expect(1 - pta(year) / ptaGross(year), year).toBeLessThan(0.3);
+    }
     const ptaLine = PTA_YEARS.map((year) => `£${m(ptaTax(year))}m`);
     expect(note("state_pension_income_tax_protection")).toContain(`the OBR puts the costing's income tax line at ${ptaLine[0]}, ${ptaLine[1]} and ${ptaLine[2]} in its detailed policy table, Table 1.1.`);
     // The percentages compare the figures the note shows, so a reader can
@@ -461,10 +469,10 @@ describe("why our estimates differ from the official costings", () => {
   it("gives a point only in the years its figure holds", () => {
     expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2026).map((p) => p.text)).toEqual([
       "Households pay about £13bn of £24bn duty",
-      "If we scaled to all fuel, we would estimate about £450m",
+      "If we scaled to all fuel, we would estimate about £460m",
       "Government appears to assume 5p back on 1 Jan; law phases it",
     ]);
-    expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2027).map((p) => p.text)).toEqual(["If we scaled to all fuel, we would estimate about £760m"]);
+    expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2027).map((p) => p.text)).toEqual(["If we scaled to all fuel, we would estimate about £780m"]);
     expect(pointsForYear(OBR_DIFFERENCE_POINTS.state_pension_income_tax_protection, 2028).map((p) => p.text)).toEqual(["Pension Credit, HB and CTR savings offset about a quarter"]);
   });
 
