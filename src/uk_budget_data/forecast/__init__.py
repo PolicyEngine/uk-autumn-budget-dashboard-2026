@@ -11,6 +11,10 @@ The forecast is a scenario applied before data load, keyed by calendar
 year, the route the runbook requires for a macro path, so the dataset's
 projected years follow it, and the statutory uprating inputs' forecast
 years (September CPI, May-July earnings) follow its calendar-year growth.
+
+One part runs after data load: the gambling duty bases grow with the OBR's
+betting and gaming forecast (``gambling``, policyengine-uk#2761), which the
+installed engine's dataset projection does not do.
 """
 
 import json
@@ -99,11 +103,15 @@ def forecast_parameter_changes() -> dict[str, dict[str, float]]:
 
 
 def forecast_scenario() -> Scenario:
-    """The forecast on its own: a scenario applied before data load."""
+    """The forecast on its own: its growth rates, a scenario applied before
+    data load, and the gambling duty bases grown after it
+    (``gambling.project_gambling_bases``)."""
+    from uk_budget_data.forecast.gambling import project_gambling_bases
+
     return Scenario(
         parameter_changes=forecast_parameter_changes(),
         applied_before_data_load=True,
-    )
+    ) + Scenario(simulation_modifier=project_gambling_bases)
 
 
 @lru_cache(maxsize=None)

@@ -1,0 +1,94 @@
+{
+  "vintage": "OBR EFO October 2026, receipts Table 4.10, as policyengine-uk#2761 projects the gambling duty bases",
+  "source": "policyengine-uk#2761 (merged 2 November 2026), policyengine_uk/parameters/gov/economic_assumptions/yoy_growth.yaml, obr.per_capita.gambling_duty_bases: each duty's base (its receipts over the rate the model charges) per person, from HMRC's 2024-25 receipts through their 2025-26 outturn and the OBR's October 2026 Table 4.10 to 2031-32",
+  "source_url": "https://github.com/PolicyEngine/policyengine-uk/pull/2761",
+  "applies_to": "Every simulation built from survey data on an engine whose gambling inputs declare no uprating (policyengine-uk 2.151.0 and 2.165.1): uk_budget_data.forecast.gambling. Not a simulation built from one household's answers.",
+  "notes": [
+    "Values are copied from #2761 as committed: growth per person to six decimals, by the model year (6 April) in which each fiscal year starts. The engine compounds them into an index and rounds it to five decimals; gambling.per_person_index does the same.",
+    "population_index is the ons.population index over its 2024 level that #2761 divided by (its PR body, 'Indices by year'). The national base index is the per-person index times it. The dashboard divides that by the installed engine's own ons.population growth, which grows household weights in dataset projection, so the weighted inputs grow with each duty's national base on either engine.",
+    "Machine Games Duty: #2761 divides Table 4.10's line by a rate that charges 90.78% of the standard-rate base at 25% from 2027-28 (Gambling Commission Category B over B and C). The dashboard's measure charges 75.7% (Category B over HMRC's whole standard-rate base). At 75.73% #2761 gives a 2027-28 base 3.13% higher; the dashboard keeps #2761's series as merged.",
+    "After 2031-32 the dashboard holds each base at its 2031-32 level: no policy year runs later."
+  ],
+  "population_index": {
+    "2024": 1.0,
+    "2025": 1.0033,
+    "2026": 1.0053,
+    "2027": 1.00661,
+    "2028": 1.00832,
+    "2029": 1.01044,
+    "2030": 1.01296,
+    "2031": 1.01539
+  },
+  "per_person_growth": {
+    "remote_gaming": {
+      "2024": 0.0,
+      "2025": 0.132539,
+      "2026": 0.091574,
+      "2027": 0.009315,
+      "2028": 0.019987,
+      "2029": 0.020268,
+      "2030": 0.011003,
+      "2031": 0.003881
+    },
+    "lottery": {
+      "2024": 0.0,
+      "2025": 0.048312,
+      "2026": -0.154336,
+      "2027": 0.021712,
+      "2028": 0.028957,
+      "2029": 0.02954,
+      "2030": 0.026297,
+      "2031": 0.026866
+    },
+    "general_betting": {
+      "2024": 0.0,
+      "2025": -0.044277,
+      "2026": -0.044128,
+      "2027": 0.025705,
+      "2028": 0.043246,
+      "2029": 0.032385,
+      "2030": 0.026778,
+      "2031": 0.025912
+    },
+    "machine_games": {
+      "2024": 0.0,
+      "2025": 0.048678,
+      "2026": 0.054148,
+      "2027": -0.003614,
+      "2028": 0.034551,
+      "2029": 0.007554,
+      "2030": 0.009337,
+      "2031": 0.021314
+    },
+    "gaming": {
+      "2024": 0.0,
+      "2025": 0.047963,
+      "2026": -0.000114,
+      "2027": 0.059753,
+      "2028": 0.000213,
+      "2029": -0.000768,
+      "2030": 0.00304,
+      "2031": -0.006826
+    },
+    "bingo": {
+      "2024": 0.0,
+      "2025": 0.029891,
+      "2026": -0.001996,
+      "2027": -0.001298,
+      "2028": -0.001697,
+      "2029": -0.002096,
+      "2030": -0.002494,
+      "2031": -0.002394
+    },
+    "pool_betting": {
+      "2024": 0.0,
+      "2025": -0.512992,
+      "2026": -0.288858,
+      "2027": -0.053757,
+      "2028": 0.064652,
+      "2029": -0.009525,
+      "2030": 0.053325,
+      "2031": 0.040869
+    }
+  }
+}
