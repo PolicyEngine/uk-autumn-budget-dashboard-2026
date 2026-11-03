@@ -226,15 +226,16 @@ describe("why our estimates differ from the official costings", () => {
     for (const [year, value] of Object.entries(ours.fuel_duty_rise_deferral.values)) if (year >= "2028-29") expect(Math.abs(value), year).toBe(0);
     for (const [year, value] of Object.entries(t11.find((l) => l.measure === 3 && l.head === "Total").values)) if (year >= "2028-29") expect(Math.abs(value), year).toBe(0);
     // Our VAT: the modifier moves VAT by ROAD_FUEL_VAT_RATE of the duty change
-    // on each litre (pump_vat_on_fuel_duty_deferral.py), so VAT makes 0.2 / 1.2
-    // of our cost
+    // on each litre (pump_vat_on_fuel_duty_deferral.py), so VAT makes up
+    // 0.2 / 1.2 of our cost
     const vatRate = Number(readFileSync("src/uk_budget_data/budget_measures/pump_vat_on_fuel_duty_deferral.py", "utf8").match(/^ROAD_FUEL_VAT_RATE = ([\d.]+)$/m)[1]);
     const fuelVat = (year) => (our("fuel_duty_rise_deferral", year) * vatRate) / (1 + vatRate);
     expect(note("fuel_duty_rise_deferral")).toContain(`Ours includes £${m(fuelVat("2026-27"))} million and £${m(fuelVat("2027-28"))} million of VAT on the lower pump price`);
     // Scaled to all fuel: our fuel duty cost, without that VAT, times the
     // OBR's fuel duty receipts (EFO October 2026 receipts table 4.8) over our
-    // households' fuel duty, to the nearest £10m. The release doesn't publish
-    // that base; a baseline run of #290 at 9b98370e gave it on 28 October
+    // households' fuel duty, to the nearest £10m. We don't publish that base
+    // in the release, so we took it from a baseline run of #290 at 9b98370e
+    // on 28 October
     const receipts = { "2026-27": 23.95, "2027-28": 25.713 };
     const householdDuty = { "2026-27": 13.3635, "2027-28": 14.6503 };
     const allFuel = (year) => m(((our("fuel_duty_rise_deferral", year) - fuelVat(year)) * receipts[year]) / householdDuty[year] / 10) * 10;
@@ -297,6 +298,15 @@ describe("why our estimates differ from the official costings", () => {
     const shownPct = (year) => m((m(ptaGross(year)) / m(ptaTax(year)) - 1) * 100);
     expect(note("state_pension_income_tax_protection")).toContain(`Ours, £${m(ptaGross("2027-28"))}m, £${m(ptaGross("2028-29"))}m and £${m(ptaGross("2029-30"))}m, falls about ${-shownPct("2027-28")}% short of that line in 2027-28 and exceeds it by ${shownPct("2028-29")}% and ${shownPct("2029-30")}% in 2028-29 and 2029-30.`);
     expect(note("state_pension_income_tax_protection")).toContain(`we estimate a net cost of £${m(pta("2027-28"))}m, £${m(pta("2028-29"))}m and £${m(pta("2029-30"))}m.`);
+    // The pensioners who gain: the people whose own income tax falls, to the
+    // nearest 10,000, against the Treasury's count
+    const gainers = (m(ours.state_pension_income_tax_protection.peopleDirectlyAffected["2027-28"] / 10000) * 10000).toLocaleString("en-GB");
+    expect(note("state_pension_income_tax_protection")).toContain(`More pensioners gain in our data (about ${gainers} in 2027-28, against the Treasury's 500,000).`);
+    expect(point("state_pension_income_tax_protection", 2027)).toContain(`More pensioners gain in our data (${gainers} vs 500,000)`);
+    // The allowance in the later years, as the release publishes it
+    // (public/data/policy_parameters.json, from pension_tax_allowance.py)
+    const allowance = (year) => JSON.parse(readFileSync("public/data/policy_parameters.json", "utf8")).measures.state_pension_income_tax_protection.rows[0].points.find((p) => p.year === year).after;
+    expect(note("state_pension_income_tax_protection")).toContain(`For 2028-29 and 2029-30 we set the allowance at £${allowance(2028)} and £${allowance(2029)} a year, from the October 2026 forecast of the State Pension.`);
     expect(point("state_pension_income_tax_protection", 2028)).toContain("Pension Credit, HB and CTR savings offset about a quarter");
     expect(panel("state_pension_income_tax_protection")).toBe(`Income tax ${ptaLine.join(", ")}; no benefit savings`);
 
@@ -362,9 +372,10 @@ describe("why our estimates differ from the official costings", () => {
   // The figures those notes compute from are the release's own: each
   // measure's artifact in public/data/manifest.json, its
   // budgetary_impact.csv and, where a note gives our figure before offsets,
-  // its official_basis.csv, in £ million. A regeneration changes the
-  // artifacts, so this fails until the fixture, and each note figure
-  // computed from it, matches the new release
+  // its official_basis.csv, in £ million, and, where a note counts the
+  // people who gain, its age_impact.csv. When we regenerate, the artifacts
+  // change, so this fails until the fixture, and each note figure computed
+  // from it, matches the new release
   it("computes from the figures the release publishes", () => {
     const fixture = JSON.parse(readFileSync("src/test/fixtures/obrNotesOurFigures.json", "utf8")).measures;
     const manifest = JSON.parse(readFileSync("public/data/manifest.json", "utf8"));
@@ -385,6 +396,13 @@ describe("why our estimates differ from the official costings", () => {
       };
       check("budgetary_impact.csv", entry.values);
       if (entry.officialBasis) check("official_basis.csv", entry.officialBasis);
+      // The people whose own income tax changes, all ages together
+      if (entry.peopleDirectlyAffected) {
+        const ages = parseDashboardCsv(readFileSync(`public/data/${entry.artifact}/age_impact.csv`, "utf8"));
+        for (const [label, value] of Object.entries(entry.peopleDirectlyAffected)) {
+          expect(Number(ages.find((row) => row.year === label.slice(0, 4) && row.age_band === "all").people_directly_affected), `${id} age_impact.csv ${label}`).toBeCloseTo(value, 3);
+        }
+      }
     }
   });
 

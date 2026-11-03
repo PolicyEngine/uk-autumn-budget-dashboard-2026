@@ -1,5 +1,5 @@
 {
- "source": "Each measure's budgetary_impact.csv in the release (public/data/manifest.json, revision 60), and its official_basis.csv where a note gives our figure before offsets, £ million, negative a cost",
+ "source": "Each measure's budgetary_impact.csv in the release (public/data/manifest.json, revision 60), and its official_basis.csv where a note gives our figure before offsets, £ million, negative a cost; peopleDirectlyAffected is age_impact.csv's people_directly_affected for all ages, in people",
  "measures": {
   "household_energy_payment_2026": {
    "artifact": "artifacts/household_energy_payment_2026/220d79f0f70e2679",
@@ -92,6 +92,9 @@
     "2029-30": -192.9618,
     "2030-31": 0.0,
     "2031-32": 0.0
+   },
+   "peopleDirectlyAffected": {
+    "2027-28": 665907.2105
    }
   },
   "property_income_rates_up": {
