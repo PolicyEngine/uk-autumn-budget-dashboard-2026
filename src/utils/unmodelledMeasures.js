@@ -69,7 +69,7 @@ export const UNMODELLED_REASONS = [
     label: "Outside a household model",
     why: "Taxes on firms, reliefs on business premises, a change in who collects a tax and loans don't change household incomes the way this dashboard measures them.",
   },
-  { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules not yet published." },
+  { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules that still await publication." },
 ];
 
 /** The labels of every card's points, in order. */
@@ -169,7 +169,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "2.5% deposit; five interest-free years; saves hundreds a month, says the Budget." },
       { label: "Who it reaches", text: "Around 70,000 first-time buyers (government estimate)." },
-      { label: "Why we leave it out", text: "A loan is lent, not paid, so household incomes do not change." },
+      { label: "Why we leave it out", text: "The scheme lends rather than pays, so household incomes do not change." },
     ],
     costings: [
       {
@@ -246,11 +246,11 @@ export const UNMODELLED_MEASURES = [
     id: "universal-credit-surplus-earnings",
     order: 10,
     reason: "data",
-    name: "Universal Credit surplus earnings threshold kept at £2,500",
+    name: "Universal Credit surplus earnings threshold stays at £2,500",
     starts: "1 Apr 2027",
     summary: "Keeps Universal Credit's surplus earnings threshold at £2,500 to March 2028, rather than £300.",
     points: [
-      { label: "For a household", text: "Excess earnings up to £2,500, such as a bonus, aren't carried forward." },
+      { label: "For a household", text: "Excess earnings up to £2,500, such as a bonus, don't carry forward." },
       { label: "Who it reaches", text: "Claimants reclaiming within six months of earnings ending their award." },
       { label: "Why we leave it out", text: "The model works out Universal Credit yearly, not month by month." },
     ],
@@ -261,7 +261,7 @@ export const UNMODELLED_MEASURES = [
     id: "mileage-rates",
     order: 11,
     reason: "data",
-    name: "Tax-free mileage rates raised",
+    name: "Tax-free mileage rates up",
     starts: "Apr 2026 / Apr 2027",
     summary: "Makes 55p a mile permanent up to 10,000 business miles; above that, 25p becomes 35p.",
     points: [
@@ -291,13 +291,13 @@ export const UNMODELLED_MEASURES = [
     id: "business-asset-disposal-relief",
     order: 13,
     reason: "data",
-    name: "Business Asset Disposal Relief limit cut to £500,000",
+    name: "Business Asset Disposal Relief limit down to £500,000",
     starts: "6 Apr 2027",
-    summary: "Halves the lifetime limit on gains taxed at 18%, from £1 million to £500,000.",
+    summary: "Halves the lifetime limit on gains paying 18% tax, from £1 million to £500,000.",
     points: [
-      { label: "For a household", text: "Gains above £500,000 are taxed at up to 24% rather than 18%." },
+      { label: "For a household", text: "Gains above £500,000 pay tax at up to 24% rather than 18%." },
       { label: "Who it reaches", text: "Sellers of qualifying businesses; three-quarters keep relief on their whole gain." },
-      { label: "Why we leave it out", text: "No record of relief already used; gains calibrated to 2024-25's high disposals." },
+      { label: "Why we leave it out", text: "No record of past relief; we calibrate gains to 2024-25's high disposals." },
     ],
     costings: [{ row: 60, values: [5, 60, 180, 255, 280, 305] }],
     sources: [
@@ -313,8 +313,8 @@ export const UNMODELLED_MEASURES = [
     starts: "Oct 2026 / Apr 2029",
     summary: "A 25%-bonus ISA replaces the Lifetime ISA, whose charge over £450,000 falls to 20%.",
     points: [
-      { label: "For a household", text: "The bonus adds to the deposit, not income, paid at purchase." },
-      { label: "Who it reaches", text: "People saving for a first home, Lifetime ISA holders included." },
+      { label: "For a household", text: "The bonus arrives at purchase, adding to the deposit, not income." },
+      { label: "Who it reaches", text: "People saving for a first home, including Lifetime ISA holders." },
       { label: "Why we leave it out", text: "The model has no ISA payments, bonuses or home purchases." },
     ],
     costings: [
@@ -333,7 +333,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "Two weeks, up to £194 each; adopters up to 39 weeks." },
       { label: "Who it reaches", text: "Over 150,000 parents a year (government estimate)." },
-      { label: "Why we leave it out", text: "Rules not final; paternity pay and Maternity Allowance are taken as reported." },
+      { label: "Why we leave it out", text: "Rules not final; paternity pay and Maternity Allowance come from the survey." },
     ],
     costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
     sources: [
@@ -353,7 +353,7 @@ export const UNMODELLED_MEASURES = [
     id: "gas-standing-charges",
     order: 16,
     reason: "data",
-    name: "Gas standing charges to be abolished",
+    name: "Gas standing charges to end",
     // Budget paragraph 4.3: "aiming for delivery by the end of 2027 or as soon
     // as possible after then" (the start badge holds 20 characters)
     starts: "End of 2027 or later",
