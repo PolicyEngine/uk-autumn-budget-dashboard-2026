@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DETAIL_PARTS,
   DETAIL_TIMEOUT_MS,
+  DefinitionMismatchError,
   EngineMismatchError,
   HEADLINE_INCLUDE,
   MODAL_TIMEOUT_MS,
   buildHouseholdRequest,
+  definitionRefusals,
   engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
@@ -16,6 +18,7 @@ import {
   requestKey,
   stageMismatch,
 } from "../utils/householdImpactApi";
+import { definitionChecked } from "../utils/calculatorOnlyMeasures";
 
 // Results already fetched this session, by request: switching the year or
 // the policies back shows them at once
@@ -36,10 +39,16 @@ function underEngine(entry, expectedEngine) {
 /**
  * A result already in the session cache for a request key (fetched, or a
  * precomputed example), or null; null too when `expectedEngine` is given and
- * the result's package versions differ. Its headline may be all it has.
+ * the result's package versions differ, or when the result does not report
+ * the approved definition (`approved`) of every one of `policies`, the
+ * measures the key was asked with: the check this hook makes of its own
+ * cache (#136). With no policies there is nothing to check it against, and
+ * no result. Its headline may be all it has.
  */
-export function peekHouseholdImpact(key, expectedEngine = null) {
-  return underEngine(cache.get(key), expectedEngine)?.data ?? null;
+export function peekHouseholdImpact(key, expectedEngine, approved, policies) {
+  const data = underEngine(cache.get(key), expectedEngine)?.data ?? null;
+  if (!data || !Array.isArray(policies) || policies.length === 0) return null;
+  return definitionRefusals(approved ?? {}, data.definitions ?? null, policies).length === 0 ? data : null;
 }
 
 // Whether the detail service (NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL) may
@@ -121,6 +130,20 @@ const DEBOUNCE_MS = 400;
  * @param {Object<string, string>} [params.expectedEngine] - The package
  *   versions the selected measures' receipts record; an answer from others
  *   is refused, and is an error
+ * @param {Object<string, Object>} [params.expectedDefinitions] - Each
+ *   selected measure's approved definition (`publishedDefinitions`). Both
+ *   stages name their commits, and a main API answer whose reported
+ *   definitions differ, or that reports none, is refused: a
+ *   DefinitionMismatchError naming the measures (a detail service answer
+ *   like that is asked again of the main API). A measure asked about with
+ *   none here is refused before any request, so leaving it out never shows
+ *   an unchecked answer; a calculator-only measure with none is the
+ *   exception, with no published figures to check it against.
+ *   Only those of `policies` are used and sent, and the request is checked
+ *   again when one of them comes or goes. An answer in the session cache is
+ *   shown only when it reports them too: a precomputed example's has the
+ *   ones its file recorded (utils/householdPresets.js), and one with none
+ *   or others is asked of the API instead
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
  *   - Resolves after a check of the live publication that started after it
  *   was called; each request waits for it and is dropped unless still current
@@ -136,12 +159,25 @@ const DEBOUNCE_MS = 400;
  *   because the service looked to be starting up (an empty answer, a 5xx,
  *   a timeout); `detailStartingUp` the same for the sweep and the split
  */
-export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, confirmPublication = null, seeded = 0, household = null }) {
+export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, expectedDefinitions = null, confirmPublication = null, seeded = 0, household = null }) {
   const body = useMemo(
     () => buildHouseholdRequest(inputs, { year, policies }),
     [inputs, year, policies],
   );
   const key = `${publicationKey}:${requestKey(body)}`;
+  // The approved definitions of the measures asked about, and only those:
+  // each request names them. The page works them out from the current
+  // selection, which can differ from the policies asked about (answers sent
+  // with Calculate, then edited while the bar changed). The check is made
+  // again whenever one of them comes or goes, so a refusal never outlives
+  // the definitions it was made against. Only a measure with published
+  // figures has one: a calculator-only measure, which every household
+  // request carries, is checked only once it has one (`definitionChecked`)
+  const published = definitionChecked(policies, expectedDefinitions);
+  const approved = Object.fromEntries(
+    published.filter((id) => Object.hasOwn(expectedDefinitions ?? {}, id)).map((id) => [id, expectedDefinitions[id]]),
+  );
+  const checksKey = JSON.stringify([Object.entries(approved), expectedEngine]);
   const [attempt, setAttempt] = useState(0);
   // `key` is the request asked for last; `dataKey` the request `data`
   // answers. They differ while a new answer loads: the old numbers are then
@@ -162,9 +198,28 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
 
   useEffect(() => {
     if (!enabled || policies.length === 0) return undefined;
-    // An entry from other package versions is a miss: the live answer
-    // replaces it
-    const cached = underEngine(cache.get(key), expectedEngine);
+    const controller = new AbortController();
+    const { signal } = controller;
+    const refuse = (error) => {
+      cache.delete(key);
+      setState({ key, dataKey: null, dataHousehold: null, status: "error", data: null, error, detailStatus: "idle", detailError: null, startingUp: false, detailStartingUp: false });
+      // Nothing else this request asked for can be shown now
+      controller.abort();
+    };
+    // Nothing published is answered unchecked: a selected measure with no
+    // approved definition is refused before any request
+    const unapproved = published.filter((id) => !Object.hasOwn(approved, id));
+    if (unapproved.length) {
+      refuse(new DefinitionMismatchError(definitionRefusals(approved, null, unapproved)));
+      return undefined;
+    }
+    // An entry from other package versions, or one that doesn't report
+    // every selected measure's approved definition, is a miss: the live
+    // answer replaces it. A fetched answer was checked when it arrived; a
+    // precomputed example's has the definitions its file recorded, or none.
+    const entry = underEngine(cache.get(key), expectedEngine);
+    const cached =
+      entry && definitionRefusals(approved, entry.data?.definitions ?? null, published).length === 0 ? entry : null;
     if (cached?.complete) {
       setState({
         key,
@@ -180,8 +235,6 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       });
       return undefined;
     }
-    const controller = new AbortController();
-    const { signal } = controller;
     // The same household asked again (another year or set of policies):
     // keep its last result on screen while the next one loads, marked stale
     // (dataKey) until this request's answer arrives, as the guide's "don't
@@ -206,12 +259,13 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     // and is dropped if the snapshot it was made under is no longer live:
     // the page then shows the new snapshot's views, or none.
     const current = async () => !confirmPublication || (await confirmPublication(publicationKey));
-    const refuse = (error) => {
-      cache.delete(key);
-      setState({ key, dataKey: null, dataHousehold: null, status: "error", data: null, error, detailStatus: "idle", detailError: null, startingUp: false, detailStartingUp: false });
-      // Nothing else this request asked for can be shown now
-      controller.abort();
+    // The refusal of the selected measures the API's code does not compute
+    // from their approved definitions, or null when it computes them all
+    const mismatch = (answer) => {
+      const refused = definitionRefusals(approved, answer.definitions, published);
+      return refused.length ? new DefinitionMismatchError(refused, { unchecked: answer.definitions === null }) : null;
     };
+    const definitions = approved;
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
       // Whether this request fetched its headline: one kept in the cache
@@ -242,7 +296,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
                 // nothing by then would answer with an empty body at 150 s
                 postHouseholdImpact(
                   { ...body, include },
-                  { signal: earlyController.signal, timeoutMs: MODAL_TIMEOUT_MS, url: detailUrl },
+                  { signal: earlyController.signal, timeoutMs: MODAL_TIMEOUT_MS, definitions, url: detailUrl },
                 ).then(
                   (raw) => ({ raw }),
                   (error) => ({ error }),
@@ -258,6 +312,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
             { ...body, include: HEADLINE_INCLUDE },
             {
               signal,
+              definitions,
               retry: retryPolicy,
               onRetry: () => {
                 if (!signal.aborted) setState((prev) => ({ ...prev, key, startingUp: true }));
@@ -291,6 +346,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           refuse(new EngineMismatchError(differ));
           return;
         }
+        // Computed from other definitions than the approved ones
+        const refused = mismatch(first);
+        if (refused) {
+          refuse(refused);
+          return;
+        }
         const complete = first.byPolicy !== null && first.sweep !== null;
         cache.set(key, { data: first, complete });
         setState({
@@ -312,8 +373,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       }
       // The sweep and the split by policy, asked for at once: each part is
       // shown as soon as its own answer arrives. They wait for a check of the
-      // live publication, and a part answered by other package versions than
-      // the headline's refuses the whole result.
+      // live publication. A part the detail service answers from another
+      // build than the headline's, or with a measure computed from another
+      // definition than its approved one, is asked again of the main API; a
+      // part the main API answers so refuses the whole result.
       if (!(await current()) || signal.aborted) {
         earlyController.abort();
         return;
@@ -325,10 +388,11 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         include.some((part) => (part === "sweep" ? merged.sweep : merged.byPolicy) === null),
       );
       // The detail service's answer is used only if it has the part asked
-      // for, reports the headline's build commit and matches it; otherwise
-      // the part is asked of the main API. An answer from another build than
-      // a headline fetched just now stops the page asking the detail service
-      // for the rest of the session
+      // for, reports the headline's build commit, matches it, and computes
+      // every measure from its approved definition (a stale or pre-#125
+      // deploy doesn't); otherwise the part is asked of the main API. An
+      // answer from another build than a headline fetched just now stops the
+      // page asking the detail service for the rest of the session
       const acceptFor = (include) => (raw) => {
         try {
           const detail = normaliseHouseholdImpact(raw);
@@ -339,7 +403,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           // answer from the new one is refused for this request but says
           // nothing about the next
           if (otherBuild && headlineFetched) detailServiceUsable = false;
-          return answered && !otherBuild;
+          return answered && !otherBuild && mismatch(detail) === null;
         } catch {
           return false;
         }
@@ -365,6 +429,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
                     {
                       signal,
                       timeoutMs: DETAIL_TIMEOUT_MS,
+                      definitions,
                       accept,
                       // Asked early already: an answer that failed or was
                       // refused there goes to Cloud Run at once
@@ -378,9 +443,15 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
                     },
                   );
             if (signal.aborted || refused) return;
+            const detail = normaliseHouseholdImpact(raw);
+            // Checked as the headline was: the main API's answer comes back
+            // as it is, and a deployment between the two stages may compute a
+            // measure from another definition
+            const mismatched = mismatch(detail);
+            if (mismatched) throw mismatched;
             // Refused unless from the headline's own package versions and,
             // where both report one, its build commit
-            merged = mergeStages(merged, normaliseHouseholdImpact(raw));
+            merged = mergeStages(merged, detail);
             const complete = merged.byPolicy !== null && merged.sweep !== null;
             cache.set(key, { data: merged, complete });
             setState((prev) => ({
@@ -396,7 +467,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
             }));
           } catch (error) {
             if (signal.aborted || refused) return;
-            if (error instanceof EngineMismatchError) {
+            if (error instanceof EngineMismatchError || error instanceof DefinitionMismatchError) {
               refused = true;
               refuse(error);
               return;
@@ -421,9 +492,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       clearTimeout(timer);
       controller.abort();
     };
-    // body is derived from key's inputs
+    // body is derived from key's inputs, approved and expectedEngine from
+    // checksKey's
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, household, enabled, attempt, policies.length, seeded]);
+  }, [key, household, enabled, attempt, policies.length, checksKey, seeded]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
