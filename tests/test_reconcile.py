@@ -1800,6 +1800,7 @@ def test_the_committed_policy_gates_budget_2026_on_post_behavioural():
         # Held back from the release, ready for when they are published
         "cash_isa_limit_kept",
         "machine_games_duty_rise",
+        "company_car_tax_2030",
     }
     # Their costings state no behaviour, or there is none to cost
     assert (

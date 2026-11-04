@@ -977,6 +977,7 @@ def test_the_combined_reform_names_every_other_budget_measure():
         "savings_income_rates_up",
         "cash_isa_limit_kept",
         "machine_games_duty_rise",
+        "company_car_tax_2030",
     }
     assert sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == sorted(
         i

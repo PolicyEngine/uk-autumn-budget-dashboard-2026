@@ -168,6 +168,8 @@ DECLARED = {
     # The tax on the interest the planned limit's excess would have earned
     "cash_isa_limit_kept": {"income tax"},
     "machine_games_duty_rise": {"gambling duties"},
+    # The benefit's income tax, and employers' Class 1A on it
+    "company_car_tax_2030": {"income tax", "National Insurance"},
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(
