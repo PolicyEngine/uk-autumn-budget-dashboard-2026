@@ -703,7 +703,8 @@ export const POLICY_DETAILS = [
       label: "HM Treasury, Budget 2026, paragraph 6.207",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
     },
-    budgetRows: [86],
+    // budgetRows: [86] comes with the measure's row in
+    // data_inputs/treasury/mapping.csv, when it is published.
   },
 ];
 

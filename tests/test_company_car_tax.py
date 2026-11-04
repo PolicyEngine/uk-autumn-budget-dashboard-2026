@@ -59,15 +59,23 @@ def test_without_company_cars_in_the_engine_it_changes_nothing():
 def test_the_rates_are_the_budgets():
     """6.207: zero-emission 9% to 10%, 1 to 50 g/km 19% to 20%, every
     other band 1 point up, the maximum 40%."""
-    assert COMPANY_CAR_RATES_2030[f"{APPROPRIATE_PERCENTAGE}.zero_emission"] == 0.10
+    assert (
+        COMPANY_CAR_RATES_2030[f"{APPROPRIATE_PERCENTAGE}.zero_emission"]
+        == 0.10
+    )
     for band in range(5):
         path = f"{APPROPRIATE_PERCENTAGE}.electric_range[{band}].amount"
         assert COMPANY_CAR_RATES_2030[path] == 0.20
     assert [
-        COMPANY_CAR_RATES_2030[f"{APPROPRIATE_PERCENTAGE}.co2_band[{band}].amount"]
+        COMPANY_CAR_RATES_2030[
+            f"{APPROPRIATE_PERCENTAGE}.co2_band[{band}].amount"
+        ]
         for band in range(5)
     ] == [0.21, 0.22, 0.23, 0.24, 0.24]
-    assert COMPANY_CAR_RATES_2030[f"{APPROPRIATE_PERCENTAGE}.graduated.base_rate"] == 0.24
+    assert (
+        COMPANY_CAR_RATES_2030[f"{APPROPRIATE_PERCENTAGE}.graduated.base_rate"]
+        == 0.24
+    )
     assert COMPANY_CAR_RATES_2030[f"{APPROPRIATE_PERCENTAGE}.maximum"] == 0.40
     assert len(COMPANY_CAR_RATES_2030) == 13
 
@@ -127,10 +135,14 @@ def _both(sit, year, variables):
     measure = get_reform(COMPANY_CAR_TAX_ID)
     sims = (
         Simulation(situation=sit, scenario=with_forecast(None)),
-        Simulation(situation=sit, scenario=with_forecast(measure.to_scenario())),
+        Simulation(
+            situation=sit, scenario=with_forecast(measure.to_scenario())
+        ),
     )
     return {
-        variable: tuple(float(sim.calculate(variable, year).sum()) for sim in sims)
+        variable: tuple(
+            float(sim.calculate(variable, year).sum()) for sim in sims
+        )
         for variable in variables
     }
 
@@ -153,9 +165,21 @@ CARS = {
     # 23% + 25 points = 48%, capped at the maximum
     "petrol at 200 g/km": (50_000, "PETROL", 200, 0.39, 0.40),
     # 23% + 5 points + the 4-point diesel supplement
-    "diesel without RDE2 at 100 g/km": (25_000, "DIESEL_NON_RDE2", 100, 0.32, 0.33),
+    "diesel without RDE2 at 100 g/km": (
+        25_000,
+        "DIESEL_NON_RDE2",
+        100,
+        0.32,
+        0.33,
+    ),
     # 23% + 17 + 4 = 44%, capped: the rise reaches it through the maximum
-    "diesel without RDE2 at 160 g/km": (25_000, "DIESEL_NON_RDE2", 160, 0.39, 0.40),
+    "diesel without RDE2 at 160 g/km": (
+        25_000,
+        "DIESEL_NON_RDE2",
+        160,
+        0.39,
+        0.40,
+    ),
 }
 
 
