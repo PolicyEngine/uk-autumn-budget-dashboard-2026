@@ -183,8 +183,9 @@ def test_the_package_is_the_eight_announced_measures():
     # 29 October 2026 with the £2 bus fare cap. Ten registered: the savings
     # rates held back and the cash ISA limit, Household calculator only.
     # Eleven with the Machine Games Duty rise, likewise (2 November 2026).
+    # Twelve with the company car tax rates, held back (4 November 2026).
     assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
-    assert len(reforms._MEASURE_FACTORIES) == 11
+    assert len(reforms._MEASURE_FACTORIES) == 12
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
     assert key == "combined--7baf4e89377bcc9c"
     # The area run's package alias stands for that key

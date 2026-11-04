@@ -47,6 +47,8 @@ TAX_NAMES = {
         r"\bHICBC\b",
         # Budget 2026's reduction in pensioners' income tax.
         r"(?i:\bpension tax allowance\b)",
+        # Company car tax is income tax on the company car benefit.
+        rf"(?i:\bcompany[- ]car[- ]{TAX}\b)",
     ),
     "National Insurance": (
         r"(?i:\bnational[- ]insurance\b)",
@@ -371,6 +373,7 @@ def test_the_names_are_read_as_copy_uses_them():
         "R&D tax relief": {"corporation tax"},
         "the High Income Child Benefit Charge": {"income tax"},
         "a Pension Tax Allowance": {"income tax"},
+        "Company car tax rates up 1 point": {"income tax"},
         "where employers spread increased NI costs": {"National Insurance"},
         "attract employee and employer National Insurance": {
             "National Insurance"
