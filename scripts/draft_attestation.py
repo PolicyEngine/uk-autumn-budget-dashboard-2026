@@ -108,7 +108,8 @@ REASONS = {
         "takings on survey data (the Gambling Commission's Category B "
         "share) and all of them for one household, times the forecast's "
         "Machine Games Duty base growth (forecast.gambling, "
-        "policyengine-uk#2761). Before 2027-28 and for every other band the "
+        "policyengine-uk#2761's series with its 2027-28 step derived at the "
+        "same 75.7%). Before 2027-28 and for every other band the "
         "native duty stands. The receipt's outputs were compared with the "
         "hand-computed households in tests/test_machine_games_higher_stake.py."
     ),

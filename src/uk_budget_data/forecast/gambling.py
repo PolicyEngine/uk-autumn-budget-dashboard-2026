@@ -4,10 +4,17 @@ forecast, ported from policyengine-uk#2761.
 policyengine-uk 2.151.0 and 2.165.1 declare no uprating for their sixteen
 gambling inputs, so dataset projection holds each at its 2024-25 cash level
 while household weights grow with population: the bases hardly move (Machine
-Games Duty's grows 0.7% to 2027-28 against the OBR's 10.9%). #2761 gives each
-of the seven betting and gaming duties a base series (each year's receipts
-over the rate the model charges, so the model applies its own rate changes
-once), and this module grows the bases by it (``gambling_duty_bases.json``).
+Games Duty's grows 0.7% to 2027-28 against 10.9% on #2761's series). #2761
+gives each of the seven betting and gaming duties a base series (each year's
+receipts over the rate the model charges, so the model applies its own rate
+changes once), and this module grows the bases by it
+(``gambling_duty_bases.json``).
+
+One step differs from #2761. Its Machine Games Duty base for 2027-28 divides
+Table 4.10's line by a rate that charges 90.78% of the standard-rate base at
+25%; the dashboard's measure charges 75.7%, so the dashboard derives that
+step at 75.7% (``machine_games_step``, ``HIGHER_STAKE_SHARE``), and the base
+from 2027-28 on is 3.14% above #2761's (14.4% growth to 2027-28).
 
 How. Each duty is linear in its own inputs, and every input of a duty takes
 that duty's series, so growing the inputs by a factor grows the duty by the
@@ -85,6 +92,54 @@ def bases_record() -> dict:
     return json.loads(
         files("uk_budget_data.forecast").joinpath(BASES_FILE).read_text()
     )
+
+
+def _higher_stake() -> dict:
+    return bases_record()["machine_games_higher_stake"]
+
+
+def machine_games_rate(share: float, higher_stake: bool) -> float:
+    """Machine Games Duty's rate on its whole base, each band weighted by
+    its 2024-25 share of the base, with ``share`` of the standard-rate band
+    at the higher rate when ``higher_stake`` (from 1 April 2027): 19.35%
+    before, 22.96% at 75.7% and 23.68% at #2761's 90.78% after."""
+    bands = _higher_stake()["bands_2024_25"]
+    total = sum(band["base"] for band in bands.values())
+    charged = sum(band["base"] * band["rate"] for band in bands.values())
+    if higher_stake:
+        standard = bands["standard"]
+        charged += (
+            standard["base"]
+            * share
+            * (bands["higher"]["rate"] - standard["rate"])
+        )
+    return charged / total
+
+
+def machine_games_step(share: float) -> float:
+    """Machine Games Duty's growth per person into 2027-28, derived as #2761
+    derives it, at ``share``: Table 4.10's 2027-28 receipts over the rate
+    with ``share`` at 25%, over 2026-27's over the rate before, over one plus
+    population growth, minus one, to six decimals.
+
+    A base series is receipts over the rate the model charges, so it holds
+    only for the share the model charges. #2761 uses 90.78% (Gambling
+    Commission Category B over Categories B and C) and gets -0.003614; the
+    dashboard's measure charges ``HIGHER_STAKE_SHARE``, 75.7% (Category B
+    over HMRC's whole standard-rate base), and ``gambling_duty_bases.json``
+    holds this step at that share. Later steps divide by the same rate in
+    both years, so the share cancels and they stay #2761's."""
+    record = _higher_stake()
+    receipts = record["table_4_10_bn"]
+    before = receipts["2026"] / machine_games_rate(share, higher_stake=False)
+    after = receipts["2027"] / machine_games_rate(share, higher_stake=True)
+    return round(after / before / (1 + record["population_growth"]) - 1, 6)
+
+
+# The higher-stake share of standard-rate takings that the Machine Games
+# Duty measure charges at 25% on survey data, and that the stored base's
+# 2027-28 step is derived at (``machine_games_step``): one number for both
+HIGHER_STAKE_SHARE = _higher_stake()["share"]
 
 
 def _years(duty: str) -> list[int]:

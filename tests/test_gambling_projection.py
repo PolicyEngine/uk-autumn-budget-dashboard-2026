@@ -2,7 +2,8 @@
 (``forecast.gambling``, ported from policyengine-uk#2761).
 
 The indices are checked against #2761's own tables (its PR body, "Indices
-by year"), and the projection on four invented households built as survey
+by year"; Machine Games Duty's from 2027-28 at the dashboard's higher-stake
+share, and that step against its derivation), and the projection on four invented households built as survey
 data: each duty, weighted, grows with its national base, on the installed
 engine's population path, and one household's answers are not projected.
 """
@@ -231,18 +232,105 @@ def weighted(sim, variable, year):
     )
 
 
+# Machine Games Duty's base from 2027-28 over #2761's: its 2027-28 step at
+# the dashboard's 75.7% (0.027652) over #2761's at 90.78% (-0.003614)
+MACHINE_GAMES_FROM_2027 = 1.027652 / 0.996386
+
+
 @pytest.mark.parametrize("duty", sorted(PER_PERSON))
 def test_the_indices_are_2761s(duty):
     """Compounded as the engine compounds a yoy_growth series, the stored
     growth gives #2761's per-person index, and with #2761's population its
-    national base index, in every year."""
+    national base index, in every year; Machine Games Duty's from 2027-28
+    are #2761's times its re-derived step over #2761's, to the five-decimal
+    rounding of each step."""
     for year, person, base in zip(YEARS, PER_PERSON[duty], BASE[duty]):
+        scale = (
+            MACHINE_GAMES_FROM_2027
+            if duty == "machine_games" and year >= 2027
+            else 1.0
+        )
+        tolerance = 1e-9 if scale == 1.0 else 2e-5
         assert gambling.per_person_index(duty, year) == pytest.approx(
-            person, abs=1e-9
+            person * scale, abs=tolerance
         ), year
         assert gambling.base_index(duty, year) == pytest.approx(
-            base, abs=1.5e-5
+            base * scale, abs=1.5e-5 + tolerance
         ), year
+
+
+def test_only_machine_games_2027_step_differs_from_2761():
+    """Every stored value is #2761's as committed (its yoy_growth.yaml)
+    except Machine Games Duty's step into 2027-28."""
+    growth = gambling.bases_record()["per_person_growth"]
+    record = gambling.bases_record()["machine_games_higher_stake"]
+    assert growth["machine_games"]["2027"] != record["growth_2761"]
+    # #2761's committed machine_games series, 2025 to 2031
+    as_2761 = [
+        0.048678,
+        0.054148,
+        -0.003614,
+        0.034551,
+        0.007554,
+        0.009337,
+        0.021314,
+    ]
+    stored = [growth["machine_games"][str(y)] for y in range(2025, 2032)]
+    assert stored[:2] == as_2761[:2] and stored[3:] == as_2761[3:]
+
+
+def test_machine_games_2027_step_is_derived_at_the_measures_share():
+    """The base is receipts over the rate the model charges, so the stored
+    2027-28 step is #2761's derivation at the share the measure charges:
+    Table 4.10's £826.9m over 22.96% (75.7% of the standard-rate band at
+    25%) over its £677.1m over 19.35%, over population growth of 0.13%.
+    The same derivation at #2761's share, 90.78%, gives #2761's value, so
+    the method is #2761's and only the share moves."""
+    import inspect
+
+    from uk_budget_data.budget_measures.machine_games_higher_stake_rate import (
+        machine_games_higher_stake_rate,
+    )
+
+    record = gambling.bases_record()["machine_games_higher_stake"]
+    share = (
+        inspect.signature(machine_games_higher_stake_rate)
+        .parameters["higher_stake_share"]
+        .default
+    )
+    assert share == gambling.HIGHER_STAKE_SHARE == 0.757
+    assert round(record["category_b_yield_m"] / (604.748 / 0.20), 3) == share
+    stored = gambling.bases_record()["per_person_growth"]["machine_games"]
+    assert gambling.machine_games_step(share) == stored["2027"] == 0.027652
+    share_2761 = record["category_b_yield_m"] / (
+        record["category_b_yield_m"] + record["category_c_yield_m"]
+    )
+    assert share_2761 == pytest.approx(0.907833, abs=1e-6)
+    assert gambling.machine_games_step(share_2761) == record["growth_2761"]
+    assert gambling.machine_games_rate(share, False) == pytest.approx(
+        0.193477, abs=1e-6
+    )
+    assert gambling.machine_games_rate(share, True) == pytest.approx(
+        0.229642, abs=1e-6
+    )
+    assert gambling.machine_games_rate(share_2761, True) == pytest.approx(
+        0.236849, abs=1e-6
+    )
+    # The base from 2027-28 on, over #2761's: 3.14%
+    assert gambling.base_index("machine_games", 2027) / BASE["machine_games"][
+        3
+    ] == pytest.approx(1.0314, abs=1e-4)
+
+
+def test_the_2761_inputs_match_the_engines_population():
+    """The step divides by #2761's population growth into 2027, which is
+    the bundle engine's (2.165.1) and #2761's: 1.00661 over 1.0053 in the
+    stored population index, to its rounding."""
+    record = gambling.bases_record()
+    population = record["population_index"]
+    assert 1 + record["machine_games_higher_stake"][
+        "population_growth"
+    ] == pytest.approx(population["2027"] / population["2026"], abs=5e-6)
 
 
 def test_every_duty_and_input_is_covered():

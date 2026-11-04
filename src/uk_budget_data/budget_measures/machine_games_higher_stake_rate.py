@@ -58,7 +58,11 @@ def machine_games_higher_stake_rate(
       and C yield may be higher-stake too
       (María, policyengine.py#731, 2 November 2026; agreed by Vahid, 3
       November). Category B over Categories B and C alone, which
-      policyengine-uk#2761 uses, is 90.78%: an upper reading.
+      policyengine-uk#2761 uses, is 90.78%: an upper reading. The base's
+      2027-28 step is derived at the same share
+      (``forecast.gambling.HIGHER_STAKE_SHARE``; a test holds the two
+      equal), so the base and the rate match. Written here, not imported,
+      so the receipt can bind the modifier.
     - For one household (the Household calculator), all of S: the form
       asks only for losses on higher-stake machines and sets them as the
       household's standard-rate takings, so H = S, exactly.
@@ -68,8 +72,9 @@ def machine_games_higher_stake_rate(
     ``policyengine_uk.utils.data_source.built_from_data``.
 
     The base. On survey data S grows with the OBR's October 2026 Machine
-    Games Duty base (``forecast.gambling``, policyengine-uk#2761), as the
-    duty before the change does: the extra duty scales by the same
+    Games Duty base (``forecast.gambling``, policyengine-uk#2761's series
+    with its 2027-28 step derived at this share, not #2761's 90.78%), as
+    the duty before the change does: the extra duty scales by the same
     ``projection_factor``. One household's S is the amount it gives.
 
     Timing. Model year Y runs from 6 April Y, so model year 2027 is the
