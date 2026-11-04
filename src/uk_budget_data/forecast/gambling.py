@@ -139,6 +139,16 @@ def machine_games_step(share: float) -> float:
 # The higher-stake share of standard-rate takings that the Machine Games
 # Duty measure charges at 25% on survey data, and that the stored base's
 # 2027-28 step is derived at (``machine_games_step``): one number for both
+# (María's ruling, 4 November 2026). Two denominators, both bounds:
+# - 75.7%, a floor: Gambling Commission 2024-25 Category B yield, £2,289.8m,
+#   over HMRC's whole standard-rate base, £3,023.7m. It counts all £501m by
+#   which HMRC's base exceeds the Commission's Category B and C yield as
+#   lower-stake.
+# - 90.78%, #2761's: the same Category B yield over the Commission's
+#   Category B and C yield, £2,522.3m. It leaves that £501m out.
+# The gap holds pubs' Category C and D machines (lower-stake), clubs'
+# Category B4 machines (higher-stake) and Northern Ireland, and no source
+# splits it.
 HIGHER_STAKE_SHARE = _higher_stake()["share"]
 
 

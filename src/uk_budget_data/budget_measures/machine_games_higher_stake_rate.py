@@ -58,7 +58,10 @@ def machine_games_higher_stake_rate(
       and C yield may be higher-stake too
       (María, policyengine.py#731, 2 November 2026; agreed by Vahid, 3
       November). Category B over Categories B and C alone, which
-      policyengine-uk#2761 uses, is 90.78%: an upper reading. The base's
+      policyengine-uk#2761 uses, is 90.78%: an upper reading, which leaves
+      the £501m out. That gap also holds pubs' Category C and D machines,
+      which are lower-stake, and no source splits it, so both shares are
+      bounds (María's ruling, 4 November 2026). The base's
       2027-28 step is derived at the same share
       (``forecast.gambling.HIGHER_STAKE_SHARE``; a test holds the two
       equal), so the base and the rate match. Written here, not imported,
