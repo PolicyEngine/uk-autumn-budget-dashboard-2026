@@ -22,6 +22,7 @@ from tests.pta_households import (
     PENNY,
     REGIONS,
     SLOTS,
+    SOURCES,
     YEARS,
     band_positions,
     calculate,
@@ -149,15 +150,23 @@ def test_the_allowance_is_non_refundable(year, income):
 @examples
 @given(years, band_positions, mixes)
 def test_tax_matches_at_and_past_the_top_of_the_band(year, positions, mix):
+    """Where total income reaches the band's top, the taper has taken the
+    whole allowance. Income at the top can still leave total income below
+    it: policyengine-uk 2.164.2's total income nets the trading and property
+    allowances (2.151.0's doesn't), so trading or property income they cover
+    drops out. The first slot holds State Pension alone, which always
+    reaches the top."""
     rule = rule_for(year)
-    # At or above 1, every slot sits at the top of the band or past it.
+    # At or above 1, every slot's income sits at the top of the band or past
+    # it.
     above = np.maximum(1, np.asarray(positions))
-    inputs = split(in_band(rule, above), mix)
+    state_pension_only = [1.0] + [0.0] * (len(SOURCES) - 1)
+    inputs = split(in_band(rule, above), [state_pension_only, *mix[1:]])
     ([without, total], [with_allowance, _]) = _both(
         year, inputs, ("income_tax", "total_income")
     )
     past = total >= rule.top - PENNY
-    assert past.any()
+    assert past[0]
     assert with_allowance[past] == pytest.approx(without[past], abs=PENNY)
 
 

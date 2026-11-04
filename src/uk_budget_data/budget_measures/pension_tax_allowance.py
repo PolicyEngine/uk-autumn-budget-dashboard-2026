@@ -59,14 +59,14 @@ def pension_tax_allowance(
     personal allowance is the engine's. DWP rounds that way: each rate
     from 2017-18 to 2026-27 equals the year before's, uprated by the
     engine's triple lock growth and rounded to the nearest 5p, and rounding
-    down misses five of the ten. The engine's forecast rates carry no
-    rounding, so this rounds the engine's own rate, which keeps the band's
-    bottom within £1.30 a year of what the engine pays someone on the full
-    rate. At policyengine-uk 2.164.2's rates the allowance clears all their
-    tax, every year, in Scotland too. Chaining DWP's rounding from the
-    2027-28 rate instead would put 2028-29's at £259.20, below the engine's
-    £259.24, and leave them 67p of tax. Once the engine rounds its forecast
-    rates (policyengine-uk#2751), this rounding changes nothing.
+    down misses five of the ten. policyengine-uk 2.164.2's forecast rates
+    carry no rounding, so this rounds the engine's own rate, which keeps the
+    band's bottom within £1.30 a year of what the engine pays someone on
+    the full rate. At those rates the allowance clears all their tax, every
+    year, in Scotland too. Chaining DWP's rounding from the 2027-28 rate
+    instead would put 2028-29's at £259.20, below the engine's £259.24, and
+    leave them 67p of tax. From 2.170.2 the engine rounds its forecast rates
+    (policyengine-uk#2751), so this rounding changes nothing there.
 
     Total income is ``total_income`` (Income Tax Act 2007 s. 23, savings
     interest included). The explainer's 2027-28 cases: £13,036.40 pays
@@ -79,8 +79,9 @@ def pension_tax_allowance(
 
     The reduction never offsets a Step 7 charge: the High Income Child
     Benefit Charge, the annual allowance charge or the Winter Fuel Payment
-    charge. The Budget documents mention none of them. They value the PTA as
-    tax on "the difference between the full new State Pension and the
+    charge. Neither the Budget's PTA paragraphs (3.19, 6.182) nor the
+    explainer says how the PTA meets any of them. The Budget values the PTA
+    as tax on "the difference between the full new State Pension and the
     Personal Allowance" (6.182), and the explainer calls it "a tax
     reduction". Income Tax Act 2007 s. 23 deducts tax reductions from the
     Step 5 tax at Step 6 (s. 29(2)) and adds all three charges at Step 7

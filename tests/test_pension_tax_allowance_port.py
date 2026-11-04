@@ -242,6 +242,23 @@ def test_an_engine_with_the_allowance_in_current_law_is_refused():
         pension_tax_allowance(Simulation(situation=_pensioner()))
 
 
+def _engine_rates_sit_on_5p_steps():
+    """policyengine-uk#2751 (in 2.170.2 and later) rounds the engine's
+    forecast rates to the nearest 5p; engines before it carry unrounded
+    rates."""
+    return all(
+        math.isclose(round(rate * 20), rate * 20, abs_tol=1e-6)
+        for rate in (
+            float(
+                system.parameters(
+                    f"{year}-04-06"
+                ).gov.dwp.state_pension.new_state_pension.amount
+            )
+            for year in YEARS
+        )
+    )
+
+
 @lru_cache(maxsize=None)
 def _native_and_ported():
     native = Simulation(situation=_pensioner())
@@ -252,9 +269,13 @@ def _native_and_ported():
         situation=_pensioner(),
         scenario=Scenario(parameter_changes=switched_off),
     )
-    # The engine's threshold is 52 x the unrounded weekly rate, so the
-    # comparison leaves out the port's rounding to 5p.
-    pension_tax_allowance(ported, weekly_rounding=1e-6)
+    # The engine's threshold is 52 x its weekly rate. Where that rate sits on
+    # a 5p step, the port runs at its own rounding, as the dashboard runs it.
+    # Elsewhere the comparison leaves out the port's rounding to 5p.
+    if _engine_rates_sit_on_5p_steps():
+        pension_tax_allowance(ported)
+    else:
+        pension_tax_allowance(ported, weekly_rounding=1e-6)
     return native, ported
 
 
@@ -274,8 +295,9 @@ def test_the_port_matches_the_engines_own_allowance(
         ANNUAL_ALLOWANCE_INPUT: paid_in,
     }
     native, ported = _native_and_ported()
-    outputs = ("income_tax", "uc_income_tax_on_earnings")
-    native_tax, native_uc = calculate(native, year, inputs, outputs)
-    ported_tax, ported_uc = calculate(ported, year, inputs, outputs)
+    outputs = ("income_tax", *UC_TAX)
+    native_tax, *native_uc = calculate(native, year, inputs, outputs)
+    ported_tax, *ported_uc = calculate(ported, year, inputs, outputs)
     assert ported_tax == pytest.approx(native_tax, abs=2 * PENNY)
-    assert ported_uc == pytest.approx(native_uc, abs=2 * PENNY)
+    for native_part, ported_part in zip(native_uc, ported_uc):
+        assert ported_part == pytest.approx(native_part, abs=2 * PENNY)
