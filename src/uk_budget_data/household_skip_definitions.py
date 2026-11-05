@@ -73,10 +73,14 @@ NO_RULE = "no rule"
 NOT_REGISTERED = "not a registered measure"
 
 
-@lru_cache(maxsize=1)
 def checked_definitions() -> dict:
     """``{measure id: the digest its rule was last checked against}``, as
     committed. Unreadable, it is empty: every rule off, the answers right."""
+    return _read_checked()
+
+
+@lru_cache(maxsize=1)
+def _read_checked() -> dict:
     try:
         checked = json.loads(
             files("uk_budget_data").joinpath(CHECKED_FILE).read_text()
@@ -165,7 +169,7 @@ def current_definitions() -> dict:
 
 def clear_definition_cache() -> None:
     """For a test that changes the registry or the checked digests."""
-    checked_definitions.cache_clear()
+    _read_checked.cache_clear()
     current_definitions.cache_clear()
 
 

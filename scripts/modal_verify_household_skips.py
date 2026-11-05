@@ -1,12 +1,16 @@
-"""verify_household_skips.py's check, fanned out on Modal instead of the
-laptop: each (household, year) case in its own container, skips against the
-full run. No survey data and no Hugging Face token (synthetic households).
+"""A check of the skip rules through the calculator's own runs, fanned out on
+Modal: each (household, year) case in its own container, every measure run,
+and each rule that says £0 (household_impact.rule_says_unaffected, whether or
+not its definition has changed) held to the run. No survey data and no Hugging
+Face token (synthetic households). ``verify_household_skips.py --recheck`` is
+the routine check, and the one that records a digest; this one reaches further
+when a batch isn't trusted.
 
 An ephemeral app (``modal run``, never deployed): at most 12 containers, no
 retries, nothing kept warm, a 15-minute limit per case.
 
     uv run --with modal modal run scripts/modal_verify_household_skips.py \
-        --households 40 --years 2027,2028,2029,2030,2031
+        --households 40
 """
 
 import json
@@ -50,21 +54,30 @@ def check(args: tuple) -> dict:
 
     from verify_household_skips import case
 
-    index, kw, year = args
+    index, answers, year = args
     try:
-        year, skipped_ids, bad = case((dict(kw), year))
+        year, skipped_ids, bad = case((answers, year))
         return {"i": index, "year": year, "skipped": skipped_ids, "bad": bad}
     except Exception:
-        return {"i": index, "year": year, "error": traceback.format_exc()[-1500:]}
+        return {
+            "i": index,
+            "year": year,
+            "error": traceback.format_exc()[-1500:],
+        }
 
 
 @app.local_entrypoint()
-def main(households: int = 40, years: str = "2027,2028,2029,2030,2031"):
+def main(households: int = 40, years: str = ""):
     from verify_household_skips import gen
 
-    year_list = [int(y) for y in years.split(",")]
+    from uk_budget_data.budget_years import POLICY_YEARS
+    from uk_budget_data.household_impact import measure_ids
+
+    year_list = [int(y) for y in years.split(",")] if years else POLICY_YEARS
     cases = [
-        (i, kw, y) for i, kw in enumerate(gen(households)) for y in year_list
+        (i, answers, y)
+        for i, answers in enumerate(gen(households))
+        for y in year_list
     ]
     started = time.perf_counter()
     results = list(check.map(cases, order_outputs=False))
@@ -75,7 +88,7 @@ def main(households: int = 40, years: str = "2027,2028,2029,2030,2031"):
         "households": households,
         "years": year_list,
         "cases": len(cases),
-        "per_policy_runs": 9 * len(cases),
+        "per_policy_runs": len(measure_ids()) * len(cases),
         "skipped": skipped,
         "mismatches": len(mismatches),
         "mismatch_detail": mismatches[:20],

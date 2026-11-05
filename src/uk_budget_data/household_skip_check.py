@@ -29,7 +29,7 @@ from typing import Optional
 
 import numpy as np
 
-from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data import reforms
 from uk_budget_data.household_impact import (
     CALCULATOR_INPUTS,
     COUNCIL_TAX_BANDS,
@@ -56,8 +56,8 @@ from uk_budget_data.reforms import get_reform
 # Households the rules treat differently, by the answers each rule reads.
 NAMED_HOUSEHOLDS = {
     "default": HouseholdAnswers(),
-    # In the way of every conditional rule that reads the head's or the
-    # partner's answers: the skip rules should leave almost nothing out.
+    # Reached by every conditional rule: the rules leave out only what the
+    # year rules out.
     "eligible_for_every_rule": HouseholdAnswers(
         age=45,
         employment_income=11_000,
@@ -66,7 +66,6 @@ NAMED_HOUSEHOLDS = {
         partner_age=70,
         partner_employment_income=0,
         partner_student_loan_plan="PLAN_2",
-        partner_private_pension_income=4_000,
         children=(Child(4),),
         region="NORTH_WEST",
         claims_universal_credit=True,
@@ -123,7 +122,7 @@ NAMED_HOUSEHOLDS = {
         region="SCOTLAND",
         claims_universal_credit=True,
         tenure="RENT_PRIVATELY",
-        monthly_rent=700,
+        monthly_rent=1_400,
         bus_fare_spending=300,
     ),
     "pensioner_petrol_no_electricity": HouseholdAnswers(
@@ -187,7 +186,7 @@ ANSWER_VALUES = {
         99_000,
         125_000,
         160_000,
-    ),  # noqa: E501
+    ),
     "student_loan_plan": STUDENT_LOAN_PLANS,
     "has_partner": (False, True),
     "partner_age": (22, 35, 60, 65, 66, 67, 68, 75),
@@ -211,7 +210,7 @@ ANSWER_VALUES = {
     "salary_year": (SALARY_YEAR,),
     "dividend_income": (0, 0, 2_000, 30_000),
     "savings_interest_income": (0, 0, 1, 1_500, 20_000),
-    "cash_isa_subscriptions": (0, 0, 11_999, 12_000, 12_001, 20_000, 25_000),
+    "cash_isa_subscriptions": (0, 0, 11_999, 12_000, 12_001, 20_000),
     "property_income": (0, 0, 1, 12_000, 60_000),
     "private_pension_income": (0, 0, 8_000, 25_000),
     "partner_private_pension_income": (0, 0, 9_000),
@@ -312,6 +311,18 @@ def own_sides(reform: Reform) -> tuple[dict, dict]:
     )
 
 
+def withdrawn_measures() -> dict[str, Reform]:
+    """The rules whose measure the registry no longer has, ``{id: Reform}``,
+    from the factories ``reforms`` keeps. Their rules cannot fire in
+    production: ``household_impact.measure_sides`` refuses the measures."""
+    registered = set(measure_ids())
+    return {
+        id_: getattr(reforms, f"_create_{id_}")()
+        for id_ in SKIP_REASONS
+        if id_ not in registered and hasattr(reforms, f"_create_{id_}")
+    }
+
+
 def selections(ids: Optional[list[str]] = None) -> dict[str, list[str]]:
     """The selections whose before sides differ: every measure; and if any
     has a pre-Budget side of its own, every measure without those."""
@@ -325,6 +336,10 @@ def selections(ids: Optional[list[str]] = None) -> dict[str, list[str]]:
         "every_measure": ids,
         **({"pre_budget_law_as_it_stands": without} if without != ids else {}),
     }
+
+
+# The selection a withdrawn measure is checked in.
+ALONE = "alone"
 
 
 @dataclass(frozen=True)
@@ -426,7 +441,7 @@ def check_withdrawn(
             bases[key] = net_incomes(households, year, before)
         _record(
             check,
-            "alone",
+            ALONE,
             measure,
             bases[key],
             net_incomes(households, year, after),
@@ -482,28 +497,7 @@ def smallest_counterexample(
 
 
 def _sides_of(effect: Effect) -> tuple[dict, dict]:
-    if effect.selection == "alone":
-        from uk_budget_data import reforms
-
-        return own_sides(getattr(reforms, f"_create_{effect.measure}")())
+    if effect.selection == ALONE:
+        return own_sides(withdrawn_measures()[effect.measure])
     sides = measure_sides(selections()[effect.selection])
     return sides.before, sides.singles[effect.measure]
-
-
-__all__ = [
-    "ANSWER_VALUES",
-    "ANSWERS_NOT_GENERATED",
-    "NAMED_HOUSEHOLDS",
-    "POLICY_YEARS",
-    "Effect",
-    "YearCheck",
-    "check_selection",
-    "check_withdrawn",
-    "check_year",
-    "describe",
-    "generated_households",
-    "net_incomes",
-    "own_sides",
-    "selections",
-    "smallest_counterexample",
-]

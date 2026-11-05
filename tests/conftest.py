@@ -222,9 +222,19 @@ def pre_budget_registry(monkeypatch):
     back: the household-calculator tests use them as fixtures of the
     calculation's machinery (a threshold freeze, a student loan threshold,
     a one-off payment), not as published measures. The package is
-    unchanged."""
-    from uk_budget_data import reforms
+    unchanged.
 
+    Their rules count as checked, as does every other rule here, whichever
+    definitions the code now has: these tests are of the calculation, and
+    the committed digests (household_skip_definitions) were checked on the
+    real registry, whose before sides these measures would change."""
+    from uk_budget_data import household_skip_definitions, reforms
+
+    monkeypatch.setattr(
+        household_skip_definitions,
+        "checked_definitions",
+        lambda: household_skip_definitions.current_definitions(),
+    )
     monkeypatch.setattr(
         reforms,
         "_MEASURE_FACTORIES",
@@ -238,6 +248,8 @@ def pre_budget_registry(monkeypatch):
     )
     monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
     monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+    household_skip_definitions.clear_definition_cache()
     yield
     reforms._AUTUMN_BUDGET_2026_REFORMS_CACHE = None
     reforms._REFORM_LOOKUP_CACHE = None
+    household_skip_definitions.clear_definition_cache()
