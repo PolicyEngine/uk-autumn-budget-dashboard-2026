@@ -28,11 +28,15 @@ export const CALCULATOR_ONLY_MEASURES = {
     name: "Savings income tax up",
     // As the result card names it after the count ("with 7 policies and …")
     phrase: "the savings income tax rise",
+    // Its card's words (utils/unmodelledMeasures.js), shown on Policies with
+    // the policies we model for households only (utils/measureClass.js)
+    card: "savings-income-tax",
   },
   cash_isa_limit_kept: {
     id: "cash_isa_limit_kept",
     name: "Cash ISA limit kept at £20,000",
     phrase: "the cash ISA limit kept at £20,000",
+    card: "cash-isa-limit",
   },
   machine_games_duty_rise: {
     id: "machine_games_duty_rise",
