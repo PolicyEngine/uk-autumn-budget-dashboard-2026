@@ -18,16 +18,20 @@ A digest covers what a measure's own run reads from the definitions:
   no commit is in it): parameter changes by content, a modifier by its
   source, its module's source and its default arguments. A measure's name
   and description are labels, not part of it;
+- the sides as its own run takes them (``household_impact.measure_sides``,
+  with every measure selected), because a receipt and a run reach a measure's
+  baseline by different code;
 - every registered measure's pre-Budget side, where it has one of its own,
   because each measure's own run holds the other selected measures there
   (the savings income rule depends on the planned cash ISA limit, for one);
-- the source of the code modifiers call in another module (``SHARED_CODE``),
-  which a receipt binds only through its commit.
+- the source of every module of this package that a modifier's module imports,
+  directly or through another (``_imported_code``), which a receipt binds only
+  through its commit. ``CANNOT_CHANGE_A_NUMBER`` names the exceptions.
 
-It does not cover the household calculation, the forecast or the engine. The
-differential test in ``tests/test_household_skips.py`` runs the rules that are
-current against the engine on every CI run, so a change to any of them that
-breaks a rule for a household it runs fails there.
+It does not cover the rest of the household calculation, the forecast or the
+engine. The differential test in ``tests/test_household_skips.py`` runs the
+rules that are current against the engine on every CI run, so a change to any
+of them that breaks a rule for a household it runs fails there.
 
 A definition the code can't work out counts as changed: a rule is on only when
 the code knows its digest matches. As in ``definitions``, a warning attributed
@@ -37,15 +41,18 @@ keeps a refusal too: for a speed-up, the answer stays right, and the process
 logs it once.
 """
 
+import ast
 import hashlib
+import importlib
 import json
 import logging
 from collections.abc import Iterable
 from functools import lru_cache
 from importlib.resources import files
+from importlib.util import resolve_name
 from pathlib import Path
+from typing import Optional
 
-from uk_budget_data import measure_templates
 from uk_budget_data.definitions import identity_core
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.receipt import (
@@ -61,10 +68,15 @@ logger = logging.getLogger(__name__)
 
 CHECKED_FILE = "household_skip_rules.json"
 
-# The modules of this package that modifiers call, which a measure's identity
-# leaves out. tests/test_household_skips.py walks the modifiers' imports and
-# fails on one this doesn't name.
-SHARED_CODE = (measure_templates,)
+# The package whose modules a digest reads when a modifier imports them.
+PACKAGE = "uk_budget_data"
+# Modules a modifier's code imports that a digest leaves out. measure_templates
+# reads them only to warn about a limit on a change (_warn_if_data_limited and
+# the like) and to refuse a wealth tax scale, and their lists change with every
+# review of a data cut.
+CANNOT_CHANGE_A_NUMBER = frozenset(
+    {"uk_budget_data.data_limits", "uk_budget_data.model_limits"}
+)
 
 # What ``rule_statuses`` reports for a measure.
 CURRENT = "current"
@@ -102,12 +114,93 @@ def _digest(content: dict) -> str:
     ).hexdigest()
 
 
-def _shared_code() -> dict:
+def _source_file(module: str) -> Optional[Path]:
+    """The file of a module of this package, or None for anything else: a
+    name that is not in the package, or that names something in a module."""
+    top, *rest = module.split(".")
+    if top != PACKAGE:
+        return None
+    base = Path(importlib.import_module(top).__file__).parent.joinpath(*rest)
+    for path in (base / "__init__.py", base.with_suffix(".py")):
+        if path.is_file():
+            return path
+    return None
+
+
+def _imports_of(module: str, path: Path) -> set:
+    """The modules of this package named by the import statements in a
+    module's source, wherever in the file they sit."""
+    package = (
+        module if path.name == "__init__.py" else module.rpartition(".")[0]
+    )
+    named = set()
+    for node in ast.walk(ast.parse(path.read_bytes())):
+        if isinstance(node, ast.Import):
+            named.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            base = resolve_name(
+                "." * node.level + (node.module or ""), package
+            )
+            # "from a import b": the module a.b if there is one, else a
+            named.update(
+                (
+                    f"{base}.{alias.name}"
+                    if _source_file(f"{base}.{alias.name}")
+                    else base
+                )
+                for alias in node.names
+            )
+    return {name for name in named if _source_file(name)}
+
+
+def _imported_code(modules: Iterable[str]) -> set:
+    """Every module of this package these modules import, directly or through
+    another, but for ``CANNOT_CHANGE_A_NUMBER``. A module only in ``modules``
+    isn't in it: its own measure's identity reads its source."""
+    found, stack = set(), list(modules)
+    while stack:
+        module = stack.pop()
+        path = _source_file(module)
+        if path is None:
+            continue
+        for name in _imports_of(module, path) - CANNOT_CHANGE_A_NUMBER - found:
+            found.add(name)
+            stack.append(name)
+    return found
+
+
+def _modifier_modules(measures: list) -> set:
     return {
-        module.__name__: hashlib.sha256(
-            Path(module.__file__).read_bytes()
-        ).hexdigest()
-        for module in SHARED_CODE
+        modifier.__module__
+        for measure in measures
+        for modifier in (
+            measure.simulation_modifier,
+            measure.baseline_simulation_modifier,
+        )
+        if modifier is not None
+    }
+
+
+def _shared_code(measures: list) -> dict:
+    """``{module: the digest of its source}``, for the code the measures'
+    modifiers import."""
+    return {
+        module: hashlib.sha256(_source_file(module).read_bytes()).hexdigest()
+        for module in _imported_code(_modifier_modules(measures))
+    }
+
+
+def _as_run(measure_ids: list, config: DataConfig) -> dict:
+    """``{measure id: its own run's two sides}``, with every measure selected:
+    parameter changes by content, modifiers by name, as the calculation
+    composes them."""
+    # Here, not at the top: household_impact imports this module.
+    from uk_budget_data.household_impact import measure_sides
+
+    sides = measure_sides(measure_ids, config)
+    return {
+        id_: {"before": sides.before, "own_run": own_run}
+        for id_, own_run in sides.singles.items()
     }
 
 
@@ -146,10 +239,12 @@ def _definitions_now() -> dict:
     pre_budget_sides = {
         id_: sides[id_]["baseline"] for id_ in with_pre_budget_side
     }
-    shared_code = _shared_code()
+    as_run = _as_run([measure.id for measure in measures], config)
+    shared_code = _shared_code(measures)
     return {
         id_: _digest(
             {
+                "as_run": as_run[id_],
                 "measure": side,
                 "pre_budget_sides": pre_budget_sides,
                 "shared_code": shared_code,

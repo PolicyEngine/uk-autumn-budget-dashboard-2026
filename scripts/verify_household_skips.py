@@ -16,15 +16,17 @@ named households and generated ones (``--households``, ``--seed``), in every
 policy year, in every selection whose before side differs. A rule that holds
 everywhere gets the running code's digest in
 ``src/uk_budget_data/household_skip_rules.json``: commit that file. A rule
-that fails loses any digest it had, so it is off whatever its definition, and
-the command prints the smallest household showing it and exits 1: correct the
-rule, or leave the measure running in full.
+that fails loses any digest it had as soon as a year shows it, so it is off
+whatever its definition and whatever happens to the other years, and the
+command prints the smallest household showing it and exits 1: correct the rule,
+or leave the measure running in full. A year that can't finish records nothing
+for any rule, and the command names it and exits 1.
 """
 
 import argparse
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
 def case(args):
@@ -159,11 +161,18 @@ def recheck(measures, households, seed, processes) -> int:
     started = time.perf_counter()
     covered = {id_: [0, 0] for id_ in wanted}
     failures = {}
+    unfinished = {}
     with ProcessPoolExecutor(processes) as pool:
-        for year, year_covered, counterexamples in pool.map(
-            _check_one_year,
-            [(year, households, seed) for year in POLICY_YEARS],
-        ):
+        years = {
+            pool.submit(_check_one_year, (year, households, seed)): year
+            for year in POLICY_YEARS
+        }
+        for finished in as_completed(years):
+            try:
+                year, year_covered, counterexamples = finished.result()
+            except Exception as error:
+                unfinished[years[finished]] = error
+                continue
             for id_ in wanted:
                 ran, skipped = year_covered.get(id_, (0, 0))
                 covered[id_][0] += ran
@@ -173,6 +182,11 @@ def recheck(measures, households, seed, processes) -> int:
                     failures.setdefault(effect.measure, []).append(
                         (effect.selection, year, answers, change)
                     )
+            if failures:
+                # A rule on before this check has the digest still, and the
+                # digest doesn't cover the engine: a wrong rule must not stay
+                # on, whatever happens to the years still running.
+                definitions.forget_checked(failures)
     print(f"Took {time.perf_counter() - started:.0f} s.")
     for id_ in wanted:
         print(
@@ -185,16 +199,24 @@ def recheck(measures, households, seed, processes) -> int:
         print(f"Checked nothing, so not recorded: {', '.join(never_applied)}")
     for id_, found in failures.items():
         print(f"\n{id_}: the rule is wrong, so it is off.")
-        for selection, year, answers, change in found:
+        for selection, year, answers, change in sorted(
+            found, key=lambda failure: (failure[1], failure[0])
+        ):
             print(
                 f"  {year}, selection {selection}: says £0, the run shows "
                 f"{change!r}, for {check.describe(answers)}"
             )
     if failures:
-        # A rule on before this check has the digest still, and the digest
-        # doesn't cover the engine: a wrong rule must not stay on.
-        path = definitions.forget_checked(failures)
-        print(f"\nRemoved {', '.join(failures)} from {path}. Commit it.")
+        print(
+            f"\nRemoved {', '.join(failures)} from "
+            f"{definitions.CHECKED_FILE}. Commit it."
+        )
+    if unfinished:
+        # A rule passes on every year or not at all.
+        print("\nThese years didn't finish, so no rule is recorded:")
+        for year, error in sorted(unfinished.items()):
+            print(f"  {year}: {error!r}")
+        return 1
     clean = [
         id_
         for id_ in wanted

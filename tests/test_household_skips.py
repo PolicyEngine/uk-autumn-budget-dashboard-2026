@@ -17,15 +17,19 @@ The invariants, for every household, year and selection of measures:
 4. A definition digest changes with whatever a measure's own run reads from
    the definitions, stays the same for a label or another checkout, and
    doesn't depend on the process.
-5. Only a check the rule passed, on households it said £0 for, turns a rule on.
+5. Only a check the rule passed, on households it said £0 for, turns a rule on,
+   and a check that shows a rule wrong turns it off whatever else happens.
+6. The check's batch: a household in a batch gets what it gets alone, to the
+   last bit.
 
 A stale rule fails no test here: the calculator is right without it, only
 slower, and CI's "Household skip rules" check names it. A correction must not
 wait on a speed-up. So the tests that read the committed digests assert only
-on the rules they find current, and the rest set the digests themselves.
+on the rules they find current, the tests of the digests build the definitions
+they change, and the tests that need what a measure does now skip a measure
+that has changed since its last check.
 """
 
-import ast
 import dataclasses
 import importlib
 import importlib.util
@@ -37,6 +41,7 @@ import subprocess
 import sys
 import textwrap
 import uuid
+from concurrent.futures import Future
 from pathlib import Path
 
 import pytest
@@ -55,6 +60,7 @@ from uk_budget_data.household_impact import (
     BUS_FARE_CAP_REGIONS,
     SKIP_REASONS,
     HouseholdAnswers,
+    education_by_age,
     provably_unaffected,
     rule_says_unaffected,
 )
@@ -300,25 +306,30 @@ def test_each_definition_is_its_own(monkeypatch):
     assert {id_ for id_ in before if before[id_] != after[id_]} == {measure}
 
 
-def test_a_change_to_a_pre_budget_side_disables_every_rule(monkeypatch):
-    """Every measure's own run holds the planned cash ISA limit at its
-    pre-Budget side when a reader selects both, and the savings rule reads it:
-    every rule's check ran on that side."""
-    before = dict(current_definitions())
-    limit = reforms.get_reform(reforms.CASH_ISA_LIMIT_ID)
-    assert limit.baseline_scenario_for(DataConfig()) is not None
+def _with_a_pre_budget_side(monkeypatch, value=13_000):
+    """The registry with a measure added that has a pre-Budget side of its
+    own, as the planned cash ISA limit has."""
     _use_registry(
         monkeypatch,
         {
-            limit.id: _changed(
-                limit,
+            "new_measure": Reform(
+                id="new_measure",
+                name="New",
                 baseline_parameter_changes={
-                    **(limit.baseline_parameter_changes or {}),
-                    UNTOUCHED_PARAMETER: {"2026": 13_000},
+                    UNTOUCHED_PARAMETER: {"2026": value}
                 },
             )
         },
     )
+
+
+def test_a_change_to_a_pre_budget_side_disables_every_rule(monkeypatch):
+    """Every measure's own run holds a selected measure at its pre-Budget side
+    (the savings rule reads the planned cash ISA limit's, for one): every
+    rule's check ran on those sides."""
+    _with_a_pre_budget_side(monkeypatch)
+    before = dict(current_definitions())
+    _with_a_pre_budget_side(monkeypatch, 14_000)
     after = current_definitions()
     assert set(after) == set(before)
     assert all(after[id_] != before[id_] for id_ in before)
@@ -328,19 +339,35 @@ def test_a_new_pre_budget_side_disables_every_rule(monkeypatch):
     """A measure added with a pre-Budget side of its own is in every other
     measure's run from then on."""
     before = dict(current_definitions())
-    _use_registry(
-        monkeypatch,
-        {
-            "new_measure": Reform(
-                id="new_measure",
-                name="New",
-                baseline_parameter_changes={
-                    UNTOUCHED_PARAMETER: {"2026": 13_000}
-                },
-            )
-        },
+    _with_a_pre_budget_side(monkeypatch)
+    after = current_definitions()
+    assert all(after[id_] != before[id_] for id_ in before)
+
+
+def test_a_change_to_how_a_run_takes_its_sides_disables_every_rule(
+    monkeypatch,
+):
+    """A receipt reaches a measure's baseline through
+    ``baseline_scenario_for``, a run through ``has_custom_baseline``. Change
+    only the second: the runs read something else and the receipts don't."""
+    _with_a_pre_budget_side(monkeypatch)
+    measure = reforms.get_reform("new_measure")
+    receipt = household_skip_definitions.measure_identities(
+        measure, DataConfig(), household_skip_definitions.DEFINITION_REVISION
+    )
+    before = dict(current_definitions())
+    monkeypatch.setattr(Reform, "has_custom_baseline", lambda _self: False)
+    clear_definition_cache()
+    assert (
+        household_skip_definitions.measure_identities(
+            measure,
+            DataConfig(),
+            household_skip_definitions.DEFINITION_REVISION,
+        )
+        == receipt
     )
     after = current_definitions()
+    assert set(after) == set(before)
     assert all(after[id_] != before[id_] for id_ in before)
 
 
@@ -412,13 +439,13 @@ def test_a_change_to_the_shared_template_code_disables_every_rule(
     copy.write_bytes(
         Path(measure_templates.__file__).read_bytes() + b"\n# Changed\n"
     )
-
-    class EditedTemplates:
-        __name__ = measure_templates.__name__
-        __file__ = str(copy)
-
+    real = household_skip_definitions._source_file
     monkeypatch.setattr(
-        household_skip_definitions, "SHARED_CODE", (EditedTemplates,)
+        household_skip_definitions,
+        "_source_file",
+        lambda module: (
+            copy if module == measure_templates.__name__ else real(module)
+        ),
     )
     clear_definition_cache()
     after = current_definitions()
@@ -426,54 +453,191 @@ def test_a_change_to_the_shared_template_code_disables_every_rule(
     assert all(after[id_] != before[id_] for id_ in before)
 
 
-def test_the_shared_code_is_all_a_modifier_calls():
-    """A modifier's module is in its measure's identity. Walking what those
-    modules import, within this package: ``SHARED_CODE`` or this test names
-    every module, with why it can't change an answer. A helper module a
-    modifier starts to call fails this until one of them names it."""
-    only_warn = {
-        # The templates import these only to warn about a limit on a change
-        # (_warn_if_data_limited and the like) and to refuse a wealth tax
-        # scale; neither changes a number.
-        "uk_budget_data.data_limits",
-        "uk_budget_data.model_limits",
-    }
-    package = Path(household_impact.__file__).parent
-    shared = {
-        module.__name__ for module in household_skip_definitions.SHARED_CODE
-    }
-    found, stack = set(), [
-        module.stem
-        for module in (package / "budget_measures").glob("*.py")
-        if module.stem != "__init__"
+def test_the_digests_read_the_templates_and_leave_out_the_limit_lists():
+    """What the modifiers import today, by the walk the digests use."""
+    definitions = household_skip_definitions
+    measures = [
+        reforms.get_reform(id_) for id_ in household_impact.measure_ids()
     ]
-    stack = [f"uk_budget_data.budget_measures.{stem}" for stem in stack]
-    bound = set(stack)
-    while stack:
-        path = package.parent / (stack.pop().replace(".", "/") + ".py")
-        for node in ast.walk(ast.parse(path.read_text())):
-            names = []
-            if isinstance(node, ast.ImportFrom) and node.module:
-                names = [node.module]
-            elif isinstance(node, ast.Import):
-                names = [alias.name for alias in node.names]
-            for name in names:
-                if name.startswith("uk_budget_data") and name not in found:
-                    found.add(name)
-                    if name in shared:
-                        stack.append(name)
-    assert found - bound - only_warn <= shared
-    assert shared <= found
+    found = definitions._imported_code(definitions._modifier_modules(measures))
+    assert measure_templates.__name__ in found
+    assert not found & definitions.CANNOT_CHANGE_A_NUMBER
+
+
+@pytest.fixture
+def scratch_package(tmp_path, monkeypatch):
+    """A package the digests take for this one, to import from. A measure's
+    module sits a level down, as in ``budget_measures``."""
+    root = tmp_path / f"skip_rule_scratch_{uuid.uuid4().hex}"
+    (root / "measures").mkdir(parents=True)
+    (root / "__init__.py").write_text("VALUE = 12570\n")
+    (root / "measures" / "__init__.py").write_text("")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.setattr(household_skip_definitions, "PACKAGE", root.name)
+    return root
 
 
 @pytest.mark.parametrize(
-    "measure", [reforms.CASH_ISA_LIMIT_ID, "fuel_duty_rise_deferral"]
+    "imports, edited",
+    [
+        pytest.param(
+            "from {package}.helper import VALUE",
+            "helper.py",
+            id="a name from a module",
+        ),
+        pytest.param(
+            "from {package} import helper",
+            "helper.py",
+            id="a module from its package",
+        ),
+        pytest.param(
+            "import {package}.helper",
+            "helper.py",
+            id="a plain import",
+        ),
+        pytest.param(
+            "from ..helper import VALUE",
+            "helper.py",
+            id="a name, relatively",
+        ),
+        pytest.param(
+            "from .. import helper",
+            "helper.py",
+            id="a module, relatively",
+        ),
+        pytest.param(
+            "from .sibling import VALUE",
+            "measures/sibling.py",
+            id="a sibling, relatively",
+        ),
+        pytest.param(
+            "from . import sibling",
+            "measures/sibling.py",
+            id="a sibling from its package, relatively",
+        ),
+        pytest.param(
+            "def inner():\n    from {package}.helper import VALUE\n",
+            "helper.py",
+            id="inside a function",
+        ),
+        pytest.param(
+            "from {package}.middle import VALUE",
+            "helper.py",
+            id="through another module",
+        ),
+        pytest.param(
+            "from {package} import VALUE",
+            "__init__.py",
+            id="a name from the package itself",
+        ),
+    ],
+)
+def test_a_change_to_code_a_modifier_imports_disables_every_rule(
+    imports, edited, scratch_package, monkeypatch
+):
+    """A receipt binds a modifier's own module and no other, so a helper it
+    imports could change what it does with the digest the same. The case the
+    review ran: a helper's value goes from 12,570 to 0, and nothing else
+    changes."""
+    package = scratch_package.name
+    for name in ("helper.py", "measures/sibling.py"):
+        (scratch_package / name).write_text("VALUE = 12570\n")
+    (scratch_package / "middle.py").write_text(
+        f"from {package}.helper import VALUE\n"
+    )
+    (scratch_package / "measures" / "measure.py").write_text(
+        imports.format(package=package)
+        + "\n\n\ndef modifier(sim):\n    return sim\n"
+    )
+    module = importlib.import_module(f"{package}.measures.measure")
+    reform = reforms.get_reform("fuel_duty_rise_deferral")
+    _use_registry(
+        monkeypatch,
+        {reform.id: _changed(reform, simulation_modifier=module.modifier)},
+    )
+    before = dict(current_definitions())
+    (scratch_package / edited).write_text("VALUE = 0\n")
+    clear_definition_cache()
+    after = current_definitions()
+    assert set(after) == set(before)
+    assert all(after[id_] != before[id_] for id_ in before)
+
+
+IMPORT_FORMS = (
+    "from {package}.{module} import VALUE",
+    "from {package} import {module}",
+    "import {package}.{module}",
+    "from .{module} import VALUE",
+    "from . import {module}",
+    "def inner():\n    from .{module} import VALUE",
+)
+
+
+@given(
+    imports=st.lists(
+        st.tuples(
+            st.integers(0, 4),
+            st.integers(0, 4),
+            st.sampled_from(IMPORT_FORMS),
+        ),
+        max_size=12,
+    )
+)
+@settings(
+    max_examples=50,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
+def test_the_imported_code_is_exactly_what_a_module_reaches(
+    imports, scratch_package
+):
+    """Any import graph, in any of the forms: the modules reachable from the
+    first by following imports, and no others. The first isn't among them
+    unless another imports it."""
+    package = scratch_package.name
+    sources = {index: "" for index in range(5)}
+    for importer, imported, form in imports:
+        sources[importer] += (
+            form.format(package=package, module=f"m{imported}") + "\n"
+        )
+    for index, source in sources.items():
+        (scratch_package / f"m{index}.py").write_text(source)
+    reached, stack = set(), [0]
+    while stack:
+        importer = stack.pop()
+        for start, imported, _ in imports:
+            if start == importer and imported not in reached:
+                reached.add(imported)
+                stack.append(imported)
+    assert household_skip_definitions._imported_code([f"{package}.m0"]) == {
+        f"{package}.m{index}" for index in reached
+    }
+
+
+@pytest.mark.parametrize(
+    "fields, reaches_every_run",
+    [
+        pytest.param(
+            {"baseline_parameter_changes": {UNTOUCHED_PARAMETER: {"2026": 1}}},
+            True,
+            id="a measure with a pre-Budget side",
+        ),
+        pytest.param(
+            {"parameter_changes": {UNTOUCHED_PARAMETER: {"2026": 1}}},
+            False,
+            id="a measure without one",
+        ),
+    ],
 )
 def test_a_definition_that_cannot_be_worked_out_counts_as_changed(
-    measure, monkeypatch
+    fields, reaches_every_run, monkeypatch
 ):
     """The receipt API's refusal, for one measure: its rule is off. For a
     measure with a pre-Budget side, in every other measure's run, all are."""
+    measure = "new_measure"
+    _use_registry(
+        monkeypatch, {measure: Reform(id=measure, name="New", **fields)}
+    )
     every = dict(current_definitions())
     monkeypatch.setattr(
         household_skip_definitions, "checked_definitions", lambda: every
@@ -490,15 +654,14 @@ def test_a_definition_that_cannot_be_worked_out_counts_as_changed(
     )
     clear_definition_cache()
     assert not rule_is_current(measure)
-    other = "machine_games_duty_rise"
-    assert rule_is_current(other) is (measure != reforms.CASH_ISA_LIMIT_ID)
-    assert rule_statuses(SKIP_REASONS)[measure] == NO_DEFINITION
+    assert rule_is_current("machine_games_duty_rise") is not reaches_every_run
+    assert rule_statuses([measure])[measure] == NO_DEFINITION
 
 
 def test_a_failure_working_out_definitions_turns_rules_off_not_the_calculator(
     monkeypatch,
 ):
-    def fail():
+    def fail(_measures):
         raise OSError("no source")
 
     monkeypatch.setattr(household_skip_definitions, "_shared_code", fail)
@@ -1086,7 +1249,14 @@ class _InThisProcess:
     def __exit__(self, *_):
         return False
 
-    map = staticmethod(map)
+    @staticmethod
+    def submit(function, argument):
+        future = Future()
+        try:
+            future.set_result(function(argument))
+        except Exception as error:
+            future.set_exception(error)
+        return future
 
 
 @pytest.fixture
@@ -1160,6 +1330,67 @@ def test_a_recheck_that_fails_turns_off_a_rule_that_was_on(
     assert _recheck(verify, wrong) == 1
     assert not rule_is_current(wrong)
     assert json.loads(record.read_text()) == {}
+
+
+def _crash_in(monkeypatch, verify, crashed):
+    """A worker that fails in one year, as out of memory would."""
+    real = verify._check_one_year
+
+    def check_one_year(arguments):
+        if arguments[0] == crashed:
+            raise RuntimeError("the worker failed")
+        return real(arguments)
+
+    monkeypatch.setattr(verify, "_check_one_year", check_one_year)
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+@pytest.mark.parametrize(
+    "shown_wrong_in, crashed",
+    [
+        pytest.param(POLICY_YEARS[0], POLICY_YEARS[-1], id="before the crash"),
+        pytest.param(POLICY_YEARS[-1], POLICY_YEARS[0], id="after the crash"),
+    ],
+)
+def test_a_crash_in_another_year_leaves_no_wrong_rule_on(
+    shown_wrong_in, crashed, verify, record, monkeypatch, capsys
+):
+    """The review's case: one year disproves a rule that was on, another year's
+    worker fails. The rule goes off, whichever came first, and the command says
+    which year didn't finish."""
+    wrong = "machine_games_duty_rise"
+    record.write_text(json.dumps({wrong: current_definitions()[wrong]}))
+    clear_definition_cache()
+    _engine_that_moves(
+        monkeypatch,
+        wrong,
+        lambda answers, year: answers.age == 45 and year == shown_wrong_in,
+    )
+    _crash_in(monkeypatch, verify, crashed)
+    assert _recheck(verify, wrong) == 1
+    assert not rule_is_current(wrong)
+    assert json.loads(record.read_text()) == {}
+    output = capsys.readouterr().out
+    assert f"{wrong}: the rule is wrong" in output
+    assert f"{crashed}: RuntimeError('the worker failed')" in output
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+def test_a_rule_passes_on_every_year_or_not_at_all(
+    verify, record, monkeypatch
+):
+    """One year's worker fails and nothing shows a rule wrong. A rule that was
+    off stays off, for want of that year. A rule that was on stays on: nothing
+    has changed what the record says."""
+    was_on, was_off = "fuel_duty_rise_deferral", "machine_games_duty_rise"
+    record.write_text(json.dumps({was_on: current_definitions()[was_on]}))
+    clear_definition_cache()
+    _engine_that_moves_nothing(monkeypatch)
+    _crash_in(monkeypatch, verify, POLICY_YEARS[2])
+    assert _recheck(verify, was_on, was_off) == 1
+    assert rule_is_current(was_on)
+    assert not rule_is_current(was_off)
+    assert set(json.loads(record.read_text())) == {was_on}
 
 
 @pytest.mark.usefixtures("state_pension_ages")
@@ -1238,6 +1469,127 @@ def test_the_status_check_fails_only_on_a_registered_rule_that_is_off(
     )
     assert verify.status() == 1
     assert f"--recheck {off}\n" in capsys.readouterr().out
+
+
+# --- A batch against each household alone ---------------------------------
+
+
+# Inputs one household can have and another not, whose variable has a formula.
+# A simulation treats an input anyone has as an input for everyone, so a
+# household without one gets the variable's default in a batch and its formula
+# alone, and each of these needs a reason the two agree.
+# test_a_household_in_a_batch_gets_what_it_gets_alone runs them.
+THE_SAME_IN_A_BATCH = {
+    # With no input, the formula reads last year's, back to a default of 0
+    "state_pension_reported",
+    # policyengine-uk moves a total to bus_fare_spending_reported on loading:
+    # its default is 0, and without journeys the formula shares that out
+    "bus_fare_spending",
+}
+
+
+def _set_for_some(merged: dict) -> set:
+    """The inputs some households in a merged situation have, on anyone in
+    them, and others don't have at all, that the engine has a variable for.
+    Within a household a run alone does the same as a batch: a head's salary
+    makes the variable an input for the child, alone or not."""
+    from policyengine_uk.system import system
+
+    by_household: dict = {}
+    for instances in merged.values():
+        for name, instance in instances.items():
+            household = name.partition("_")[0]
+            by_household.setdefault(household, set()).update(instance)
+    names = list(by_household.values())
+    return (set.union(*names) - set.intersection(*names)) & set(
+        system.variables
+    )
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+def test_no_household_in_a_batch_loses_a_formula_it_would_run_alone():
+    """A new input with a formula, set for only some households, fails this
+    until ``merged_situation`` deals with it or the table above gives its
+    reason."""
+    from policyengine_uk.system import system
+
+    merged, _ = household_skip_check.merged_situation(
+        [
+            *NAMED_HOUSEHOLDS.values(),
+            *household_skip_check.generated_households(200, seed=2026),
+        ],
+        2027,
+    )
+    with_a_formula = {
+        name
+        for name in _set_for_some(merged)
+        if not system.variables[name].is_input_variable()
+    }
+    assert with_a_formula <= THE_SAME_IN_A_BATCH
+
+
+def _stages(merged: dict) -> list:
+    """Each person's ``current_education`` in a merged situation, or None."""
+    return [
+        (
+            next(iter(person["current_education"].values()))
+            if "current_education" in person
+            else None
+        )
+        for person in merged["people"].values()
+    ]
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+@given(batch=st.lists(households(), min_size=1, max_size=4))
+@settings(
+    max_examples=30,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
+def test_everyone_in_a_batch_has_the_stage_they_would_have_alone(batch):
+    """Their stage if it is entered; else what the formula gives, written out
+    only if anyone in the batch has one."""
+    together, _ = household_skip_check.merged_situation(batch, 2027)
+    alone = [
+        stage
+        for answers in batch
+        for stage in _stages(
+            household_skip_check.merged_situation([answers], 2027)[0]
+        )
+    ]
+    ages = [
+        next(iter(person["age"].values()))
+        for person in together["people"].values()
+    ]
+    if any(alone):
+        assert _stages(together) == [
+            stage or education_by_age(age) for stage, age in zip(alone, ages)
+        ]
+    else:
+        assert _stages(together) == alone
+
+
+@pytest.mark.slow
+def test_a_household_in_a_batch_gets_what_it_gets_alone():
+    """With the engine and every measure on, in one year: what a household's
+    run reads doesn't depend on the year. Every named household and some drawn
+    ones, together and then each alone, to the last bit. Beside each other,
+    the young person left to the formula read £8,743 lower before the batch
+    gave everyone a stage."""
+    year = 2027
+    side = household_impact.measure_sides(household_impact.measure_ids()).after
+    batch = [*NAMED_HOUSEHOLDS.values(), *_drawn(3, year)]
+    merged, _ = household_skip_check.merged_situation(batch, year)
+    assert THE_SAME_IN_A_BATCH <= _set_for_some(merged)
+    together = household_skip_check.net_incomes(batch, year, side)
+    different = {
+        _name(batch, index): (in_the_batch, alone)
+        for index, (answers, in_the_batch) in enumerate(zip(batch, together))
+        for alone in household_skip_check.net_incomes([answers], year, side)
+        if in_the_batch != alone
+    }
+    assert not different
 
 
 # --- The rules against the engine, every policy year ----------------------
@@ -1344,6 +1696,13 @@ def _current_rules():
     return {id_ for id_ in REGISTERED_RULES if rule_is_current(id_)}
 
 
+def _skip_unless_as_last_checked(measure):
+    """For a test that needs what a measure does now. A changed measure may do
+    something else, and a stale rule fails no test here."""
+    if not rule_is_current(measure):
+        pytest.skip(f"{measure} has changed since its last check")
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("year", POLICY_YEARS)
 def test_skips_give_the_same_answer_as_running_every_measure(year):
@@ -1391,20 +1750,19 @@ def test_skips_give_the_same_answer_as_running_every_measure(year):
 def test_the_rules_hold_when_a_pre_budget_side_is_left_out(year):
     """A reader who leaves the cash ISA limit out: every other measure's own
     run then has current law for its before side. Selections differ only in
-    that (``household_skip_check.selections``)."""
-    named = household_skip_check.selections()
-    assert len(named) == 2
-    check = household_skip_check.check_selection(
-        _batch(year),
-        year,
-        "pre_budget_law_as_it_stands",
-        named["pre_budget_law_as_it_stands"],
-    )
+    that (``household_skip_check.selections``); with no pre-Budget side in the
+    registry, there is no other selection to run."""
     current = _current_rules()
-    _assert_holds(check, current)
-    _assert_real_effects(
-        check, current - {reforms.CASH_ISA_LIMIT_ID}, REAL_EFFECTS
-    )
+    for name, ids in household_skip_check.selections().items():
+        if name == "every_measure":
+            continue
+        check = household_skip_check.check_selection(
+            _batch(year), year, name, ids
+        )
+        _assert_holds(check, current)
+        _assert_real_effects(
+            check, current - {reforms.CASH_ISA_LIMIT_ID}, REAL_EFFECTS
+        )
 
 
 @pytest.mark.slow
@@ -1430,6 +1788,7 @@ def test_the_check_fails_on_a_wrong_rule_with_the_engine(monkeypatch):
     the engine, the check breaks it for a player, and the smallest
     counterexample keeps the one answer the duty reads."""
     measure = reforms.MACHINE_GAMES_DUTY_ID
+    _skip_unless_as_last_checked(measure)
     player = NAMED_HOUSEHOLDS["machine_player"]
     assert not rule_says_unaffected(measure, player, 2027)
     monkeypatch.setattr(
@@ -1463,6 +1822,7 @@ def test_a_changed_definition_shows_its_real_effect_in_its_own_row(
     2026-27 its rule still says £0; the run shows the duty; the page's row
     shows it, and "Interaction between policies" stays at 0."""
     measure = reforms.MACHINE_GAMES_DUTY_ID
+    _skip_unless_as_last_checked(measure)
     reform = reforms.get_reform(measure)
     other = "fuel_duty_rise_deferral"
     checked = dict(current_definitions())

@@ -911,6 +911,20 @@ def education_by_age(age: int) -> str:
     return "NOT_IN_EDUCATION"
 
 
+def state_education_for_everyone(people: list) -> None:
+    """Give everyone in one simulation an education stage, if anyone has one.
+
+    Once one person's stage is entered, policyengine-core treats the variable
+    as an input for everyone, and a person left out gets the default (not in
+    education) rather than the formula's stage: a 17-year-old would lose
+    Child Benefit. So everyone else gets the stage the formula would give."""
+    if any("current_education" in person for person in people):
+        for person in people:
+            person.setdefault(
+                "current_education", education_by_age(person["age"])
+            )
+
+
 def child_inputs(child: Child) -> dict:
     """A child as policyengine-uk inputs. Never the claimant or partner;
     from 16, their education as entered, so policyengine-uk's own
@@ -1275,16 +1289,7 @@ def household_entities(
         # Childcare.
         children[0]["childcare_expenses"] = answers.monthly_childcare * 12
     people += children
-    if any("current_education" in person for person in people):
-        # Once one person's stage is entered, policyengine-core treats the
-        # variable as an input for everyone, and a person left out gets the
-        # default (not in education) rather than the formula's stage: a
-        # 17-year-old would lose Child Benefit. So everyone else gets the
-        # stage the formula would give.
-        for person in people:
-            person.setdefault(
-                "current_education", education_by_age(person["age"])
-            )
+    state_education_for_everyone(people)
     benunit = {"would_claim_uc": answers.claims_universal_credit}
     household = {
         "region": answers.region,

@@ -10,8 +10,11 @@ One ``policyengine_uk.Simulation`` can hold many households, and most of its
 cost goes on building the system, not on the calculation, so
 ``net_incomes`` runs a whole batch of households through one side for about
 the cost of one household. That makes every policy year affordable in CI.
-``tests/test_household_skips.py`` holds the batch to the calculator's own
-single-household runs.
+``tests/test_household_skips.py`` holds the batch to each household run alone,
+and to the calculator's own runs. It has to, because a simulation treats an
+input anyone has as an input for everyone: a person without it gets the
+variable's default, not its formula. ``merged_situation`` deals with the one
+input where the two differ.
 
 A rule has to hold whichever measures a reader selects, and the selection
 changes a measure's own run: the run holds every other selected measure at
@@ -48,6 +51,7 @@ from uk_budget_data.household_impact import (
     rule_says_unaffected,
     side_scenario,
     split_calculator_inputs,
+    state_education_for_everyone,
 )
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import merged_changes
@@ -170,6 +174,20 @@ NAMED_HOUSEHOLDS = {
         employment_income=60_000,
         property_income=12_000,
     ),
+    # Side by side in every batch: one household states a 17-year-old's
+    # education and the other leaves it to the formula. Run together without
+    # ``state_education_for_everyone``, the second loses its young person.
+    "young_person_left_to_the_formula": HouseholdAnswers(
+        age=34,
+        employment_income=15_000,
+        children=(Child(17),),
+        claims_universal_credit=True,
+        tenure="RENT_PRIVATELY",
+        monthly_rent=800,
+    ),
+    "young_person_in_education": HouseholdAnswers(
+        children=(Child(17, True),),
+    ),
 }
 
 # The values generated households draw from, per answer: each rule's
@@ -197,6 +215,7 @@ ANSWER_VALUES = {
         (),
         (Child(1),),
         (Child(4), Child(9)),
+        (Child(17),),
         (Child(14), Child(17, True)),
         (Child(16, False), Child(9), Child(4)),
     ),
@@ -248,18 +267,18 @@ def generated_households(count: int, seed: int) -> list[HouseholdAnswers]:
     ]
 
 
-def net_incomes(households: list, year: int, side: dict) -> list[float]:
-    """Each household's net income in ``year`` on one side, in one
-    simulation: ``household_impact.run_scenario``'s calculation, its
-    situation and calculator inputs merged across the households."""
-    from policyengine_uk import Simulation
-
-    from uk_budget_data.forecast import with_forecast
-
+def merged_situation(households: list, year: int) -> tuple[dict, list]:
+    """The households as one policyengine-uk situation in ``year``, and each
+    household's calculator inputs with its number of people. One simulation
+    holds them all, so everyone gets what ``household_entities`` gives the
+    people of one household: an education stage, if anyone has one."""
+    entities = [household_entities(answers, year) for answers in households]
+    state_education_for_everyone(
+        [person for people, _, _ in entities for person in people]
+    )
     merged: dict = {"people": {}, "benunits": {}, "households": {}}
     inputs_by_household = []
-    for index, answers in enumerate(households):
-        people, benunit, household = household_entities(answers, year)
+    for index, (people, benunit, household) in enumerate(entities):
         people, inputs = split_calculator_inputs(people)
         inputs_by_household.append((inputs, len(people)))
         situation = household_situation(people, benunit, household, year)
@@ -272,6 +291,18 @@ def net_incomes(households: list, year: int, side: dict) -> list[float]:
                     **group,
                     "members": [renamed[m] for m in group["members"]],
                 }
+    return merged, inputs_by_household
+
+
+def net_incomes(households: list, year: int, side: dict) -> list[float]:
+    """Each household's net income in ``year`` on one side, in one
+    simulation: ``household_impact.run_scenario``'s calculation, on
+    ``merged_situation``."""
+    from policyengine_uk import Simulation
+
+    from uk_budget_data.forecast import with_forecast
+
+    merged, inputs_by_household = merged_situation(households, year)
     simulation = Simulation(
         situation=merged, scenario=with_forecast(side_scenario(side))
     )
