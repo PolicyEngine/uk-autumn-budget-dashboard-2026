@@ -15,12 +15,13 @@ runs the rules that are off (or the ones named) against the engine, for the
 named households and generated ones (``--households``, ``--seed``), in every
 policy year, in every selection whose before side differs. A rule that holds
 everywhere gets the running code's digest in
-``src/uk_budget_data/household_skip_rules.json``: commit that file. A rule
-that fails loses any digest it had as soon as a year shows it, so it is off
-whatever its definition and whatever happens to the other years, and the
-command prints the smallest household showing it and exits 1: correct the rule,
-or leave the measure running in full. A year that can't finish records nothing
-for any rule, and the command names it and exits 1.
+``src/uk_budget_data/household_skip_rules.json``: commit that file. Each year's
+check runs every rule, whichever the command named. A rule that fails, named or
+not, loses any digest it had as soon as a year shows it, so it is off whatever
+its definition and whatever happens to the other years, and the command prints
+the smallest household showing it and exits 1: correct the rule, or leave the
+measure running in full. A year that can't finish records nothing for any rule,
+and the command names it and exits 1.
 """
 
 import argparse
@@ -178,10 +179,9 @@ def recheck(measures, households, seed, processes) -> int:
                 covered[id_][0] += ran
                 covered[id_][1] += skipped
             for effect, answers, change in counterexamples:
-                if effect.measure in wanted:
-                    failures.setdefault(effect.measure, []).append(
-                        (effect.selection, year, answers, change)
-                    )
+                failures.setdefault(effect.measure, []).append(
+                    (effect.selection, year, answers, change)
+                )
             if failures:
                 # A rule on before this check has the digest still, and the
                 # digest doesn't cover the engine: a wrong rule must not stay

@@ -1,12 +1,12 @@
 {
-  "bus_fare_cap_2027": "a83d88541f5346c75c47d098018120b7bbec84db0eadfb3e2c1226bbdb2175d0",
-  "carers_allowance_earnings_taper": "28230f1e140650f17f9fce438d6ec38637015b71a8521dc57da24a21b35758ca",
-  "cash_isa_limit_kept": "b315be2b5580ab38034e244c2e4d296b7197ce344001cf5d543d1a8a1e8ce52b",
-  "domestic_electricity_zero_vat": "a150d69f1bb957eb7c28440f40c8b6240ac214d589d75f69e7b523e65890a738",
-  "fuel_duty_rise_deferral": "b112c24bdda08103941b940b6411dcf6200d27ffcf7aab5483207fb8b97b6b00",
-  "machine_games_duty_rise": "2b0f3be5e3f65bebc72d8d8649b8313060851ee858af6be772f1b9b7eab17c8b",
-  "property_income_rates_up": "b6bc67da73179c88101e7e7a1cfdc00b6a0348519e174f5af4c9cabf7f84e130",
-  "savings_income_rates_up": "2d4b8e003e823920ef2d098b52dcba2880995c9b7a41a376bf21bcd01b6bb57d",
-  "state_pension_income_tax_protection": "372bf7647e0c23c9e8a37c04ac08f1304b6278e4f943e863a0cc4310d5552386",
-  "trading_allowance_raise": "c2a984bcbb2c92f9e1bfe68885f38d810964b0f64eeee329a9fc3dce491c52a7"
+  "bus_fare_cap_2027": "5300f13de181f6e6c854cc9cc4d88df56854b3dd0be8fb426ad37e234d72f0f9",
+  "carers_allowance_earnings_taper": "5dad61bad1192a7ac9bb86a6f6ab492b6c462fa6718c95f52380b177998565cb",
+  "cash_isa_limit_kept": "ddf0c4f87205c2b74c5d07d15eccea6607fdf5d0d3610f8af027726428d9ac34",
+  "domestic_electricity_zero_vat": "13f4de1c84b3b382c1c339536695a0eadb6a224b64d8725ea7d7a45fb04129ff",
+  "fuel_duty_rise_deferral": "ff8fc94435bae09e361a7bbb0f72bacfdd78b79c81acb33197870f8246e5fa46",
+  "machine_games_duty_rise": "f9852626d6296dbc9ed7b4347204306effd80e799966ee22ecae00e2f3e281c1",
+  "property_income_rates_up": "cc663cfd025d38848abb33aa7c45be6362944956c463d92372393321a3365751",
+  "savings_income_rates_up": "acf253915581110b0c5a325e48fe93b8bacd75427881abfcde3697623529476d",
+  "state_pension_income_tax_protection": "9570496869a9dcf73dcd5db0ba80ea128314a363136446c845d0468b37d0d363",
+  "trading_allowance_raise": "a90c86f2cd17815943583f31d8c29b8b35efeebd19c5ab3d175be3e04d33c13b"
 }

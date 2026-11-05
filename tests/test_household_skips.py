@@ -1332,6 +1332,26 @@ def test_a_recheck_that_fails_turns_off_a_rule_that_was_on(
     assert json.loads(record.read_text()) == {}
 
 
+@pytest.mark.usefixtures("state_pension_ages")
+def test_a_recheck_turns_off_a_wrong_rule_it_was_not_asked_about(
+    verify, record, monkeypatch, capsys
+):
+    """Each year's check runs every rule, whichever the command named. One it
+    shows wrong goes off, and the rule the command named still gets its own
+    answer."""
+    wrong, named = "machine_games_duty_rise", "fuel_duty_rise_deferral"
+    record.write_text(json.dumps({wrong: current_definitions()[wrong]}))
+    clear_definition_cache()
+    _engine_that_moves(
+        monkeypatch, wrong, lambda answers, _: answers.age == 45
+    )
+    assert _recheck(verify, named) == 1
+    assert not rule_is_current(wrong)
+    assert rule_is_current(named)
+    assert set(json.loads(record.read_text())) == {named}
+    assert f"{wrong}: the rule is wrong" in capsys.readouterr().out
+
+
 def _crash_in(monkeypatch, verify, crashed):
     """A worker that fails in one year, as out of memory would."""
     real = verify._check_one_year

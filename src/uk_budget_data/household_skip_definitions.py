@@ -31,7 +31,10 @@ A digest covers what a measure's own run reads from the definitions:
 It does not cover the rest of the household calculation, the forecast or the
 engine. The differential test in ``tests/test_household_skips.py`` runs the
 rules that are current against the engine on every CI run, so a change to any
-of them that breaks a rule for a household it runs fails there.
+of them that breaks a rule for a household it runs fails there. The walk reads
+import statements, so it doesn't see a module loaded by name or a file a
+modifier opens: no modifier does either today, and that test is what would show
+one that broke a rule.
 
 A definition the code can't work out counts as changed: a rule is on only when
 the code knows its digest matches. As in ``definitions``, a warning attributed
