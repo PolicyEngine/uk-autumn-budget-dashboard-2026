@@ -2080,11 +2080,11 @@ BUS_FARE_CAP_REGIONS = frozenset(REGIONS) - {
 
 # Measures that cannot move this household's net income in this year,
 # from the household's answers alone, so the split by policy need not run
-# them: each shows as "not affected", exactly as its run would. Every rule is
-# checked against the full run in tests/test_household_skips.py, over many
-# households and every policy year, and applies only to the definition it was
-# checked against (household_skip_definitions). These are the measures with a
-# rule, and why.
+# them: each shows as "not affected", exactly as its run would.
+# tests/test_household_skips.py compares every rule with the full run, over many
+# households and every policy year, and a rule applies only to the definition
+# its last check ran on (household_skip_definitions). These are the measures
+# with a rule, and why.
 SKIP_REASONS = {
     "employer_ni_relief_under_25s": "an employer cost; wages are held fixed",
     "warm_home_discount_top_up": "paid in 2026-27 only",
@@ -2142,8 +2142,8 @@ def provably_unaffected(
 ) -> bool:
     """Whether the split by policy can leave ``measure_id`` out: its rule
     says it cannot change this household's net income in ``year``, and the
-    rule was checked against the measure's definition as it now stands. A
-    measure whose definition has changed since is run in full."""
+    rule's last check ran on the measure's definition as it now stands. Once
+    the definition changes, the calculator runs the measure in full."""
     return rule_is_current(measure_id) and rule_says_unaffected(
         measure_id, answers, year
     )
@@ -2153,8 +2153,8 @@ def rule_says_unaffected(
     measure_id: str, answers: HouseholdAnswers, year: int
 ) -> bool:
     """Whether the rule for ``measure_id`` says it cannot change this
-    household's net income in ``year``, whatever the rule was checked
-    against. False whenever it might (and for any measure without a rule)."""
+    household's net income in ``year``, whatever definition its last check
+    ran on. False whenever it might (and for any measure without a rule)."""
     adults = [(answers.age, answers.student_loan_plan)]
     if answers.has_partner:
         adults.append((answers.partner_age, answers.partner_student_loan_plan))

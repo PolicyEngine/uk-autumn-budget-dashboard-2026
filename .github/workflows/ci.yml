@@ -203,10 +203,10 @@ jobs:
         run: uv run uk-budget-data publish check --code-root .
 
   # Which household skip rules are on (scripts/verify_household_skips.py). Red
-  # when a measure's definition has changed since its rule was checked: the
+  # when a measure's definition has changed since its rule's last check: the
   # calculator then runs that measure in full, so its answers stay right and
-  # only take longer. Not a required check, so a correction needn't wait for
-  # the recheck.
+  # only take longer. The ruleset doesn't require this check, so a correction
+  # needn't wait for the recheck.
   household-skip-rules:
     name: Household skip rules
     runs-on: ubuntu-latest
@@ -226,7 +226,7 @@ jobs:
       - name: Install dependencies (lockfile must be current)
         run: uv sync --locked --extra dev
 
-      - name: Each rule was checked against its measure's definition
+      - name: Each rule's last check ran on its measure's definition
         run: uv run python scripts/verify_household_skips.py --status
 
   lint:

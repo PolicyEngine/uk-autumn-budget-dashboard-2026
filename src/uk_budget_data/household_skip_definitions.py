@@ -1,9 +1,10 @@
-"""The definition each household skip rule was checked against.
+"""The definition each household skip rule's last check ran on.
 
 ``household_impact.rule_says_unaffected`` says a measure is exactly £0 for a
 household and year. That is a statement about the measure as it stood when
-the rule was checked against full runs, so ``household_skip_rules.json``
-records, for each rule, the digest of the definition it was checked against.
+the rule last passed a check against full runs, so
+``household_skip_rules.json`` records, for each rule, the digest of that
+definition.
 ``rule_is_current`` compares that with the running code's digest. A rule
 whose digest differs is off: the household calculation runs the measure in
 full, so the answer stays right and only gets slower, until
@@ -23,16 +24,17 @@ A digest covers what a measure's own run reads from the definitions:
 - the source of the code modifiers call in another module (``SHARED_CODE``),
   which a receipt binds only through its commit.
 
-It does not cover the household calculation or the engine. The differential
-test in ``tests/test_household_skips.py`` runs the rules that are current
-against the engine on every CI run, so a change to either that breaks a rule
-fails there.
+It does not cover the household calculation, the forecast or the engine. The
+differential test in ``tests/test_household_skips.py`` runs the rules that are
+current against the engine on every CI run, so a change to any of them that
+breaks a rule for a household it runs fails there.
 
-A definition that cannot be worked out counts as changed: a rule is on only
-when its digest is known to match. As in ``definitions``, a warning attributed
-to a bound module leaves it unbindable, so every digest is worked out together
-on first use, before the process runs anything, and kept. A refusal is kept
-too: for a speed-up, the answer stays right, and the process logs it once.
+A definition the code can't work out counts as changed: a rule is on only when
+the code knows its digest matches. As in ``definitions``, a warning attributed
+to a bound module leaves it unbindable, so the code works out every digest
+together on first use, before the process runs anything, and keeps them. It
+keeps a refusal too: for a speed-up, the answer stays right, and the process
+logs it once.
 """
 
 import hashlib
@@ -66,7 +68,7 @@ SHARED_CODE = (measure_templates,)
 
 # What ``rule_statuses`` reports for a measure.
 CURRENT = "current"
-CHANGED = "changed since it was checked"
+CHANGED = "changed since its last check"
 NEVER_CHECKED = "never checked"
 NO_DEFINITION = "definition unavailable"
 NO_RULE = "no rule"
@@ -74,8 +76,9 @@ NOT_REGISTERED = "not a registered measure"
 
 
 def checked_definitions() -> dict:
-    """``{measure id: the digest its rule was last checked against}``, as
-    committed. Unreadable, it is empty: every rule off, the answers right."""
+    """``{measure id: the digest of the definition its rule's last check ran
+    on}``, as committed. Unreadable, it is empty: every rule off, the answers
+    right."""
     return _read_checked()
 
 
@@ -174,9 +177,10 @@ def clear_definition_cache() -> None:
 
 
 def rule_is_current(measure_id: str) -> bool:
-    """Whether the rule for ``measure_id`` was checked against the definition
-    the running code has. False for a measure with no recorded check, a
-    measure the registry doesn't have, and a definition unavailable."""
+    """Whether the last check of the rule for ``measure_id`` ran on the
+    definition the running code has. False for a measure with no recorded
+    check, a measure the registry doesn't have, and a definition unavailable.
+    """
     current = current_definitions()
     checked = checked_definitions().get(measure_id)
     return checked is not None and current.get(measure_id) == checked
@@ -216,6 +220,23 @@ def record_checked(measure_ids: Iterable[str]) -> Path:
     checked = dict(checked_definitions())
     for id_ in measure_ids:
         checked[id_] = current[id_]
+    return _write_checked(checked)
+
+
+def forget_checked(measure_ids: Iterable[str]) -> Path:
+    """Turn these rules off whatever their digests say: a check found them
+    wrong. Returns the file written."""
+    wrong = set(measure_ids)
+    return _write_checked(
+        {
+            id_: digest
+            for id_, digest in checked_definitions().items()
+            if id_ not in wrong
+        }
+    )
+
+
+def _write_checked(checked: dict) -> Path:
     path = Path(str(files("uk_budget_data").joinpath(CHECKED_FILE)))
     path.write_text(json.dumps(checked, indent=2, sort_keys=True) + "\n")
     clear_definition_cache()

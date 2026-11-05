@@ -1,10 +1,10 @@
 """The household skip rules: each rule against the full run in every policy
-year, and each rule tied to the definition it was checked against.
+year, and each rule tied to the definition its last check ran on.
 
 ``household_impact.provably_unaffected`` leaves a measure out of the split by
 policy when ``rule_says_unaffected`` says it is exactly £0 for a household and
-year and ``household_skip_definitions.rule_is_current`` says the rule was
-checked against the measure's definition as it now stands.
+year and ``household_skip_definitions.rule_is_current`` says the rule's last
+check ran on the measure's definition as it now stands.
 
 The invariants, for every household, year and selection of measures:
 
@@ -12,11 +12,12 @@ The invariants, for every household, year and selection of measures:
    income unchanged, to the last bit (the page's status compares the
    unrounded change with 0).
 2. Equivalence: the split by policy with skips equals the split without.
-3. Fail-safe: a rule whose definition has changed, or can't be worked out, is
-   off, and the measure runs in full with its own row.
+3. Fail-safe: a rule whose definition has changed, or that the code can't work
+   out, is off, and the measure runs in full with its own row.
 4. A definition digest changes with whatever a measure's own run reads from
    the definitions, stays the same for a label or another checkout, and
    doesn't depend on the process.
+5. Only a check the rule passed, on households it said £0 for, turns a rule on.
 
 A stale rule fails no test here: the calculator is right without it, only
 slower, and CI's "Household skip rules" check names it. A correction must not
@@ -27,6 +28,7 @@ on the rules they find current, and the rest set the digests themselves.
 import ast
 import dataclasses
 import importlib
+import importlib.util
 import json
 import os
 import re
@@ -147,8 +149,8 @@ def state_pension_ages(monkeypatch):
 
 @pytest.fixture
 def every_rule_current(monkeypatch):
-    """Every rule counts as checked against the definition it now has, so a
-    test of the skips doesn't depend on the committed digests."""
+    """Every rule counts as having passed its check on the definition it now
+    has, so a test of the skips doesn't depend on the committed digests."""
     monkeypatch.setattr(
         household_skip_definitions,
         "checked_definitions",
@@ -157,8 +159,8 @@ def every_rule_current(monkeypatch):
 
 
 def _use_registry(monkeypatch, changed: dict):
-    """The registry with these measures replaced, ``{id: Reform}``; a new id
-    is added. Every reader goes through these two caches."""
+    """The registry with these measures replaced, ``{id: Reform}``, and any
+    new id added. Every reader goes through these two caches."""
     members = [
         reform
         for reform in reforms.get_autumn_budget_2026_reforms()
@@ -176,6 +178,20 @@ def _use_registry(monkeypatch, changed: dict):
 
 def _changed(reform, **fields):
     return reform.model_copy(update=fields)
+
+
+def _record_at(path: Path, monkeypatch) -> Path:
+    """The record of checked digests at ``path``, for reading and writing."""
+
+    class Package:
+        @staticmethod
+        def joinpath(_name):
+            return path
+
+    monkeypatch.setattr(
+        household_skip_definitions, "files", lambda _name: Package
+    )
+    return path
 
 
 def _with_a_parameter_changed(reform, value=13_000):
@@ -203,14 +219,14 @@ def modifier(sim, step={step}):
 """
 
 
-# --- A rule applies only to the definition it was checked against ---------
+# --- A rule applies only to the definition its last check ran on ----------
 
 
 @pytest.mark.parametrize("measure", REGISTERED_RULES)
 def test_changing_a_measures_definition_disables_its_rule(
     measure, monkeypatch
 ):
-    """The same household, year and rule. The rule was checked against the
+    """The same household, year and rule. The rule's last check ran on the
     measure as it was; the measure changes and keeps its id; the rule stops
     applying, though it still says £0."""
     answers, year = UNAFFECTED[measure]
@@ -286,8 +302,8 @@ def test_each_definition_is_its_own(monkeypatch):
 
 def test_a_change_to_a_pre_budget_side_disables_every_rule(monkeypatch):
     """Every measure's own run holds the planned cash ISA limit at its
-    pre-Budget side when both are selected, and the savings rule reads it:
-    every rule was checked against that side."""
+    pre-Budget side when a reader selects both, and the savings rule reads it:
+    every rule's check ran on that side."""
     before = dict(current_definitions())
     limit = reforms.get_reform(reforms.CASH_ISA_LIMIT_ID)
     assert limit.baseline_scenario_for(DataConfig()) is not None
@@ -412,11 +428,11 @@ def test_a_change_to_the_shared_template_code_disables_every_rule(
 
 def test_the_shared_code_is_all_a_modifier_calls():
     """A modifier's module is in its measure's identity. Walking what those
-    modules import, within this package: every module is named in
-    ``SHARED_CODE`` or here, with why it can't change an answer. A helper
-    module a modifier starts to call fails this until it is named."""
+    modules import, within this package: ``SHARED_CODE`` or this test names
+    every module, with why it can't change an answer. A helper module a
+    modifier starts to call fails this until one of them names it."""
     only_warn = {
-        # The templates import these only to warn that a change is limited
+        # The templates import these only to warn about a limit on a change
         # (_warn_if_data_limited and the like) and to refuse a wealth tax
         # scale; neither changes a number.
         "uk_budget_data.data_limits",
@@ -513,16 +529,7 @@ def test_a_digest_for_a_measure_the_registry_lacks_is_off(monkeypatch):
 def test_an_unreadable_record_leaves_every_rule_off(
     content, tmp_path, monkeypatch
 ):
-    (tmp_path / "pins.json").write_text(content)
-
-    class Package:
-        @staticmethod
-        def joinpath(_name):
-            return tmp_path / "pins.json"
-
-    monkeypatch.setattr(
-        household_skip_definitions, "files", lambda _name: Package
-    )
+    _record_at(tmp_path / "pins.json", monkeypatch).write_text(content)
     clear_definition_cache()
     assert checked_definitions() == {}
     assert not any(rule_is_current(id_) for id_ in REGISTERED_RULES)
@@ -554,18 +561,9 @@ def test_the_record_names_rules_and_full_digests():
 def test_recording_a_check_turns_that_rule_on_and_leaves_the_others(
     tmp_path, monkeypatch
 ):
-    path = tmp_path / "pins.json"
+    path = _record_at(tmp_path / "pins.json", monkeypatch)
     other = "0" * 64
     path.write_text(json.dumps({"fuel_duty_rise_deferral": other}))
-
-    class Package:
-        @staticmethod
-        def joinpath(_name):
-            return path
-
-    monkeypatch.setattr(
-        household_skip_definitions, "files", lambda _name: Package
-    )
     clear_definition_cache()
     assert not rule_is_current("machine_games_duty_rise")
     assert record_checked(["machine_games_duty_rise"]) == path
@@ -637,6 +635,7 @@ def test_the_digests_are_the_same_from_a_copy_outside_any_repository(tmp_path):
 # --- The rules' reach -----------------------------------------------------
 
 
+@pytest.mark.usefixtures("state_pension_ages")
 def test_only_measures_with_a_listed_reason_have_a_rule():
     """Every answer that could fire a rule, in every year: a measure not in
     ``SKIP_REASONS`` never does."""
@@ -663,6 +662,7 @@ UNCONDITIONAL_RULES = {
 }
 
 
+@pytest.mark.usefixtures("state_pension_ages")
 @pytest.mark.parametrize(
     "measure", sorted(set(SKIP_REASONS) - UNCONDITIONAL_RULES)
 )
@@ -724,7 +724,7 @@ def test_the_named_households_include_each_kind_a_rule_turns_on():
 
 def test_the_generator_covers_every_answer():
     """A new answer on the form fails this until generated households vary
-    it: a rule can't be checked against an answer no household gives."""
+    it: no check can reach an answer no household gives."""
     fields = {field.name for field in dataclasses.fields(HouseholdAnswers)}
     assert set(ANSWER_VALUES) | ANSWERS_NOT_GENERATED == fields
     assert not set(ANSWER_VALUES) & ANSWERS_NOT_GENERATED
@@ -933,10 +933,10 @@ def test_a_measure_with_a_stale_rule_keeps_its_own_row(
 def test_a_current_rule_trusted_wrongly_would_fold_the_effect_into_interaction(
     monkeypatch,
 ):
-    """What the digest prevents, shown by removing it: the rule is taken as
-    current, the engine moves the household anyway, and the row reads £0 with
-    the effect in the residual. Only the differential test below, and the
-    recheck, stand between a wrong current rule and this."""
+    """What the digest prevents, with the digest out of the way: the test
+    takes the rule as current, the engine moves the household anyway, and the
+    row reads £0 with the effect in the residual. Only the differential test
+    below, and the recheck, stand between a wrong current rule and this."""
     ids = household_impact.measure_ids()
     measure = "machine_games_duty_rise"
     answers = _answers()
@@ -976,6 +976,268 @@ def test_provably_unaffected_is_exactly_the_rule_and_its_check(
         )
         if not current:
             assert not provably_unaffected(measure, answers, year)
+
+
+# --- The check and the recheck, with a stand-in engine ---------------------
+
+
+def _engine_that_moves(patch, measure, moved, selections=None):
+    """``household_skip_check.net_incomes`` where net income moves by £1 on
+    ``measure``'s own run, in these selections (by default all of them), where
+    ``moved(answers, year)`` says, and nowhere else."""
+    selections = selections or household_skip_check.selections()
+    own = [
+        household_impact.measure_sides(ids).singles[measure]
+        for ids in selections.values()
+        if measure in ids
+    ]
+
+    def net_incomes(households_, year, side):
+        return [
+            40_000.0 + (1.0 if side in own and moved(answers, year) else 0.0)
+            for answers in households_
+        ]
+
+    patch.setattr(household_skip_check, "net_incomes", net_incomes)
+
+
+def _engine_that_moves_nothing(patch):
+    patch.setattr(
+        household_skip_check,
+        "net_incomes",
+        lambda households_, year, side: [40_000.0] * len(households_),
+    )
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+@given(
+    answers=households(),
+    year=st.sampled_from(POLICY_YEARS),
+    measure=st.sampled_from(REGISTERED_RULES),
+)
+@PROPERTIES
+def test_the_check_reports_exactly_the_zeros_the_engine_contradicts(
+    answers, year, measure, monkeypatch
+):
+    """Any household, year and rule, with an engine that moves the household
+    on that measure's own run, in each selection with the measure. The check
+    breaks the rule where the rule says £0, and says nothing where it doesn't.
+    One selection at a time: the cash ISA limit's own run in one is the other's
+    before side, and an engine is a function of the side."""
+    says = rule_says_unaffected(measure, answers, year)
+    for name, ids in household_skip_check.selections().items():
+        if measure not in ids:
+            continue
+        with monkeypatch.context() as patch:
+            _engine_that_moves(patch, measure, lambda *_: True, {name: ids})
+            broken = household_skip_check.check_selection(
+                [answers], year, name, ids
+            ).broken()
+        assert {(effect.selection, effect.measure) for effect in broken} == (
+            {(name, measure)} if says else set()
+        )
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+@pytest.mark.parametrize(
+    "measure, drawn, moved, smallest",
+    [
+        pytest.param(
+            "machine_games_duty_rise",
+            {"age": 45, "employment_income": 70_000, "region": "WALES"},
+            lambda answers: answers.age == 45,
+            {"age": 45},
+            id="keeps the answer the contradiction needs",
+        ),
+        pytest.param(
+            "domestic_electricity_zero_vat",
+            {"age": 45, "electricity_spending": 0},
+            lambda answers: True,
+            {"electricity_spending": 0},
+            id="keeps the answer the rule needs to say 0",
+        ),
+    ],
+)
+def test_the_smallest_counterexample_drops_every_other_answer(
+    measure, drawn, moved, smallest, monkeypatch
+):
+    households_ = [_answers(**drawn)]
+    _engine_that_moves(monkeypatch, measure, lambda answers, _: moved(answers))
+    broken = household_skip_check.check_year(households_, 2027).broken()
+    assert broken
+    for effect in broken:
+        answers, change = household_skip_check.smallest_counterexample(
+            effect, households_
+        )
+        assert household_skip_check.describe(answers) == smallest
+        assert change == 1.0
+
+
+class _InThisProcess:
+    """The part of ``ProcessPoolExecutor`` the recheck uses, here, so that its
+    years run on the test's stand-in engine."""
+
+    def __init__(self, _processes):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+    map = staticmethod(map)
+
+
+@pytest.fixture
+def verify(monkeypatch):
+    """``scripts/verify_household_skips.py``."""
+    path = Path(__file__).parents[1] / "scripts" / "verify_household_skips.py"
+    spec = importlib.util.spec_from_file_location("verify_skips_here", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module, "ProcessPoolExecutor", _InThisProcess)
+    return module
+
+
+@pytest.fixture
+def record(tmp_path, monkeypatch):
+    """An empty record of checked digests, the test's own."""
+    path = _record_at(tmp_path / "pins.json", monkeypatch)
+    path.write_text("{}\n")
+    clear_definition_cache()
+    return path
+
+
+def _recheck(verify, *measures):
+    return verify.recheck(list(measures), 0, 2026, 1)
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+@pytest.mark.parametrize(
+    "moved",
+    [
+        pytest.param(lambda answers, year: answers.age == 45, id="every year"),
+        pytest.param(
+            lambda answers, year: answers.age == 45
+            and year == POLICY_YEARS[-1],
+            id="the last year alone",
+        ),
+    ],
+)
+def test_the_recheck_turns_on_a_rule_that_holds_and_not_a_wrong_one(
+    moved, verify, record, monkeypatch, capsys
+):
+    """The whole recheck but for the engine: named households, every year,
+    both selections, the file."""
+    right, wrong = "fuel_duty_rise_deferral", "machine_games_duty_rise"
+    _engine_that_moves(monkeypatch, wrong, moved)
+    assert _recheck(verify, right, wrong) == 1
+    assert rule_is_current(right)
+    assert not rule_is_current(wrong)
+    assert set(json.loads(record.read_text())) == {right}
+    output = capsys.readouterr().out
+    assert f"{wrong}: the rule is wrong" in output
+    assert "{'age': 45}" in output
+    # In every selection the measure is in
+    for selection in household_skip_check.selections():
+        assert f"selection {selection}:" in output
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+def test_a_recheck_that_fails_turns_off_a_rule_that_was_on(
+    verify, record, monkeypatch
+):
+    """The digest doesn't cover the engine, so a rule can be current and
+    wrong. Once a recheck finds it wrong, it is off."""
+    wrong = "machine_games_duty_rise"
+    record.write_text(json.dumps({wrong: current_definitions()[wrong]}))
+    clear_definition_cache()
+    assert rule_is_current(wrong)
+    _engine_that_moves(
+        monkeypatch, wrong, lambda answers, _: answers.age == 45
+    )
+    assert _recheck(verify, wrong) == 1
+    assert not rule_is_current(wrong)
+    assert json.loads(record.read_text()) == {}
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+def test_the_recheck_records_no_rule_it_never_saw_say_zero(
+    verify, record, monkeypatch, capsys
+):
+    """A rule that said £0 for no household was not checked at all."""
+    measure = "fuel_duty_rise_deferral"
+    only = _answers(petrol_spending=1_000)
+    assert not any(
+        rule_says_unaffected(measure, only, year) for year in POLICY_YEARS
+    )
+    monkeypatch.setattr(
+        household_skip_check, "NAMED_HOUSEHOLDS", {"only": only}
+    )
+    _engine_that_moves_nothing(monkeypatch)
+    assert _recheck(verify, measure) == 1
+    assert json.loads(record.read_text()) == {}
+    assert f"not recorded: {measure}" in capsys.readouterr().out
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+def test_the_recheck_with_none_named_checks_the_rules_that_are_off(
+    verify, record, monkeypatch, capsys
+):
+    off = "machine_games_duty_rise"
+    current = current_definitions()
+    record.write_text(
+        json.dumps(
+            {**{id_: current[id_] for id_ in REGISTERED_RULES}, off: "0" * 64}
+        )
+    )
+    clear_definition_cache()
+    _engine_that_moves_nothing(monkeypatch)
+    assert _recheck(verify) == 0
+    assert all(rule_is_current(id_) for id_ in REGISTERED_RULES)
+    assert f"Checking {off}:" in capsys.readouterr().out
+    # And then there's nothing left to do
+    assert _recheck(verify) == 0
+    assert "nothing to check" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "measure",
+    [
+        "household_energy_payment_2026",
+        "warm_home_discount_top_up",
+        "not_a_measure",
+    ],
+    ids=["no rule", "not registered", "no such measure"],
+)
+def test_the_recheck_refuses_what_it_cannot_check(measure, verify, record):
+    assert _recheck(verify, measure) == 2
+    assert json.loads(record.read_text()) == {}
+
+
+def test_the_status_check_fails_only_on_a_registered_rule_that_is_off(
+    verify, monkeypatch, capsys
+):
+    """No required test fails on a stale rule; this exit code is CI's
+    "Household skip rules" check. A measure with no rule and a withdrawn
+    measure's rule don't turn it red."""
+    current = current_definitions()
+    every = {id_: current[id_] for id_ in REGISTERED_RULES}
+    monkeypatch.setattr(
+        household_skip_definitions, "checked_definitions", lambda: every
+    )
+    assert verify.status() == 0
+    capsys.readouterr()
+
+    off = "machine_games_duty_rise"
+    monkeypatch.setattr(
+        household_skip_definitions,
+        "checked_definitions",
+        lambda: {**every, off: "0" * 64},
+    )
+    assert verify.status() == 1
+    assert f"--recheck {off}\n" in capsys.readouterr().out
 
 
 # --- The rules against the engine, every policy year ----------------------
@@ -1151,7 +1413,7 @@ def test_the_rules_of_measures_the_registry_no_longer_has_hold(year):
     """The rules for the withdrawn measures (the Warm Home Discount top-up,
     Plan 2, the employer NI relief, the road fuel VAT cut and the rest), each
     measure run alone. They cannot fire in production, and stay off if a
-    measure comes back, until it is rechecked; this keeps their logic honest
+    measure comes back, until a recheck passes; this keeps their logic honest
     against the definitions still in ``reforms``."""
     withdrawn = household_skip_check.withdrawn_measures()
     assert set(withdrawn) == set(SKIP_REASONS) - set(

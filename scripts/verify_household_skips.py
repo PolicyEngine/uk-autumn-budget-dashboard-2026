@@ -1,7 +1,7 @@
 """Which household skip rules are on, and the check that turns one back on.
 
 A skip rule (``household_impact.rule_says_unaffected``) applies only to the
-definition it was checked against (``household_skip_definitions``): once a
+definition its last check ran on (``household_skip_definitions``): once a
 measure's definition changes, its rule is off and the calculator runs the
 measure in full. See docs/budget-day-runbook.md, "Fewer runs".
 
@@ -16,8 +16,9 @@ named households and generated ones (``--households``, ``--seed``), in every
 policy year, in every selection whose before side differs. A rule that holds
 everywhere gets the running code's digest in
 ``src/uk_budget_data/household_skip_rules.json``: commit that file. A rule
-that fails stays off, and the command prints the smallest household showing
-it and exits 1: correct the rule, or leave the measure running in full.
+that fails loses any digest it had, so it is off whatever its definition, and
+the command prints the smallest household showing it and exits 1: correct the
+rule, or leave the measure running in full.
 """
 
 import argparse
@@ -124,12 +125,12 @@ def recheck(measures, households, seed, processes) -> int:
         for id_ in measures
         if statuses.get(id_) == definitions.NOT_REGISTERED
     ]
-    if unknown or unregistered:
-        print(
-            "No rule to check: "
-            + ", ".join(f"{id_} has no rule" for id_ in unknown)
-            + ", ".join(f"{id_} isn't registered" for id_ in unregistered)
-        )
+    refused = [
+        *(f"{id_} has no rule" for id_ in unknown),
+        *(f"{id_} isn't registered" for id_ in unregistered),
+    ]
+    if refused:
+        print(f"No rule to check: {'; '.join(refused)}.")
         return 2
     wanted = measures or [
         id_
@@ -183,12 +184,17 @@ def recheck(measures, households, seed, processes) -> int:
     if never_applied:
         print(f"Checked nothing, so not recorded: {', '.join(never_applied)}")
     for id_, found in failures.items():
-        print(f"\n{id_}: the rule is wrong, so it stays off.")
+        print(f"\n{id_}: the rule is wrong, so it is off.")
         for selection, year, answers, change in found:
             print(
                 f"  {year}, selection {selection}: says £0, the run shows "
                 f"{change!r}, for {check.describe(answers)}"
             )
+    if failures:
+        # A rule on before this check has the digest still, and the digest
+        # doesn't cover the engine: a wrong rule must not stay on.
+        path = definitions.forget_checked(failures)
+        print(f"\nRemoved {', '.join(failures)} from {path}. Commit it.")
     clean = [
         id_
         for id_ in wanted

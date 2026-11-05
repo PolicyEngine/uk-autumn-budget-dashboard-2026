@@ -338,7 +338,7 @@ def selections(ids: Optional[list[str]] = None) -> dict[str, list[str]]:
     }
 
 
-# The selection a withdrawn measure is checked in.
+# The selection the check runs a withdrawn measure in.
 ALONE = "alone"
 
 
@@ -431,7 +431,7 @@ def check_withdrawn(
     """Measures the registry no longer has, each run alone. ``reforms``:
     ``{id: Reform}``. Their rules cannot fire in production
     (``household_impact.measure_sides`` refuses the measures) and stay off
-    if one comes back, until it is rechecked."""
+    if one comes back, until a recheck passes."""
     check = check or YearCheck(year, households)
     bases: dict = {}
     for measure, reform in reforms.items():

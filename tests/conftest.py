@@ -224,17 +224,13 @@ def pre_budget_registry(monkeypatch):
     a one-off payment), not as published measures. The package is
     unchanged.
 
-    Their rules count as checked, as does every other rule here, whichever
-    definitions the code now has: these tests are of the calculation, and
-    the committed digests (household_skip_definitions) were checked on the
-    real registry, whose before sides these measures would change."""
-    from uk_budget_data import household_skip_definitions, reforms
+    Every rule counts as current here, whichever definitions the code now
+    has: these tests are of the calculation, and the committed digests
+    (household_skip_definitions) were checked on the real registry, whose
+    before sides these measures would change."""
+    from uk_budget_data import household_impact, reforms
 
-    monkeypatch.setattr(
-        household_skip_definitions,
-        "checked_definitions",
-        lambda: household_skip_definitions.current_definitions(),
-    )
+    monkeypatch.setattr(household_impact, "rule_is_current", lambda _id: True)
     monkeypatch.setattr(
         reforms,
         "_MEASURE_FACTORIES",
@@ -248,8 +244,6 @@ def pre_budget_registry(monkeypatch):
     )
     monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
     monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
-    household_skip_definitions.clear_definition_cache()
     yield
     reforms._AUTUMN_BUDGET_2026_REFORMS_CACHE = None
     reforms._REFORM_LOOKUP_CACHE = None
-    household_skip_definitions.clear_definition_cache()
