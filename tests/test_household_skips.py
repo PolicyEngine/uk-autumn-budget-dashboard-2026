@@ -1425,6 +1425,36 @@ def test_the_rules_of_measures_the_registry_no_longer_has_hold(year):
 
 
 @pytest.mark.slow
+def test_the_check_fails_on_a_wrong_rule_with_the_engine(monkeypatch):
+    """The Machine Games Duty rule, made wrong: it says £0 for everyone. With
+    the engine, the check breaks it for a player, and the smallest
+    counterexample keeps the one answer the duty reads."""
+    measure = reforms.MACHINE_GAMES_DUTY_ID
+    player = NAMED_HOUSEHOLDS["machine_player"]
+    assert not rule_says_unaffected(measure, player, 2027)
+    monkeypatch.setattr(
+        household_skip_check, "rule_says_unaffected", lambda *_: True
+    )
+    # Only this measure's run: the others would add a simulation each
+    monkeypatch.setattr(
+        household_skip_check, "SKIP_REASONS", {measure: SKIP_REASONS[measure]}
+    )
+    check = household_skip_check.check_selection(
+        [player], 2027, "every_measure", household_impact.measure_ids()
+    )
+    broken = check.broken()
+    assert [effect.measure for effect in broken] == [measure]
+    assert broken[0].change < 0
+    answers, change = household_skip_check.smallest_counterexample(
+        broken[0], [player]
+    )
+    assert household_skip_check.describe(answers) == {
+        "higher_stake_machine_losses": player.higher_stake_machine_losses
+    }
+    assert change < 0
+
+
+@pytest.mark.slow
 def test_a_changed_definition_shows_its_real_effect_in_its_own_row(
     monkeypatch,
 ):
