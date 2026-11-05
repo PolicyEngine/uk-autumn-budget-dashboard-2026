@@ -84,6 +84,7 @@ from uk_budget_data.budget_measures.planned_cash_isa_limit import (
     planned_cash_isa_limit,
 )
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.household_skip_definitions import rule_is_current
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
     CombineConflict,
@@ -2081,7 +2082,9 @@ BUS_FARE_CAP_REGIONS = frozenset(REGIONS) - {
 # from the household's answers alone, so the split by policy need not run
 # them: each shows as "not affected", exactly as its run would. Every rule is
 # checked against the full run in tests/test_household_skips.py, over many
-# households and every policy year.
+# households and every policy year, and applies only to the definition it was
+# checked against (household_skip_definitions). These are the measures with a
+# rule, and why.
 SKIP_REASONS = {
     "employer_ni_relief_under_25s": "an employer cost; wages are held fixed",
     "warm_home_discount_top_up": "paid in 2026-27 only",
@@ -2137,8 +2140,21 @@ def diverts_cash_isa_payments(answers: HouseholdAnswers, year: int) -> bool:
 def provably_unaffected(
     measure_id: str, answers: HouseholdAnswers, year: int
 ) -> bool:
-    """Whether ``measure_id`` cannot change this household's net income in
-    ``year``. False whenever it might (and for any measure without a rule)."""
+    """Whether the split by policy can leave ``measure_id`` out: its rule
+    says it cannot change this household's net income in ``year``, and the
+    rule was checked against the measure's definition as it now stands. A
+    measure whose definition has changed since is run in full."""
+    return rule_is_current(measure_id) and rule_says_unaffected(
+        measure_id, answers, year
+    )
+
+
+def rule_says_unaffected(
+    measure_id: str, answers: HouseholdAnswers, year: int
+) -> bool:
+    """Whether the rule for ``measure_id`` says it cannot change this
+    household's net income in ``year``, whatever the rule was checked
+    against. False whenever it might (and for any measure without a rule)."""
     adults = [(answers.age, answers.student_loan_plan)]
     if answers.has_partner:
         adults.append((answers.partner_age, answers.partner_student_loan_plan))
