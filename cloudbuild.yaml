@@ -164,9 +164,15 @@ steps:
         # it has a tag, with or without traffic, and every build leaves its
         # tag on its revision, so it is 0 here. Where both are set, the
         # larger applies: the serving revision still keeps one.
+        # Maximum instances: --max 20 is the service's maximum, shared by the
+        # revisions in the traffic split. Without it the service keeps Cloud
+        # Run's default of 100, so a flood of requests could run 100 busy
+        # 8 vCPU instances at about $76 an hour. The most that ran at once
+        # from 12 October to 4 November, Budget day included, was 6; 20 costs
+        # at most about $15 an hour.
         common="--image $$image --region ${_REGION} --platform managed \
           --no-invoker-iam-check --memory 8Gi --cpu 8 --timeout 300 \
-          --min 1 --min-instances 0 --cpu-boost \
+          --min 1 --min-instances 0 --max 20 --cpu-boost \
           --update-env-vars HOUSEHOLD_WORKERS=8 \
           --tag $$tag \
           --labels commit-sha=${_GIT_SHA},gcb-build-id=${BUILD_ID}"
