@@ -95,7 +95,43 @@ def forecast_parameter_changes() -> dict[str, dict[str, float]]:
         f"{day}.{int(day[:4]) + 1}-03-31": rate
         for day, rate in fuel_duty_rpi_steps()
     }
+    changes[CARERS_ALLOWANCE_EARNINGS_LIMIT] = {
+        f"{year}-04-01.{year + 1}-03-31": limit
+        for year, limit in carers_allowance_earnings_limits().items()
+    }
     return changes
+
+
+# Current law's Carer's Allowance earnings limit, £ a week. policyengine-uk
+# 2.151.0 holds it at £204 (2026-27) in every later year, but it is set
+# each April at 16 hours at the National Living Wage, rounded up to the
+# pound, "from April 2025 and in future years" (Explanatory Memorandum to
+# SI 2025/352, paragraph 5.6: £196 from 16 x £12.21, £204 from 16 x
+# £12.71). The Budget's taper (budget_measures/carers_allowance_earnings_
+# taper.py) starts above that same limit, so with the engine's £204 a carer
+# earning between £204 and the year's limit got nothing under current law
+# or the taper, while one just above the limit got almost the full rate
+# (household QA, 30 October 2026).
+CARERS_ALLOWANCE_EARNINGS_LIMIT = "gov.dwp.carers_allowance.earnings_limit"
+CARERS_ALLOWANCE_LIMIT_HOURS = 16
+
+
+def carers_allowance_earnings_limits() -> dict[int, float]:
+    """Current law's earnings limit from April of each year the OBR
+    forecasts the National Living Wage for (2027-28 to 2031-32): 16 hours
+    at that April's wage, rounded up to the next pound (£212 from £13.21).
+    The wages are the taper's own (``OBR_NATIONAL_LIVING_WAGE_BY_APRIL``),
+    so the taper and current law share one limit."""
+    import math
+
+    from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
+        OBR_NATIONAL_LIVING_WAGE_BY_APRIL,
+    )
+
+    return {
+        year: float(math.ceil(round(CARERS_ALLOWANCE_LIMIT_HOURS * wage, 6)))
+        for year, wage in OBR_NATIONAL_LIVING_WAGE_BY_APRIL
+    }
 
 
 def forecast_scenario() -> Scenario:

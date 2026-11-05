@@ -24,7 +24,7 @@ def Answers(**values):
 
 
 # A single carer on Universal Credit, renting, with part-time pay entered
-# for 2026 and grown with average earnings: under the £204 weekly
+# for 2026 and grown with average earnings: under the £212 weekly
 # earnings limit in 2027-28 (about £197 a week of net earnings)
 CARER = dict(
     age=50,
@@ -166,7 +166,7 @@ def test_a_non_carers_answer_has_no_carer_rows():
 
 
 def test_a_carer_under_the_earnings_limit_gets_carers_allowance_and_the_element():
-    """2027-28: about £197 a week of net earnings, under the £204 limit, so
+    """2027-28: about £197 a week of net earnings, under the £212 limit, so
     the allowance in full (52 weeks at the year's rate) before and after;
     the taper has not started, so nothing changes."""
     result = household_impact.calculate_household_impact(
@@ -214,3 +214,69 @@ def test_a_carer_over_the_earnings_limit_gets_part_of_the_allowance_from_the_tap
     assert measure["status"] == "affected"
     assert measure["change"] == result["net_income"]["change"] != 0
     assert abs(measure["change"]) < allowance["change"]
+
+
+# A carer who owns their home and claims no Universal Credit, so the
+# allowance alone moves: pay entered for 2026, grown to 2030-31
+OWNER_CARER = dict(
+    age=40,
+    region="NORTH_WEST",
+    tenure="OWNED_WITH_MORTGAGE",
+    claims_universal_credit=False,
+    is_carer=True,
+    care_hours_per_week=35,
+)
+
+
+def _allowance_in_2030(pay_2026):
+    result = household_impact.calculate_household_impact(
+        Answers(**OWNER_CARER, employment_income=pay_2026),
+        [TAPER],
+        2030,
+        include=("by_policy",),
+    )
+    return _rows(result)["carers_allowance"], result["net_income"]["change"]
+
+
+def test_a_carer_under_the_years_earnings_limit_keeps_the_allowance():
+    """2030-31: the limit is 16 hours at April 2030's National Living Wage,
+    £228 a week, under current law and the taper alike. A carer on about
+    £215 a week of net earnings (£10,218 entered for 2026) is under it, so
+    gets the allowance in full before and after: the taper changes nothing
+    for them. One on about £235 a week (£11,169) is over it, so gets none
+    under current law and the rate less the excess from the taper. The
+    lower earner never gets less (household QA, 30 October 2026: with the
+    engine's £204 limit the £215 carer got nothing either way)."""
+    under, under_change = _allowance_in_2030(10_218)
+    over, over_change = _allowance_in_2030(11_169)
+    assert under["baseline"] > 4_500
+    assert under["reform"] == under["baseline"]
+    assert under_change == 0
+    assert over["baseline"] == 0
+    assert 0 < over["reform"] < under["reform"]
+    assert over_change > 0
+
+
+def _allowance(pay_2026, year):
+    result = household_impact.calculate_household_impact(
+        Answers(**OWNER_CARER, employment_income=pay_2026),
+        [TAPER],
+        year,
+        include=("by_policy",),
+    )
+    return _rows(result)["carers_allowance"]
+
+
+def test_the_limit_is_read_for_the_right_year():
+    """About £225 a week of net earnings lies between 2029-30's limit (£222)
+    and 2030-31's (£228), so it pins the year (María, #371): in 2030-31 a
+    carer on it keeps the allowance in full, and in 2029-30 one on it is
+    over the limit and gets none (the taper starts in 2030-31). £10,693
+    entered for 2026 is about £225 a week in 2030-31; £10,950 is about £225
+    a week in 2029-30."""
+    in_2030 = _allowance(10_693, 2030)
+    assert in_2030["baseline"] > 4_500
+    assert in_2030["reform"] == in_2030["baseline"]
+    in_2029 = _allowance(10_950, 2029)
+    assert in_2029["baseline"] == 0
+    assert in_2029["reform"] == 0
