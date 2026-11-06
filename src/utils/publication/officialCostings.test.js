@@ -79,7 +79,7 @@ describe("loadOfficialCostings", () => {
   });
 
   it("fails without a manifest or on another error", async () => {
-    await expect(loadOfficialCostings({}, { fetchImpl: vi.fn() })).rejects.toThrow(/No Budget results/);
+    await expect(loadOfficialCostings({}, { fetchImpl: vi.fn() })).rejects.toThrow(/published no Budget results/);
     const fetchImpl = vi.fn(async () => new Response("", { status: 500 }));
     await expect(loadOfficialCostings(catalogue, { fetchImpl })).rejects.not.toBeInstanceOf(OfficialCostingsPendingError);
   });

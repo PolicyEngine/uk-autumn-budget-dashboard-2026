@@ -336,6 +336,18 @@ describe("UnmodelledMeasures", () => {
     expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
   });
 
+  it("says the cash ISA limit is in the Household calculator only, not the national results", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const measure = UNMODELLED_MEASURES.find(({ id }) => id === "cash-isa-limit");
+    // Not in our data yet (#368): the survey data hold no payments into ISAs
+    expect(measure.reason).toBe("data");
+    const card = document.getElementById("unmodelled-cash-isa-limit");
+    expect(card.querySelector(".policy-card-points")).toHaveTextContent(
+      /Household calculator only, not the national results: our data lack ISA payments\./,
+    );
+  });
+
   it("keeps At a glance short and the summary one sentence, and shows every change a card names", () => {
     render(<UnmodelledMeasures />);
     open();
@@ -346,7 +358,7 @@ describe("UnmodelledMeasures", () => {
     }
     // Two changes: both in the card's picture, and no table of the same values beside it
     const mileage = document.getElementById("unmodelled-mileage-rates");
-    expect(within(mileage).getByRole("img").getAttribute("aria-label")).toMatch(/55p a mile for the first 10,000 business miles, made permanent; above 10,000 miles the rate rises from 25p to 35p/);
+    expect(within(mileage).getByRole("img").getAttribute("aria-label")).toMatch(/55p a mile for the first 10,000 business miles becomes permanent; above 10,000 miles the rate rises from 25p to 35p/);
     const car = document.getElementById("unmodelled-company-car-tax");
     expect(within(car).getByRole("img").getAttribute("aria-label")).toMatch(/zero-emission cars 9% to 10%, cars emitting 1 to 50g CO2 a kilometre 19% to 20%/);
     for (const card of [mileage, car]) {

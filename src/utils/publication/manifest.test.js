@@ -284,7 +284,7 @@ describe("availability", () => {
             m.measures.alpha.status = status;
           }),
         ),
-      ).toThrow(/figures cannot be shown/);
+      ).toThrow(/cannot show its figures/);
     }
   });
 

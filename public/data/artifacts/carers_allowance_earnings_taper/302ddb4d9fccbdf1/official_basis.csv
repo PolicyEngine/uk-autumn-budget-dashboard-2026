@@ -1,0 +1,7 @@
+reform_id,reform_name,year,value,variables
+carers_allowance_earnings_taper,Carer's Allowance earnings taper,2026,0.0,carers_allowance;universal_credit
+carers_allowance_earnings_taper,Carer's Allowance earnings taper,2027,0.0,carers_allowance;universal_credit
+carers_allowance_earnings_taper,Carer's Allowance earnings taper,2028,0.0,carers_allowance;universal_credit
+carers_allowance_earnings_taper,Carer's Allowance earnings taper,2029,0.0,carers_allowance;universal_credit
+carers_allowance_earnings_taper,Carer's Allowance earnings taper,2030,-0.03924215764832753,carers_allowance;universal_credit
+carers_allowance_earnings_taper,Carer's Allowance earnings taper,2031,-0.07942088303163518,carers_allowance;universal_credit

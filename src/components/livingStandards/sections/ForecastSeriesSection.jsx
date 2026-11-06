@@ -171,7 +171,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yea
       ? `${seriesList
           .filter((s) => !withPost.includes(s))
           .map(seriesName)
-          .join(", ")}: not in the ${postName}'s summary table yet; it follows with the OBR's detailed forecast tables, so only the ${preName} is shown.`
+          .join(", ")}: not in the ${postName}'s summary table yet; it follows with the OBR's detailed forecast tables, so we show only the ${preName}.`
       : null;
   const csv = () =>
     buildChartCsv({

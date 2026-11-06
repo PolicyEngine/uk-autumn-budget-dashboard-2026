@@ -3,20 +3,38 @@ import fc from "fast-check";
 import {
   CALCULATOR_ONLY_MEASURES,
   SAVINGS_INCOME_RATES_ID,
+  definitionChecked,
   isCalculatorOnly,
+  publishedRequest,
+  removableFromSelection,
   resultPolicies,
   withCalculatorOnly,
   withoutCalculatorOnly,
 } from "./calculatorOnlyMeasures";
 import { policyRows } from "./singleYear";
 
+const CASH_ISA_LIMIT_ID = "cash_isa_limit_kept";
+const MACHINE_GAMES_DUTY_ID = "machine_games_duty_rise";
+
 describe("calculator-only measures", () => {
   it("always go after the selected measures, once, and come off for the national figures", () => {
-    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID]);
-    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID]);
+    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID, MACHINE_GAMES_DUTY_ID]);
+    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID, MACHINE_GAMES_DUTY_ID]);
     // Nothing selected: no request, so nothing added
     expect(withCalculatorOnly([])).toEqual([]);
-    expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a"]);
+    expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID, MACHINE_GAMES_DUTY_ID])).toEqual(["a"]);
+  });
+
+  it("show an assumption's note where the household's figure rests on it", () => {
+    const note = "Assumes that under the planned £12,000 limit …";
+    const byPolicy = (change) => ({
+      measures: [{ id: CASH_ISA_LIMIT_ID, name: "Cash ISA limit", change, status: change ? "affected" : "not_affected", note, noteKind: "assumption" }],
+      residual: 0,
+    });
+    const moved = policyRows(byPolicy(185), 185, [], 2029);
+    expect(moved.rows).toEqual([expect.objectContaining({ id: CASH_ISA_LIMIT_ID, name: "Cash ISA limit kept at £20,000", rounded: 185 })]);
+    expect(moved.notes).toEqual([{ id: CASH_ISA_LIMIT_ID, name: "Cash ISA limit kept at £20,000", kind: "assumption", text: note }]);
+    expect(policyRows(byPolicy(0), 0, [], 2029).notes).toEqual([]);
   });
 
   it("show in the split by policy with their short name, and no note", () => {
@@ -31,6 +49,67 @@ describe("calculator-only measures", () => {
     expect(bars.rows).toEqual([expect.objectContaining({ id: SAVINGS_INCOME_RATES_ID, name: "Savings income tax up", rounded: -190 })]);
     expect(bars.notes).toEqual([]);
   });
+
+  it("are left out of the definitions check only while they have no approved definition", () => {
+    const IDS = ["a", "b", "c", SAVINGS_INCOME_RATES_ID];
+    fc.assert(
+      fc.property(fc.uniqueArray(fc.constantFrom(...IDS)), fc.subarray(IDS), (policies, approvedIds) => {
+        const checked = definitionChecked(policies, Object.fromEntries(approvedIds.map((id) => [id, {}])));
+        // In the request's order, each one at most once
+        expect(checked).toEqual(policies.filter((id) => checked.includes(id)));
+        // Every measure with published figures is checked, whether or not
+        // it has an approved definition (with none, it is refused)
+        for (const id of policies) expect(checked.includes(id)).toBe(!isCalculatorOnly(id) || approvedIds.includes(id));
+      }),
+      { numRuns: 300 },
+    );
+    expect(definitionChecked(["a", SAVINGS_INCOME_RATES_ID], null)).toEqual(["a"]);
+  });
+
+  it("are checked against the publication once it names them, selected or not", () => {
+    // Review of bc51d6d2, finding 1: a published savings rise, not selected,
+    // went in every request unchecked
+    const IDS = ["a", "b", "c", SAVINGS_INCOME_RATES_ID];
+    fc.assert(
+      fc.property(fc.uniqueArray(fc.constantFrom(...IDS)), fc.subarray(IDS), (selected, publishedIds) => {
+        const checked = publishedRequest(selected, (id) => publishedIds.includes(id));
+        const request = withCalculatorOnly(selected);
+        // The request's measures, in its order, each at most once
+        expect(checked).toEqual(request.filter((id) => checked.includes(id)));
+        // Every selected one; one the request adds exactly when published
+        for (const id of selected) expect(checked).toContain(id);
+        for (const id of request) expect(checked.includes(id)).toBe(selected.includes(id) || publishedIds.includes(id));
+        for (const id of request.filter((added) => !selected.includes(added))) expect(isCalculatorOnly(id)).toBe(true);
+        // With the published ones approved, the hooks check the same
+        // measures the page approved (definitionChecked)
+        const approvals = Object.fromEntries(checked.map((id) => [id, {}]));
+        expect(definitionChecked(request, approvals)).toEqual(checked);
+      }),
+      { numRuns: 300 },
+    );
+    // With nothing selected there is no request, and nothing to check
+    expect(publishedRequest([], () => true)).toEqual([]);
+  });
+
+  it("are never offered for removal from the selection: a Remove would change nothing", () => {
+    // Re-reviews of 34133276 and edf98756 (P3s): the savings rise goes in
+    // every request, selected or not
+    const IDS = ["a", "b", "c", SAVINGS_INCOME_RATES_ID];
+    fc.assert(
+      fc.property(fc.uniqueArray(fc.constantFrom(...IDS)), fc.uniqueArray(fc.constantFrom(...IDS)), (selected, refused) => {
+        const removable = removableFromSelection(refused, selected);
+        expect(removable).toBe(refused.every((id) => selected.includes(id) && !isCalculatorOnly(id)));
+        // Offered, it lifts the refusal: the request without them names none
+        if (removable) {
+          const request = withCalculatorOnly(selected.filter((id) => !refused.includes(id)));
+          for (const id of refused) expect(request).not.toContain(id);
+        }
+      }),
+      { numRuns: 300 },
+    );
+    expect(removableFromSelection([SAVINGS_INCOME_RATES_ID], ["a", SAVINGS_INCOME_RATES_ID])).toBe(false);
+    expect(removableFromSelection(["a"], ["a", SAVINGS_INCOME_RATES_ID])).toBe(true);
+  });
 });
 
 describe("the result card's measures (resultPolicies)", () => {
@@ -41,14 +120,16 @@ describe("the result card's measures (resultPolicies)", () => {
     { minLength: 1, maxLength: 12 },
   );
 
-  it("counts the selection and names the savings rise, as production showed it", () => {
+  it("counts the selection and names the savings rise and the cash ISA limit", () => {
     const seven = ["a", "b", "c", "d", "e", "f", "g"];
     expect(resultPolicies(withCalculatorOnly(seven))).toEqual({
       count: 7,
-      named: ["the savings income tax rise"],
-      text: "7 policies and the savings income tax rise",
+      named: ["the savings income tax rise", "the cash ISA limit kept at £20,000", "the rise in Machine Games Duty"],
+      text: "7 policies, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty",
     });
-    expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe("1 policy and the savings income tax rise");
+    expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe(
+      "1 policy, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty",
+    );
     // Without the calculator's own measures, just the count
     expect(resultPolicies(["a", "b"]).text).toBe("2 policies");
     expect(resultPolicies([]).text).toBe("0 policies");

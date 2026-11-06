@@ -14,6 +14,8 @@
  * version.
  */
 
+import { SOURCES } from "./sources";
+
 const BUDGET_URL = "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html";
 
 export const BUDGET_DOCUMENT = {
@@ -67,7 +69,7 @@ export const UNMODELLED_REASONS = [
     label: "Outside a household model",
     why: "Taxes on firms, reliefs on business premises, a change in who collects a tax and loans don't change household incomes the way this dashboard measures them.",
   },
-  { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules not yet published." },
+  { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules that still await publication." },
 ];
 
 /** The labels of every card's points, in order. */
@@ -90,44 +92,8 @@ export const UNMODELLED_MEASURES = [
     sources: [budget("paragraph 6.247")],
   },
   {
-    id: "machine-games-duty",
-    order: 2,
-    reason: "coming-soon",
-    name: "Machine Games Duty up from 20% to 25%",
-    starts: "1 Apr 2027",
-    summary: "Machines with stakes over £1 or prizes over £100 pay 25% duty, up from 20%.",
-    points: [
-      { label: "For a household", text: "Businesses pay; any household effect comes via stakes, prizes, owners or staff." },
-      { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
-      { label: "Why we leave it out", text: "Our data hold no household spending on gambling." },
-    ],
-    costings: [{ row: 56, values: [0, 135, 150, 145, 145, 145] }],
-    sources: [budget("paragraphs 2.49 and 6.225")],
-  },
-  {
-    id: "cash-isa-limit",
-    order: 3,
-    reason: "coming-soon",
-    name: "Cash ISA limit kept at £20,000",
-    starts: "6 Apr 2027",
-    summary: "Drops a planned cut in the under-65 cash ISA limit to £12,000; it stays £20,000.",
-    points: [
-      { label: "For a household", text: "Interest stays tax-free on up to £20,000 a year of new savings." },
-      { label: "Who it reaches", text: "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23." },
-      { label: "Why we leave it out", text: "The model has no ISA payments, so never had the cut." },
-    ],
-    costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
-    sources: [
-      budget("paragraphs 2.52 and 6.248"),
-      {
-        label: "HMRC, tax information and impact note on the cash ISA limit (17 September 2026)",
-        href: "https://www.gov.uk/government/publications/reduction-in-the-cash-individual-savings-account-isa-limit",
-      },
-    ],
-  },
-  {
     id: "adjusted-triple-lock",
-    order: 4,
+    order: 2,
     reason: "separately",
     name: "Adjusted Triple Lock for the State Pension",
     starts: "Apr 2030",
@@ -150,7 +116,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "bank-surcharge",
-    order: 5,
+    order: 3,
     reason: "outside",
     name: "Bank surcharge up from 3% to 6% for 15 months",
     starts: "1 Jan 2027",
@@ -165,7 +131,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "pubs-business-rates-relief",
-    order: 6,
+    order: 4,
     reason: "outside",
     name: "Business rates relief for pubs and venues up to 35%",
     starts: "1 Apr 2027",
@@ -180,7 +146,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "online-marketplace-liability",
-    order: 7,
+    order: 5,
     reason: "outside",
     name: "Online marketplaces to collect the tax on UK sellers' sales",
     starts: "1 Oct 2027",
@@ -195,7 +161,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "your-first-home",
-    order: 8,
+    order: 6,
     reason: "outside",
     name: "Your First Home equity loan scheme",
     starts: "Apr 2027",
@@ -203,7 +169,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "2.5% deposit; five interest-free years; saves hundreds a month, says the Budget." },
       { label: "Who it reaches", text: "Around 70,000 first-time buyers (government estimate)." },
-      { label: "Why we leave it out", text: "A loan is lent, not paid, so household incomes do not change." },
+      { label: "Why we leave it out", text: "The scheme lends rather than pays, so household incomes do not change." },
     ],
     costings: [
       {
@@ -213,6 +179,52 @@ export const UNMODELLED_MEASURES = [
       },
     ],
     sources: [budget("paragraphs 5.5 and 6.113")],
+  },
+  {
+    id: "machine-games-duty",
+    order: 7,
+    reason: "data",
+    name: "Machine Games Duty up from 20% to 25%",
+    starts: "1 Apr 2027",
+    summary: "Machines with stakes over £1 or prizes over £100 pay 25% duty, up from 20%.",
+    points: [
+      { label: "For a household", text: "Businesses pay; any household effect comes via stakes, prizes, owners or staff." },
+      { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
+      { label: "Why we leave it out", text: "Household calculator only: our data hold no gambling or machine types." },
+    ],
+    costings: [
+      {
+        row: 56,
+        values: [0, 135, 150, 145, 145, 145],
+        note: "Row 56 also covers moving the duty to machine suppliers from 1 April 2028: £20m in 2028-29, then £15m, £15m and £10m (policy costings p.68).",
+      },
+    ],
+    sources: [
+      budget("paragraphs 2.49 and 6.225"),
+      // The move to machine suppliers' yearly figures in row 56
+      { label: "HM Treasury, Budget 2026 policy costings, Machine Games Duty (page 68)", href: SOURCES.obr_budget_2026_costings.url },
+    ],
+  },
+  {
+    id: "cash-isa-limit",
+    order: 8,
+    reason: "data",
+    name: "Cash ISA limit kept at £20,000",
+    starts: "6 Apr 2027",
+    summary: "Drops a planned cut in the under-65 cash ISA limit to £12,000; it stays £20,000.",
+    points: [
+      { label: "For a household", text: "Interest stays tax-free on up to £20,000 a year of new savings." },
+      { label: "Who it reaches", text: "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23." },
+      { label: "Why we leave it out", text: "Household calculator only, not the national results: our data lack ISA payments." },
+    ],
+    costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
+    sources: [
+      budget("paragraphs 2.52 and 6.248"),
+      {
+        label: "HMRC, tax information and impact note on the cash ISA limit (17 September 2026)",
+        href: "https://www.gov.uk/government/publications/reduction-in-the-cash-individual-savings-account-isa-limit",
+      },
+    ],
   },
   {
     id: "national-living-wage",
@@ -234,22 +246,22 @@ export const UNMODELLED_MEASURES = [
     id: "universal-credit-surplus-earnings",
     order: 10,
     reason: "data",
-    name: "Universal Credit surplus earnings threshold kept at £2,500",
+    name: "Universal Credit surplus earnings threshold stays at £2,500",
     starts: "1 Apr 2027",
     summary: "Keeps Universal Credit's surplus earnings threshold at £2,500 to March 2028, rather than £300.",
     points: [
-      { label: "For a household", text: "Excess earnings up to £2,500, such as a bonus, aren't carried forward." },
+      { label: "For a household", text: "Excess earnings up to £2,500, such as a bonus, don't carry forward." },
       { label: "Who it reaches", text: "Claimants reclaiming within six months of earnings ending their award." },
       { label: "Why we leave it out", text: "The model works out Universal Credit yearly, not month by month." },
     ],
     costings: [{ row: 8, values: [0, -140, 0, 0, 0, 0] }],
-    sources: [budget("paragraph 6.11"), obr("Box 5.1")],
+    sources: [budget("paragraph 6.11"), obr("paragraph 3.44")],
   },
   {
     id: "mileage-rates",
     order: 11,
     reason: "data",
-    name: "Tax-free mileage rates raised",
+    name: "Tax-free mileage rates up",
     starts: "Apr 2026 / Apr 2027",
     summary: "Makes 55p a mile permanent up to 10,000 business miles; above that, 25p becomes 35p.",
     points: [
@@ -279,13 +291,13 @@ export const UNMODELLED_MEASURES = [
     id: "business-asset-disposal-relief",
     order: 13,
     reason: "data",
-    name: "Business Asset Disposal Relief limit cut to £500,000",
+    name: "Business Asset Disposal Relief limit down to £500,000",
     starts: "6 Apr 2027",
-    summary: "Halves the lifetime limit on gains taxed at 18%, from £1 million to £500,000.",
+    summary: "Halves the lifetime limit on gains paying 18% tax, from £1 million to £500,000.",
     points: [
-      { label: "For a household", text: "Gains above £500,000 are taxed at up to 24% rather than 18%." },
+      { label: "For a household", text: "Gains above £500,000 pay tax at up to 24% rather than 18%." },
       { label: "Who it reaches", text: "Sellers of qualifying businesses; three-quarters keep relief on their whole gain." },
-      { label: "Why we leave it out", text: "No record of relief already used; gains calibrated to 2024-25's high disposals." },
+      { label: "Why we leave it out", text: "No record of past relief; we calibrate gains to 2024-25's high disposals." },
     ],
     costings: [{ row: 60, values: [5, 60, 180, 255, 280, 305] }],
     sources: [
@@ -301,8 +313,8 @@ export const UNMODELLED_MEASURES = [
     starts: "Oct 2026 / Apr 2029",
     summary: "A 25%-bonus ISA replaces the Lifetime ISA, whose charge over £450,000 falls to 20%.",
     points: [
-      { label: "For a household", text: "The bonus adds to the deposit, not income, paid at purchase." },
-      { label: "Who it reaches", text: "People saving for a first home, Lifetime ISA holders included." },
+      { label: "For a household", text: "The bonus arrives at purchase, adding to the deposit, not income." },
+      { label: "Who it reaches", text: "People saving for a first home, including Lifetime ISA holders." },
       { label: "Why we leave it out", text: "The model has no ISA payments, bonuses or home purchases." },
     ],
     costings: [
@@ -319,13 +331,18 @@ export const UNMODELLED_MEASURES = [
     starts: "Apr 2029",
     summary: "Extends parental pay to self-employed fathers, partners, adopters and some irregular workers in Great Britain.",
     points: [
-      { label: "For a household", text: "Two weeks' pay after a birth: up to £194 a week (Treasury)." },
+      { label: "For a household", text: "Two weeks, up to £194 each; adopters up to 39 weeks." },
       { label: "Who it reaches", text: "Over 150,000 parents a year (government estimate)." },
-      { label: "Why we leave it out", text: "Rules unpublished; the model takes paternity pay and Maternity Allowance as reported." },
+      { label: "Why we leave it out", text: "Rules not final; paternity pay and Maternity Allowance come from the survey." },
     ],
     costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
     sources: [
       budget("paragraphs 3.20 and 6.12"),
+      // Adopters' up to 39 weeks: the policy costings' Parental Pay measure
+      {
+        label: "HM Treasury, Budget 2026 policy costings, Parental Pay (page 15)",
+        href: SOURCES.obr_budget_2026_costings.url,
+      },
       {
         label: "HM Treasury, release on parental pay and other measures (26 October 2026)",
         href: "https://www.gov.uk/government/news/everyday-fixes-to-make-life-easier-for-millions-of-britons",
@@ -336,11 +353,13 @@ export const UNMODELLED_MEASURES = [
     id: "gas-standing-charges",
     order: 16,
     reason: "data",
-    name: "Gas standing charges to be abolished",
+    name: "Gas standing charges to end",
+    // Budget paragraph 4.3: "aiming for delivery by the end of 2027 or as soon
+    // as possible after then" (the start badge holds 20 characters)
     starts: "End of 2027 or later",
     summary: "The government asks Ofgem to abolish gas standing charges, £108 a year on average.",
     points: [
-      { label: "For a household", text: "Before mitigation, about 60% save £45 a year; higher users pay more." },
+      { label: "For a household", text: "60% of account holders save about £45 a year on average." },
       { label: "Who it reaches", text: "Around 23 million homes in Great Britain (government estimate)." },
       { label: "Why we leave it out", text: "The model counts energy taxes, not supplier prices; start and mitigation unset." },
     ],
