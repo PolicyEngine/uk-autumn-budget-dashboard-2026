@@ -84,6 +84,7 @@ export const CHART_COLOURS = {
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
   noticeText: "#7A5A1F",
+  vintage: "#9FB8B3",
   // A household's income, stacked: benefits in teals, taxes and
   // deductions in ambers (the 2025 dashboard's families), earnings and the
   // rest in slate greys

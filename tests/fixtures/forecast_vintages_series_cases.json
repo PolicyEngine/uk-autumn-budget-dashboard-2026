@@ -1,0 +1,33 @@
+{
+  "about": "Series ({period: value}), each with whether the page's loader reads it as a series it can draw. Read by tests/test_forecast_vintages.py (the build's series_as_read) and src/utils/forecastVintages/series.test.js (the page's isSeries): the two must agree with these and so with each other.",
+  "cases": [
+    {"name": "two years in a row", "frequency": "calendar", "values": {"2020": 1.5, "2021": 2}, "accepted": true},
+    {"name": "one year", "frequency": "calendar", "values": {"2020": 1}, "accepted": true},
+    {"name": "years out of order in the file", "frequency": "calendar", "values": {"2021": 2, "2020": 1}, "accepted": true},
+    {"name": "no values", "frequency": "calendar", "values": {}, "accepted": false},
+    {"name": "a list, not periods", "frequency": "calendar", "values": [1, 2], "accepted": false},
+    {"name": "a year missing between (a blank ONS year)", "frequency": "calendar", "values": {"1954": 1, "1956": 2}, "accepted": false},
+    {"name": "a year missing between, in a longer run", "frequency": "calendar", "values": {"2019": 1, "2020": 1, "2022": 1, "2023": 1}, "accepted": false},
+    {"name": "a value of 0", "frequency": "calendar", "values": {"2020": 0, "2021": 1}, "accepted": true},
+    {"name": "a value of minus 0", "frequency": "calendar", "values": {"2020": -0.0, "2021": 1}, "accepted": true},
+    {"name": "the smallest figure", "frequency": "calendar", "values": {"2020": 0.0001, "2021": -0.0001}, "accepted": true},
+    {"name": "a figure finer than four decimals", "frequency": "calendar", "values": {"2020": 5e-05, "2021": 1}, "accepted": false},
+    {"name": "the largest figure", "frequency": "calendar", "values": {"2020": 1000000000, "2021": -1000000000}, "accepted": true},
+    {"name": "a figure past the largest", "frequency": "calendar", "values": {"2020": 1000000001, "2021": 1}, "accepted": false},
+    {"name": "a figure too large for a number", "frequency": "calendar", "values": {"2020": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000, "2021": 1}, "accepted": false},
+    {"name": "a value of true", "frequency": "calendar", "values": {"2020": true, "2021": 1}, "accepted": false},
+    {"name": "a value that is text", "frequency": "calendar", "values": {"2020": "1", "2021": 1}, "accepted": false},
+    {"name": "a value of null", "frequency": "calendar", "values": {"2020": null, "2021": 1}, "accepted": false},
+    {"name": "a year past 2100", "frequency": "calendar", "values": {"2100": 1, "2101": 1}, "accepted": false},
+    {"name": "a year before 1900", "frequency": "calendar", "values": {"1899": 1, "1900": 1}, "accepted": false},
+    {"name": "a year not in the data's form", "frequency": "calendar", "values": {"2020.0": 1, "2021": 1}, "accepted": false},
+    {"name": "quarters in a row over a year end", "frequency": "quarterly", "values": {"2024Q4": 1, "2025Q1": 2}, "accepted": true},
+    {"name": "a quarter missing between", "frequency": "quarterly", "values": {"2024Q4": 1, "2025Q2": 2}, "accepted": false},
+    {"name": "a quarter in lower case", "frequency": "quarterly", "values": {"2024q4": 1, "2025Q1": 2}, "accepted": false},
+    {"name": "a year among quarters", "frequency": "quarterly", "values": {"2024": 1, "2025Q1": 2}, "accepted": false},
+    {"name": "fiscal years in a row", "frequency": "fiscal", "values": {"2024-25": 1, "2025-26": 2}, "accepted": true},
+    {"name": "a fiscal year missing between", "frequency": "fiscal", "values": {"2024-25": 1, "2026-27": 2}, "accepted": false},
+    {"name": "a fiscal year written in full", "frequency": "fiscal", "values": {"2024-2025": 1, "2025-26": 2}, "accepted": false},
+    {"name": "a fiscal year whose years do not follow", "frequency": "fiscal", "values": {"2024-26": 1}, "accepted": false}
+  ]
+}

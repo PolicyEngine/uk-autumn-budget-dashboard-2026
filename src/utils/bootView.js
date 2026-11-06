@@ -9,7 +9,7 @@
 export const BOOT_TABS = Object.freeze(["dashboard", "household", "outlook", "policies", "methodology"]);
 export const BOOT_SUBS = Object.freeze({
   dashboard: Object.freeze(["finances", "all", "age", "living", "poverty"]),
-  outlook: Object.freeze(["living", "poverty", "forecast"]),
+  outlook: Object.freeze(["living", "poverty", "forecast", "vintages"]),
 });
 // Old sub-tab names that now open another (App.jsx oldAgeSubGroup)
 const SUB_ALIASES = Object.freeze({ young: "age", pensioners: "age" });

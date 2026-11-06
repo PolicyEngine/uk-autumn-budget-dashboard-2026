@@ -1,5 +1,5 @@
 import TitleIcon from "./TitleIcon";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import "./SubTabs.css";
 import { scrollBelowBars } from "../utils/pageScroll";
 
@@ -107,8 +107,10 @@ export function useSlidingIndicator(rowRef, itemRefs, value) {
  * @param {(value: string) => void} props.onChange
  * @param {string} props.ariaLabel - The tablist's accessible name
  * @param {string} props.idPrefix - Prefix for the tab and panel ids
+ * @param {import("react").Ref<{show: (value: string) => void}>} [props.ref] -
+ *   For a link in a panel that opens another sub-tab: `show(value)`
  */
-export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) {
+export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix, ref }) {
   const refs = useRef({});
   const barRef = useRef(null);
   // Where the band sits in the page: the band sticks, so its own box moves
@@ -131,6 +133,15 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) 
     if (next !== value) scrollPending.current = true;
     onChange(next);
   };
+
+  // A link in a panel goes the same way as choosing the tab here, and
+  // moves focus to the tab: the link that had it is in the panel now hidden
+  useImperativeHandle(ref, () => ({
+    show(next) {
+      choose(next);
+      refs.current[next]?.focus({ preventScroll: true });
+    },
+  }));
 
   // Once the new panel is laid out: if the reader had scrolled past the
   // band (it sticks, so the panel's top had gone under it), bring the
