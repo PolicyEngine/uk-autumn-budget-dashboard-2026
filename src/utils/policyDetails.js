@@ -687,7 +687,7 @@ export const POLICY_DETAILS = [
     points: [
       { label: "Electric cars", text: "10% instead of 9%." },
       { label: "Maximum", text: "40% instead of 39%." },
-      { label: "Example", text: "A £30,000 petrol car at 120 g/km: £120 more at 40%." },
+      { label: "Example", text: "£30,000 petrol car, 120 g/km: £120 more for a higher rate taxpayer." },
     ],
     details: [
       "Adds 1 point to every appropriate percentage from 2030-31, the zero-emission rate and the maximum included.",
