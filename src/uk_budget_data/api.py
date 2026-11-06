@@ -492,7 +492,8 @@ class HouseholdAnswersRequest(BaseModel):
             "stake over £1 or a prize over £100, £ a year, for the Machine "
             "Games Duty rise from 20% to 25% on those machines: set as the "
             "household's standard-rate machine takings (policyengine-uk's "
-            "machine_games_standard_rate_net_takings). Left out: none."
+            "machine_games_standard_rate_net_takings), all of which the "
+            "measure charges at the higher rate. Left out: none."
         ),
     )
     salary_sacrifice_pension_contributions: float = Field(

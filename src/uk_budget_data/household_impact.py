@@ -1314,9 +1314,10 @@ def household_entities(
     if answers.higher_stake_machine_losses:
         # Only when answered, so every other household is exactly as
         # before. policyengine-uk has no input for higher-stake machines
-        # (policyengine-uk#2731 adds one in 2.167.0): the measure raises the
-        # standard rate, and these are the household's only standard-rate
-        # takings, so its change is exact
+        # (policyengine-uk#2731 adds one in 2.167.0), and these are the
+        # household's only standard-rate takings: the measure's modifier
+        # charges all of them at the higher rate for a household (on
+        # survey data, its Category B share), so its change is exact
         household["machine_games_standard_rate_net_takings"] = (
             answers.higher_stake_machine_losses
         )
