@@ -135,7 +135,7 @@ export const CHANGE_ONLY = new Set(["vat_change"]);
 // This page's note on a row, in place of the API's
 const PROGRAMME_NOTES = {
   vat_change:
-    "Only the change the measures make to VAT on the electricity, petrol and diesel spending entered, not the VAT you pay, so a cut shows as a positive amount.",
+    "Only the change the measures make to VAT on the electricity, petrol and diesel spending you enter, not the VAT you pay, so a cut shows as a positive amount.",
 };
 
 /**
@@ -329,11 +329,14 @@ export function policyRows(byPolicy, total, policies, year = null) {
             : outOfForceReason(policies.find((policy) => policy.id === row.id), year),
       })),
     // Notes on a measure's figure: an employer cost always, "if received"
-    // where the household gets the amount
+    // where the household gets the amount, and an assumption where the
+    // figure rests on it
     notes: byPolicy.measures
       .filter(
         (row) =>
-          row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
+          row.note &&
+          (row.noteKind === "employer_cost" ||
+            ((row.noteKind === "if_received" || row.noteKind === "assumption") && row.change !== 0)),
       )
       .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
@@ -614,19 +617,19 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "One year",
-    "The year chosen in the bar above. Net income is before housing costs (rent is not taken off; no selected policy changes it), under current law and with the selected policies.",
+    "The year you choose in the bar above. Net income is before housing costs (we do not take off rent; no selected policy changes it), under current law and with the selected policies.",
   ],
   [
     "Salary",
-    "Entered for 2026 and grown to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
+    "You enter your salary for 2026, and we grow it to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
   ],
   [
     "State Pension",
-    "Asked from State Pension age and prefilled with the full new State Pension for the chosen year, uprated on the OBR's October 2026 forecast; a figure you enter replaces it.",
+    "We ask for it from State Pension age and prefill it with the full new State Pension for the chosen year, which we uprate on the OBR's October 2026 forecast; a figure you enter replaces it.",
   ],
   [
     "Examples",
-    "Each example household fills every answer with fixed values, so its results are worked out in advance; every answer stays editable.",
+    "Each example household fills every answer with fixed values, so we work out its results in advance; every answer stays editable.",
   ],
   [
     "Change by policy",

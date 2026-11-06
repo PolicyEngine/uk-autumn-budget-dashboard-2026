@@ -8,6 +8,10 @@ refuses a measure it doesn't register ("Unknown measures: …"), so the
 Household impact tab shows an error. The example cards read
 ``public/data/household_presets.json`` instead, so stale presets show the
 previous measures' answers without any error. Drill 5 hit both (#144).
+The household request also carries the calculator-only measures
+(``src/utils/calculatorOnlyMeasures.js``), which no manifest lists, so the
+probe sends those too: a page that adds one before its API is deployed
+breaks every calculation (#377).
 
 Run it against every household API the build will call, Cloud Run's and
 Modal's, after they are deployed and ``publish index`` has written the
@@ -18,7 +22,10 @@ manifest, before the page is published:
 
 It exits 1, listing each problem, when an API refuses any of the page's
 measures, or when the presets were computed for other measures or another
-engine than the APIs report.
+engine than the APIs report, or record other measure definitions than
+their receipts approved: the page then asks the API for every card instead,
+with no error to show for it (#136). Measures with no approved definition
+at all are ``publish definitions``' to report.
 """
 
 import argparse
@@ -33,6 +40,8 @@ from typing import Optional
 from uk_budget_data.publication import manifest as m
 
 PRESETS_FILE = Path("public/data/household_presets.json")
+# The measures the Household calculator adds to every request
+CALCULATOR_ONLY_FILE = Path("src/utils/calculatorOnlyMeasures.js")
 HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
 VERSION_ROUTE = "/api/version"
 # The packages whose versions decide a household's answer
@@ -46,6 +55,32 @@ def page_measure_ids(data_root: Path = m.DATA_ROOT) -> list[str]:
     return sorted(
         key for key, entry in measures.items() if entry.status in m.DISPLAYABLE
     )
+
+
+def calculator_only_ids(path: Path = CALCULATOR_ONLY_FILE) -> list[str]:
+    """The ids in the page's CALCULATOR_ONLY_MEASURES, in order: each
+    entry's ``id``, a string or a constant the file exports. None if the
+    file is missing (a run outside the repository)."""
+    path = Path(path)
+    if not path.exists():
+        return []
+    text = path.read_text()
+    block = re.search(
+        r"export const CALCULATOR_ONLY_MEASURES = \{(.*?)\n\};", text, re.S
+    )
+    if block is None:
+        raise ValueError(f"{path}: no CALCULATOR_ONLY_MEASURES")
+    constants = dict(
+        re.findall(r'export const ([A-Z0-9_]+) = "([a-z0-9_]+)";', text)
+    )
+    ids = []
+    for value in re.findall(
+        r'^\s+id: ("[a-z0-9_]+"|[A-Z0-9_]+),', block.group(1), re.M
+    ):
+        ids.append(
+            value.strip('"') if value.startswith('"') else constants[value]
+        )
+    return ids
 
 
 def probe(year: int, ids: list[str]) -> dict:
@@ -121,10 +156,15 @@ def api_problems(
 
 
 def preset_problems(
-    presets_file: Path, ids: list[str], packages: Optional[dict]
+    presets_file: Path,
+    ids: list[str],
+    packages: Optional[dict],
+    approved: Optional[dict] = None,
 ) -> list[str]:
-    """How the precomputed examples differ from the page's measures and the
-    API's engine."""
+    """How the precomputed examples differ from the page's measures, the
+    API's engine and, given `approved` (each measure's definition as its
+    receipt approved it, ``definitions.approved_definitions``), the
+    definitions the page checks them against."""
     presets_file = Path(presets_file)
     if not presets_file.exists():
         return []
@@ -148,6 +188,63 @@ def preset_problems(
                     f"{engine.get(name)!r}, but the API runs {packages[name]!r}; "
                     "rerun scripts/precompute_household_presets.py"
                 )
+    if approved:
+        problems += _definition_problems(presets_file, presets, ids, approved)
+    return problems
+
+
+def _definition_problems(
+    presets_file: Path, presets: dict, ids: list[str], approved: dict
+) -> list[str]:
+    """The page uses the file only when it records each measure's approved
+    definition, and leaves out an answer that reports another itself
+    (``src/utils/householdPresets.js``). Only the measures with an approval
+    are checked."""
+    from uk_budget_data import definitions
+
+    rerun = "rerun scripts/precompute_household_presets.py"
+    checked = [key for key in ids if key in approved]
+    recorded = presets.get("definitions")
+    if not isinstance(recorded, dict):
+        return [
+            f"{presets_file} records no measure definitions, so the page "
+            f"will not use it; {rerun}"
+        ]
+    problems = []
+    missing = [key for key in checked if recorded.get(key) is None]
+    if missing:
+        problems.append(
+            f"{presets_file} records no definition for {', '.join(missing)}, "
+            f"so the page will not use it; {rerun}"
+        )
+    differ = [
+        key
+        for key in checked
+        if key not in missing
+        and definitions.differences(approved[key], recorded[key])
+    ]
+    if differ:
+        problems.append(
+            f"{presets_file} records other definitions than their receipts "
+            f"approved for {', '.join(differ)}, so the page will not use it; "
+            f"{rerun}"
+        )
+
+    def reports_another(entry) -> bool:
+        own = (entry.get("response") or {}).get("definitions")
+        return isinstance(own, dict) and any(
+            key in own and definitions.differences(approved[key], own[key])
+            for key in checked
+        )
+
+    entries = presets.get("entries") or []
+    others = sum(1 for entry in entries if reports_another(entry))
+    if others:
+        problems.append(
+            f"{others} of {presets_file}'s {len(entries)} answers report other "
+            "definitions than their receipts approved, so the page leaves "
+            f"them out; {rerun}"
+        )
     return problems
 
 
@@ -157,8 +254,11 @@ def check(
     presets_file: Path = PRESETS_FILE,
     year: int = 2027,
     timeout: float = TIMEOUT_S,
+    calculator_only_file: Path = CALCULATOR_ONLY_FILE,
 ) -> list[str]:
-    """Every problem across the APIs and the presets."""
+    """Every problem across the APIs and the presets. The APIs are probed
+    with the page's measures and the calculator-only ones; the presets are
+    compared with the page's measures (their file lists those only)."""
     ids = page_measure_ids(data_root)
     if not ids:
         return [
@@ -167,11 +267,17 @@ def check(
         ]
     problems: list[str] = []
     packages = None
+    requested = ids + [
+        i for i in calculator_only_ids(calculator_only_file) if i not in ids
+    ]
     for url in base_urls:
-        found, reported = api_problems(url, ids, year, timeout)
+        found, reported = api_problems(url, requested, year, timeout)
         problems += found
         packages = packages or reported
-    problems += preset_problems(presets_file, ids, packages)
+    from uk_budget_data import definitions
+
+    approved = definitions.approved_definitions(Path(data_root), ids)
+    problems += preset_problems(presets_file, ids, packages, approved)
     return problems
 
 

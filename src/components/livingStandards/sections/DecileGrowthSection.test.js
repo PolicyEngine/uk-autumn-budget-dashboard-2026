@@ -75,7 +75,7 @@ describe("the growth charts leave out the lowest tenth", () => {
   it("says why in one caveat, naming no one", async () => {
     const { LOWEST_TENTH_CAVEAT } = await import("./DecileGrowthSection");
     expect(LOWEST_TENTH_CAVEAT).toBe(
-      "The lowest tenth is not shown: survey incomes at the very bottom are often below what those households spend, so their growth is unreliable.",
+      "The chart leaves out the lowest tenth: survey incomes at the very bottom are often below what those households spend, so their growth is unreliable.",
     );
   });
 });

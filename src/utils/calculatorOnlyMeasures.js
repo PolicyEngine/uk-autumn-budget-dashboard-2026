@@ -8,8 +8,17 @@
  * The savings income tax rise is held back from the national results while
  * the savings data are corrected (María, #290, 28 October 2026); Vahid and
  * María agreed it goes in the calculator only, and it is always included
- * there (Vahid, 28 October). This is the one place the page names it
- * outside the measure catalogue.
+ * there (Vahid, 28 October). The cash ISA limit kept at £20,000 joined it
+ * on 29 October (María): its effect rests on what a household pays into
+ * cash ISAs, which our survey data do not hold yet. The Machine Games
+ * Duty rise joined them on 2 November: our survey data hold no gambling
+ * yet, and the model cannot tell higher-stake machines from the rest. On
+ * the next certified national (policyengine.py#731) both have data, but
+ * stay here: the cash ISA figure rests on where savers would have put the
+ * excess, and the duty's on machines the Budget leaves at 20%. To publish
+ * one, take it out of this list and add it to the package
+ * (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS in reforms.py). This is the one
+ * place the page names them outside the measure catalogue.
  */
 export const SAVINGS_INCOME_RATES_ID = "savings_income_rates_up";
 
@@ -19,6 +28,16 @@ export const CALCULATOR_ONLY_MEASURES = {
     name: "Savings income tax up",
     // As the result card names it after the count ("with 7 policies and …")
     phrase: "the savings income tax rise",
+  },
+  cash_isa_limit_kept: {
+    id: "cash_isa_limit_kept",
+    name: "Cash ISA limit kept at £20,000",
+    phrase: "the cash ISA limit kept at £20,000",
+  },
+  machine_games_duty_rise: {
+    id: "machine_games_duty_rise",
+    name: "Machine Games Duty up to 25% on higher-stake machines",
+    phrase: "the rise in Machine Games Duty",
   },
 };
 
@@ -36,6 +55,39 @@ export const withCalculatorOnly = (policies) =>
 
 /** The measures without the calculator-only ones (for the national figures). */
 export const withoutCalculatorOnly = (policies) => policies.filter((id) => !isCalculatorOnly(id));
+
+/**
+ * Whether taking `ids` out of the selection (`selected`) can lift a refusal
+ * of them: only when each one is selected and none is calculator-only,
+ * which every household request carries, selected or not
+ * (withCalculatorOnly), so a Remove would change nothing.
+ */
+export const removableFromSelection = (ids, selected) =>
+  ids.every((id) => selected.includes(id) && !isCalculatorOnly(id));
+
+/**
+ * The measures of a household request for `policies` (withCalculatorOnly)
+ * that must be checked against their published figures: every selected
+ * one, and each calculator-only measure the request adds once the
+ * publication names it (`isPublished`); until then it has no receipt to
+ * check it against. A named one's receipt's engine and definition are
+ * required as a selected measure's are; with none, the calculator is
+ * unavailable, never unchecked (PersonalImpactTab).
+ */
+export const publishedRequest = (policies, isPublished) =>
+  withCalculatorOnly(policies).filter((id) => policies.includes(id) || isPublished(id));
+
+/**
+ * The measures among `policies` whose answers are checked against an
+ * approved definition (`definitions`): every one but a calculator-only
+ * measure with none. The page approves every measure of `publishedRequest`
+ * or answers nothing, so the ones left unchecked are exactly the
+ * calculator-only measures the publication does not name: they publish no
+ * figures, the API's running code computes them, and the calculator says
+ * they are not in the national results.
+ */
+export const definitionChecked = (policies, definitions) =>
+  policies.filter((id) => !isCalculatorOnly(id) || Object.hasOwn(definitions ?? {}, id));
 
 /**
  * The measures a household's result covers, in words: the selected ones by

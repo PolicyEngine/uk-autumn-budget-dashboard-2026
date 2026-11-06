@@ -2,7 +2,7 @@ import { artifactSha256, jcsSha256, sha256Hex } from "./digest";
 import { loadManifest } from "./load";
 import { assertCurrentRelease } from "./release";
 import { parseCsv } from "./csv";
-import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaReceipt, assertAreaRows } from "./area";
+import { AREA_PROVENANCE_FILE, areaReceiptTarget, assertAreaProvenance, assertAreaReceipt, assertAreaRows } from "./area";
 
 export const RELEASE_INDEX_FILE = "release-index.json";
 export const RELEASE_INDEX_SCHEMA = "uk-budget-release-index/v1";
@@ -86,11 +86,13 @@ export async function loadVerifiedFlat(fileName, catalogue, { basePath = process
   const provenance = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(provenanceBytes));
   assertAreaProvenance(provenance, manifest, files, aliases);
   await Promise.all(Object.values(provenance.reforms).map(async (record) => {
-    const receiptResponse = await fetchImpl(`${basePath}/data/${record.artifact}/receipt.json`, { signal });
+    // v1: the artifact the area run read; v2: the entry's current one
+    const target = areaReceiptTarget(provenance, record, manifest);
+    const receiptResponse = await fetchImpl(`${basePath}/data/${target.artifact}/receipt.json`, { signal });
     if (!receiptResponse.ok) throw new Error("Approved area receipt is unavailable");
     const receipt = await receiptResponse.json();
-    if (await artifactSha256(receipt) !== record.artifact_sha256) throw new Error("Area provenance receipt differs from the approved artifact");
-    assertAreaReceipt(record, receipt);
+    if (await artifactSha256(receipt) !== target.artifactSha256) throw new Error("Area provenance receipt differs from the approved artifact");
+    assertAreaReceipt(record, receipt, provenance.schema);
   }));
   if (!Object.hasOwn(files, fileName)) throw new Error(`${fileName} is unavailable in this snapshot`);
   const response = await fetchImpl(`${basePath}/data/${fileName}`, { signal, cache: "no-cache" });

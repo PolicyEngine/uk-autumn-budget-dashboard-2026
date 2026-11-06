@@ -3,8 +3,10 @@ import fc from "fast-check";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildMeasureCatalogue, catalogueProvisional, NEUTRAL_COLOR, isCatalogueRowDisplayable } from "./measureCatalogue";
+import { buildMeasureCatalogue, catalogueProvisional, NEUTRAL_COLOR, isCatalogueRowDisplayable, publishedDefinitions } from "./measureCatalogue";
 import { hexToOklab, MEASURE_RAMPS, measureRamp } from "./chartTheme";
+import { FULL_COMMIT } from "./publication/definitions";
+import { approvedDefinition } from "../test/definitionsFixture";
 import { budgetChartData, parseDashboardCsv } from "./loadDashboard";
 import { ALPHA, BETA, COMBINED, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
@@ -260,6 +262,10 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   // - EXPLAINERS: the titles of our published posts on this Budget, linked
   //   from Methodology; a post stays whether or not its measure is
   //   published, so a title decides nothing the page shows of a measure.
+  // - IMPROVEMENTS_NOTE: "What we're improving", the next update's plans in
+  //   the words Max approved (28 October), less the dated poverty item (30 October)
+  //   (ImprovementsNote.test.jsx); prose only, it decides nothing about any
+  //   measure, and it goes when that update lands.
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
@@ -274,6 +280,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "utils/householdPolicyFields.js": [/export const POLICY_FIELDS = \{[\s\S]*?\n\};/],
     "utils/calculatorOnlyMeasures.js": [/export const SAVINGS_INCOME_RATES_ID = "[a-z_]+";/, /export const CALCULATOR_ONLY_MEASURES = \{[\s\S]*?\n\};/],
     "utils/explainers.js": [/export const EXPLAINERS = \[[\s\S]*?\n\];/],
+    "components/methodology/improvementsText.js": [/export const IMPROVEMENTS_NOTE = \{[\s\S]*?\n\};/],
     "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/, /export const OBR_DIFFERENCE_POINTS = \{[\s\S]*?\n\};/, /export const OBR_PANEL_BASES = \{[\s\S]*?\n\};/, /export const NOT_COMPARABLE_SHORT = \{[\s\S]*?\n\};/],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -292,6 +299,39 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   }
   walk(root);
   expect(matches).toEqual([]);
+});
+
+describe("publishedDefinitions", () => {
+  const commit = fc.oneof(fc.constant("c".repeat(40)), fc.constant("d".repeat(64)), fc.constant("C".repeat(40)), fc.constant("abc1234"), fc.constant(null), fc.constant(7));
+  const tables = fc.option(fc.record({ definition: fc.option(commit.map((git_sha) => ({ ...approvedDefinition(), git_sha })), { nil: undefined }) }), { nil: undefined });
+
+  it("puts each selected measure in exactly one of definitions or missing, failing closed", () => {
+    fc.assert(fc.property(
+      fc.uniqueArray(fc.constantFrom("alpha", "beta", "gamma", "constructor", "__proto__", "hasOwnProperty"), { maxLength: 5 }),
+      fc.func(tables),
+      (ids, tablesFor) => {
+        const tablesByKey = Object.create(null);
+        for (const id of ids) {
+          const value = tablesFor(id);
+          if (value !== undefined) tablesByKey[id] = value;
+        }
+        const { definitions, missing } = publishedDefinitions({ tablesByKey }, ids);
+        const missingIds = missing.map((item) => item.id);
+        expect([...Object.keys(definitions), ...missingIds].sort()).toEqual([...ids].sort());
+        for (const id of Object.keys(definitions)) {
+          expect(definitions[id]).toBe(tablesByKey[id].definition);
+          expect(FULL_COMMIT.test(definitions[id].git_sha)).toBe(true);
+        }
+        for (const item of missing) expect(item.reason).toMatch(/no definition|no full commit/);
+      },
+    ));
+  });
+
+  it("finds nothing on the prototype, and nothing without verified tables", () => {
+    expect(publishedDefinitions({ tablesByKey: {} }, ["constructor", "toString"]).missing.map((item) => item.id)).toEqual(["constructor", "toString"]);
+    expect(publishedDefinitions({}, ["alpha"]).missing).toHaveLength(1);
+    expect(publishedDefinitions(null, ["alpha"]).missing).toHaveLength(1);
+  });
 });
 
 describe("catalogueProvisional", () => {

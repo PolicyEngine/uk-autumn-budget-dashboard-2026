@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Check that a served build of the dashboard answers the page, each of its
-# four tabs, Young people sub-tab and required independent data files with HTTP 200.
+# four tabs, Young people sub-tab, required independent data files and the
+# images and fonts the page links with HTTP 200.
 #
 # The vitest smoke (src/tabsSmoke.test.jsx) renders each tab on these files
 # in jsdom; this checks the built site actually serves them, under the base
@@ -70,8 +71,43 @@ for file in "${DATA_FILES[@]}"; do
   fi
 done
 
+# Every image and font the page links (its logos, the Inter font), from its
+# own HTML: each under the base path, and answering 200. A static import
+# whose URL lost the base path would ask policyengine.org for /_next/...,
+# which is not this site's, and 404.
+ORIGIN=$(printf '%s' "$SITE" | sed -E 's#^(https?://[^/]+).*#\1#')
+BASE_PATH="${SITE#"$ORIGIN"}"
+page=$(mktemp)
+trap 'rm -f "$body" "$page"' EXIT
+status "$SITE" "$page" >/dev/null
+media=0
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  media=$((media + 1))
+  path="${path//&amp;/&}"
+  case "$path" in
+    "$BASE_PATH"/_next/*) ;;
+    *)
+      echo "FAIL $path: not under the base path $BASE_PATH"
+      failures=$((failures + 1))
+      continue
+      ;;
+  esac
+  code=$(status "$ORIGIN$path" "$body")
+  if [ "$code" != 200 ] || [ ! -s "$body" ]; then
+    echo "FAIL $ORIGIN$path: HTTP $code"
+    failures=$((failures + 1))
+  else
+    echo "ok   $ORIGIN$path"
+  fi
+done < <(grep -oE '(src|href)="[^"]*/_next/static/media/[^"]*"' "$page" | sed -E 's/^(src|href)="//; s/"$//' | sort -u)
+if [ "$media" -eq 0 ]; then
+  echo "FAIL $SITE: no images or fonts found in the page"
+  failures=$((failures + 1))
+fi
+
 if [ "$failures" -gt 0 ]; then
   echo "$failures check(s) failed."
   exit 1
 fi
-echo "The page, its five tabs and ${#DATA_FILES[@]} data files answer 200."
+echo "The page, its five tabs, ${#DATA_FILES[@]} data files and $media images and fonts answer 200."

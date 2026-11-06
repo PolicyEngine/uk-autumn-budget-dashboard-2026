@@ -330,8 +330,8 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
           ? `${at}, your household's net income is about ${formatPounds(Math.round(youBefore / 10) * 10)} a year under current law and ${formatPounds(Math.round(youValue / 10) * 10)} with the selected policies.`
           : `${at}, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
   const description = isChange
-    ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, with partner income and everything else held fixed.`
-    : `Your household's net income ${sideWords} as your salary varies${netParts ? ": income and benefits above zero, taxes below" : ""}, with partner income and everything else held fixed.`;
+    ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, while partner income and everything else stay fixed.`
+    : `Your household's net income ${sideWords} as your salary varies${netParts ? ": income and benefits above zero, taxes below" : ""}, while partner income and everything else stay fixed.`;
 
   const layerColumns = layers.map((layer) => ({
     key: layer.key,
@@ -661,7 +661,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             shows: description,
             how: [
               // "Held fixed" is said once, in What it shows above
-              "Your household is calculated again at each salary from £0 up.",
+              "We calculate your household again at each salary from £0 up.",
               // By view: in Change each layer is after minus before and the
               // line the change (layerRows); with no parts, Change draws two
               // shaded areas and no line (W6 G1)
@@ -677,7 +677,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               isChange && smallChange && "The change is under 1% of net income at every salary.",
-              drops.length > 0 && "In the shaded bands net income falls as salary rises: taxes and withdrawn benefits take more than the extra pay.",
+              drops.length > 0 && "In the shaded bands net income falls as salary rises: taxes and benefit withdrawals take more than the extra pay.",
             ],
           }}
         />

@@ -115,7 +115,7 @@ export function layerLegendItems(layers) {
       items.push({
         label: "Child Benefit and its charge",
         color: layer.color,
-        info: "Child Benefit is drawn above zero and the High Income Child Benefit Charge, which takes it back between £60,000 and £80,000 of income, below zero.",
+        info: "Child Benefit sits above zero and the High Income Child Benefit Charge, which takes it back between £60,000 and £80,000 of income, below zero.",
       });
       return;
     }
