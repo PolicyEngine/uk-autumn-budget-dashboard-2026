@@ -49,6 +49,7 @@ from uk_budget_data.budget_measures.pension_tax_allowance import (
 
 HAS_CHARGE = "winter_fuel_payment_charge" in system.variables
 HAS_NATIVE_ALLOWANCE = "pension_tax_allowance" in system.variables
+HAS_CLAIM_STATUS = "trading_allowance_claim_status" in system.variables
 OLD_TEMPLATE_RUNS = not system.get_variable("income_tax").adds
 UC_TAX = ("uc_income_tax_on_earnings", "uc_income_tax_on_trade")
 NATIVE_SWITCH = "gov.hmrc.income_tax.reliefs.pension_tax_allowance.in_effect"
@@ -259,24 +260,32 @@ def _engine_rates_sit_on_5p_steps():
     )
 
 
-@lru_cache(maxsize=None)
-def _native_and_ported():
-    native = Simulation(situation=_pensioner())
-    switched_off = {
-        NATIVE_SWITCH: {str(year): False for year in YEARS},
-    }
-    ported = Simulation(
-        situation=_pensioner(),
-        scenario=Scenario(parameter_changes=switched_off),
+def _without_the_native_allowance():
+    return Scenario(
+        parameter_changes={
+            NATIVE_SWITCH: {str(year): False for year in YEARS},
+        }
     )
-    # The engine's threshold is 52 x its weekly rate. Where that rate sits on
-    # a 5p step, the port runs at its own rounding, as the dashboard runs it.
-    # Elsewhere the comparison leaves out the port's rounding to 5p.
+
+
+def _ported(situation):
+    """The engine with its own allowance switched off and the port applied.
+    The engine's threshold is 52 x its weekly rate. Where that rate sits on a
+    5p step, the port runs at its own rounding, as the dashboard runs it.
+    Elsewhere the comparison leaves out the port's rounding to 5p."""
+    ported = Simulation(
+        situation=situation, scenario=_without_the_native_allowance()
+    )
     if _engine_rates_sit_on_5p_steps():
         pension_tax_allowance(ported)
     else:
         pension_tax_allowance(ported, weekly_rounding=1e-6)
-    return native, ported
+    return ported
+
+
+@lru_cache(maxsize=None)
+def _native_and_ported():
+    return Simulation(situation=_pensioner()), _ported(_pensioner())
 
 
 @pytest.mark.skipif(
@@ -301,3 +310,60 @@ def test_the_port_matches_the_engines_own_allowance(
     assert ported_tax == pytest.approx(native_tax, abs=2 * PENNY)
     for native_part, ported_part in zip(native_uc, ported_uc):
         assert ported_part == pytest.approx(native_part, abs=2 * PENNY)
+
+
+def _pay_and_trade(year):
+    """A Londoner aged 70 with £12,800 of pay and a £1,100 trade profit that
+    already nets the trading allowance: they claim its partial relief, so
+    income tax falls on all of the profit."""
+    return {
+        "people": {
+            "p": {
+                "age": {year: 70},
+                "employment_income": {year: 12_800},
+                "self_employment_income": {year: 1_100},
+                "trading_allowance_claim_status": {year: "CLAIMANT"},
+            }
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {year: "LONDON"}}},
+    }
+
+
+@pytest.mark.skipif(
+    not (HAS_NATIVE_ALLOWANCE and HAS_CLAIM_STATUS),
+    reason="this engine has no allowance of its own or no claimant status",
+)
+@pytest.mark.parametrize("year", (2028, 2029))
+def test_the_port_splits_universal_credits_tax_as_the_engine_does(year):
+    """Universal Credit takes pay as the lowest slice of income, so its tax on
+    pay falls only on pay over the personal allowance. Without a claimant
+    status, the engine relieves in full a trade profit within the £3,000
+    trading allowance. Pay and trade that both bear tax then exceed the top of
+    the allowance's band, so the households generated above never test how
+    the port splits the allowance between Universal Credit's two taxes. This
+    claimant does: the allowance they use falls short of the tax on their pay
+    in 2028-29 and exceeds it in 2029-30, and in both years taking it off the
+    trade first would leave a different tax on the trade."""
+    outputs = ("income_tax", *UC_TAX)
+
+    def results(simulation):
+        return [float(simulation.calculate(name, year)[0]) for name in outputs]
+
+    tax, earnings, trade = results(
+        Simulation(
+            situation=_pay_and_trade(year),
+            scenario=_without_the_native_allowance(),
+        )
+    )
+    native = results(Simulation(situation=_pay_and_trade(year)))
+    used = tax - native[0]
+    employment = earnings - trade
+    employment_first = max(0.0, trade - max(0.0, used - employment))
+    trade_first = max(0.0, trade - used)
+    assert used > 2 * PENNY
+    assert (used < employment) == (year == 2028)
+    assert abs(employment_first - trade_first) > 2 * PENNY
+
+    ported = results(_ported(_pay_and_trade(year)))
+    assert ported == pytest.approx(native, abs=2 * PENNY)
