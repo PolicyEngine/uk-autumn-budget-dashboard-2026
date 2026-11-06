@@ -20,13 +20,21 @@ A digest covers what a measure's own run reads from the definitions:
   and description are labels, not part of it;
 - the sides as its own run takes them (``household_impact.measure_sides``,
   with every measure selected), because a receipt and a run reach a measure's
-  baseline by different code;
+  baseline by different code. These keep their order, which a receipt's digest
+  sorts away: the engine applies writes in order, and a later one for the same
+  dates replaces an earlier one;
 - every registered measure's pre-Budget side, where it has one of its own,
   because each measure's own run holds the other selected measures there
   (the savings income rule depends on the planned cash ISA limit, for one);
 - the source of every module of this package that a modifier's module imports,
-  directly or through another (``_imported_code``), which a receipt binds only
-  through its commit. ``CANNOT_CHANGE_A_NUMBER`` names the exceptions.
+  directly or through another, and of every package initializer those imports
+  run (``_imported_code``), which a receipt binds only through its commit.
+  ``CANNOT_CHANGE_A_NUMBER`` names the exceptions;
+- the source of this package's own initializer, which every import of it runs.
+  What that initializer imports counts only for a module that names the package
+  (``from uk_budget_data import x``, ``import uk_budget_data.x``). It imports
+  most of the package, so following it from every import would turn every rule
+  off at any edit to anything.
 
 It does not cover the rest of the household calculation, the forecast or the
 engine. The differential test in ``tests/test_household_skips.py`` runs the
@@ -49,7 +57,7 @@ import hashlib
 import importlib
 import json
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from functools import lru_cache
 from importlib.resources import files
 from importlib.util import resolve_name
@@ -131,42 +139,54 @@ def _source_file(module: str) -> Optional[Path]:
 
 
 def _imports_of(module: str, path: Path) -> set:
-    """The modules of this package named by the import statements in a
-    module's source, wherever in the file they sit."""
+    """The modules of this package that the import statements in a module's
+    source name or bind, wherever in the file they sit."""
     package = (
         module if path.name == "__init__.py" else module.rpartition(".")[0]
     )
     named = set()
     for node in ast.walk(ast.parse(path.read_bytes())):
         if isinstance(node, ast.Import):
-            named.update(alias.name for alias in node.names)
+            for alias in node.names:
+                named.add(alias.name)
+                if alias.asname is None:
+                    # "import a.b" binds a
+                    named.add(alias.name.partition(".")[0])
         elif isinstance(node, ast.ImportFrom):
             base = resolve_name(
                 "." * node.level + (node.module or ""), package
             )
-            # "from a import b": the module a.b if there is one, else a
-            named.update(
-                (
-                    f"{base}.{alias.name}"
-                    if _source_file(f"{base}.{alias.name}")
-                    else base
-                )
-                for alias in node.names
-            )
+            # "from a import b" runs a, which can bind b itself whether or
+            # not there is a module a.b
+            named.add(base)
+            named.update(f"{base}.{alias.name}" for alias in node.names)
     return {name for name in named if _source_file(name)}
+
+
+def _packages_above(module: str) -> set:
+    """The packages Python runs on its way to a module, but for the top one:
+    every import of this package runs that, and ``_shared_code`` reads it."""
+    parts = module.split(".")
+    return {
+        name
+        for name in (".".join(parts[:end]) for end in range(2, len(parts)))
+        if _source_file(name)
+    }
 
 
 def _imported_code(modules: Iterable[str]) -> set:
     """Every module of this package these modules import, directly or through
-    another, but for ``CANNOT_CHANGE_A_NUMBER``. A module only in ``modules``
-    isn't in it: its own measure's identity reads its source."""
+    another, and the packages above them, but for ``CANNOT_CHANGE_A_NUMBER``.
+    A module only in ``modules`` isn't in it: its own measure's identity reads
+    its source."""
     found, stack = set(), list(modules)
     while stack:
         module = stack.pop()
         path = _source_file(module)
         if path is None:
             continue
-        for name in _imports_of(module, path) - CANNOT_CHANGE_A_NUMBER - found:
+        reached = _imports_of(module, path) | _packages_above(module)
+        for name in reached - CANNOT_CHANGE_A_NUMBER - found:
             found.add(name)
             stack.append(name)
     return found
@@ -186,23 +206,45 @@ def _modifier_modules(measures: list) -> set:
 
 def _shared_code(measures: list) -> dict:
     """``{module: the digest of its source}``, for the code the measures'
-    modifiers import."""
+    modifiers import and this package's own initializer."""
+    modules = {PACKAGE, *_imported_code(_modifier_modules(measures))}
     return {
         module: hashlib.sha256(_source_file(module).read_bytes()).hexdigest()
-        for module in _imported_code(_modifier_modules(measures))
+        for module in modules
+    }
+
+
+def _in_the_order_they_run(side: dict) -> dict:
+    """A side with its parameter changes as lists, which ``_digest`` keeps in
+    order as it wouldn't an object's keys. The engine applies them in this
+    order (``read_parameter_changes``), so reordering them can change a run."""
+    return {
+        **side,
+        "parameter_changes": [
+            [
+                path,
+                (
+                    list(periods.items())
+                    if isinstance(periods, Mapping)
+                    else periods
+                ),
+            ]
+            for path, periods in side["parameter_changes"].items()
+        ],
     }
 
 
 def _as_run(measure_ids: list, config: DataConfig) -> dict:
     """``{measure id: its own run's two sides}``, with every measure selected:
-    parameter changes by content, modifiers by name, as the calculation
-    composes them."""
+    parameter changes by content and in order, modifiers by name, as the
+    calculation composes them."""
     # Here, not at the top: household_impact imports this module.
     from uk_budget_data.household_impact import measure_sides
 
     sides = measure_sides(measure_ids, config)
+    before = _in_the_order_they_run(sides.before)
     return {
-        id_: {"before": sides.before, "own_run": own_run}
+        id_: {"before": before, "own_run": _in_the_order_they_run(own_run)}
         for id_, own_run in sides.singles.items()
     }
 
@@ -337,5 +379,7 @@ def forget_checked(measure_ids: Iterable[str]) -> Path:
 def _write_checked(checked: dict) -> Path:
     path = Path(str(files("uk_budget_data").joinpath(CHECKED_FILE)))
     path.write_text(json.dumps(checked, indent=2, sort_keys=True) + "\n")
-    clear_definition_cache()
+    # Only the record: this process keeps the digests it worked out, so a
+    # recheck records the definition it started on, not one edited since.
+    _read_checked.cache_clear()
     return path

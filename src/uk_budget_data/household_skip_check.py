@@ -13,8 +13,8 @@ the cost of one household. That makes every policy year affordable in CI.
 ``tests/test_household_skips.py`` holds the batch to each household run alone,
 and to the calculator's own runs. It has to, because a simulation treats an
 input anyone has as an input for everyone: a person without it gets the
-variable's default, not its formula. ``merged_situation`` deals with the one
-input where the two differ.
+variable's default, not its formula. ``merged_situation`` deals with the two
+inputs where those differ.
 
 A rule has to hold whichever measures a reader selects, and the selection
 changes a measure's own run: the run holds every other selected measure at
@@ -36,6 +36,7 @@ from uk_budget_data import reforms
 from uk_budget_data.household_impact import (
     CALCULATOR_INPUTS,
     COUNCIL_TAX_BANDS,
+    DEFAULT_BRMA,
     REGIONS,
     SALARY_YEAR,
     SKIP_REASONS,
@@ -188,6 +189,29 @@ NAMED_HOUSEHOLDS = {
     "young_person_in_education": HouseholdAnswers(
         children=(Child(17, True),),
     ),
+    # Side by side in every batch too: one household names its area and the
+    # other leaves it to the formula. Run together without
+    # ``_state_brma_for_everyone``, the first reads the rents of the engine's
+    # default area, not London's.
+    "family_renting_in_london": HouseholdAnswers(
+        age=34,
+        employment_income=15_000,
+        children=(Child(4), Child(9)),
+        region="LONDON",
+        claims_universal_credit=True,
+        tenure="RENT_PRIVATELY",
+        monthly_rent=2_000,
+    ),
+    "renter_naming_their_area": HouseholdAnswers(
+        age=40,
+        employment_income=15_000,
+        region="NORTH_WEST",
+        claims_universal_credit=True,
+        tenure="RENT_PRIVATELY",
+        monthly_rent=700,
+        brma="OLDHAM_ROCHDALE",
+        local_authority="OLDHAM",
+    ),
 }
 
 # The values generated households draw from, per answer: each rule's
@@ -249,7 +273,7 @@ ANSWER_VALUES = {
 }
 # Answers generated households leave at the form's default, and why: both
 # name places, valid only with the right region (the area tests cover them),
-# and no rule reads them.
+# and no rule reads them. A named household gives both, so the batch has them.
 ANSWERS_NOT_GENERATED = frozenset({"brma", "local_authority"})
 
 
@@ -267,15 +291,29 @@ def generated_households(count: int, seed: int) -> list[HouseholdAnswers]:
     ]
 
 
+def _state_brma_for_everyone(households: list) -> None:
+    """Give every household in one simulation a BRMA, if any has one: the one
+    policyengine-uk's formula would give its region. Once one household's is
+    entered, policyengine-core treats the variable as an input for everyone,
+    and a household left out gets the default area rather than the formula's.
+    A family renting in London read £7,740 lower beside a household that named
+    its area in Greater Manchester."""
+    if any("brma" in household for household in households):
+        for household in households:
+            household.setdefault("brma", DEFAULT_BRMA[household["region"]])
+
+
 def merged_situation(households: list, year: int) -> tuple[dict, list]:
     """The households as one policyengine-uk situation in ``year``, and each
     household's calculator inputs with its number of people. One simulation
     holds them all, so everyone gets what ``household_entities`` gives the
-    people of one household: an education stage, if anyone has one."""
+    people of one household: an education stage, if anyone has one. So does
+    every household, for its BRMA."""
     entities = [household_entities(answers, year) for answers in households]
     state_education_for_everyone(
         [person for people, _, _ in entities for person in people]
     )
+    _state_brma_for_everyone([household for _, _, household in entities])
     merged: dict = {"people": {}, "benunits": {}, "households": {}}
     inputs_by_household = []
     for index, (people, benunit, household) in enumerate(entities):
@@ -499,13 +537,12 @@ def describe(answers: HouseholdAnswers) -> dict:
 
 
 def smallest_counterexample(
-    effect: Effect, households: list
+    effect: Effect, answers: HouseholdAnswers
 ) -> tuple[HouseholdAnswers, float]:
-    """The broken effect's household with every answer that isn't needed
-    back at the form's default, and the change it still shows: the
+    """The household ``answers`` of a broken effect, with every answer that
+    isn't needed back at the form's default, and the change it still shows: the
     counterexample to read, not the one that happened to be drawn."""
     sides = _sides_of(effect)
-    answers = households[effect.household]
     change = effect.change
     shrinking = True
     while shrinking:

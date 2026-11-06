@@ -14,14 +14,16 @@ prints each measure's rule and exits 1 if a registered measure's rule is off.
 runs the rules that are off (or the ones named) against the engine, for the
 named households and generated ones (``--households``, ``--seed``), in every
 policy year, in every selection whose before side differs. A rule that holds
-everywhere gets the running code's digest in
-``src/uk_budget_data/household_skip_rules.json``: commit that file. Each year's
-check runs every rule, whichever the command named. A rule that fails, named or
-not, loses any digest it had as soon as a year shows it, so it is off whatever
-its definition and whatever happens to the other years, and the command prints
-the smallest household showing it and exits 1: correct the rule, or leave the
-measure running in full. A year that can't finish records nothing for any rule,
-and the command names it and exits 1.
+everywhere gets the digest the code had when the command started in
+``src/uk_budget_data/household_skip_rules.json``: commit that file. An edit
+while it runs leaves that rule off. Each year's check runs every rule, whichever
+the command named. A rule that fails, named or not, loses any digest it had as
+soon as a year shows it, so it is off whatever its definition and whatever
+happens to the other years, and the command prints the smallest household
+showing it and exits 1: correct the rule, or leave the measure running in full.
+Finding the smallest takes more runs, so it comes after that, in workers of its
+own: if it fails, the command prints the household as found. A year that can't
+finish records nothing for any rule, and the command names it and exits 1.
 """
 
 import argparse
@@ -68,8 +70,9 @@ def _check_one_year(args):
         check.generated_households(count, seed + year)
     )
     result = check.check_year(households, year)
-    counterexamples = [
-        (effect, *check.smallest_counterexample(effect, households))
+    # Nothing more runs here, so nothing can lose what this year has shown
+    broken = [
+        (effect, households[effect.household])
         for effect in {
             (effect.selection, effect.measure): effect
             for effect in result.broken()
@@ -79,7 +82,36 @@ def _check_one_year(args):
     for effect in result.effects:
         covered.setdefault(effect.measure, [0, 0])
         covered[effect.measure][effect.rule_says_unaffected] += 1
-    return year, covered, counterexamples
+    return year, covered, broken
+
+
+def _shrink(args):
+    from uk_budget_data import household_skip_check as check
+
+    return check.smallest_counterexample(*args)
+
+
+def _smallest_households(found: list, processes: int) -> dict:
+    """``{(measure, year, selection): (answers, change)}``: the smallest
+    household showing each of the disproofs ``found``, as far as this gets.
+
+    Each takes runs of its own, any of which can kill a worker, and a pool that
+    has broken takes no more work. So it has a pool of its own, and runs after
+    the rules are off: a failure here costs only the shorter answer."""
+    smallest = {}
+    try:
+        with ProcessPoolExecutor(processes) as pool:
+            jobs = {
+                pool.submit(_shrink, (effect, answers)): effect
+                for effect, answers in found
+            }
+            for job in as_completed(jobs):
+                effect = jobs[job]
+                key = (effect.measure, effect.year, effect.selection)
+                smallest[key] = job.result()
+    except Exception as error:
+        print(f"\nSome households below are as found, not shrunk: {error!r}")
+    return smallest
 
 
 def status() -> int:
@@ -170,7 +202,7 @@ def recheck(measures, households, seed, processes) -> int:
         }
         for finished in as_completed(years):
             try:
-                year, year_covered, counterexamples = finished.result()
+                year, year_covered, broken = finished.result()
             except Exception as error:
                 unfinished[years[finished]] = error
                 continue
@@ -178,9 +210,9 @@ def recheck(measures, households, seed, processes) -> int:
                 ran, skipped = year_covered.get(id_, (0, 0))
                 covered[id_][0] += ran
                 covered[id_][1] += skipped
-            for effect, answers, change in counterexamples:
+            for effect, answers in broken:
                 failures.setdefault(effect.measure, []).append(
-                    (effect.selection, year, answers, change)
+                    (effect, answers)
                 )
             if failures:
                 # A rule on before this check has the digest still, and the
@@ -197,14 +229,25 @@ def recheck(measures, households, seed, processes) -> int:
     never_applied = [id_ for id_ in wanted if not covered[id_][1]]
     if never_applied:
         print(f"Checked nothing, so not recorded: {', '.join(never_applied)}")
+    smallest = (
+        _smallest_households(
+            [disproof for found in failures.values() for disproof in found],
+            processes,
+        )
+        if failures
+        else {}
+    )
     for id_, found in failures.items():
         print(f"\n{id_}: the rule is wrong, so it is off.")
-        for selection, year, answers, change in sorted(
-            found, key=lambda failure: (failure[1], failure[0])
+        for effect, answers in sorted(
+            found, key=lambda each: (each[0].year, each[0].selection)
         ):
+            shown, change = smallest.get(
+                (id_, effect.year, effect.selection), (answers, effect.change)
+            )
             print(
-                f"  {year}, selection {selection}: says £0, the run shows "
-                f"{change!r}, for {check.describe(answers)}"
+                f"  {effect.year}, selection {effect.selection}: says £0, the "
+                f"run shows {change!r}, for {check.describe(shown)}"
             )
     if failures:
         print(

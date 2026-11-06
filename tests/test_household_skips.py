@@ -15,10 +15,12 @@ The invariants, for every household, year and selection of measures:
 3. Fail-safe: a rule whose definition has changed, or that the code can't work
    out, is off, and the measure runs in full with its own row.
 4. A definition digest changes with whatever a measure's own run reads from
-   the definitions, stays the same for a label or another checkout, and
+   the definitions, the order of its writes and the code that importing a
+   modifier runs included, stays the same for a label or another checkout, and
    doesn't depend on the process.
-5. Only a check the rule passed, on households it said £0 for, turns a rule on,
-   and a check that shows a rule wrong turns it off whatever else happens.
+5. Only a check the rule passed, on households it said £0 for and on the
+   definition the check started on, turns a rule on, and a check that shows a
+   rule wrong turns it off whatever else happens.
 6. The check's batch: a household in a batch gets what it gets alone, to the
    last bit.
 
@@ -42,6 +44,7 @@ import sys
 import textwrap
 import uuid
 from concurrent.futures import Future
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 import pytest
@@ -113,10 +116,10 @@ UNAFFECTED = {
     "state_pension_income_tax_protection": ({"age": 40}, 2027),
     "trading_allowance_raise": ({"self_employment_receipts": 0}, 2027),
 }
-# A parameter no measure changes, for a definition changed by one that does.
-UNTOUCHED_PARAMETER = (
-    "gov.hmrc.income_tax.allowances.personal_allowance.amount"
-)
+# A path no measure can write, for a definition changed by a write it doesn't
+# have, whatever the measures write on the day. Nothing runs it: these tests
+# read digests, and a stand-in engine.
+UNTOUCHED_PARAMETER = "gov.test_only.no_measure_writes_this"
 # 2026-27, then 2027-28 on (household_impact.state_pension_age, which runs a
 # simulation; test_the_state_pension_ages_here_are_the_engines keeps these
 # true). The properties below run many households, so they don't ask it.
@@ -275,6 +278,108 @@ def test_any_changed_value_changes_the_digest(value, measure, monkeypatch):
         other = current_definitions()[measure]
     clear_definition_cache()
     assert one != other
+
+
+OVERLAPPING_WRITES = {"2027-04-01.2028-03-31": 0, "2027": 12_570, "2028": 1}
+
+
+@given(
+    orders=st.lists(
+        st.permutations(list(OVERLAPPING_WRITES)), min_size=2, max_size=2
+    ),
+    measure=st.sampled_from(REGISTERED_RULES),
+)
+@settings(
+    max_examples=25,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
+def test_the_order_of_a_measures_writes_is_part_of_its_definition(
+    orders, measure, monkeypatch
+):
+    """The engine applies writes in order, and a later one for the same dates
+    replaces an earlier one. The review's case: the same two writes to the
+    personal allowance, reversed, moved a £50,000 salary by £5,028 in 2027-28,
+    and every digest stayed the same."""
+    reform = reforms.get_reform(measure)
+
+    def digest(order):
+        writes = {period: OVERLAPPING_WRITES[period] for period in order}
+        _use_registry(
+            patch,
+            {
+                measure: _changed(
+                    reform,
+                    parameter_changes={
+                        **(reform.parameter_changes or {}),
+                        UNTOUCHED_PARAMETER: writes,
+                    },
+                )
+            },
+        )
+        return current_definitions()[measure]
+
+    with monkeypatch.context() as patch:
+        digests = [digest(order) for order in orders]
+    clear_definition_cache()
+    assert (digests[0] == digests[1]) is (orders[0] == orders[1])
+
+
+def test_the_order_of_a_measures_parameters_is_part_of_its_definition(
+    monkeypatch,
+):
+    """Two spellings can reach one parameter (the engine canonicalises a path),
+    so the order of the paths counts as the order of the periods does."""
+    reform = reforms.get_reform("fuel_duty_rise_deferral")
+    second = f"{UNTOUCHED_PARAMETER}_too"
+    one = {UNTOUCHED_PARAMETER: {"2027": 1}, second: {"2027": 2}}
+    other = dict(reversed(list(one.items())))
+
+    def digest(changes):
+        _use_registry(
+            monkeypatch,
+            {
+                reform.id: _changed(
+                    reform,
+                    parameter_changes={
+                        **(reform.parameter_changes or {}),
+                        **changes,
+                    },
+                )
+            },
+        )
+        return current_definitions()[reform.id]
+
+    assert digest(one) == digest(dict(one))
+    assert digest(one) != digest(other)
+
+
+def test_the_order_of_a_pre_budget_sides_writes_disables_every_rule(
+    monkeypatch,
+):
+    """Every measure's before side holds it, in that order. The measure's own
+    digest is the one to watch: its own run leaves its pre-Budget side out, so
+    only its before side carries the order."""
+
+    def digests(order):
+        writes = {period: OVERLAPPING_WRITES[period] for period in order}
+        _use_registry(
+            monkeypatch,
+            {
+                "new_measure": Reform(
+                    id="new_measure",
+                    name="New",
+                    baseline_parameter_changes={UNTOUCHED_PARAMETER: writes},
+                )
+            },
+        )
+        return dict(current_definitions())
+
+    one = digests(list(OVERLAPPING_WRITES))
+    other = digests(list(reversed(list(OVERLAPPING_WRITES))))
+    assert "new_measure" in one
+    assert set(one) == set(other)
+    assert all(one[id_] != other[id_] for id_ in one)
 
 
 def test_a_labels_wording_changes_no_definition(monkeypatch):
@@ -462,6 +567,12 @@ def test_the_digests_read_the_templates_and_leave_out_the_limit_lists():
     found = definitions._imported_code(definitions._modifier_modules(measures))
     assert measure_templates.__name__ in found
     assert not found & definitions.CANNOT_CHANGE_A_NUMBER
+    # The package above the modifiers' modules
+    assert "uk_budget_data.budget_measures" in found
+    # And not the package as a whole, or a change to the pipeline would turn
+    # every rule off: no modifier names the package itself
+    assert "uk_budget_data" not in found
+    assert "uk_budget_data.pipeline" not in found
 
 
 @pytest.fixture
@@ -530,20 +641,62 @@ def scratch_package(tmp_path, monkeypatch):
             "__init__.py",
             id="a name from the package itself",
         ),
+        pytest.param(
+            "from {package}.helpers import helper",
+            "helpers/__init__.py",
+            id="a name a package's initializer can rebind",
+        ),
+        pytest.param(
+            "from {package}.helpers import helper",
+            "helpers/other.py",
+            id="a name a package's initializer can re-export",
+        ),
+        pytest.param(
+            "from {package}.helpers.inner import VALUE",
+            "helpers/__init__.py",
+            id="the initializer above a module it imports",
+        ),
+        pytest.param(
+            "import {package}.helpers.inner",
+            "helpers/__init__.py",
+            id="the initializer above a plain import",
+        ),
+        pytest.param(
+            "from {package}.helper import VALUE",
+            "__init__.py",
+            id="the package's own initializer, above every module",
+        ),
+        pytest.param(
+            "from {package} import helper",
+            "__init__.py",
+            id="a module whose package's initializer changes it",
+        ),
+        pytest.param(
+            "VALUE = 12570",
+            "measures/__init__.py",
+            id="the initializer above the modifier's own module",
+        ),
     ],
 )
 def test_a_change_to_code_a_modifier_imports_disables_every_rule(
     imports, edited, scratch_package, monkeypatch
 ):
-    """A receipt binds a modifier's own module and no other, so a helper it
-    imports could change what it does with the digest the same. The case the
-    review ran: a helper's value goes from 12,570 to 0, and nothing else
-    changes."""
+    """A receipt binds a modifier's own module and no other, so code an import
+    of it runs could change what it does with the digest the same. The cases
+    the reviews ran: a helper's value goes from 12,570 to 0; a package's
+    initializer re-exports a name from another module; an initializer sets a
+    helper's value. Nothing else changes."""
     package = scratch_package.name
     for name in ("helper.py", "measures/sibling.py"):
         (scratch_package / name).write_text("VALUE = 12570\n")
     (scratch_package / "middle.py").write_text(
         f"from {package}.helper import VALUE\n"
+    )
+    (scratch_package / "helpers").mkdir()
+    for name in ("helper.py", "inner.py", "other.py"):
+        (scratch_package / "helpers" / name).write_text("VALUE = 12570\n")
+    (scratch_package / "helpers" / "__init__.py").write_text(
+        "from .other import VALUE\n"
     )
     (scratch_package / "measures" / "measure.py").write_text(
         imports.format(package=package)
@@ -571,6 +724,13 @@ IMPORT_FORMS = (
     "from . import {module}",
     "def inner():\n    from .{module} import VALUE",
 )
+# The forms above that name or bind the package itself, whose initializer can
+# then give the importer anything it imports.
+NAME_THE_PACKAGE = {
+    "from {package} import {module}",
+    "import {package}.{module}",
+    "from . import {module}",
+}
 
 
 @given(
@@ -593,7 +753,8 @@ def test_the_imported_code_is_exactly_what_a_module_reaches(
 ):
     """Any import graph, in any of the forms: the modules reachable from the
     first by following imports, and no others. The first isn't among them
-    unless another imports it."""
+    unless another imports it. The package is among them if a module reached
+    names it."""
     package = scratch_package.name
     sources = {index: "" for index in range(5)}
     for importer, imported, form in imports:
@@ -609,8 +770,119 @@ def test_the_imported_code_is_exactly_what_a_module_reaches(
             if start == importer and imported not in reached:
                 reached.add(imported)
                 stack.append(imported)
+    names_the_package = any(
+        start in reached | {0} and form in NAME_THE_PACKAGE
+        for start, _, form in imports
+    )
     assert household_skip_definitions._imported_code([f"{package}.m0"]) == {
-        f"{package}.m{index}" for index in reached
+        *(f"{package}.m{index}" for index in reached),
+        *([package] if names_the_package else []),
+    }
+
+
+# Modules of a scratch package, one nested, each binding VALUE before any
+# import so that a cycle of them still loads.
+SCRATCH_MODULES = ("m0", "m1", "m2", "sub", "sub.m3", "sub.m4")
+MODULE_LEVEL_IMPORT_FORMS = (
+    "from {package}.{module} import VALUE",
+    "from {parent} import {leaf}",
+    "import {package}.{module}",
+    "import {package}.{module} as alias",
+)
+
+
+@given(
+    start=st.sampled_from(SCRATCH_MODULES),
+    imports=st.lists(
+        st.tuples(
+            st.sampled_from(SCRATCH_MODULES),
+            st.sampled_from(SCRATCH_MODULES),
+            st.sampled_from(MODULE_LEVEL_IMPORT_FORMS),
+        ),
+        max_size=10,
+    ),
+)
+@settings(
+    max_examples=60,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
+def test_the_walk_reads_exactly_the_modules_an_import_runs(
+    start, imports, scratch_package, monkeypatch
+):
+    """Against Python's import system, on any graph of module-level imports:
+    the modules importing one really loads, its package's initializers
+    included, and those the walk reads. The two agree, but for the package
+    itself, which Python always runs and whose source every digest reads
+    anyway."""
+    package = scratch_package.name
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    (scratch_package / "sub").mkdir(exist_ok=True)
+    for module in SCRATCH_MODULES:
+        source = "VALUE = 1\n"
+        for importer, imported, form in imports:
+            if importer == module:
+                parent, _, leaf = f"{package}.{imported}".rpartition(".")
+                source += (
+                    form.format(
+                        package=package,
+                        module=imported,
+                        parent=parent,
+                        leaf=leaf,
+                    )
+                    + "\n"
+                )
+        path = (
+            scratch_package / "sub" / "__init__.py"
+            if module == "sub"
+            else scratch_package / f"{module.replace('.', '/')}.py"
+        )
+        path.write_text(source)
+    for name in list(sys.modules):
+        if name == package or name.startswith(f"{package}."):
+            del sys.modules[name]
+    importlib.invalidate_caches()
+
+    first = f"{package}.{start}"
+    importlib.import_module(first)
+
+    loaded = {name for name in sys.modules if name.startswith(f"{package}.")}
+    read = household_skip_definitions._imported_code([first])
+    assert loaded - {first} == read - {first, package}
+
+
+def test_the_packages_own_imports_count_only_where_a_module_names_it(
+    scratch_package,
+):
+    """Python runs the package's initializer before any module in it, and that
+    initializer imports most of the package. Followed from every import, any
+    edit anywhere would turn every rule off, so its source counts and its
+    imports count only for a module that names the package."""
+    package = scratch_package.name
+    (scratch_package / "__init__.py").write_text(
+        f"from {package}.everything import VALUE\n"
+    )
+    for name in ("everything", "helper"):
+        (scratch_package / f"{name}.py").write_text("VALUE = 1\n")
+    (scratch_package / "uses_a_module.py").write_text(
+        f"from {package}.helper import VALUE\n"
+    )
+    (scratch_package / "names_the_package.py").write_text(
+        f"from {package} import VALUE\n"
+    )
+    (scratch_package / "binds_the_package.py").write_text(
+        f"import {package}.helper\n"
+    )
+    walk = household_skip_definitions._imported_code
+    assert walk([f"{package}.uses_a_module"]) == {f"{package}.helper"}
+    assert walk([f"{package}.names_the_package"]) == {
+        package,
+        f"{package}.everything",
+    }
+    assert walk([f"{package}.binds_the_package"]) == {
+        package,
+        f"{package}.everything",
+        f"{package}.helper",
     }
 
 
@@ -709,14 +981,14 @@ def test_a_missing_record_leaves_every_rule_off(monkeypatch):
 
 def test_the_record_names_rules_and_full_digests():
     """The committed file's shape. Whether each digest is current is the
-    "Household skip rules" check's business, not a required test's."""
+    "Household skip rules" check's business, not a required test's. It may
+    hold nothing: a recheck that shows every rule wrong leaves it empty."""
     checked = json.loads(
         (
             Path(household_impact.__file__).parent
             / household_skip_definitions.CHECKED_FILE
         ).read_text()
     )
-    assert checked
     assert set(checked) <= set(SKIP_REASONS)
     assert all(re.fullmatch(r"[0-9a-f]{64}", d) for d in checked.values())
 
@@ -891,6 +1163,20 @@ def test_the_generator_covers_every_answer():
     fields = {field.name for field in dataclasses.fields(HouseholdAnswers)}
     assert set(ANSWER_VALUES) | ANSWERS_NOT_GENERATED == fields
     assert not set(ANSWER_VALUES) & ANSWERS_NOT_GENERATED
+    # An answer no generated household gives, a named one has to
+    form = HouseholdAnswers()
+    for name in ANSWERS_NOT_GENERATED:
+        assert any(
+            getattr(answers, name) != getattr(form, name)
+            for answers in NAMED_HOUSEHOLDS.values()
+        ), name
+
+
+def test_the_named_households_are_ones_the_form_accepts():
+    from uk_budget_data import api
+
+    for answers in NAMED_HOUSEHOLDS.values():
+        api.HouseholdAnswersRequest(**_as_request(answers))
 
 
 def test_generated_households_are_reproducible_and_answerable():
@@ -1230,7 +1516,7 @@ def test_the_smallest_counterexample_drops_every_other_answer(
     assert broken
     for effect in broken:
         answers, change = household_skip_check.smallest_counterexample(
-            effect, households_
+            effect, households_[effect.household]
         )
         assert household_skip_check.describe(answers) == smallest
         assert change == 1.0
@@ -1393,6 +1679,99 @@ def test_a_crash_in_another_year_leaves_no_wrong_rule_on(
     output = capsys.readouterr().out
     assert f"{wrong}: the rule is wrong" in output
     assert f"{crashed}: RuntimeError('the worker failed')" in output
+
+
+class _BrokenWhenShrinking(_InThisProcess):
+    """A pool that has broken by the time the recheck asks it to shrink."""
+
+    @staticmethod
+    def submit(function, argument):
+        if function.__name__ == "_shrink":
+            raise BrokenProcessPool("a worker died")
+        return _InThisProcess.submit(function, argument)
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+@pytest.mark.parametrize(
+    "shrinking_raises, pool, reported",
+    [
+        pytest.param(
+            RuntimeError("the shrinking failed"),
+            _InThisProcess,
+            "RuntimeError('the shrinking failed')",
+            id="the shrinking fails",
+        ),
+        pytest.param(
+            BrokenProcessPool("a worker died"),
+            _InThisProcess,
+            "BrokenProcessPool('a worker died')",
+            id="a worker dies while shrinking",
+        ),
+        pytest.param(
+            None,
+            _BrokenWhenShrinking,
+            "BrokenProcessPool('a worker died')",
+            id="the pool has broken before it can shrink",
+        ),
+    ],
+)
+def test_a_failure_to_shrink_loses_no_disproof(
+    shrinking_raises, pool, reported, verify, record, monkeypatch, capsys
+):
+    """The review's case: a year shows a rule wrong, then shrinking the
+    household fails. The rule is off before the shrinking starts, and the
+    command prints the household as found, with its change."""
+    wrong = "machine_games_duty_rise"
+    record.write_text(json.dumps({wrong: current_definitions()[wrong]}))
+    clear_definition_cache()
+    _engine_that_moves(
+        monkeypatch, wrong, lambda answers, _: answers.age == 45
+    )
+    was_on_while_shrinking = []
+
+    def shrink(_effect, _answers):
+        was_on_while_shrinking.append(rule_is_current(wrong))
+        raise shrinking_raises
+
+    monkeypatch.setattr(
+        household_skip_check, "smallest_counterexample", shrink
+    )
+    monkeypatch.setattr(verify, "ProcessPoolExecutor", pool)
+    assert _recheck(verify, wrong) == 1
+    assert not any(was_on_while_shrinking)
+    assert not rule_is_current(wrong)
+    assert json.loads(record.read_text()) == {}
+    output = capsys.readouterr().out
+    assert f"{wrong}: the rule is wrong" in output
+    assert "the run shows 1.0" in output
+    # As found, with the answers it would have dropped
+    assert "'employment_income'" in output
+    assert reported in output
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+def test_a_recheck_records_the_definition_it_started_on(
+    verify, record, monkeypatch
+):
+    """A definition edited while a check runs is not the one it checked, so
+    the record names the definition as it stood at the start. Once a process
+    reads the edit, the rule is off. A rule shown wrong on the way, whose
+    removal writes the record, changes nothing."""
+    named, wrong = "fuel_duty_rise_deferral", "machine_games_duty_rise"
+    at_the_start = {id_: "a" * 64 for id_ in REGISTERED_RULES}
+    after_the_edit = {id_: "b" * 64 for id_ in REGISTERED_RULES}
+    digests = iter([at_the_start, after_the_edit])
+    monkeypatch.setattr(
+        household_skip_definitions, "_definitions_now", lambda: next(digests)
+    )
+    clear_definition_cache()
+    _engine_that_moves(
+        monkeypatch, wrong, lambda answers, _: answers.age == 45
+    )
+    assert _recheck(verify, named) == 1
+    assert json.loads(record.read_text()) == {named: "a" * 64}
+    clear_definition_cache()
+    assert not rule_is_current(named)
 
 
 @pytest.mark.usefixtures("state_pension_ages")
@@ -1590,13 +1969,56 @@ def test_everyone_in_a_batch_has_the_stage_they_would_have_alone(batch):
         assert _stages(together) == alone
 
 
+def _brmas(merged: dict) -> list:
+    """Each household's ``brma`` in a merged situation, or None."""
+    return [
+        (
+            next(iter(household["brma"].values()))
+            if "brma" in household
+            else None
+        )
+        for household in merged["households"].values()
+    ]
+
+
+@pytest.mark.usefixtures("state_pension_ages")
+@given(
+    batch=st.lists(
+        st.tuples(
+            st.sampled_from(household_impact.REGIONS),
+            st.sampled_from((None, None, "OLDHAM_ROCHDALE", "WIGAN")),
+        ),
+        min_size=1,
+        max_size=4,
+    )
+)
+@settings(
+    max_examples=30,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
+def test_everyone_in_a_batch_has_the_brma_they_would_have_alone(batch):
+    """Theirs if it is entered; else the one policyengine-uk's formula gives
+    their region, written out only if anyone in the batch has one."""
+    answers = [_answers(region=region, brma=brma) for region, brma in batch]
+    together, _ = household_skip_check.merged_situation(answers, 2027)
+    if any(brma for _, brma in batch):
+        assert _brmas(together) == [
+            brma or household_impact.DEFAULT_BRMA[region]
+            for region, brma in batch
+        ]
+    else:
+        assert _brmas(together) == [None] * len(batch)
+
+
 @pytest.mark.slow
 def test_a_household_in_a_batch_gets_what_it_gets_alone():
     """With the engine and every measure on, in one year: what a household's
     run reads doesn't depend on the year. Every named household and some drawn
     ones, together and then each alone, to the last bit. Beside each other,
     the young person left to the formula read £8,743 lower before the batch
-    gave everyone a stage."""
+    gave everyone a stage, and the family renting in London £7,740 lower before
+    it gave every household a BRMA."""
     year = 2027
     side = household_impact.measure_sides(household_impact.measure_ids()).after
     batch = [*NAMED_HOUSEHOLDS.values(), *_drawn(3, year)]
@@ -1825,7 +2247,7 @@ def test_the_check_fails_on_a_wrong_rule_with_the_engine(monkeypatch):
     assert [effect.measure for effect in broken] == [measure]
     assert broken[0].change < 0
     answers, change = household_skip_check.smallest_counterexample(
-        broken[0], [player]
+        broken[0], player
     )
     assert household_skip_check.describe(answers) == {
         "higher_stake_machine_losses": player.higher_stake_machine_losses
