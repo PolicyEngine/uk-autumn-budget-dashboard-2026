@@ -6,8 +6,8 @@ Table 6.1, with the published artifacts and with its own sign convention.
 The ``ours_bn`` figures on the ``net`` basis are tested against the published
 ``budgetary_impact.csv`` of each measure, so a rerun that moves them fails
 here until the file is refreshed. The Carer's Allowance rows use the Carer's
-Allowance + Universal Credit basis, which no published file carries: they are
-a snapshot of #320's ring."""
+Allowance + Universal Credit basis that #320's ring shows, tested against the
+measure's published ``official_basis.csv``."""
 
 import csv
 import json
@@ -158,16 +158,23 @@ def test_official_figures_match_table_6_1(row):
     assert float(row["official_bn"]) == pytest.approx(official, abs=5e-4)
 
 
-@pytest.mark.parametrize(
-    "row", [r for r in SIZED if r["ours_basis"] == "net"], ids=_id
-)
-def test_ours_matches_the_published_budgetary_impact(row):
+CA_UC = "carers_allowance_plus_universal_credit"
+# The published file that carries each basis of ``ours_bn``.
+BASIS_FILE = {"net": "budgetary_impact.csv", CA_UC: "official_basis.csv"}
+# The variables ``official_basis.csv`` sums on each basis.
+BASIS_VARIABLES = {CA_UC: "carers_allowance;universal_credit"}
+
+
+@pytest.mark.parametrize("row", SIZED, ids=_id)
+def test_ours_matches_the_published_figure_on_its_basis(row):
     manifest = json.loads((PUBLISHED / "manifest.json").read_text())
     artifact = PUBLISHED / manifest["measures"][row["measure_id"]]["artifact"]
-    published = {
-        int(r["year"]): float(r["value"])
-        for r in _rows(artifact / "budgetary_impact.csv")
-    }
+    published_rows = _rows(artifact / BASIS_FILE[row["ours_basis"]])
+    if row["ours_basis"] in BASIS_VARIABLES:
+        assert {r["variables"] for r in published_rows} == {
+            BASIS_VARIABLES[row["ours_basis"]]
+        }
+    published = {int(r["year"]): float(r["value"]) for r in published_rows}
     ours = published[_start_year(row["fiscal_year"])]
     assert float(row["ours_bn"]) == pytest.approx(
         ours, abs=5e-4
