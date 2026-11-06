@@ -753,7 +753,7 @@ function MethodologyTab({ onShowTab }) {
                     ),
                     more: [
                       `A band or age with fewer than ${MIN_SAMPLE_SIZE} records in the dataset is not shown. Microcosm builds several records from one survey household, so this counts records, not households.`,
-                      "When an age band or single year of age rests on one or two survey households, it is not published: a single year takes the other single years of its band with it, and a band takes every row but all ages.",
+                      "When an age band or single year of age rests on one or two survey households, it is not published. A single year is left out with as few other single years of its band as it takes for the years left out, with the band's ages too rare for a row of their own, to rest on at least three survey households; a band takes every row but all ages.",
                       <>
                         Each person counts their whole household&apos;s change in net income, not
                         equivalised, and averages are <Term id="perPerson">per person</Term>.
