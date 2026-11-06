@@ -65,9 +65,15 @@ const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
 // beside the income decile card it takes that card's plot height (see
 // HouseholdScatterTemplate.css).
 const STACKED_HEIGHT = 400;
-// Room under the axis for the logo, drawn in the SVG as the decile card
-// beside it draws its own (WaterfallChart's LOGO_ROOM), so the two plots,
-// axis titles and logos sit level
+// Room under the axis for the logo, which the SVG draws at its foot. The
+// decile card beside it draws its logo at its SVG's foot too, and both
+// SVGs end at the foot of the shared plot row, so the two logos sit level.
+// The axes don't: the decile chart's Recharts legend sits between its axis
+// and its logo, so its axis sits higher by the legend's height less this
+// room, and moves as the legend gains or loses rows. The decile charts'
+// own LOGO_ROOM (WaterfallChart, DistributionalChart), the same size,
+// applies only under a section key (key.shared), which All households
+// doesn't have.
 export const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
 
 // The dots' colours, as colourFor draws them; the key under the plot
@@ -125,8 +131,8 @@ function ScatterMoreInfo({ basisLabel }) {
           "The groups and the change axis are the same in every year. Changes beyond the axis show as arrows at its edge.",
           "No change (under £1 either way) is an unfilled ring on £0.",
         ],
-        caveats: ["Groups with too few survey households are left out."],
-        method: { anchor: METHOD_ANCHORS.scatter, label: "How the household groups are built" },
+        caveats: ["We leave out groups with too few survey households."],
+        method: { anchor: METHOD_ANCHORS.scatter, label: "How we build the household groups" },
       }}
     />
   );
@@ -357,7 +363,7 @@ function youSentence({ perDot, you, points, basisLabel, incomeMatches }) {
   }
   if (incomeMatches && you.income >= INCOME_AXIS_DOMAIN[1]) {
     parts.push(
-      `The chart stops at ${pounds(INCOME_AXIS_DOMAIN[1])} of ${basisLabel} net income, so households like yours are not shown; your ring sits at its top.`,
+      `The chart stops at ${pounds(INCOME_AXIS_DOMAIN[1])} of ${basisLabel} net income, so it does not show households like yours; your ring sits at its top.`,
     );
   }
   if (you.note) parts.push(you.note);
@@ -388,7 +394,7 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
         </strong>{" "}
         had <strong style={{ color: colourFor(point) }}>{change}</strong>.
         {point.clamped
-          ? " This is beyond the axis, so it is drawn as an arrow at its edge, pointing the way it lies."
+          ? " This is beyond the axis, so the chart draws it as an arrow at its edge, pointing the way it lies."
           : ""}
       </p>
     </div>
@@ -519,7 +525,7 @@ function HouseholdScatter({
             : {
                 ...youShown,
                 note: [
-                  `Your ring is placed by your ${fiscalYearLabel(youShown.incomeYear)} net income; the dots by ${basisLabel}'s.`,
+                  `The chart places your ring by your ${fiscalYearLabel(youShown.incomeYear)} net income and the dots by ${basisLabel}'s.`,
                   youShown.note,
                 ]
                   .filter(Boolean)
@@ -665,13 +671,14 @@ function HouseholdScatter({
           <ChartDownloadMenu
             download={download}
             chartTitle={chartTitle}
-            disabledReason={ready ? undefined : "Available when results are published"}
+            disabledReason={ready ? undefined : "Available when we publish results"}
           />
         </div>
       )}
 
-      {/* The plot takes the rows the map beside it uses for its controls,
-          map and colour scale, so the two cards line up and fill alike */}
+      {/* Beside the income decile card, the plot fills the plot row that
+          card's plot sets (HouseholdScatterTemplate.css), so the two
+          cards line up */}
       <div className="chart-plot household-scatter-template-plot">
         <div className="household-scatter-template-canvas" ref={chartRef}>
           {noDots ? (

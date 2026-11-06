@@ -424,6 +424,17 @@ class HouseholdAnswersRequest(BaseModel):
     )
     dividend_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
     savings_interest_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    cash_isa_subscriptions: float = Field(
+        default=0,
+        ge=0,
+        le=20_000,
+        description=(
+            "New money the head pays into cash ISAs, £ a year, up to the "
+            "£20,000 ISA limit: for the cash ISA limit kept at £20,000, "
+            "which the planned £12,000 limit for under-65s would have cut. "
+            "Left out: none."
+        ),
+    )
     property_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
     private_pension_income: float = Field(
         default=0,
@@ -470,6 +481,18 @@ class HouseholdAnswersRequest(BaseModel):
             "(policyengine-uk's bus_fare_spending): it credits a share of "
             "them in England outside London in 2026-27 and 2027-28. Left "
             "out: none, as before the form asked."
+        ),
+    )
+    higher_stake_machine_losses: float = Field(
+        default=0,
+        ge=0,
+        le=100_000,
+        description=(
+            "Net losses (stakes less prizes) on gaming machines with a "
+            "stake over £1 or a prize over £100, £ a year, for the Machine "
+            "Games Duty rise from 20% to 25% on those machines: set as the "
+            "household's standard-rate machine takings (policyengine-uk's "
+            "machine_games_standard_rate_net_takings). Left out: none."
         ),
     )
     salary_sacrifice_pension_contributions: float = Field(

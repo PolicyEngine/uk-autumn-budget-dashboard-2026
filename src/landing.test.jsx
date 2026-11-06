@@ -11,7 +11,7 @@ import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture"
 beforeAll(preloadAllViews, 60_000);
 
 const INTRO =
-  /^Estimates from PolicyEngine UK( \(opens in a new tab\))? of how Autumn Budget 2026 policies affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own; the economic forecast is the OBR’s Economic and fiscal outlook, October 2026( \(opens in a new tab\))?\.$/;
+  /^Estimates from PolicyEngine UK( \(opens in a new tab\))? of how Autumn Budget 2026 policies affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own except the bus fare cap’s, which is the Treasury’s; the economic forecast is the OBR’s Economic and fiscal outlook, October 2026( \(opens in a new tab\))?\.$/;
 
 const BOXES = {
   society: /^The Budget and society/,
@@ -110,7 +110,7 @@ describe("the landing page", () => {
     expect(notes()).toHaveLength(0);
     // The Policies view's subtitle says the measures are provisional
     expect(
-      screen.getByText(`${provisionalLabel(manifest)}. What each policy changes, when, and how it is modelled.`),
+      screen.getByText(`${provisionalLabel(manifest)}. What each policy changes, when, and how we model it.`),
     ).toBeInTheDocument();
   });
 
@@ -119,7 +119,7 @@ describe("the landing page", () => {
     expect(container.querySelectorAll(".publication-provisional")).toHaveLength(0);
     expect(screen.queryByRole("link", { name: /^The policies modelled/ })).toBeNull();
     fireEvent.click(box("policies"));
-    expect(screen.getByText("What each policy changes, when, and how it is modelled.")).toBeInTheDocument();
+    expect(screen.getByText("What each policy changes, when, and how we model it.")).toBeInTheDocument();
   });
 
   it("draws a silhouette of Public finances behind it, with no view mounted", async () => {

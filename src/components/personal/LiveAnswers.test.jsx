@@ -19,6 +19,7 @@ import { resetSavedWizard } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
 import { resetPresetResults } from "../../utils/householdPresets";
+import { approvedDefinition, route, withReportedDefinitions } from "../../test/definitionsFixture";
 import LIVE from "../../test/fixtures/householdLiveAnswers2027.json";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
@@ -36,22 +37,28 @@ const catalogue = buildMeasureCatalogue({
     ),
     combined: {},
   },
-  tablesByKey: Object.fromEntries(POLICIES.map((policy) => [policy.id, { engine: ENGINE }])),
+  tablesByKey: Object.fromEntries(POLICIES.map((policy) => [policy.id, { engine: ENGINE, definition: approvedDefinition(policy.id) }])),
 });
 
-/** Serve `answer` as the API would for each stage. */
+/**
+ * Serve `answer` as the API would for each stage, beside the definitions an
+ * API running the approved code reports (PR 136).
+ */
 function serve(answer) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url, init = {}) => {
-      if (url !== HOUSEHOLD_API) return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+      if (route(url) !== HOUSEHOLD_API) return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
       const { include = [] } = JSON.parse(init.body);
       const staged = {
         ...answer,
         by_policy: include.includes("by_policy") ? answer.by_policy : null,
         sweep: include.includes("sweep") ? answer.sweep : null,
       };
-      return new Response(JSON.stringify(staged), { status: 200, headers: { "Content-Type": "application/json" } });
+      return withReportedDefinitions(
+        new Response(JSON.stringify(staged), { status: 200, headers: { "Content-Type": "application/json" } }),
+        url,
+      );
     }),
   );
 }

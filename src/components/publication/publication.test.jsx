@@ -72,7 +72,7 @@ describe("CombinedStats (UI regression)", () => {
       "Combined figures are unavailable for this selection.",
     );
     expect(container.textContent).toContain(
-      "Combined runs are published for: Alpha and Beta.",
+      "We publish combined runs for: Alpha and Beta.",
     );
     expect(container.textContent).not.toContain("-0.11pp");
   });

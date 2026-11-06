@@ -260,7 +260,7 @@ describe("how it is modelled (measureModelling.js)", () => {
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
     const details = open();
     const caveats = details.querySelector(".info-caveats");
-    expect(caveats).toHaveTextContent("vans, lorries and business use of cars is not modelled");
+    expect(caveats).toHaveTextContent("We leave out fuel for vans, lorries and business use of cars");
     expect(details.textContent.match(/lorries/g)).toHaveLength(1);
     cleanup();
   });
@@ -692,7 +692,7 @@ describe("the card's frame", () => {
     expect(example.querySelector(".policy-card-example-text")).toHaveTextContent(/including:$/);
     const list = example.querySelector("ul.policy-card-example-items");
     expect([...list.children].map((item) => item.tagName)).toEqual(["LI", "LI"]);
-    expect(list.children[0]).toHaveTextContent("83% of households spending over a tenth of their income on energy");
+    expect(list.children[0]).toHaveTextContent("83% of households spending over a tenth of their income after housing costs on energy");
   });
 
   it("shows the Carer's Allowance cliff the taper removes, with the limit in the note (PR 290, Anthony, 19:20)", () => {

@@ -12,7 +12,13 @@ import { takeEarlyResponse } from "./publication/early";
 import { SELECTABLE_YEARS } from "./displayYears";
 import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { WIZARD_DEFAULTS } from "./householdDefaults";
-import { buildHouseholdRequest, engineDifferences, normaliseHouseholdImpact, requestKey } from "./householdImpactApi";
+import {
+  buildHouseholdRequest,
+  definitionRefusals,
+  engineDifferences,
+  normaliseHouseholdImpact,
+  requestKey,
+} from "./householdImpactApi";
 import { withCalculatorOnly } from "./calculatorOnlyMeasures";
 
 export const PRESETS_FILE = "household_presets.json";
@@ -22,7 +28,8 @@ export const PRESETS_FILE = "household_presets.json";
  * answer covers are the file's own (`policies`, as it was written), and an
  * answer is used only for a request with exactly those measures selected,
  * in the page's order, under a publication whose receipts record the
- * file's engine; any other request goes to the live API.
+ * file's engine and approved each measure's definition the file records
+ * (#136); any other request goes to the live API.
  */
 const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id));
 
@@ -83,17 +90,55 @@ const engineMatches = (file, expectedEngine) =>
   engineDifferences(expectedEngine, file?.engine).length === 0;
 
 /**
+ * Whether the file reports, for every one of its measures, the definition
+ * that measure's receipt approved (`expectedDefinitions`, by id, as
+ * publishedDefinitions gives them): the household API's check (#136), made
+ * of the file's `definitions`, which scripts/precompute_household_presets.py
+ * records at each receipt's commit from the code that computed the answers.
+ * Never when none are expected, and never for a file that records none (one
+ * written before them): its answers would then be shown unchecked.
+ */
+const definitionsMatch = (file, expectedDefinitions) =>
+  Boolean(expectedDefinitions) &&
+  Array.isArray(file?.policies) &&
+  file.policies.length > 0 &&
+  definitionRefusals(expectedDefinitions, file.definitions ?? null, file.policies).length === 0;
+
+/** Whether the file's answers can stand for the live API's: both checks. */
+const fileMatches = (file, { expectedEngine = null, expectedDefinitions = null } = {}) =>
+  engineMatches(file, expectedEngine) && definitionsMatch(file, expectedDefinitions);
+
+/**
+ * One answer's definitions: the file's record, under any the answer itself
+ * reports. The precompute records them once, at the top; each answer keeps
+ * what the API reported beside it, which is nothing (`{}`) for a request
+ * that names no commits, as the precompute's don't. A definition an answer
+ * does report stands, and is checked as the file's are.
+ */
+function entryDefinitions(file, entry) {
+  const own = entry.response.definitions;
+  return { ...file.definitions, ...(own && typeof own === "object" && !Array.isArray(own) ? own : {}) };
+}
+
+/** Whether one answer, as well as the file, reports each measure's approved definition. */
+const entryMatches = (file, entry, expectedDefinitions) =>
+  definitionRefusals(expectedDefinitions, entryDefinitions(file, entry), file.policies).length === 0;
+
+/**
  * Each example's change in net income by year, with every measure, and
  * each measure's own part (that measure alone, as the breakdown shows it;
  * with interactions the parts need not add up to the change), from the file, for the cards' figures:
  * { [presetId]: { [year]: { change, byPolicy: { [measureId]: change } } } }.
- * An entry that no longer matches its example is left out, as above, and
- * the whole file unless its engine is `expectedEngine`.
+ * An entry that no longer matches its example is left out, as above, or
+ * that reports a definition of its own other than the approved one, and
+ * the whole file unless its engine is `expectedEngine` and it reports each
+ * measure's `expectedDefinitions`.
  */
-export function presetChanges(file, { policies, expectedEngine = null } = {}) {
+export function presetChanges(file, { policies, expectedEngine = null, expectedDefinitions = null } = {}) {
   const changes = {};
-  if (!engineMatches(file, expectedEngine)) return changes;
+  if (!fileMatches(file, { expectedEngine, expectedDefinitions })) return changes;
   for (const { entry } of currentEntries(file, policies)) {
+    if (!entryMatches(file, entry, expectedDefinitions)) continue;
     const change = Number(entry.response.net_income?.change);
     if (!Number.isFinite(change)) continue;
     const byPolicy = Object.fromEntries(
@@ -119,14 +164,25 @@ export function presetChanges(file, { policies, expectedEngine = null } = {}) {
  * rebuilt from today's example and form, not read from the file: if either
  * has changed since the file was written, its entry no longer matches any
  * request and the live API answers instead. None unless the file's engine
- * is `expectedEngine` (the receipts' for every published measure).
+ * is `expectedEngine` (the receipts' for every published measure) and it
+ * reports each measure's `expectedDefinitions`.
  */
-export function presetCacheEntries(file, { policies, expectedEngine = null, publicationKey = "" } = {}) {
-  if (!engineMatches(file, expectedEngine)) return [];
+export function presetCacheEntries(
+  file,
+  { policies, expectedEngine = null, expectedDefinitions = null, publicationKey = "" } = {},
+) {
+  if (!fileMatches(file, { expectedEngine, expectedDefinitions })) return [];
   return currentEntries(file, policies).flatMap(({ key, entry }) => {
-    // The file keeps the engine once, at its top; each answer gets it back,
-    // so the breakdown's "Versions" line shows as for a live answer
-    const data = normaliseHouseholdImpact({ ...entry.response, engine: entry.response.engine ?? file.engine });
+    if (!entryMatches(file, entry, expectedDefinitions)) return [];
+    // The file keeps the engine and the definitions once, at its top; each
+    // answer gets them back, so the breakdown's "Versions" line shows as for
+    // a live answer, and useHouseholdImpact checks its definitions as it
+    // checks a live answer's
+    const data = normaliseHouseholdImpact({
+      ...entry.response,
+      engine: entry.response.engine ?? file.engine,
+      definitions: entryDefinitions(file, entry),
+    });
     if (data.byPolicy === null || data.sweep === null) return [];
     // useHouseholdImpact's key: the publication snapshot, then the request
     return [[`${publicationKey}:${key}`, data]];
@@ -153,8 +209,8 @@ function loadPresetFile(fetchImpl) {
 /**
  * The precomputed answers, fetched once: [key, result] pairs
  * (presetCacheEntries, with `options`), or none when the file is missing,
- * unreadable or for other measures or another engine (the live API answers
- * then).
+ * unreadable, for other measures or another engine, or without the
+ * approved definitions (the live API answers then).
  */
 export function loadPresetResults(options = {}, fetchImpl = globalThis.fetch) {
   return loadPresetFile(fetchImpl)

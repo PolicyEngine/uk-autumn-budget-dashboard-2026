@@ -39,7 +39,7 @@ function CombinedStats({ stats, measureNames = {}, manifest = null }) {
         <p className="publication-unavailable-detail">{stats.reason}.</p>
         {sets.length > 0 && (
           <p className="publication-unavailable-detail">
-            Combined runs are published for:{" "}
+            We publish combined runs for:{" "}
             {sets.map((ids) => joinNames(ids.map(name))).join("; ")}.
           </p>
         )}

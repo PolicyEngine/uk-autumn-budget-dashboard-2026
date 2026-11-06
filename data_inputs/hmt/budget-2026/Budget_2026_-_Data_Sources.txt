@@ -1,0 +1,1461 @@
+Budget 2026
+Data Sources
+
+
+
+
+               October 2026
+2
+Budget 2026
+Data Sources
+
+
+
+
+               October 2026
+© Crown copyright 2026
+
+
+This publication is licensed under the terms of the Open Government
+Licence v3.0 except where otherwise stated. To view this licence, visit
+nationalarchives.gov.uk/doc/open-government-licence/version/3.
+
+
+Where we have identified any third-party copyright information you will
+need to obtain permission from the copyright holders concerned.
+
+
+This publication is available at: www.gov.uk/official-documents
+
+
+Any enquiries regarding this publication should be sent to us at
+public.enquiries@hmtreasury.gov.uk
+
+ISBN: 978-1-80994-012-4     PU: 3700
+
+
+
+
+                                    4
+Preface
+This document provides details of the data sources for the text, charts,
+and tables in the Budget 2026 document. It also includes further detail
+on sources where information additional to that provided in footnotes
+may be helpful to users and, where necessary, how they have been
+calculated.
+
+This document ensures that the Treasury meets the standards set out
+by the UK Statistics Authority to comply with the Statistics and
+Registration Act 20071. In particular, this document aims to meet the
+principles of the UK Statistics Authority’s ‘Code of Practice for Statistics2’
+with regard to Trustworthiness, Quality and Value, and which includes
+standards for Intelligent Transparency3. It also aims to provide an
+example of the voluntary application of this code to outputs that are
+not official statistics.
+The main standards that this document addresses are in the Standards
+for the Public Use of Statistics, Data and Wider Analysis, under
+Supporting Understanding and Equality of Access, that departments
+should:
+        •    “Be clear about where statistics, data and wider analysis used in
+             public communications come from.”
+        •    “Clearly communicate any key context and limitations
+             associated with statistics, data and wider analysis to help the
+             public understand and interpret them.”
+        •    “Publish statistics, data and wider analysis separately from any
+             related policy and ministerial statements”.
+        •    “Where possible, draw on the latest and most reliable published
+             official statistics.”
+It does this by:
+•      Distinguishing clearly between outturn data that are official
+       statistics, and other data and estimates that are not official
+       statistics4. Examples of estimates that are not official statistics
+       include forecasts, management information and economic
+
+
+
+1 Statistics and Registration Service Act 2007
+
+2 Code of Practice for Statistics (Code of Practice for Statistics) UK Statistics Authority, 2025.
+
+3 Regulator Guidance on Intelligence Transparency (Regulatory guidance on intelligent transparency – Office for
+
+    Statistics Regulation), Office for Statistics Regulation, 2023.
+4 The ‘official statistics’ label refers to a specified subset of the quantitative information produced by the
+
+    government and its nominated agents. Official statistics are produced and published in accordance with
+    provisions set out in the Statistics and Registration Service Act 2007 and in supplementary statistical
+    legislation, and in line with the Code of Practice for Statistics.
+
+                                                              5
+      estimates. These may be calculated by HM Treasury or other
+      government departments and are constructed using assumptions
+      or judgements wherein the results of economic analyses have a
+      material effect on the resulting estimate.
+
+•     In the case of outturn data that are official statistics, by clearly
+      referring to the source of the statistics and providing a link to the
+      statistical release. Where possible, the sources that are used and
+      shown are accredited official statistics.5
+
+•     By producing charts that take account of the Government Analysis
+      Function guidance6.
+Fuller details of sources, for example ONS CDIDs, are in the main only
+provided for outturn data up to 2025-26. Data for future years are
+forecasts, which are outside the domain of official statistics, although
+some are within the definition of wider analysis. Estimates of the
+impacts and costings of government policy decisions fall into the same
+category, as these are estimated, rather than measured or compiled
+using statistical processes.
+In many cases, data for 2026-27 onwards are taken from the Office for
+Budget Responsibility’s (OBR) October 2026 ‘Economic and Fiscal
+Outlook’ (EFO)7. Where this is the case, it is mentioned in the text or in
+this document.
+Time series for data that are shown with Office for National Statistics
+(ONS) time series identifier codes can be downloaded from the ONS
+website at: https://www.ons.gov.uk/
+
+
+
+
+5 ‘Accredited official statistics’ are a subset of ‘official statistics’ which have been formally certified by the UK
+
+    Statistics Authority to be compliant with the professional standards set out in the Code. Public bodies that
+    produce accredited official statistics have a statutory duty to continue to comply with the Code.
+6 Data Visualisation: Charts, Government Analysis Function, 2022
+
+7 ‘Economic and Fiscal Outlook’, OBR, October 2026.
+
+                                                            6
+7
+Chapter 1
+Paragraph 1.1
+Data
+G7 GDP growth in H1 2026
+GDP; RHDI; business investment
+Government borrowing
+
+
+Data source, including ONS source code if applicable
+Organisation for Economic Co-operation and Development
+HM Treasury calculations: growth rates calculated from OECD GDP
+levels.
+
+
+Office for National Statistics
+'UK Economic Accounts', Office for National Statistics (ONS), September
+2026.
+GDP (series YBEZ)
+RHDI (series NRJR)
+Business Investment (series NPEL)
+‘Public Sector Finances’ ONS, September 2026.
+UK public sector net borrowing (Series J5II)
+
+
+Further reference information
+OECD, Quarterly GDP and components – expenditure approach –
+volume and price indices
+OECD Data Explorer • Quarterly GDP and components - expenditure
+approach - volume and price indices
+
+
+'UK Economic Accounts', Office for National Statistics (ONS), September
+2026.
+ONS, Public Sector Finances, UK: September 2026
+https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/pu
+blicsectorfinance/bulletins/publicsectorfinances/september2026
+
+
+
+                                    8
+Paragraph 1.4
+Data
+G7 GDP growth in H1 2026
+Quarterly GDP growth outturn
+GDP growth outturn in the three months to August
+Forecast real GDP growth
+IMF UK GDP growth forecast for 2026
+OECD UK GDP growth forecast for 2026
+Central government current receipts (JW20)
+Data source, including ONS source code if applicable
+Organisation for Economic Co-operation and Development
+HM Treasury calculations: growth rates calculated from OECD GDP
+levels.
+Office for National Statistics (YBEZ, ED3H)
+Office for Budget Responsibility March 2026 Economic and fiscal
+outlook monthly profiles
+International Monetary Fund
+Further reference information
+OECD, Quarterly GDP and components – expenditure approach –
+volume and price indices
+OECD Data Explorer • Quarterly GDP and components - expenditure
+approach - volume and price indices
+ONS, GDP quarterly national accounts, UK: January to March 2026
+GDP quarterly national accounts, UK - Office for National Statistics
+ONS, GDP quarterly national accounts, UK: April to June 2026
+GDP quarterly national accounts, UK - Office for National Statistics
+ONS, Detailed forecast tables – economy, Economic and fiscal outlook –
+March 2026
+Economic and fiscal outlook – March 2026 - Office for Budget
+Responsibility
+IMF, World Economic Outlook October 2026, Annex Table 1.1.1
+World Economic Outlook, October 2026; Resilience Under Strain,
+Urgent Choices; October 13, 2026
+IMF, World Economic Outlook April 2026, Table A2
+
+
+
+                                    9
+World Economic Outlook, April 2026; Global Economy in the Shadow of
+War; April 14, 2026
+OECD, Economic Outlook, September 2026 Interim Report, Table 1
+OECD Economic Outlook, Interim Report September 2026 (EN)
+ONS, GDP monthly estimate, UK: August 2026
+GDP monthly estimate, UK - Office for National Statistics
+Office for National Statistics, Public sector finances, UK: September
+2026, Public sector finances, UK: September 2026
+Office for Budget Responsibility, March 2026 Economic and fiscal
+outlook monthly profiles https://obr.uk/economic-and-fiscal-outlooks/
+
+
+Paragraph 1.5
+Data
+UK GDP per capita
+UK RHDI per capita
+UK average weekly earnings
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Gross domestic product (Average) per head, Chained Volume
+       Measure (CVM) at market prices (IHXW)
+       Households: Real disposable Income, per head: Chained volume
+       measure (NRJR), UK resident population (EBAQ)
+       Real average weekly earnings using consumer price inflation
+       (seasonally adjusted)
+Further reference information
+ONS, GDP quarterly national accounts, UK: April to June 2026
+GDP quarterly national accounts, UK - Office for National Statistics
+ONS, Real average weekly earnings using consumer price inflation
+(seasonally adjusted), October 2026
+X09: Real average weekly earnings using consumer price inflation
+(seasonally adjusted) - Office for National Statistics
+
+
+Paragraph 1.6
+Data
+Gross Value Added (GVA) by sector
+Household consumption
+
+                                    10
+Retail sales
+G7 GDP growth in Q2 2026
+Exports
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Service Industries - Total (Index 1dp): CVM SA (ECYC)
+       Production Industries - Total (Index 1dp): CVM SA (ECY4)
+       Construction (Index 1dp): CVM SA (ECY9)
+       Household final consumption expenditure: National concept
+       chained volume measure (ABJR)
+       Retail sales volumes
+       Total Trade: Exports: CVM SA (IKBK)
+Organisation for Economic Co-operation and Development
+HM Treasury calculations: growth rates calculated from ONS and OECD
+series.
+Further reference information
+ONS, Monthly GDP low level industry data
+Monthly GDP low level industry data - Office for National Statistics
+Household final consumption expenditure: National concept chained
+volume measure
+Household final consumption expenditure :National concept CVM SA -
+£m - Office for National Statistics
+Retail sales, Great Britain: August 2026
+Retail sales, Great Britain - Office for National Statistics
+OECD, Quarterly GDP and components – expenditure approach –
+volume and price indices
+OECD Data Explorer • Quarterly GDP and components - expenditure
+approach - volume and price indices
+ONS, GDP quarterly national accounts, UK: April to June 2026
+GDP quarterly national accounts, UK - Office for National Statistics
+
+
+Paragraph 1.7
+Data
+Whole economy investment
+Business investment
+GDP
+                                       11
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Gross Fixed Capital Formation (GFCF): Business Investment: CVM
+       SA (NPEL)
+       Total Gross Fixed Capital Formation: CVM SA (NPQT)
+       Gross Domestic Product (GDP) in chained volume measures
+       (ABMI)
+HM Treasury calculations: levels growth and contributions to overall
+GDP growth calculated from ONS series
+Further reference information
+ONS, GDP quarterly national accounts, UK: April to June 2026
+GDP quarterly national accounts, UK - Office for National Statistics
+
+
+Paragraph 1.8
+Data
+Business investment by industry and asset
+Business investment by asset
+Gross Value Added (GVA) by sector
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Gross Fixed Capital Formation (GFCF): Business Investment: CVM
+       SA (NPEL)
+       Gross Fixed Capital Formation (GFCF): Business Investment: ICT
+       equipment and other machinery: CVM SA (EDOP)
+       Gross Fixed Capital Formation (GFCF): Business Investment:
+       Other buildings and structures: CVM SA (EDQZ)
+       Gross Fixed Capital Formation (GFCF): Business Investment: Non
+       Gov: Intellectual Property Products: CVM SA (EDRA)
+       Gross Fixed Capital Formation (GFCF): Business Investment: Priv
+       Sect: Information and communication: CVM SA (DS8E)
+       Gross value added (GVA) in pounds millions, chained volume
+       measures, UK, seasonally adjusted
+HM Treasury calculations: levels growth and contributions to overall
+GDP growth calculated from ONS series.
+Further reference information
+ONS, Monthly GDP low level industry data
+
+                                    12
+Monthly GDP low level industry data - Office for National Statistics
+
+
+Paragraph 1.9
+Data
+Productivity
+Data source, including ONS source code if applicable
+ONS, labour productivity
+HM Treasury calculations: compound annual growth rates calculated
+from ONS series levels, Q2 2024 to Q2 2026 and Q2 2015 to Q2 2024.
+Further reference information
+Component approach to measuring labour productivity, UK: 1997 to
+2024
+Component approach to measuring labour productivity, UK: 1997 to
+2024 - Office for National Statistics
+Productivity flash estimate and overview, UK: April to June 2026 and
+January to March 2026
+Productivity flash estimate and overview, UK - Office for National
+Statistics
+
+
+
+
+Paragraph 1.10
+Data
+Payrolled employees
+Unemployment rate
+Vacancies
+Employment rate
+G7 average employment rate
+Young people not in education, employment or training (NEET)
+Data source, including ONS source code if applicable
+Office for National Statistics and HMRC
+       Payrolled employees
+Office for National Statistics
+       Unemployment rate 16+ (MGSX)
+       All vacancies (AP2Y)
+       Employment rate (16-64) (LF24)
+
+
+                                    13
+       Employment rate up to 1970: Long-term trends in UK
+       employment: 1861 to 2018 and from 1971 onwards: Employment
+       rate 16-64 (LF24)
+       Young people not in Education, Employment or Training (NEET)
+HM Treasury calculations: average annual employment rate calculated
+by averaging non-overlapping quarters within the year.
+Organisation for Economic Co-operation and Development
+       G7 average employment rate (15-64)
+Further reference information
+Earnings and employment from Pay As You Earn Real Time
+Information, seasonally adjusted, October 2026
+Earnings and employment from Pay As You Earn Real Time
+Information, UK - Office for National Statistics
+A01: Summary of labour market statistics, October 2026, (rolling 3-
+month average)
+A01: Summary of labour market statistics - Office for National Statistics
+OECD Infra-annual labour statistics, October 2026 (rolling 3-month
+average)
+OECD Data Explorer • Infra-annual labour statistics
+Long-term trends in UK employment: 1861 to 2018, April 2019
+Long-term trends in UK employment: 1861 to 2018 - Office for National
+Statistics
+Young people not in education, employment or training (NEET), August
+2026
+https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwor
+k/unemployment/bulletins/youngpeoplenotineducationemploymentor
+trainingneet/august2026Young people not in education, employment
+or training (NEET) - Office for National Statistics
+
+
+Box 1.A
+Data
+Productivity
+Data source, including ONS source code if applicable
+Office for National Statistics
+HM Treasury calculations: compound annual growth rates calculated
+from ONS series levels: RTI-based productivity levels Q2 2024 to Q2
+2026, 2024 to 2025, and Q2 2015 to Q2 2024; Direct and Components
+approach productivity levels 2006 to 2024, 1996 to 2007, 2007 to 2024.
+Further reference information
+
+                                    14
+ONS, Productivity flash estimate and overview, UK: April to June 2026
+and January to March 2026
+Productivity flash estimate and overview, UK - Office for National
+Statistics
+Component approach to measuring labour productivity, UK: 1997 to
+2024
+Component approach to measuring labour productivity, UK: 1997 to
+2024 - Office for National Statistics
+Reference tables: Component approach to labour productivity, UK: 1997
+to 2024
+Reference tables: Component approach to labour productivity, UK: 1997
+to 2024 - Office for National Statistics
+
+
+Paragraph 1.11
+Data
+UK Public sector net borrowing as a percentage of GDP
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Public sector net borrowing (J51I)
+       Gross Domestic Product, current prices, NSA (BKTL)
+Further reference information
+ONS, Public Sector Finances, UK: September 2026
+https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/pu
+blicsectorfinance/bulletins/publicsectorfinances/september2026
+
+
+
+
+Paragraph 1.12
+Data
+Average Brent crude oil prices
+Average UK natural gas prices
+Data source, including ONS source code if applicable
+Bloomberg
+       Monthly average front-month Brent crude oil futures contract
+       prices
+       Monthly average front-month UK natural gas futures contract
+       prices
+HM Treasury calculations
+
+                                    15
+Further reference information
+Bloomberg
+
+
+Paragraph 1.13
+Data
+Inflation
+G7 2026 inflation forecast
+Data source, including ONS source code if applicable
+Office for National Statistics
+       CPI ANNUAL RATE 00: ALL ITEMS 2015=100 (D7G7)
+International Monetary Fund
+Further reference information
+ONS, Consumer price inflation tables, October 2026
+Consumer price inflation tables - Office for National Statistics
+IMF, World Economic Outlook 2025
+World Economic Outlook, October 2025: Global Economy in Flux,
+Prospects Remain Dim
+IMF, World Economic Outlook 2026
+World Economic Outlook, October 2026: Resilience Under Strain,
+Urgent Choices
+
+
+Box 1.B
+Data
+UK fuel prices
+Euro area fuel prices
+CPI weights
+Euro area consumer price inflation weights
+Link between gas and electricity prices
+UK household gas prices
+UK household electricity prices
+Households on fixed energy tariffs
+Businesses on fixed energy tariffs
+Core inflation
+Data source, including ONS source code if applicable
+Department for Energy Security and Net Zero
+                                 16
+       Weekly road fuel prices
+Office for National Statistics
+       CPI weights
+       Businesses on fixed energy tariffs
+       Core inflation
+European Commission
+       Euro area fuel prices
+Eurostat
+       Euro area consumer price inflation weights
+Department for Energy Security and Net Zero
+       Link between gas and electricity prices
+Ofgem
+       Direct debit gas rates
+       Single-rate direct debit electricity unit rates
+       Household fixed tariff rate
+Further reference information
+DESNZ, Weekly road fuel prices
+Weekly road fuel prices - GOV.UK
+European Commission, Weekly Oil Bulletin
+Weekly Oil Bulletin
+ONS, Consumer price inflation tables
+Consumer price inflation tables - Office for National Statistics
+Eurostat, Harmonised index of consumer prices (HICP) - ECOICOP ver.2
+- item weights
+[prc_hicp_iw] Harmonised index of consumer prices (HICP) - ECOICOP
+ver.2 - item weights
+DESNZ, Decisive action to break influence of gas on electricity prices
+Decisive action to break influence of gas on electricity prices - GOV.UK
+Ofgem, Energy price cap unit rates and standing charges
+Energy price cap unit rates and standing charges | Ofgem
+ONS, Business insights and impact on the UK economy, BICS Wave 154
+Business insights and impact on the UK economy - Office for National
+Statistics
+Ofgem, Energy price cap will rise by 13% from July
+Energy price cap will rise by 13% from July | Ofgem
+
+                                     17
+Para 1.15
+Data
+G7 bond yields
+Data source, including ONS source code if applicable
+Bloomberg
+HM Treasury calculations
+Further reference information
+Bloomberg
+
+
+Para 1.16
+Data
+GDP
+Real GDP growth and borrowing
+Data source, including ONS source code if applicable
+Bloomberg
+HM Treasury calculations
+Office for Budget Responsibility
+Further reference information
+Bloomberg
+Office for Budget Responsibility, ‘Economic and fiscal outlook October
+2026’, page 9
+
+
+Para 1.22
+Data
+UK Current budget deficit
+Fiscal rules
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Current budget deficit (JW2T)
+Office for Budget Responsibility
+Further reference information
+ONS, Public Sector Finances, UK: September 2026
+https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/pu
+blicsectorfinance/bulletins/publicsectorfinances/september2026
+
+                                   18
+Office for Budget Responsibility, ‘Economic and fiscal outlook October
+2026’, page 22
+
+
+
+
+Para 1.24
+Data
+UK Public sector net borrowing
+Net lending (+) / net borrowing (-), General government, Percent of GDP
+Data source, including ONS source code if applicable
+Office for National Statistics
+Public sector net borrowing (J5II)
+       Gross Domestic Product, current prices, NSA (BKTL)
+International Monetary Fund
+Further reference information
+ONS, Public Sector Finances, UK: October 2026
+https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/pu
+blicsectorfinance/bulletins/publicsectorfinances/september2026
+International Monetary Fund, World Economic Outlook October 2026
+
+
+Box 1.C
+Data
+UK Public sector net borrowing as a percentage of GDP
+UK Current budget deficit as a percentage of GDP
+Primary deficit as a percentage of GDP
+Cyclically adjusted primary deficit
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Public sector net borrowing (J51I)
+       Current budget deficit (JW2T)
+       Interests and dividends to private sector (JW2L)
+       Interest and dividends from public sector (JW2M)
+       Current expenditure: Interest and dividends paid to private
+       sector (JW2P)
+       Gross Domestic Product, current prices, NSA (BKTL)
+Office for Budget Responsibility
+                                      19
+Further reference information
+Office for National Statistics, Public sector finances, UK: September
+2026, Public sector finances, UK: September 2026
+Office for Budget Responsibility, ‘Economic and fiscal outlook October
+2026’
+Office for Budget Responsibility, ‘Economic and fiscal outlook March
+2026’
+
+
+
+
+Box 1.D
+Data
+Gross debt, General government, Percent of GDP
+Net lending (+) / net borrowing (-), General government, Percent of GDP
+Data source, including ONS source code if applicable
+International Monetary Fund
+Further reference information
+'World Economic Outlook October 2026', International Monetary Fund,
+October 2026.
+
+
+Para 1.29
+Data
+Savings of Adjusted Triple Lock
+Data source, including ONS source code if applicable
+Department for Work and Pensions
+Further reference information
+‘State Pension Uprating’, Department for Work and Pensions, October
+2026
+
+
+Para 1.37
+Data
+Inflation forecast of only modest second-round effects
+Data source, including ONS source code if applicable
+Office for Budget Responsibility
+Further reference information
+Office for Budget Responsibility, ‘Economic and fiscal outlook October
+2026’, page 12
+                                    20
+Para 1.49
+Data
+Proposed DMO 2027-28 financing remit
+Data source, including ONS source code if applicable
+HM Treasury
+Further reference information
+‘Update on the Asset Purchase Facility (APF)’, HM Treasury, September
+2026.
+
+
+
+
+                                  21
+Charts and tables
+
+Chart 1.1: G7 real GDP growth in H1 2026
+Data
+Quarterly GDP and components - expenditure approach, 2025-Q4 to
+2026-Q2
+Data source, including ONS source code if applicable
+Organisation for Economic Co-ordination and Development
+Further reference information
+OECD Data Explorer
+https://data-explorer.oecd.org/?lc=en
+
+
+Chart 1.2: Contributions to headline business investment growth (H1
+2026)
+Data
+Business investment by asset
+Data source, including ONS source code if applicable
+Office for National Statistics Series:
+NPEL (Business Investment
+EDOH (Transport equipment)
+EDOP (ICT equipment and other machinery)
+EDQZ (Other buildings and structures)
+EDRA (Intellectual property products)
+Further reference information
+Business investment by asset dataset
+https://www.ons.gov.uk/economy/grossdomesticproductgdp/datasets/
+businessinvestmentbyasset
+
+
+Chart 1.3: Measures of average annual productivity growth, per cent
+Data
+Output per hour: current approach, output per hour: component
+approach
+Data source, including ONS source code if applicable
+Office for National Statistics
+
+
+                                         22
+HM Treasury calculations: compound annual growth rates calculated
+from ONS series levels, 1997 to 2007, 2007 to 2024, 1997 to 2024.
+Further reference information
+Component approach to measuring labour productivity, UK: 1997 to
+2024
+Compound annual growth rate, using the first year of each period as
+the base year.
+https://www.ons.gov.uk/economy/economicoutputandproductivity/pro
+ductivitymeasures/methodologies/componentapproachtomeasuringla
+bourproductivityuk1997to2024
+
+
+Chart 1.4: 2026 energy weights in headline consumer price inflation
+Data
+Energy weights in headline consumer price inflation
+Data source, including ONS source code if applicable
+Office for National Statistics
+Eurostat
+Further reference information
+Office for National Statistics:
+CJXB (CPI weights: Gas)
+CJXA (CPI weights: Electricity)
+CJXR (CPI weights: Fuels and Lubricants)
+L89Y (CPI weights: Liquified Hydrocarbons)
+CJXC (CPI weights: Liquid Fuels)
+CJXD (CPI weights: Solid Fuels)
+Eurostat: Gas (ND), Electricity (ND), Fuels and lubricants for personal
+transport equipment (ND), Euro area Elec, gas and other fuels.
+https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_iw__custom_2
+3249557/default/table
+
+
+Chart 1.5: Energy market price volatility since 2010
+Data
+Front-month Brent crude oil and UK natural gas futures contracts
+Data source, including ONS source code if applicable
+Bloomberg
+HM Treasury calculations
+                                    23
+Further reference information
+Bloomberg
+
+
+Chart 1.6 Change in stability rule headroom since March 2026
+forecast
+Data
+UK Current budget deficit
+Underlying central government forecast changes
+Other underlying forecast changes
+Pre-measures forecast
+Effect of policy
+Data source, including ONS source code if applicable
+Office for Budget Responsibility
+Further reference information
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications/
+
+
+Chart 1.7: Fiscal stance
+Data
+Cyclically adjusted primary deficit as a percentage of GDP
+Primary deficit as a percentage of GDP, both March 2026 and October
+2026 forecasts
+Data source, including ONS source code if applicable
+Office for National Statistics
+Public sector net borrowing (J5II)
+Interests and dividends to private sector (JW2L)
+Interest and dividends from public sector (JW2M)
+Current expenditure: Interest and dividends paid to private sector
+(JW2P)
+Gross Domestic Product, current prices, NSA (BKTL)
+Office for Budget Responsibility
+Further reference information
+ONS, Public Sector Finances, UK: October 2026
+https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/pu
+blicsectorfinance/bulletins/publicsectorfinances/september2026
+OBR, Economic and Fiscal Outlook, March 2026
+
+                                     24
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications/
+
+
+
+
+Chart 1.8: The forecast annual change in general government borrowing in
+G20 countries between 2025 and 2026
+Data
+Net lending (+) / net borrowing (-), General government, Percent of GDP
+for 2025 and 2026
+Data source, including ONS source code if applicable
+International Monetary Fund World Economic Outlook, October 2026
+Further reference information
+World Economic Outlook Database
+https://data.imf.org/en/datasets/IMF.RES:WEO
+
+
+
+
+Chart 1.9: Public sector net borrowing and current budget deficit
+Data
+UK Public sector net borrowing
+UK Current budget deficit
+Data Source, including ONS source code if applicable
+Office for National Statistics
+       Public sector net borrowing (J51I)
+       Current budget deficit (JW2T)
+Office for Budget Responsibility
+Further reference information
+ONS, Public Sector Finances, UK: September 2026
+https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/pu
+blicsectorfinance/bulletins/publicsectorfinances/september2026
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications/
+
+
+
+
+Chart 1.10: Four measures of the public sector balance sheet
+Data
+
+
+
+                                    25
+Public sector net debt, public sector net debt excluding the Bank of
+England, public sector net financial liabilities and public sector net
+worth (inverted) - all as a percentage of GDP.
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Public sector net financial liabilities (CPOE)
+       Public sector net debt (HF6X)
+       Public sector net debt excluding the Bank of England (CPOA)
+       Public sector net worth is shown on the Government Finance
+       Statistics Manual basis – Appendix E, International Monetary
+       Fund’s Government in the public sector finances, September
+       2026 – Balance Sheet – Public Sector, Codes 6, 6M3 and 6M35
+Office for Budget Responsibility
+Further reference information
+ONS, Public Sector Finances, UK: September 2026
+https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/pu
+blicsectorfinance/bulletins/publicsectorfinances/september2026
+OBR, Economic and Fiscal Outlook, October 2025
+https://obr.uk/publications/
+
+
+Table 1.1: Overview of the OBR’s economic forecast
+Data
+Summary of OBR’s economic forecast and recent outturns (2025)
+Data source, including ONS source code if applicable
+Office for Budget Responsibility
+Office for National Statistics
+       Real GDP (YBEZ)
+       GDP per capita (YBHA/EBAQ)
+       Household final consumption expenditure (ABJR)
+       Government consumption (NMRY)
+       Change in inventories (CAFU)
+       Business investment (NPEL)
+       Government investment (DLWF)
+       Private dwellings investment (L636)
+       Exports (IKBK)
+       Imports (IKBL)
+
+                                     26
+       CPI inflation (D7BT)
+       ILO unemployment rate (MGSX)
+       Employment in millions (MGRZ)
+       RHDI four quarter growth rate (KV38)
+On 30 September, as part of the Q2 Quarterly National Accounts, the
+ONS published revisions consistent with Blue Book 2026, its annual
+update to the UK National Accounts. As these data were published after
+the OBR closed its forecast to new data, the 2025 outturn figures in
+Table 1.1 use data consistent with the OBR forecast and do not
+incorporate these subsequent revisions. The latest ONS estimate of real
+GDP growth in 2025 is 1.2%, compared with 1.3% in Table 1.1.
+Further reference information
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications
+Uses projections calculated from economic estimates, detailed
+forecasting models, and include numerous assumptions that have a
+material impact; they are therefore outside the domain of official
+statistics.
+
+
+Table 1.2 Overview of the OBR’s fiscal forecast (% GDP)
+Data
+Public sector net debt, public sector net debt excluding the Bank of
+England, public sector net financial liabilities, public sector net worth,
+general government gross debt, public sector net borrowing, public
+sector net investment, current budget deficit, cyclically adjusted public
+sector net borrowing, primary deficit, cyclically adjusted primary deficit,
+central government debt interest net of the asset purchase facility. All
+as a percentage of GDP.
+Data source, including ONS source code if applicable
+Office for Budget Responsibility
+Further reference information
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications/
+
+
+Table 1.3: Changes in borrowing since March 2026 (£ billion)
+Data
+Changes in borrowing since March 2026
+Data source, including ONS source code if applicable
+Office for Budget Responsibility
+                                    27
+Further reference information
+OBR, Economic and Fiscal Outlook, October 2026
+OBR, Economic and Fiscal Outlook, March 2026
+https://obr.uk/publications/
+
+
+Table 1.4: OBR forecast of financial transactions, excluding Bank of
+England
+Data
+Financial transactions forecast
+Data source, including ONS source code if applicable
+Office for Budget Responsibility
+Further reference information
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications/
+
+
+Table 1.5: Significant contingent liabilities since November 2025
+Data
+Significant contingent liabilities since November 2025
+Data source, including ONS source code if applicable
+HM Treasury contingent liability database and Contingent Liability
+Central Capability analysis.
+Further reference information
+HM Treasury
+
+
+
+
+                                   28
+Chapter 2
+Paragraph 2.33
+Data
+Number of employees expected to benefit from changes to
+employment expenses
+Data source, including ONS source code if applicable
+The expected number of employees expected to benefit from changes
+to employment expenses has been estimated using internal HMRC
+data on Self Assessment returns.
+Further reference information
+
+
+Paragraph 2.49
+Data
+Association between higher-risk machine games and gambling harm
+Data source, including ONS source code if applicable
+Gambling Commission
+Further reference information
+Exploring the relationship between gambling activities and Problem
+Gambling Severity Index (PGSI) scores, Gambling Commission, 2025
+
+
+
+
+                                  29
+Chapter 3
+Paragraph 3.20
+Data
+Number of carers expected to benefit in England and Wales
+Data source
+DWP estimates
+Further reference information
+In 2030/31, around 48,000 people are estimated to benefit as a result of
+the measure, including people who become newly entitled under the
+proposed taper. Of these, around 3,000 are estimated to live in Wales.
+The overall estimate is calculated by comparing modelled awards
+under the proposed taper, with awards under the existing Carer’s
+Allowance earnings limit. The Annual Survey of Hours and Earnings
+(ASHE) is used to estimate the weekly earning distribution of
+employees in England and Wales. The Family Resource Survey (FRS) is
+used to estimate the characteristics of full-time carers, including sex,
+industry, occupation and full-time or part-time employment status. FRS
+characteristic estimates are used to reweight the estimated ASHE
+distribution of weekly earnings, to produce an estimate of earnings for
+current and future Carer’s Allowance recipients.
+Estimation of beneficiaries in Wales is calculated by first segmenting
+the Welsh share of the total England and Wales Carer’s Allowance in-
+payment group and recalculating a Carer’s Allowance earnings
+distribution for Wales.
+Both estimates are sensitive to assumptions about earnings, take-up
+and carer's behavioural responses.
+
+
+
+
+                                   30
+Charts and tables
+
+Chart 3.1: Increases in prices and earnings since 2020
+Data
+ONS Consumer Price Inflation Tables, ONS Average Weekly Earnings
+Statistics
+Data source, including ONS source code if applicable
+CPI CDID: D7BT,
+Food and Drink CDID: D7BU,
+Household energy CDID: D7CH,
+Average weekly earnings CDID: K54M
+Further reference information
+Consumer price inflation tables - Office for National Statistics
+EARN01: Average weekly earnings - Office for National Statistics
+
+
+Chart 3.2: Contribution to Consumer Price Index (CPI) inflation
+Data
+Contribution to CPI inflation
+Data source, including ONS source code if applicable
+Office for National Statistics: UK CPI Inflation (D7G7)
+Further reference information
+ONS, Consumer price inflation, UK: September 2026
+CPI ANNUAL RATE 00: ALL ITEMS 2015=100 - Office for National
+Statistics
+
+
+Chart 3.3: Household expenditure on energy (electricity, gas and
+other non-motor fuels), by income decile, as a percentage of net
+household income
+Data
+Office for National Statistics, Living Costs and Food Survey, 2024-25
+Data source, including ONS source code if applicable
+Office for National Statistics, Family Spending in the UK: April 2024 to
+March 2025, Family spending workbook 1: detailed expenditure and
+trends
+Further reference information
+Family spending in the UK - Office for National Statistics
+                                     31
+Chart 3.4: Impact of decisions from Budget 2026 on households in
+2027-28, as a percentage of net income, by income decile
+Data
+Data source, including ONS source code if applicable
+HM Treasury Distributional Analysis model
+Further reference information
+For more information see 'Impact on Households' supplementary
+document (published on Budget Day)
+
+
+
+
+                                  32
+Chapter 4
+Paragraph 4.2
+Data
+Average growth rate of real household disposable income per person.
+The long-run pre-financial crisis average is defined as 1955 Q1-2008 Q1
+and post 2010 starts from 2010 Q1.
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Households: Real disposable Income, per head: Chained volume
+       measure: NRJR
+       UK resident population: EBAQ
+Further reference information
+ONS, Economic Accounts, September 2026 UK Economic Accounts -
+Office for National Statistics
+
+
+Paragraph 4.4
+Data
+G7 GDP growth in H1 2026
+Organisation for Economic Co-operation and Development
+HM Treasury calculations: growth rates calculated from OECD GDP
+levels.
+Data source, including ONS source code if applicable
+Organisation for Economic Co-operation and Development (OECD)
+Further reference information
+OECD Data Explorer • Quarterly GDP and components - expenditure
+approach - volume and price indices
+
+
+Paragraph 4.6
+Data
+UK investment as measured by annual gross fixed capital formation,
+percentage of GDP. Count of years which UK has lowest investment in
+G7
+Data source, including ONS source code if applicable
+Organisation for Economic Co-operation and Development (OECD)
+                                   33
+       Annual Gross Fixed Capital Formation, percent of GDP
+Further reference information
+OECD, Data Explorer OECD Data Explorer • NAAG Chapter 3:
+Expenditure
+
+
+Paragraph 4.7
+Data
+Annual Gross Fixed Capital Formation – General Government. percent
+of GDP. Average between 1995-2024.
+Public capital stock. percent of GDP
+Data source, including ONS source code if applicable
+Organisation for Economic Co-operation and Development, (OECD)
+       Annual Gross Fixed Capital Formation
+International Monetary Fund (IMF)
+       Investment and Capital Stock dataset.
+Further reference information
+OECD, Data Explorer OECD Data Explorer • NAAG Chapter 3:
+Expenditure
+IMF, Investment and Capital Stock Dataset (ICSD) ICSD
+
+
+Paragraph 4.8
+Data
+Business investment growth since 2024 Q2
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Gross Fixed Capital Formation: Business Investment: CVM SA
+       (NPEL)
+Further reference information
+'UK Economic Accounts', Office for National Statistics (ONS), September
+2026.
+
+
+Paragraph 4.13
+Data
+Employment rate. Rolling 3-month average.
+Young people not in education, employment or training (NEET).
+
+                                    34
+Unemployment. Rolling 3-month average.
+Data source, including ONS source code if applicable
+Office for National Statistics
+       Employment rate (16-64) (MGSR)
+       Young people not in education, employment or training
+       Economic inactivity reasons: Long Term Sick: UK: 16-64 (LF69)
+Further reference information
+ONS, Summary of labour market statistics, October 2026 A01: Summary
+of labour market statistics - Office for National Statistics
+ONS, Young people not in education, employment or training (NEET),
+UK, August 2026 Young people not in education, employment or
+training (NEET), UK - Office for National Statistics
+
+
+Paragraph 4.51
+Data
+Working hours freed because of meeting the Government’s target on
+cutting the administrative burden of regulation for businesses.
+The target is converted into employment hours using the economy-
+wide average hourly wage with a non-wage uplift applied.
+Data source, including ONS source code if applicable
+HM Treasury
+Further reference information
+HM Treasury, Technical Annex – 25% Target Methodology (Annex A)
+Annex_A_Technical_Annex_FINAL.pdf
+
+
+Paragraph 4.88
+
+Data
+Percentage of the working age population in England living in the 20
+largest functional urban areas
+Data source, including ONS source code if applicable
+OECD
+Office for National Statistics
+Further reference information
+OECD Regions, cities and local areas database, 2024.
+
+ONS population data for England, 2024
+
+
+                                   35
+Functional urban areas were ranked by working age population in their
+largest city using OECD 2024 population data. To calculate the percent
+of the working age population living in the 20 largest functional urban
+areas in England, the sum of working age population in the top 20
+ranked functional urban areas in England from the OECD 2024
+population data, was divided by the 2024 ONS estimate for the total 15-
+64 population in England.
+Paragraph 4.89
+
+Data
+Aligning the top 10 non-London cities in England with the average
+productivity gap between the lead city and other major cities as seen in
+France, Germany, and Italy calculation
+Data source, including ONS source code if applicable
+OECD Regions, cities and local areas database
+
+ONS Regional Accounts GDP
+
+ONS seasonally adjusted workforce jobs
+
+Further reference information
+OECD functional urban area Economy data for labour productivity and
+employment at place of work for UK, France, Germany, Italy in 2021.
+
+OECD UK GDP (US dollars, PPP converted) in 2021
+
+ONS Regional Economic Activity by Gross Domestic Product in 2024
+
+ONS seasonally adjusted workforce jobs in 2025
+
+The approach taken to the calculation is as follows:
+
+   •   Cities in each country were ranked based on their number of
+       employees. Average productivity for the ten largest cities outside
+       the lead city was compared to productivity in the lead city for
+       each country. The lead city was selected as the largest city in
+       France (Paris), Italy (Milan) and the UK (London). In Germany
+       Munich was chosen as the leading city despite Berlin and the
+       Ruhrgebiet having a higher number of employees. This approach
+       is consistent with Centre For Cities (2024)
+
+   •   The gap in productivity levels between large cities to leading city
+       in England was -35%. The average of the productivity gaps for
+       France (-25%), Germany (-21%), and Italy (-23%) is -23%.
+   •   Productivity across the ten largest UK cities outside London were
+       then increased to reduce the productivity gap to London from –
+       35% to –23%. The resulting percentage change in UK GDP is then
+       reweighted to an England basis using the ratio of England to UK
+                                    36
+       GDP from ONS regional GDP accounts data for 2024. This is
+       applied to 2024 England GDP from ONS regional accounts data
+       to estimate the change in GDP in £bn terms.
+   •   This was divided by the number of workforce jobs in England
+       (ONS 2025) to give a figure for the effect on GDP per worker, in £
+       terms
+
+Box 4.D
+
+Data
+Calculation for share of Scottish population that lives in the Central Belt
+Data source, including ONS source code if applicable
+ONS Regional gross domestic product: all ITL regions, 1998-2024, Table
+6
+Further reference information
+Total central belt population estimated by taking the sum of ONS
+population estimates in 2024 for the following ITL3 regions: Glasgow
+City; City of Edinburgh; North Lanarkshire; South Lanarkshire; West
+Lothian; Falkirk; East Dunbartonshire and West Dunbartonshire;
+Inverclyde, East Renfrewshire, and Renfrewshire; East Lothian and
+Midlothian; Perth and Kinross, and Stirling; Clackmannanshire and Fife;
+North Ayrshire and East Ayrshire; and South Ayrshire. The central belt
+population was then divided by the overall population estimate for
+Scotland in 2024.
+ONS Regional gross domestic product: all ITL regions, 1998-2024, Table
+6: Regional gross domestic product: all ITL regions - Office for National
+Statistics
+
+
+
+
+                                    37
+Charts and tables
+
+Chart 4.F: Productivity levels in selected city regions relative to the
+UK average, 2023
+Data
+Current Price (unsmoothed) GVA (B) per hour worked, HMT calculations
+Data source, including ONS source code if applicable
+Office for National Statistics
+Further reference information
+Subregional productivity in the UK for 2023, ONS.
+
+
+
+
+                                   38
+Chapter 5
+Charts and tables
+
+Chart 5.A: This adjustment significantly improves the long-run
+sustainability of the State Pension
+Data
+Data source, including ONS source code if applicable
+State Pension Uprating
+Further reference information
+Department for Work and Pensions, October 2026
+State Pension uprating - GOV.UK
+
+
+
+
+                                  39
+Annex A: Financing
+Charts and tables
+
+Table A.1: Financing Arithmetic 2026-27 (£ billion)
+Data
+The table shows the government’s net financing requirement, and how
+we will source the finance needed to meet this in 2026-27.
+
+
+Data source
+CGNCR ex: OBR’s Economic and Fiscal Outlook, October 2026.
+Contribution from NS&I: NS&I.
+DMO net cash position: The target end-year net cash position for the
+DMO is £2.3bn, as set out in the DMO financing remit.
+Financing adjustment: The net financing requirement from the
+previous financial year less the total financing from that year.
+Financing decisions: HM Treasury policy decision at Autumn Budget
+2026.
+Gilt redemptions: DMO website.
+Other financing: HM Treasury forecasts.
+
+
+
+
+Table A.2: Illustrative gross financing requirement (£ billion)
+
+Data
+The table shows the government’s illustrative gross financing
+requirement over the forecast period.
+Data source
+CGNCR ex: OBR’s Economic and Fiscal Outlook, October 2026.
+Gilt redemptions: DMO website.
+
+
+
+
+                                   40
+Annex B: Government
+Spending
+Table B.1: Resource Departmental Expenditure Limits
+Data
+Resource DEL: 2025-26 outturn to 2028-29 plans.
+Data source
+HM Treasury Public Spending Statistics for 2025-26 outturn
+HM Treasury, DEL plans
+Further reference information
+HM Treasury, Public Spending Statistics
+Public Expenditure Statistical Analyses 2026 - GOV.UK
+
+
+
+
+Table B.2: Capital Departmental Expenditure Limits (DEL)
+
+Data
+Capital DEL: 2025-26 outturn to 2028-29 plans.
+Data source
+HM Treasury Public Spending Statistics for 2025-26 outturn
+HM Treasury, DEL plans
+Further reference information
+HM Treasury, Public Spending Statistics
+Public Expenditure Statistical Analyses 2026 - GOV.UK
+
+
+
+
+                                  41
+Table B.3: Capital Departmental Expenditure Limits (DEL): Financial
+Transactions (FT)
+Data
+Capital DEL Financial Transactions covering outturn in 2025-26 and
+plans from 2026-27 to 2029-30.
+Data source
+HM Treasury, Public Spending Statistics for 2025-26 outturn
+HM Treasury, DEL plans
+Further reference information
+HM Treasury, Public Spending Statistics
+Public Expenditure Statistical Analyses 2026 - GOV.UK
+
+
+Table B.4: Total Managed Expenditure (TME)
+Data
+Total Managed Expenditure covering outturn in 2025-26 and plans from
+2026-27 to 2031-32.
+Data source
+HM Treasury Public Spending Statistics
+HM Treasury, DEL plans
+Office for Budget Responsibility
+Office for National Statistics
+       Total Managed Expenditure (KX5Q)
+       Public sector current expenditure (JW2Q)
+Further reference information
+HM Treasury, Public Spending Statistics
+Public Expenditure Statistical Analyses 2026 - GOV.UK
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications
+ONS, Public Sector Finances, September 2026
+Public sector finances, UK: September 2026 - Office for National
+Statistics
+
+
+
+
+                                   42
+Chart B.1: Total Managed Expenditure (% GDP)
+Data
+Total Managed Expenditure as a % of GDP, from 1946-47 to 2031-32,
+covering outturn and forecast
+Data source
+HM Treasury Public Spending Statistics
+Office for Budget Responsibility
+Office for National Statistics
+       Total Managed Expenditure, % of GDP (FZM3)
+Further reference information
+HM Treasury, Public Spending Statistics
+Public Expenditure Statistical Analyses 2026 - GOV.UK
+ONS, Public Sector Finances, UK: September 2026
+Public sector finances, UK: September 2026 - Office for National
+Statistics
+OBR, Economic and Fiscal Outlook, October 2026
+
+https://obr.uk/publications
+
+
+Chart B.2: Total Departmental Spending (TDEL)
+Data
+Total DEL (excluding Scottish Government Block Grant Adjustments):
+2025-26 outturn, and 2026-27 to 2028-29 plans.
+Data source, including ONS source code if applicable
+HM Treasury, Public Spending Statistics for 2025-26 outturn
+HM Treasury, DEL plans
+Office for Budget Responsibility, Allowance for Shortfall
+Further reference information
+HM Treasury, Public Spending Statistics
+https://www.gov.uk/government/collections/public-
+expenditurestatistical-analyses-pesa
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications
+
+
+
+
+                                   43
+Annex C: Public Sector
+Receipts and Spending
+Chart C.1: Public sector receipts 2027-28
+Data
+Public sector current receipts
+Data source, including ONS source code if applicable
+Office for Budget Responsibility
+Further reference information
+OBR, Economic and Fiscal Outlook, October 2026
+https://obr.uk/publications
+
+
+Chart C.2: Public sector spending 2027-28
+Data
+Spending on each of the main functions of government and Total
+Managed Expenditure
+Data source, including ONS source code if applicable
+Economic estimates.
+Further reference information
+These figures are calculated as economic estimates, including the
+effects of assumptions and results from economic and policy analyses
+that have a material impact, and are therefore outside the domain of
+official statistics.
+Spending allocations by function are mainly based on HM Treasury
+analyses of central government departmental plans submitted on the
+OSCAR database and local government outturn published in Public
+Expenditure Statistical Analyses 2026. The allocation of spending to
+functions is largely consistent with the United Nations’ Classifications of
+the Functions of Government (COFOG). Total Managed Expenditure
+(TME) is presented on a European System of Accounts 2010 (ESA10)
+basis and is consistent with the Office for Budget Responsibility (OBR)
+2027-28 fiscal forecast.
+‘Other expenditure’ includes general public services (including
+international services); plus recreation, culture and religion; plus
+European Union transactions.
+Figures may not sum due to rounding.
+                                     44
+The classifications used for these projections are consistent with the
+statistics published by HM Treasury in Public Expenditure Statistical
+Analyses, July 2026, available at:
+https://www.gov.uk/government/statistics/public-expenditure-
+statistical-analyses-2026
+More information on COFOG is available at:
+https://unstats.un.org/unsd/classifications/Econ/Structure
+
+
+
+
+                                   45
+
