@@ -336,14 +336,15 @@ def _pay_and_trade(year):
 )
 @pytest.mark.parametrize("year", (2028, 2029))
 def test_the_port_splits_universal_credits_tax_as_the_engine_does(year):
-    """Universal Credit takes pay as the lowest slice of income, so its tax on
-    pay falls only on pay over the personal allowance. Without a claimant
-    status, the engine relieves in full a trade profit within the £3,000
-    trading allowance. Pay and trade that both bear tax then exceed the top of
-    the allowance's band, so the households generated above never test how
-    the port splits the allowance between Universal Credit's two taxes. This
-    claimant does: the allowance they use falls short of the tax on their pay
-    in 2028-29 and exceeds it in 2029-30, and in both years taking it off the
+    """The engine counts pay as the lowest slice of income when it works out
+    the income tax Universal Credit deducts, so that tax falls only on pay
+    over the personal allowance. Without a claimant status, the engine
+    relieves in full a trade profit within the £3,000 trading allowance. Pay
+    and trade that both bear tax then exceed the top of the allowance's band,
+    so the households generated above never test how the port shares the
+    allowance between the tax on pay and the tax on trade. This claimant
+    does: the allowance they use falls short of the tax on their pay in
+    2028-29 and exceeds it in 2029-30, and in both years taking it off the
     trade first would leave a different tax on the trade."""
     outputs = ("income_tax", *UC_TAX)
 
