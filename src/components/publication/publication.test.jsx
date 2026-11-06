@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CHART_COLOURS } from "../../utils/chartTheme";
 import { render, screen } from "@testing-library/react";
 import CombinedStats from "./CombinedStats";
+import { POVERTY_FIGURES_SHOWN } from "../../utils/povertyFigures";
 import FiscalSummary from "./FiscalSummary";
 import UnavailableNotice from "./UnavailableNotice";
 import { parseTable } from "../../utils/publication/csv";
@@ -45,10 +46,17 @@ function renderStats(selectedIds, year) {
 describe("CombinedStats (UI regression)", () => {
   it("shows the combined run's statistics, not a member's", () => {
     const { container } = renderStats(["alpha", "beta"], IN_DATA);
-    // -2.75 / 10 from the combined run's own metrics row.
-    expect(screen.getByText("-0.28pp")).toBeInTheDocument();
     expect(container.textContent).not.toContain("-0.11pp");
     expect(container.textContent).not.toContain("-0.22pp");
+    // While the poverty and people-affected figures are withheld
+    // (povertyFigures.js), only the Gini card is drawn
+    if (!POVERTY_FIGURES_SHOWN) {
+      expect(container.textContent).not.toMatch(/People affected|poverty|-0\.28pp|7\.25%/);
+      expect([...container.querySelectorAll("dt")].map((term) => term.textContent)).toEqual(["Relative change in the Gini index"]);
+      return;
+    }
+    // -2.75 / 10 from the combined run's own metrics row.
+    expect(screen.getByText("-0.28pp")).toBeInTheDocument();
     expect(screen.getByText("7.25%")).toBeInTheDocument();
   });
 

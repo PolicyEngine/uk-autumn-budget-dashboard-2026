@@ -7,6 +7,7 @@ import { POLICYENGINE_HOME } from "./HomeButton";
 import logo from "@/assets/policyengine-white.svg";
 import mark from "@/assets/policyengine-teal-square.svg";
 import "./OverviewDrawer.css";
+import { POVERTY_FIGURES_SHOWN, WITHHELD_SENTENCE } from "../utils/povertyFigures";
 
 // A little over --motion-slide (250ms): the slide out has ended
 const SLIDE_MS = 300;
@@ -147,7 +148,13 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
             {/* The dialog's name: an eyebrow above the title, a short teal
                 bar then the words */}
             <p id="overview-tag" className="overview-tag">About this dashboard</p>
-            <LandingIntro headingId="overview-heading" provisional={provisional} className="overview-intro" />
+            {/* While the poverty and people-affected figures are withheld, About says so once (povertyFigures.js) */}
+            <LandingIntro
+              headingId="overview-heading"
+              provisional={provisional}
+              note={POVERTY_FIGURES_SHOWN ? null : WITHHELD_SENTENCE}
+              className="overview-intro"
+            />
           </div>
           {/* Two groups: the three views in this dashboard, as one card;
               then PolicyEngine's website, a smaller muted row that leaves */}

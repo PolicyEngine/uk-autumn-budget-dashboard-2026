@@ -3,6 +3,7 @@ import { EARLY_FILES, earlyManifestScript, takeEarlyManifest, takeEarlyResponse 
 import { isDisplayable } from "./manifest";
 import { loadArtifact, loadManifest } from "./load";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "../../test/publicationFixture";
+import { POVERTY_FIGURES_SHOWN } from "../povertyFigures";
 
 const manifest = fixtureJson("manifest.json");
 
@@ -38,7 +39,16 @@ describe("the head's early requests", () => {
   it("requests the outlook for a link to the Pre-measures forecast or a view that reads it, under the name the page reads", async () => {
     const { OUTLOOK_PATH } = await import("../livingStandards/outlook");
     const url = `${BASE_PATH}${OUTLOOK_PATH}`;
-    for (const [address, wanted] of [["/?tab=outlook&sub=poverty", 1], ["/?tab=dashboard&sub=living", 1], ["/?tab=dashboard&sub=finances", 0]]) {
+    // Population impact's Poverty reads it only while it is shown (#336);
+    // hidden, ?sub=poverty opens Public finances
+    const poverty = POVERTY_FIGURES_SHOWN ? 1 : 0;
+    for (const [address, wanted] of [
+      ["/?tab=outlook&sub=poverty", 1],
+      ["/?tab=dashboard&sub=living", 1],
+      ["/?tab=dashboard&sub=finances", 0],
+      ["/?tab=dashboard&sub=poverty", poverty],
+      ["/?sub=poverty", poverty],
+    ]) {
       window.history.replaceState({}, "", address);
       const stub = await runScript({ artifacts: false });
       expect(stub.mock.calls.filter(([called]) => called === url)).toHaveLength(wanted);
