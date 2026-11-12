@@ -3335,32 +3335,46 @@ def _reads(limit: DataLimit, names: set) -> bool:
     )
 
 
+def _direct_reader_names(variable) -> set:
+    """Names directly read by a variable and its literal helper functions.
+
+    Follow only real Python functions loaded as globals by its formulas,
+    one level deep. Do not call helpers or resolve modules, attributes or
+    callable objects. A direct reference may conservatively name a read
+    even if that helper is not called; this is not a transitive scan.
+    """
+    names = set()
+    for formula in _formulas(variable):
+        if not isinstance(formula, types.FunctionType):
+            continue
+        names |= _code_names(formula.__code__)
+        for name in _loaded_globals(formula.__code__):
+            helper = formula.__globals__.get(name)
+            if isinstance(helper, types.FunctionType):
+                names |= _code_names(helper.__code__)
+    for attribute in ("adds", "subtracts", "defined_for"):
+        values = getattr(variable, attribute, None)
+        if isinstance(values, str):
+            names.add(values)
+        elif attribute != "defined_for" and isinstance(values, (list, tuple)):
+            names |= {value for value in values if isinstance(value, str)}
+    return names
+
+
 def limit_variables(limit: DataLimit, systems=()) -> frozenset:
     """The missing input and the model variables directly reading a limit.
 
-    Derive the purchase-tax readers from installed formula names and
-    parameter paths, rather than keeping a second registry of their names.
-    Include both compared systems so a newly added reader is covered too.
-    The installed model keeps a replaced or ended reader covered.
+    Include literal defined-for conditions and directly referenced Python
+    helper functions, as well as formula names and adds/subtracts. Include
+    both compared systems so a newly added reader is covered too. The
+    installed model keeps a replaced or ended reader covered.
     """
     from policyengine_uk.system import system as installed
 
     found = {limit.missing_input}
     for system in (installed, *systems):
         for name, variable in system.variables.items():
-            names = set()
-            for formula in _formulas(variable):
-                if isinstance(formula, types.FunctionType):
-                    names |= _code_names(formula.__code__)
-            for attribute in ("adds", "subtracts"):
-                values = getattr(variable, attribute, None)
-                if isinstance(values, str):
-                    names.add(values)
-                elif isinstance(values, (list, tuple)):
-                    names |= {
-                        value for value in values if isinstance(value, str)
-                    }
-            if _reads(limit, names):
+            if _reads(limit, _direct_reader_names(variable)):
                 found.add(name)
     return frozenset(found)
 
