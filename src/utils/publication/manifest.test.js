@@ -300,18 +300,26 @@ describe("availability", () => {
   });
 
   it("labels provisional entries only", () => {
+    const beforeBudget = {
+      ...structuredClone(raw),
+      updated_at: "2026-10-27T23:59:59+00:00",
+    };
     expect(publicationLabel(manifest.measures.gamma)).toBe(PROVISIONAL_LABEL);
-    expect(publicationLabel(manifest.measures.gamma, raw)).toBe(CANDIDATE_PROVISIONAL_LABEL);
+    expect(publicationLabel(manifest.measures.gamma, beforeBudget)).toBe(CANDIDATE_PROVISIONAL_LABEL);
     expect(publicationLabel(manifest.measures.alpha)).toBe("");
-    expect(publicationLabel(manifest.measures.alpha, raw)).toBe("");
+    expect(publicationLabel(manifest.measures.alpha, beforeBudget)).toBe("");
   });
 
   it("calls provisional figures candidates while the manifest predates the Budget", () => {
-    expect(raw.basis.forecast.status).toBe("pre_budget");
-    expect(raw.budget.date).toBe("2026-10-28");
-    expect(raw.updated_at.slice(0, 10) < raw.budget.date).toBe(true);
-    expect(isCandidateManifest(raw)).toBe(true);
-    expect(provisionalLabel(raw)).toBe(CANDIDATE_PROVISIONAL_LABEL);
+    const beforeBudget = {
+      ...structuredClone(raw),
+      updated_at: "2026-10-27T23:59:59+00:00",
+    };
+    expect(beforeBudget.basis.forecast.status).toBe("pre_budget");
+    expect(beforeBudget.budget.date).toBe("2026-10-28");
+    expect(beforeBudget.updated_at.slice(0, 10) < beforeBudget.budget.date).toBe(true);
+    expect(isCandidateManifest(beforeBudget)).toBe(true);
+    expect(provisionalLabel(beforeBudget)).toBe(CANDIDATE_PROVISIONAL_LABEL);
     expect(provisionalLabel(edited((copy) => {
       copy.updated_at = "2026-10-27T23:59:59+00:00";
     }))).toBe(CANDIDATE_PROVISIONAL_LABEL);
@@ -348,7 +356,11 @@ describe("availability", () => {
   });
 
   it("shows the candidate notice before the Budget and no notice for statement figures", () => {
-    expect(provisionalNotice(raw)).toBe(CANDIDATE_PROVISIONAL_LABEL);
+    const beforeBudget = {
+      ...structuredClone(raw),
+      updated_at: "2026-10-27T23:59:59+00:00",
+    };
+    expect(provisionalNotice(beforeBudget)).toBe(CANDIDATE_PROVISIONAL_LABEL);
     expect(provisionalNotice(edited((copy) => {
       copy.updated_at = "2026-10-28T13:05:00+00:00";
     }))).toBe("");

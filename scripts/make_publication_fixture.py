@@ -22,13 +22,14 @@ import json
 import shutil
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from policyengine_uk.utils.scenario import Scenario
 
 from tests.fixed_shape_measures import module_level_modifier
 from tests.model_limit_stand_ins import PC_MINIMUM_GUARANTEE
 from tests.publication_support import PROJECTION_END, World
-from uk_budget_data import model_limits
+from uk_budget_data import model_limits, sign_off
 from uk_budget_data.data_limits import DATA_LIMITS, record
 from uk_budget_data.publication import attestations
 from uk_budget_data.publication import manifest as m
@@ -100,7 +101,13 @@ try:
                 + "\n"
             )
             World.commit_attestation(attestation_file)
-        stage(manifest, refs[key].path, **args)
+        if key == "delta":
+            # Keep the Python-derived full-receipt attestation in this
+            # synthetic fixture even while the real sign-off switch is off.
+            with patch.object(sign_off, "REQUIRED", True):
+                stage(manifest, refs[key].path, **args)
+        else:
+            stage(manifest, refs[key].path, **args)
     for key in ("alpha", "beta"):
         approve(manifest, key, "Reviewer", **args)
     world.expect("gamma", "positive", IN)

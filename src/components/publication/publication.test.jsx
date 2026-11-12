@@ -258,9 +258,12 @@ describe("BinnedHouseholdScatter", () => {
 });
 
 describe("the provisional label follows the manifest's dates", () => {
-  // The fixture manifest was last written before its own Budget date: its
-  // provisional entries are candidates. Rewritten on Budget day, they are
-  // statement figures.
+  // The generator writes the current date. This scenario explicitly
+  // predates the Budget; the untouched fixture remains the real contract.
+  const beforeBudget = parseManifest({
+    ...structuredClone(fixtureJson("manifest.json")),
+    updated_at: "2026-10-27T23:59:59+00:00",
+  });
   const budgetDay = { ...manifest, updated_at: "2026-10-28T12:30:00+00:00" };
   const scatter = {
     status: "available",
@@ -270,7 +273,7 @@ describe("the provisional label follows the manifest's dates", () => {
   };
 
   it.each([
-    ["before the Budget", manifest, CANDIDATE_PROVISIONAL_LABEL],
+    ["before the Budget", beforeBudget, CANDIDATE_PROVISIONAL_LABEL],
     ["from Budget day", budgetDay, null],
   ])("labels CombinedStats, FiscalSummary and BinnedHouseholdScatter %s", async (_, shown, label) => {
     const { default: BinnedHouseholdScatter } = await import("./BinnedHouseholdScatter");
