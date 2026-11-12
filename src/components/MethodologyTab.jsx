@@ -380,9 +380,9 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Baseline",
                   {
-                    value: "Current law.",
+                    value: "Current law, with electricity VAT held at 5% for the comparison.",
                     more: [
-                      "It has no zero rate of VAT on domestic electricity, so the zero rate in force from 1 October 2026 to 31 March 2027 counts as part of the Budget's zero rate, as Table 6.1 counts it.",
+                      "Current law zero-rates domestic electricity in Great Britain from 1 October 2026 to 31 March 2027; Northern Ireland remains at 5%. We hold the baseline at 5% for those months so the comparison includes the existing winter relief, as Table 6.1 does. The measure covers Great Britain from October 2026 to June 2027, with Northern Ireland included from April 2027 as the Budget expects.",
                       <>
                         Fuel duty is 60.59p a litre from April 2027 (
                         <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>).
