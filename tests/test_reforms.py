@@ -732,9 +732,12 @@ def test_electricity_vat_in_northern_ireland_from_april_2027(year, saving):
     "age, relieved", [(20, False), (21, True), (24, True), (25, False)]
 )
 def test_employer_ni_on_30000_pounds_by_age(age, relieved):
-    """2027-28: 15% of £30,000 - £5,000, £3,750, unless 21 to 24. Under-21s
-    already have the relief in law, so the measure leaves them as the
-    model has them."""
+    """2027-28: 15% of £30,000 - £5,000, £3,750, from age 21, unless the
+    measure relieves it (21 to 24). Under-21s already have the relief in
+    law (Social Security Contributions and Benefits Act 1992 s. 9A): from
+    policyengine-uk 2.160.0 the model charges them nothing up to the upper
+    secondary threshold, £50,270 a year, so the measure leaves them at
+    £0."""
     year = 2027
     sit = situation(
         {"worker": {"age": {year: age}, "employment_income": {year: 30_000}}}
@@ -742,8 +745,9 @@ def test_employer_ni_on_30000_pounds_by_age(age, relieved):
     baseline, reformed = change(
         "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
     )
-    assert baseline == pytest.approx(3_750, abs=PENNY)
-    assert reformed == pytest.approx(0 if relieved else 3_750, abs=PENNY)
+    in_law = 0 if age < 21 else 3_750
+    assert baseline == pytest.approx(in_law, abs=PENNY)
+    assert reformed == pytest.approx(0 if relieved else in_law, abs=PENNY)
     # Wages are fixed, so the household's income does not move
     income = change(
         "employer_ni_relief_under_25s", sit, "household_net_income", year
