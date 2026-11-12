@@ -92,6 +92,18 @@ AREA_CODE_PATHS = {
     "src/uk_budget_data/publication/combine.py": (
         "How a package's members are composed into one run."
     ),
+    "src/uk_budget_data/publication/phase_recipe.py": (
+        "Resolves the common policy basis and trusted ordered modifier leaves "
+        "into the actual executable area comparison."
+    ),
+    "src/uk_budget_data/publication/receipt.py": (
+        "Binds and assembles the ordered executable comparisons used by area "
+        "runs, as well as their source and approval identities."
+    ),
+    "src/uk_budget_data/publication/template_proof.py": (
+        "Source-bound modifier proof and cardinality checks used by receipt "
+        "validation."
+    ),
     # -- what the area run withholds -------------------------------------------
     "src/uk_budget_data/data_limits.py": (
         "Data limits: a measure touching one writes no area tables."
@@ -167,11 +179,6 @@ AREA_CODE_EXEMPT = {
         "Reads the publication manifest (which reforms are approved); the "
         "approvals are checked by status and key, not through this code's "
         "figures."
-    ),
-    "src/uk_budget_data/publication/receipt.py": (
-        "Binds scenario identities and checks the approved commit. A change "
-        "in how it hashes changes the recorded definitions, which publish "
-        "index recomputes and compares, so it refuses rather than passes."
     ),
     "src/uk_budget_data/publication/release_index.py": (
         "Writes and checks area_provenance.json: the record, not the tables."

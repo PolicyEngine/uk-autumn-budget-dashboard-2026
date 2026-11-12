@@ -528,13 +528,15 @@ def built(world, modifier=None):
     built with the scenario, as generation compares them on a real run."""
 
     def build(dataset, scenario=None):
+        from uk_budget_data.forecast import with_forecast
+
         sim = world.sim()
+        actual = with_forecast(scenario)
         if modifier is not None:
-            scenario = Scenario(
-                parameter_changes=getattr(scenario, "parameter_changes", None),
-                simulation_modifier=modifier,
-            )
-        underlying = Simulation(situation=household(), scenario=scenario)
+            # The stand-in model's fix marker is additional fixture setup;
+            # preserve the actual comparison and all its native phases.
+            actual = actual + Scenario(simulation_modifier=modifier)
+        underlying = Simulation(situation=household(), scenario=actual)
         sim.tax_benefit_system = underlying.tax_benefit_system
         sim.get_holder = underlying.get_holder
         return sim

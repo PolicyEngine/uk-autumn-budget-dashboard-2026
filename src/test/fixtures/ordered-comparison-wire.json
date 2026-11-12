@@ -1,11 +1,11 @@
 {
-  "api_source": "PolicyEngine/policyengine.py:src/policyengine/provenance/ordered_scenario.py",
-  "api_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+  "api_source": "PolicyEngine/policyengine.py@12300f3b335a3c377117d1afc30ada0d62ff1b18:src/policyengine/provenance/ordered_scenario.py",
+  "api_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
   "combined": {
     "dashboard": {
       "composition": {
         "baseline_plan": {
-          "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+          "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
           "after": {
             "modifier_leaves": [],
             "parameter_changes": {}
@@ -519,7 +519,7 @@
         },
         "method": "resolved_common_policy_phases/v1",
         "reform_plan": {
-          "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+          "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
           "after": {
             "modifier_leaves": [
               {
@@ -1055,6 +1055,13 @@
         "reform_sha256": "0915abcc81b199e76839b636def46d63fbfbaa25ec29d35e66d1cb3bd88ea505",
         "representation": "policyengine-uk.scenario/v1"
       },
+      "key": "combined:a+b+c+d",
+      "measure_ids": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
       "members": [
         {
           "baseline": {
@@ -1066,7 +1073,7 @@
           },
           "baseline_bound": true,
           "baseline_delta": {
-            "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+            "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
             "after": {
               "modifier_leaves": [],
               "parameter_changes": {}
@@ -1082,11 +1089,11 @@
             "binding": "code_revision",
             "kind": "reform",
             "name": "a",
-            "reform_sha256": "d854c3d9bcec4670759b3fcd20b043f1964b03272dfd33413d5ebc2273dbff81",
+            "reform_sha256": "cbf1110a5fa11bbab9750e56b91c18174fc95b21902ade7f424c9087c95ddbf2",
             "representation": "policyengine-uk.phased_scenario_composition/v1"
           },
           "reform_delta": {
-            "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+            "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
             "after": {
               "modifier_leaves": [],
               "parameter_changes": {}
@@ -1217,7 +1224,7 @@
           },
           "baseline_bound": false,
           "baseline_delta": {
-            "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+            "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
             "after": {
               "modifier_leaves": [],
               "parameter_changes": {}
@@ -1233,11 +1240,11 @@
             "binding": "code_revision",
             "kind": "reform",
             "name": "b",
-            "reform_sha256": "9bbbd05609cd73c4dd7973c95a0d0b72243113f3cd8f98e67c242eebf94b8a10",
+            "reform_sha256": "eb02cc34785c089f21086b02a5a6d7f5615303a9742619a7933ceba4bb3734ce",
             "representation": "policyengine-uk.phased_scenario_composition/v1"
           },
           "reform_delta": {
-            "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+            "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
             "after": {
               "modifier_leaves": [],
               "parameter_changes": {}
@@ -1368,7 +1375,7 @@
           },
           "baseline_bound": false,
           "baseline_delta": {
-            "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+            "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
             "after": {
               "modifier_leaves": [],
               "parameter_changes": {}
@@ -1384,11 +1391,11 @@
             "binding": "code_revision",
             "kind": "reform",
             "name": "c",
-            "reform_sha256": "1b2acc1c593a41b19bf8344b598fc111822a3a2224227ffb94712d4895b17abc",
+            "reform_sha256": "a9be36d2b16a5a1eb6532efbb47cb0617278ffa7ae8712f16c632f2d5c0246e9",
             "representation": "policyengine-uk.phased_scenario_composition/v1"
           },
           "reform_delta": {
-            "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+            "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
             "after": {
               "modifier_leaves": [
                 {
@@ -1519,7 +1526,7 @@
           },
           "baseline_bound": false,
           "baseline_delta": {
-            "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+            "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
             "after": {
               "modifier_leaves": [],
               "parameter_changes": {}
@@ -1535,11 +1542,11 @@
             "binding": "code_revision",
             "kind": "reform",
             "name": "d",
-            "reform_sha256": "43852edffdd83f915f7ee780ad0f65b7b9b85a9a15733f0e341398eb6fca3968",
+            "reform_sha256": "7a655c985606b85c1edebfa2440c9d95cfc59f6c4118606c1980d88b5df0a26d",
             "representation": "policyengine-uk.phased_scenario_composition/v1"
           },
           "reform_delta": {
-            "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+            "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
             "after": {
               "modifier_leaves": [
                 {
@@ -1680,17 +1687,22 @@
         "representation": "policyengine-uk.scenario/v1"
       },
       "model": {
-        "version": "2.174.1"
+        "install_origin": null,
+        "name": "policyengine-uk",
+        "version": "2.174.1",
+        "wheel_sha256": null,
+        "wheel_sha256_evidence": null
       },
       "reform": {
         "binding": "code_revision",
         "kind": "reform",
         "name": "a+b+c+d",
-        "reform_sha256": "395f12411a8ef9449c9490013055558806ee8fcca3458ae060bb494e31517c54",
+        "reform_sha256": "05fddb753ebf042fc2df02724a6d755fd3166f195184561e818a70d8ccf0bc68",
         "representation": "policyengine-uk.phased_scenario_composition/v1"
       }
     }
   },
+  "declared_source_project_version": "6.17.2",
   "native_policy_comparison": {
     "common_policy_reference": {
       "identity": {
@@ -2114,6 +2126,7 @@
       "resolved_common_policy/v1",
       "resolved_common_policy_phases/v1"
     ],
+    "required_model_version_floor": "2.174.1",
     "required_model_versions": [
       "2.174.1"
     ],
@@ -2125,9 +2138,13 @@
       "uk-budget-dashboard/policy-comparison/v2"
     ]
   },
-  "notice": "SYNTHETIC SOURCE EXPERIMENT FIXTURES ONLY; no model outputs, certificate or installed release claim. CodeRevision a*40 is explicitly synthetic metadata; identities/plans come from the actual recorded API source.",
+  "notice": "SYNTHETIC METADATA-ONLY SOURCE-WHEEL EXPERIMENT; no model outputs or certificate. Actual committed source12300f3b; declared source project6.17.2 is NOT released PyPI6.17.2. CodeRevision a*40 is explicitly synthetic. The complete model identity is read by the official installed-package helper and ModelIdentity parser.",
   "single": {
     "dashboard": {
+      "key": "synthetic_single",
+      "measure_ids": [
+        "synthetic_single"
+      ],
       "modifier_templates": {
         "baseline": [
           null
@@ -2138,7 +2155,7 @@
       },
       "policy_comparison": {
         "baseline_delta": {
-          "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+          "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
           "after": {
             "modifier_leaves": [],
             "parameter_changes": {}
@@ -2259,7 +2276,7 @@
           }
         },
         "baseline_plan": {
-          "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+          "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
           "after": {
             "modifier_leaves": [],
             "parameter_changes": {}
@@ -2881,7 +2898,7 @@
           "schema": "uk-budget-dashboard/common-policy-reference/v1"
         },
         "reform_delta": {
-          "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+          "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
           "after": {
             "modifier_leaves": [
               {
@@ -3002,7 +3019,7 @@
           }
         },
         "reform_plan": {
-          "adapter_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+          "adapter_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
           "after": {
             "modifier_leaves": [
               {
@@ -3213,20 +3230,26 @@
         "binding": "code_revision",
         "kind": "reform",
         "name": "synthetic_single baseline",
-        "reform_sha256": "d854c3d9bcec4670759b3fcd20b043f1964b03272dfd33413d5ebc2273dbff81",
+        "reform_sha256": "cbf1110a5fa11bbab9750e56b91c18174fc95b21902ade7f424c9087c95ddbf2",
         "representation": "policyengine-uk.phased_scenario_composition/v1"
       },
       "model": {
-        "version": "2.174.1"
+        "install_origin": null,
+        "name": "policyengine-uk",
+        "version": "2.174.1",
+        "wheel_sha256": null,
+        "wheel_sha256_evidence": null
       },
       "reform": {
         "binding": "code_revision",
         "kind": "reform",
         "name": "synthetic_single",
-        "reform_sha256": "43852edffdd83f915f7ee780ad0f65b7b9b85a9a15733f0e341398eb6fca3968",
+        "reform_sha256": "7a655c985606b85c1edebfa2440c9d95cfc59f6c4118606c1980d88b5df0a26d",
         "representation": "policyengine-uk.phased_scenario_composition/v1"
       }
     }
   },
-  "original_wire_sha256": "3ae48a0494c53c93a7a1f1adc49419c4352d2eedb046a01ccef5b119ba62218d"
+  "source_commit": "12300f3b335a3c377117d1afc30ada0d62ff1b18",
+  "source_wheel_sha256": "f841305bad4186be039d88c75c04053826b250c33e32746b824f250fd2010451",
+  "original_wire_sha256": "454e66e3c05c5d4d9fe051693fb869e5ef12983a20ae21b8cda157150a3ea9be"
 }

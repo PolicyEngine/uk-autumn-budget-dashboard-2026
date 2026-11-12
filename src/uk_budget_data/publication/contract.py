@@ -15,6 +15,7 @@ Regenerate the file with::
 
 import json
 import sys
+from importlib import metadata
 
 from uk_budget_data import (
     data_limits,
@@ -27,7 +28,14 @@ from uk_budget_data.calculators import OFFICIAL_BASES
 from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
-from uk_budget_data.publication.receipt import receipt_api
+from uk_budget_data.publication.receipt import (
+    DEFINITION_REVISION,
+    NATIVE_COMMON_POLICY_MODEL_VERSION_FLOOR,
+    NATIVE_COMMON_POLICY_MODEL_VERSIONS,
+    RESOLVED_COMMON_POLICY,
+    common_policy_reference,
+    receipt_api,
+)
 from uk_budget_data.publication.tables import (
     SCATTER_BINS,
     SCATTER_MIN_HOUSEHOLDS,
@@ -80,6 +88,43 @@ def _in_decile_order(labels) -> list[str]:
     return sorted(labels, key=position)
 
 
+def native_policy_comparison_contract() -> dict:
+    """Exact running definitions the browser must use for native recipes.
+
+    This is a content-only reference, not an executed code-revision plan.
+    The definition sentinel consequently never enters its public identity.
+    """
+    from uk_budget_data.publication.combine import SHARED_SETTINGS
+    from uk_budget_data.publication.phase_recipe import METHOD, SINGLE_SCHEMA
+
+    common = common_policy_reference(DEFINITION_REVISION)
+    installed = metadata.version("policyengine-uk")
+    if installed != common["policy_record"]["native_model_version"]:
+        raise ValueError(
+            "The installed model differs from the common-policy source record"
+        )
+    identity = common["identity"]
+    if identity.get("binding") != "content" or "code_revision" in identity:
+        raise ValueError("The common policy contract must be parameter-only")
+    if DEFINITION_REVISION.git_sha in json.dumps(identity):
+        raise ValueError(
+            "A public common reference cannot contain the definition sentinel"
+        )
+    return {
+        "common_policy_reference": common,
+        "required_model_versions": sorted(
+            NATIVE_COMMON_POLICY_MODEL_VERSIONS | {installed}
+        ),
+        "required_model_version_floor": NATIVE_COMMON_POLICY_MODEL_VERSION_FLOOR,
+        "single_schemas": [
+            "uk-budget-dashboard/policy-comparison/v1",
+            SINGLE_SCHEMA,
+        ],
+        "composition_methods": [RESOLVED_COMMON_POLICY, METHOD],
+        "shared_parameter_prefixes": list(SHARED_SETTINGS),
+    }
+
+
 def contract() -> dict:
     """Return the browser's view of the publication format."""
     return {
@@ -103,6 +148,7 @@ def contract() -> dict:
         # the build's check needs a review row for every public file.
         "sign_off_required": sign_off.REQUIRED,
         "measure_templates": list(measure_templates.TEMPLATES),
+        "native_policy_comparison": native_policy_comparison_contract(),
         # JavaScript has lowercasing but no Unicode case-fold operation.
         # Export non-identity folds, so checker names follow Python's
         # Unicode version too (for example, Straße equals STRASSE).

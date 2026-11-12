@@ -410,6 +410,8 @@ class RunPlan:
     provenance: dict
     # The other area tables in out_dir, whose records it carries
     carried: list[str]
+    # Private trusted coordinator plans; not public provenance fields.
+    execution_bindings: dict = field(default_factory=dict)
 
 
 def default_reforms(manifest: Path) -> list[str]:
@@ -543,12 +545,14 @@ def plan_run(
         )
     # As a geography run does before simulating: each reform's identities
     # are its approved receipt's.
+    execution_bindings = {}
     provenance = geography.area_provenance(
         plan.manifest,
         plan.manifest_bytes,
         chosen,
         data_root=Path(parsed.manifest).parent,
         years=plan.years,
+        execution_bindings=execution_bindings,
     )
     # The cut is the dataset publish index binds the table to
     provenance["run"]["dataset"] = {
@@ -580,6 +584,7 @@ def plan_run(
         argv=argv,
         provenance=provenance,
         carried=[path.name for path in carried],
+        execution_bindings=execution_bindings,
     )
 
 
@@ -859,8 +864,17 @@ def simulate_unit(spec: dict) -> dict:
     )
     timings: dict = {"calculate_s": {}}
     start = time.perf_counter()
+    execution_checks = []
+    runtime = (
+        {
+            "execution_binding": spec["execution_binding"],
+            "execution_checks": execution_checks,
+        }
+        if spec.get("execution_binding") is not None
+        else {}
+    )
     baseline, reformed = geography.simulate_reform(
-        reform, spec["dataset"], years
+        reform, spec["dataset"], years, **runtime
     )
     timings["build_s"] = time.perf_counter() - start
     # With no limit registered, nothing is watched (as geography).
@@ -884,6 +898,8 @@ def simulate_unit(spec: dict) -> dict:
         else []
     )
     held = geography.reform_model_limits(reform, baseline, reformed, years)
+    for recheck in execution_checks:
+        recheck()
     timings["limits_s"] = time.perf_counter() - start
     collector = geography.GeographyCollector.from_simulation(
         baseline,
@@ -1676,6 +1692,11 @@ def _execute(
                 "result": str(unit.result),
                 "arrays": str(unit.arrays),
                 "dataset_arrays": dataset_spec,
+                **(
+                    {"execution_binding": run.execution_bindings[unit.reform]}
+                    if unit.reform in run.execution_bindings
+                    else {}
+                ),
             },
         )
         unit.result.unlink(missing_ok=True)

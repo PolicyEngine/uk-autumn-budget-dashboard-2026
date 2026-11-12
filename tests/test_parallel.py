@@ -761,7 +761,7 @@ def test_a_worker_s_receipt_still_refuses_a_modifier_changed_since(
     )
     assert [r.key for r in report.written] == ["alpha"]
     assert (
-        "The modifier changed after its identity was computed"
+        "function module_level_modifier's default arguments differ from the source"
         in report.refused["retuned"]
     )
     assert not (tmp_path / "artifacts" / "retuned").exists()

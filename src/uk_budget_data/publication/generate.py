@@ -69,9 +69,11 @@ from uk_budget_data.publication.receipt import (
     CodeRevision,
     ReceiptInputs,
     ReceiptUnavailable,
+    _same_metadata,
     approved_revision,
     build_receipt_document,
     code_revision,
+    combined_execution,
     combined_identities,
     common_policy_reference,
     comparison_identity,
@@ -80,6 +82,7 @@ from uk_budget_data.publication.receipt import (
     entry_receipt,
     is_code_defect,
     load_basis,
+    measure_execution,
     measure_identities,
 )
 from uk_budget_data.publication.tables import (
@@ -308,6 +311,24 @@ def _combined_run_identities(
     composition (``receipt.combined_identities``), each side bound with the
     phase its combined Scenario runs in and each member read from the
     manifest at the revision in ``member_revisions``."""
+    from uk_budget_data.publication import phase_recipe
+
+    if any(
+        phase_recipe.structural(scenario)
+        for member in ordered
+        for scenario in (
+            member.baseline_scenario_for(config),
+            member.to_scenario(),
+        )
+    ):
+        executions, records, composition = combined_execution(
+            ordered, config, revision, member_revisions=member_revisions
+        )
+        return (
+            *(execution.identity for execution in executions),
+            records,
+            composition,
+        )
     baseline = comparison_scenario(
         combined.baseline_scenario_for(config, uses_config)
     )
@@ -396,7 +417,7 @@ def _run_reform(job: ArtifactRun) -> tuple[Reform, Optional[list]]:
     return combined.model_copy(update={"id": job.key}), ordered
 
 
-def _run_identities(
+def _run_definition(
     job: ArtifactRun, reform: Reform, members: Optional[list]
 ) -> tuple:
     """The run's (baseline, reform) identities, computed where it runs.
@@ -408,44 +429,42 @@ def _run_identities(
     these. A run whose identities differ from those it carries is refused:
     the measure changed between the two.
     """
-    if (
-        job.common_policy_reference is not None
-        and common_policy_reference(job.revision)
-        != job.common_policy_reference
+    if job.common_policy_reference is not None and not _same_metadata(
+        common_policy_reference(job.revision), job.common_policy_reference
     ):
         raise ReceiptUnavailable(
             job.key,
             "the common policy reference changed after the run was planned",
         )
     if members is None:
-        live = _scenarios(
+        executions = _scenarios(
             job.key,
-            lambda: measure_identities(reform, job.config, job.revision),
+            lambda: measure_execution(reform, job.config, job.revision),
         )
     else:
-        resolved = _scenarios(
+        executions, records, composition = _scenarios(
             job.key,
-            lambda: _combined_run_identities(
-                reform,
+            lambda: combined_execution(
                 members,
                 job.config,
                 job.revision,
-                job.uses_config_baseline,
                 member_revisions=job.member_revisions,
             ),
         )
-        live = resolved[:2]
-        if job.composition != resolved[3] or job.members != resolved[2]:
+        if not _same_metadata(
+            job.composition, composition
+        ) or not _same_metadata(job.members, records):
             raise ReceiptUnavailable(
                 job.key,
                 "the combined policy recipe changed after the run was planned",
             )
+    live = tuple(execution.identity for execution in executions)
     differing = [
         side
         for side, computed, carried in zip(
             ("baseline", "reform"), _identity_data(live), job.identities
         )
-        if computed != carried
+        if not _same_metadata(computed, carried)
     ]
     if differing:
         raise ReceiptUnavailable(
@@ -454,7 +473,14 @@ def _run_identities(
             f"{' and '.join(differing)} identity where it ran differs from "
             "the one computed when the run was planned",
         )
-    return live
+    return live, tuple(execution.runtime for execution in executions)
+
+
+def _run_identities(
+    job: ArtifactRun, reform: Reform, members: Optional[list]
+) -> tuple:
+    """Rebind the live run definition; keep the public identity-only helper."""
+    return _run_definition(job, reform, members)[0]
 
 
 def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
@@ -482,10 +508,18 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
     config = job.config
     reform, members = _run_reform(job)
     key = job.key
-    baseline_identity, reform_identity = _run_identities(job, reform, members)
+    identities, runtime = _run_definition(job, reform, members)
+    baseline_identity, reform_identity = identities
+    # Rebuild baseline selection from the trusted definitions, as the
+    # identities do, rather than trusting a mutable carried flag.
+    uses_config = (
+        any(not member.has_custom_baseline() for member in members)
+        if members is not None
+        else not reform.has_custom_baseline()
+    )
     baseline_scenario = _scenarios(
         key,
-        lambda: reform.baseline_scenario_for(config, job.uses_config_baseline),
+        lambda: reform.baseline_scenario_for(config, uses_config),
     )
     reform_scenario = _scenarios(key, reform.to_scenario)
     _refuse_wealth_tax_base(key, baseline_scenario, reform_scenario)
@@ -497,10 +531,10 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
     # input while its simulation is built carries it past the watch, so
     # the build is watched too.
     baseline = data_limits.watched_build(
-        job.build, job.dataset_path, baseline_scenario
+        job.build, job.dataset_path, runtime[0]
     )
     reformed = data_limits.watched_build(
-        job.build, job.dataset_path, reform_scenario
+        job.build, job.dataset_path, runtime[1]
     )
     _refuse_wealth_tax_built(key, baseline, reformed)
     _refuse_companion_built(
@@ -518,6 +552,20 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
         result = job.process(
             reform, config, baseline, reformed, baseline_scenario
         )
+    # The API rechecks the exact executable adapter. Rebuild the trusted
+    # raw definitions too: resolving parameters made a new complete map,
+    # so later edits to a Reform must not hide behind that frozen map.
+    after = _run_identities(job, reform, members)
+    if not _same_metadata(
+        list(_identity_data(after)), list(_identity_data(identities))
+    ):
+        raise ReceiptUnavailable(
+            key, "the executed comparison definition changed during the run"
+        )
+    from uk_budget_data.publication.phase_recipe import bound_native_scenario
+
+    for scenario in runtime:
+        bound_native_scenario(scenario)
     limits = _limits(
         baseline, reformed, baseline_scenario, reform_scenario, observed
     )
@@ -559,7 +607,7 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
             basis=job.basis,
             revision=job.revision,
             config_baseline_identity=(
-                config_baseline() if job.uses_config_baseline else None
+                config_baseline() if uses_config else None
             ),
             members=job.members,
             member_outputs=job.member_outputs,
@@ -1068,7 +1116,15 @@ def generate_artifacts(
                 combined.to_scenario(),
             )
             combine.check_consistency(
-                combined, ordered, config, list(config.years)
+                combined,
+                ordered,
+                config,
+                list(config.years),
+                **(
+                    {"revision": revision, "member_revisions": revisions}
+                    if combine.has_early_modifiers(ordered)
+                    else {}
+                ),
             )
             return (
                 combined,

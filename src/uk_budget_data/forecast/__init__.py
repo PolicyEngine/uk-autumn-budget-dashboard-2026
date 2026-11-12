@@ -148,6 +148,14 @@ def with_forecast(scenario: Optional[Scenario]) -> Scenario:
     while each modifier retains the timing declared by its scenario.
     """
     from uk_budget_data.budget_policy import pre_budget_policy_changes
+    from uk_budget_data.publication.phase_recipe import bound_native_scenario
+
+    # Only the genuine public live-bound type can carry an already-resolved
+    # comparison. It executes its own checked adapter; adding rollback again
+    # would change the plan that its receipt binds.
+    ordered = bound_native_scenario(scenario)
+    if ordered is not None:
+        return ordered
 
     baseline = Scenario(
         parameter_changes=pre_budget_policy_changes(),
@@ -157,6 +165,6 @@ def with_forecast(scenario: Optional[Scenario]) -> Scenario:
         return baseline
     combined = baseline + scenario
     before, after = combined.parts_by_data_load()
-    # Parameter-only sums have one actual phase. Return that phase rather
-    # than the aggregate flag of a mixed-timing sum with no late modifier.
+    # A sum without a late modifier has one actual phase. Return that
+    # phase rather than its aggregate mixed-timing flag.
     return before if after is None else combined

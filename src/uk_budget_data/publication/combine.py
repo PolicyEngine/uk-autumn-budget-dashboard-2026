@@ -4,15 +4,14 @@ Every combined statistic on the dashboard comes from one simulation of
 exactly the selected measures, never from adding standalone results. This
 module builds that combined measure and checks it before it is simulated.
 
-**Order.** Members are applied in order of measure id. The combined
-scenario carries the members' merged parameter changes as its own
-``parameter_changes`` and one modifier that runs each member's modifier in
-that order. policyengine-uk 2.126.12 applies a scenario's parameter changes
-first, before the steps that read parameters while a simulation is built
-(the Universal Credit rebalancing inputs, and the structural reforms that
-parameters switch on), and runs its modifier last. So every member's
-changes and modifier take effect in the combination where they do when the
-member is run alone. The receipt binds the members in the same order.
+**Order.** Members are applied in order of measure id, retaining their
+declared before/after-data-load phases. Receipted structural runs require
+the genuine ordered execution API: one common policy reference, merged
+bare parameter deltas and ordered actual modifier leaves. Workers rebind
+that complete plan from trusted member definitions. The all-after helper
+keeps its existing closure for ordinary model callers; explicit early
+modifiers use native phase sums. Receipt bindings use the original member
+leaves through the public API.
 
 On policyengine-uk 2.125.1 the engine ran a scenario's modifier before its
 parameter changes, whose rebuild then discarded the modifier's parameter
@@ -34,9 +33,12 @@ combination, and the combination must change nothing that no member
 changes.
 """
 
+import copy
 import hashlib
 import json
 from typing import Any, Callable, Optional
+
+from pydantic import PrivateAttr
 
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.artifacts import COMBINED_PREFIX
@@ -177,6 +179,18 @@ def merged_changes(measures: list[Reform], config: DataConfig) -> dict:
     return sides
 
 
+def has_early_modifiers(members):
+    """Whether a combined raw closure cannot preserve the declared phases."""
+    for member in members:
+        for scenario in (member.to_scenario(), member.to_baseline_scenario()):
+            if scenario is None:
+                continue
+            before, _ = scenario.parts_by_data_load()
+            if before is not None and before.simulation_modifier is not None:
+                return True
+    return False
+
+
 def _compose(
     parameter_changes: dict, modifiers: list[Callable]
 ) -> tuple[Optional[dict], Optional[Callable]]:
@@ -201,6 +215,51 @@ def _compose(
     return changes, apply_members
 
 
+class _PhasedCombination(Reform):
+    """Keep native phases for ordinary builders as well as receipted runs.
+
+    Receipt producers bind trusted member leaves through the genuine API;
+    these native sums are never offered as source-bindable leaf callables.
+    """
+
+    _reform_scenario: Any = PrivateAttr(default=None)
+    _baseline_scenario: Any = PrivateAttr(default=None)
+    _declared_fields: Any = PrivateAttr(default=None)
+
+    def _check_definition(self):
+        from uk_budget_data.publication.receipt import (
+            _encoded_parameters,
+            _same_metadata,
+        )
+
+        changes, baseline, modifier, baseline_modifier = self._declared_fields
+        if (
+            not _same_metadata(
+                _encoded_parameters(self.parameter_changes),
+                _encoded_parameters(changes),
+            )
+            or not _same_metadata(
+                _encoded_parameters(self.baseline_parameter_changes),
+                _encoded_parameters(baseline),
+            )
+            or self.simulation_modifier is not modifier
+            or self.baseline_simulation_modifier is not baseline_modifier
+            or self.applied_before_data_load
+            or self.baseline_applied_before_data_load
+        ):
+            raise CombineInconsistent(
+                "A phased combination changed; rebuild it from its members"
+            )
+
+    def to_scenario(self):
+        self._check_definition()
+        return self._reform_scenario
+
+    def to_baseline_scenario(self):
+        self._check_definition()
+        return self._baseline_scenario
+
+
 def combine_measures(measures: list[Reform], config: DataConfig) -> Reform:
     """One measure that applies every member, in member order.
 
@@ -216,7 +275,7 @@ def combine_measures(measures: list[Reform], config: DataConfig) -> Reform:
     reform_changes, reform_modifier = _compose(
         sides["reform"]["parameter_changes"], sides["reform"]["modifiers"]
     )
-    return Reform(
+    result = (_PhasedCombination if has_early_modifiers(ordered) else Reform)(
         id=combined_key([member.id for member in ordered]),
         name="Combined: " + ", ".join(member.name for member in ordered),
         description="One simulation of: "
@@ -226,6 +285,38 @@ def combine_measures(measures: list[Reform], config: DataConfig) -> Reform:
         baseline_parameter_changes=baseline_changes,
         baseline_simulation_modifier=baseline_modifier,
     )
+    if isinstance(result, _PhasedCombination):
+        from policyengine_uk.utils.scenario import Scenario
+
+        baseline_sources = []
+        configured = False
+        for member in ordered:
+            if member.has_custom_baseline():
+                baseline_sources.append(member.to_baseline_scenario())
+            elif not configured:
+                baseline_sources.append(config.get_baseline_scenario())
+                configured = True
+
+        def joined(sources):
+            values = [source for source in sources if source is not None]
+            if not values:
+                return None
+            value = Scenario()
+            for source in values:
+                value = value + source
+            return value
+
+        result._reform_scenario = joined(
+            [member.to_scenario() for member in ordered]
+        )
+        result._baseline_scenario = joined(baseline_sources)
+        result._declared_fields = (
+            copy.deepcopy(result.parameter_changes),
+            copy.deepcopy(result.baseline_parameter_changes),
+            result.simulation_modifier,
+            result.baseline_simulation_modifier,
+        )
+    return result
 
 
 def sample_instants(years: list[int]) -> list[str]:
@@ -306,6 +397,9 @@ def check_consistency(
     config: DataConfig,
     years: list[int],
     max_reported: int = 12,
+    *,
+    revision=None,
+    member_revisions=None,
 ) -> None:
     """Prove the combined scenario is exactly its members' changes.
 
@@ -330,21 +424,63 @@ def check_consistency(
         )
         return measure.baseline_scenario_for(config, uses_config)
 
+    # Legacy all-after helpers have the same order as their raw closure.
+    # Explicit early modifiers must instead be checked through the exact
+    # genuine adapter the published run executes; never flatten phases.
+    phased = has_early_modifiers(members)
+    if phased:
+        from uk_budget_data.publication import phase_recipe
+        from uk_budget_data.publication.receipt import code_revision
+
+        revision = revision or code_revision()
+
     for side, scenario_of in (
         ("baseline", effective_baseline),
         ("reform", lambda measure: measure.to_scenario()),
     ):
+        together_scenario = scenario_of(combined)
+        if phased:
+            configured_included = False
+            sources = []
+            for member in member_order(members):
+                if side == "baseline":
+                    bound = (
+                        member.has_custom_baseline() or not configured_included
+                    )
+                    if not bound:
+                        continue
+                    configured_included |= not member.has_custom_baseline()
+                sources.append(
+                    (
+                        scenario_of(member),
+                        (member_revisions or {}).get(member.id, revision),
+                    )
+                )
+            together_scenario = phase_recipe.bind_comparison(
+                sources, name=f"consistency combined {side}"
+            )
         together = _changed(
             parameter_snapshot(
-                scenario_of(combined), instants, f"the combined {side}"
+                together_scenario, instants, f"the combined {side}"
             ),
             plain,
         )
         explained = set()
         for member in member_order(members):
+            alone_scenario = scenario_of(member)
+            if phased:
+                alone_scenario = phase_recipe.bind_comparison(
+                    [
+                        (
+                            alone_scenario,
+                            (member_revisions or {}).get(member.id, revision),
+                        )
+                    ],
+                    name=f"consistency {member.id} {side}",
+                )
             alone = _changed(
                 parameter_snapshot(
-                    scenario_of(member), instants, f"{member.id} {side}"
+                    alone_scenario, instants, f"{member.id} {side}"
                 ),
                 plain,
             )

@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+from packaging.version import InvalidVersion, Version
 from pydantic import ValidationError
 
 from uk_budget_data import data_limits, model_limits
@@ -386,6 +387,10 @@ COMMON_POLICY_SCHEMA = "uk-budget-dashboard/common-policy-reference/v1"
 # A receipt naming it cannot opt back into the old, bare-scenario contract
 # by deleting comparison metadata or editing an untrusted basis label.
 NATIVE_COMMON_POLICY_MODEL_VERSIONS = frozenset({"2.174.1"})
+# First native current-law model supported by this comparison contract.
+# Future and same-release development builds cannot erase their recipe to
+# opt into the historical bare-scenario rules.
+NATIVE_COMMON_POLICY_MODEL_VERSION_FLOOR = "2.174.1"
 _PHASE_KEYS = {
     "reform_applied_before_data_load",
     "baseline_applied_before_data_load",
@@ -393,12 +398,10 @@ _PHASE_KEYS = {
 
 
 def comparison_scenario(scenario):
-    """The parameter-only scenario the runtime actually constructs.
+    """The effective native parameter-only comparison.
 
-    The released receipt composition v1 has one phase and requires
-    disjoint member paths. It cannot describe a before-data reference
-    followed by an after-data modifier. Refuse that case until the public
-    receipt API supports phased scenarios, rather than dropping its timing.
+    Structural runs use comparison_execution and the genuine ordered API;
+    this helper never drops a modifier or flattens its data-load timing.
     """
     from uk_budget_data.forecast import with_forecast
 
@@ -416,14 +419,54 @@ def comparison_scenario(scenario):
     return before
 
 
+def _execution_model_version(document) -> Version:
+    execution = document.get("execution_receipt")
+    model = execution.get("model") if isinstance(execution, dict) else None
+    version = model.get("version") if isinstance(model, dict) else None
+    if not isinstance(version, str):
+        raise ValueError("its execution model version is missing or invalid")
+    try:
+        return Version(version)
+    except InvalidVersion as error:
+        raise ValueError(
+            "its execution model version is not parseable"
+        ) from error
+
+
 def _requires_common_policy_reference(document) -> bool:
-    execution = document.get("execution_receipt") or {}
-    model = execution.get("model") or {}
-    return model.get("version") in NATIVE_COMMON_POLICY_MODEL_VERSIONS
+    actual = _execution_model_version(document)
+    floor = Version(NATIVE_COMMON_POLICY_MODEL_VERSION_FLOOR)
+    # Release tuples deliberately include pre/dev/local builds of the first
+    # native release. Such builds are held unless their exact recorded
+    # version matches the reviewed policy record below.
+    actual_release = actual.release + (0,) * max(0, 3 - len(actual.release))
+    floor_release = floor.release + (0,) * max(0, 3 - len(floor.release))
+    return (actual.epoch, actual_release) >= (floor.epoch, floor_release)
+
+
+def _validate_comparison_model(document, common):
+    _execution_model_version(document)
+    actual = document["execution_receipt"]["model"]["version"]
+    expected = common["policy_record"]["native_model_version"]
+    if actual != expected:
+        raise ValueError(
+            "the execution model version differs from the trusted common-policy record"
+        )
 
 
 def comparison_identity(scenario, *, name: str, revision: CodeRevision):
     """Bind the effective reference plus policy, using its actual phase."""
+    from uk_budget_data.publication import phase_recipe
+
+    if phase_recipe.structural(scenario):
+        try:
+            phase_recipe.ordered_api()
+        except ReceiptUnavailable:
+            pass  # The genuine #752 API can still bind household definitions.
+        else:
+            return comparison_execution(
+                scenario, name=name, revision=revision
+            ).identity
     try:
         effective = comparison_scenario(scenario)
     except ReceiptUnavailable:
@@ -436,8 +479,8 @@ def comparison_identity(scenario, *, name: str, revision: CodeRevision):
         try:
             # Household definitions can bind a real structural scenario
             # once the installed public API supports its actual phases.
-            # National recipes still require comparison_scenario's
-            # parameter-only contract and cannot publish a modifier here.
+            # National structural publication additionally requires the
+            # ordered execution API; this fallback binds definitions only.
             return bind_phases(
                 with_forecast(scenario),
                 code_revision=revision.as_binding(),
@@ -448,6 +491,61 @@ def comparison_identity(scenario, *, name: str, revision: CodeRevision):
                 raise
             raise ReceiptUnavailable(name, str(error)) from error
     return scenario_identity(effective, name=name, revision=revision)
+
+
+@dataclass(frozen=True)
+class ComparisonExecution:
+    """An identity and the exact trusted argument its builder executes."""
+
+    identity: Any
+    runtime: Any
+
+
+def comparison_execution(scenario, *, name, revision):
+    """Bind a structural executable plan, preserving the parameter-only path."""
+    from uk_budget_data.publication import phase_recipe
+
+    if not phase_recipe.structural(scenario):
+        return ComparisonExecution(
+            scenario_identity(
+                comparison_scenario(scenario), name=name, revision=revision
+            ),
+            scenario,
+        )
+    api, _ = receipt_api()
+    try:
+        bound = phase_recipe.bind_comparison([(scenario, revision)], name=name)
+        return ComparisonExecution(bound.identity, bound)
+    except (api.ReceiptError, ValueError) as error:
+        if is_code_defect(error):
+            raise
+        raise ReceiptUnavailable(name, str(error)) from error
+
+
+def measure_execution(reform, config, revision):
+    """A single's live identities and exact runtime plans, bound together."""
+    from uk_budget_data.publication import phase_recipe
+
+    raw = (reform.baseline_scenario_for(config), reform.to_scenario())
+    names = (f"{reform.id} baseline", reform.id)
+    if not any(phase_recipe.structural(side) for side in raw):
+        return tuple(
+            ComparisonExecution(
+                comparison_identity(side, name=name, revision=revision), side
+            )
+            for side, name in zip(raw, names)
+        )
+    api, _ = receipt_api()
+    try:
+        result = []
+        for side, name in zip(raw, names):
+            bound = phase_recipe.bind_comparison([(side, revision)], name=name)
+            result.append(ComparisonExecution(bound.identity, bound))
+        return tuple(result)
+    except (api.ReceiptError, ValueError) as error:
+        if is_code_defect(error):
+            raise
+        raise ReceiptUnavailable(reform.id, str(error)) from error
 
 
 def _encoded_parameters(value):
@@ -606,6 +704,27 @@ def _merged_deltas(records, side: str) -> dict:
 
 def comparison_metadata(reform, config, revision, *, reference=None) -> dict:
     """A single run's inspectable recipe, bound in its artifact digest."""
+    from uk_budget_data.publication import phase_recipe
+
+    raw = (reform.baseline_scenario_for(config), reform.to_scenario())
+    if any(phase_recipe.structural(side) for side in raw):
+        executions = measure_execution(reform, config, revision)
+        return {
+            "schema": phase_recipe.SINGLE_SCHEMA,
+            "common_policy_reference": (
+                reference
+                if reference is not None
+                else common_policy_reference(revision)
+            ),
+            **{
+                f"{side}_delta": phase_recipe.bare_plan(scenario, revision)
+                for side, scenario in zip(("baseline", "reform"), raw)
+            },
+            **{
+                f"{side}_plan": execution.runtime.plan.model_dump(mode="json")
+                for side, execution in zip(("baseline", "reform"), executions)
+            },
+        }
     return {
         "schema": "uk-budget-dashboard/policy-comparison/v1",
         "common_policy_reference": (
@@ -625,13 +744,14 @@ def measure_identities(reform, config, revision: CodeRevision):
 
     Both identities include the runtime's shared pre-Budget reference.
     The baseline starts with ``Reform.baseline_scenario_for`` and the
-    reform with ``Reform.to_scenario``; their effective parameter-only
-    scenarios run before data load.
+    reform with ``Reform.to_scenario``. Parameter-only comparisons run
+    before data loading; structural comparisons preserve actual phases.
     """
-    baseline = reform.baseline_scenario_for(config)
     return (
         comparison_identity(
-            baseline, name=f"{reform.id} baseline", revision=revision
+            reform.baseline_scenario_for(config),
+            name=f"{reform.id} baseline",
+            revision=revision,
         ),
         comparison_identity(
             reform.to_scenario(), name=reform.id, revision=revision
@@ -639,13 +759,208 @@ def measure_identities(reform, config, revision: CodeRevision):
     )
 
 
+def combined_execution(members, config, revision, *, member_revisions=None):
+    """Resolve actual member phases, binding and executing the common basis once."""
+    from uk_budget_data.publication import combine, phase_recipe
+
+    members = combine.member_order(members)
+    if not members:
+        raise ReceiptUnavailable("combined comparison", "nothing to combine")
+    structural = any(
+        phase_recipe.structural(scenario)
+        for member in members
+        for scenario in (
+            member.baseline_scenario_for(config),
+            member.to_scenario(),
+        )
+    )
+    if not structural:
+        combined = combine.combine_measures(members, config)
+        raw = (
+            combined.baseline_scenario_for(
+                config, any(not m.has_custom_baseline() for m in members)
+            ),
+            combined.to_scenario(),
+        )
+        baseline, reform, records, composition = combined_identities(
+            members,
+            config,
+            revision,
+            reform_applied_before_data_load=True,
+            baseline_applied_before_data_load=True,
+            member_revisions=member_revisions,
+        )
+        return (
+            tuple(
+                ComparisonExecution(identity, scenario)
+                for identity, scenario in zip((baseline, reform), raw)
+            ),
+            records,
+            composition,
+        )
+
+    api, _ = receipt_api()
+    try:
+        common = common_policy_reference(revision)
+        records, sources = [], {"baseline": [], "reform": []}
+        configured_included = False
+        for member in members:
+            own_revision = (member_revisions or {}).get(member.id, revision)
+            executions = measure_execution(member, config, own_revision)
+            bound = member.has_custom_baseline() or not configured_included
+            if bound:
+                configured_included |= not member.has_custom_baseline()
+            record = {"id": member.id, "baseline_bound": bound}
+            for side, scenario, execution in zip(
+                ("baseline", "reform"),
+                (member.baseline_scenario_for(config), member.to_scenario()),
+                executions,
+            ):
+                record[side] = execution.identity.model_dump(mode="json")
+                record[f"{side}_delta"] = phase_recipe.bare_plan(
+                    scenario, own_revision
+                )
+                if side != "baseline" or bound:
+                    sources[side].append((scenario, own_revision))
+            records.append(record)
+        name = "+".join(member.id for member in members)
+        executions = []
+        composition = {
+            "method": phase_recipe.METHOD,
+            "common_policy_reference": common,
+        }
+        for side in ("baseline", "reform"):
+            bound = phase_recipe.bind_comparison(
+                sources[side],
+                name=f"{name} baseline" if side == "baseline" else name,
+            )
+            executions.append(ComparisonExecution(bound.identity, bound))
+            composition[f"{side}_plan"] = bound.plan.model_dump(mode="json")
+        return tuple(executions), records, composition
+    except (api.ReceiptError, ValueError) as error:
+        if is_code_defect(error):
+            raise
+        raise ReceiptUnavailable("combined comparison", str(error)) from error
+
+
+def _execution_definition(
+    reform, config, revision, *, members=None, member_revisions=None
+):
+    """Private portable area plan from approved coordinator revisions.
+
+    It carries inert identities/plans, never callable locators to resolve.
+    Workers rebuild from their trusted Reform definitions and compare it.
+    """
+    if revision.git_sha == DEFINITION_REVISION.git_sha:
+        raise ReceiptUnavailable(
+            reform.id, "an executed plan requires an actual bound revision"
+        )
+    if members is None:
+        executions = measure_execution(reform, config, revision)
+        records, composition = None, None
+        comparison = comparison_metadata(reform, config, revision)
+    else:
+        executions, records, composition = combined_execution(
+            members, config, revision, member_revisions=member_revisions
+        )
+        comparison = None
+    return {
+        "schema": "uk-budget-dashboard/private-area-execution/v1",
+        "revision": revision.as_binding(),
+        "member_revisions": {
+            key: value.as_binding()
+            for key, value in (member_revisions or {}).items()
+        },
+        "identities": [
+            execution.identity.model_dump(mode="json")
+            for execution in executions
+        ],
+        "members": records,
+        "composition": composition,
+        "policy_comparison": comparison,
+    }, executions
+
+
+def execution_binding(
+    reform, config, revision, *, members=None, member_revisions=None
+):
+    """The private portable data part of an approved area execution."""
+    return _execution_definition(
+        reform,
+        config,
+        revision,
+        members=members,
+        member_revisions=member_revisions,
+    )[0]
+
+
+def rebind_execution(reform, config, binding, *, members=None):
+    """Check private carried data against actual trusted source before a build."""
+
+    def revision(value):
+        if (
+            not isinstance(value, dict)
+            or set(value) != {"repository", "git_sha"}
+            or value["repository"] != REPOSITORY
+            or not isinstance(value["git_sha"], str)
+            or _FULL_COMMIT.fullmatch(value["git_sha"]) is None
+            or value["git_sha"] == DEFINITION_REVISION.git_sha
+        ):
+            raise ReceiptUnavailable(
+                reform.id,
+                "an area execution needs its actual approved revision",
+            )
+        return CodeRevision(value["git_sha"], True)
+
+    if (
+        not isinstance(binding, dict)
+        or set(binding)
+        != {
+            "schema",
+            "revision",
+            "member_revisions",
+            "identities",
+            "members",
+            "composition",
+            "policy_comparison",
+        }
+        or binding["schema"] != "uk-budget-dashboard/private-area-execution/v1"
+    ):
+        raise ReceiptUnavailable(
+            reform.id, "the area execution binding is malformed"
+        )
+    bound = revision(binding["revision"])
+    if not isinstance(binding["member_revisions"], dict):
+        raise ReceiptUnavailable(
+            reform.id, "the area member revisions are malformed"
+        )
+    allowed = {member.id for member in members or []}
+    if set(binding["member_revisions"]) - allowed:
+        raise ReceiptUnavailable(
+            reform.id, "the area execution names unknown member revisions"
+        )
+    revisions = {
+        key: revision(value)
+        for key, value in binding["member_revisions"].items()
+    }
+    expected, executions = _execution_definition(
+        reform, config, bound, members=members, member_revisions=revisions
+    )
+    if not _same_metadata(expected, binding):
+        raise ReceiptUnavailable(
+            reform.id,
+            "the area execution changed since its approved plan was carried",
+        )
+    return executions
+
+
 def combined_identities(
     members,
     config,
     revision: CodeRevision,
     *,
-    reform_applied_before_data_load: bool,
-    baseline_applied_before_data_load: bool,
+    reform_applied_before_data_load: Optional[bool] = None,
+    baseline_applied_before_data_load: Optional[bool] = None,
     member_revisions: Optional[Mapping[str, CodeRevision]] = None,
 ):
     """Bind the resolved common reference once, then the bare member deltas.
@@ -657,6 +972,33 @@ def combined_identities(
     effective member and combined identities without misusing the released
     disjoint-path, single-phase composition representation.
     """
+    from uk_budget_data.publication import phase_recipe
+
+    if any(
+        phase_recipe.structural(scenario)
+        for member in members
+        for scenario in (
+            member.baseline_scenario_for(config),
+            member.to_scenario(),
+        )
+    ):
+        executions, records, composition = combined_execution(
+            members, config, revision, member_revisions=member_revisions
+        )
+        for execution, asserted in zip(
+            executions,
+            (
+                baseline_applied_before_data_load,
+                reform_applied_before_data_load,
+            ),
+        ):
+            before, after = execution.runtime.scenario.parts_by_data_load()
+            if asserted is not None and asserted is not (after is None):
+                raise ReceiptUnavailable(
+                    "combined comparison",
+                    "the asserted phase does not match its actual ordered execution",
+                )
+        return *(item.identity for item in executions), records, composition
     api, _ = receipt_api()
     if (
         reform_applied_before_data_load is not True
@@ -732,6 +1074,14 @@ def _identity_core(identity) -> Optional[tuple]:
     return tuple(identity.get(field) for field in _IDENTITY_FIELDS)
 
 
+def _same_metadata(left, right):
+    """Keep exact layout and JSON types, including bool versus zero/one."""
+    api, _ = receipt_api()
+    return (
+        api.content_sha256(left) == api.content_sha256(right) and left == right
+    )
+
+
 def composition_problems(document: dict) -> list[str]:
     """Ways a combined receipt's identities are not its members' composition.
 
@@ -740,14 +1090,29 @@ def composition_problems(document: dict) -> list[str]:
     execution receipt. A member whose baseline is not composed must share
     one that is (the configured baseline, applied once).
     """
+    try:
+        requires_common = _requires_common_policy_reference(document)
+    except ValueError as error:
+        return [str(error)]
     dashboard = document["dashboard"]
     members = dashboard.get("members") or []
     composition = dashboard.get("composition")
     if not members:
-        return []
+        return (
+            ["it records a composition without its member records"]
+            if composition is not None
+            else []
+        )
+    from uk_budget_data.publication import phase_recipe
+
+    if (
+        isinstance(composition, dict)
+        and composition.get("method") == phase_recipe.METHOD
+    ):
+        return _ordered_recipe_problems(document, combined=True)
     if isinstance(composition, dict) and "method" in composition:
         return _resolved_composition_problems(document)
-    if _requires_common_policy_reference(document):
+    if requires_common:
         return [
             "its native execution model requires the resolved common-policy composition"
         ]
@@ -859,6 +1224,7 @@ def _resolved_composition_problems(document: dict) -> list[str]:
     problems = []
     try:
         _validate_common_reference(common)
+        _validate_comparison_model(document, common)
         if any(
             type(record["baseline_bound"]) is not bool for record in members
         ):
@@ -897,6 +1263,118 @@ def _resolved_composition_problems(document: dict) -> list[str]:
     return problems + _shared_baseline_problems(dashboard, members)
 
 
+def _ordered_recipe_problems(document, *, combined):
+    """Rebuild official phased identities from inert plans, never callables."""
+    from uk_budget_data.publication import phase_recipe
+
+    api, _ = receipt_api()
+    dashboard = document.get("dashboard") or {}
+    recipe = dashboard.get("composition" if combined else "policy_comparison")
+    try:
+        expected_keys = {
+            "common_policy_reference",
+            "baseline_plan",
+            "reform_plan",
+        }
+        expected_keys |= (
+            {"method"}
+            if combined
+            else {"schema", "baseline_delta", "reform_delta"}
+        )
+        if not isinstance(recipe, dict) or set(recipe) != expected_keys:
+            raise ValueError("invalid ordered comparison recipe")
+        if combined:
+            if recipe["method"] != phase_recipe.METHOD:
+                raise ValueError("unsupported ordered composition method")
+        elif recipe["schema"] != phase_recipe.SINGLE_SCHEMA:
+            raise ValueError("unsupported ordered single schema")
+        common = recipe["common_policy_reference"]
+        _validate_common_reference(common)
+        _validate_comparison_model(document, common)
+        ordered_api = phase_recipe.ordered_api()
+        members = dashboard.get("members") or []
+        problems = []
+        if combined:
+            ids = [record["id"] for record in members]
+            if (
+                not ids
+                or ids != sorted(set(ids))
+                or any(not isinstance(key, str) or not key for key in ids)
+            ):
+                raise ValueError(
+                    "ordered member ids must be unique and canonical"
+                )
+            for record in members:
+                if (
+                    set(record)
+                    != {
+                        "id",
+                        "baseline",
+                        "reform",
+                        "baseline_bound",
+                        "baseline_delta",
+                        "reform_delta",
+                    }
+                    or type(record["baseline_bound"]) is not bool
+                ):
+                    raise ValueError("invalid ordered member record")
+                for side in ("baseline", "reform"):
+                    api.ReformIdentity.model_validate(record[side])
+                    plan = phase_recipe.resolve_plan(
+                        common, [record[f"{side}_delta"]]
+                    )
+                    rebuilt = ordered_api.ordered_scenario_reform_identity(
+                        plan
+                    )
+                    if _identity_core(record[side]) != _identity_core(
+                        rebuilt.model_dump(mode="json")
+                    ):
+                        problems.append(
+                            f"member {record['id']}'s {side} identity does not bind its common reference and ordered delta"
+                        )
+        for side in ("baseline", "reform"):
+            deltas = (
+                [
+                    record[f"{side}_delta"]
+                    for record in members
+                    if side != "baseline" or record["baseline_bound"]
+                ]
+                if combined
+                else [recipe[f"{side}_delta"]]
+            )
+            plan = phase_recipe.resolve_plan(common, deltas)
+            recorded = ordered_api.ordered_scenario_reform_identity(
+                recipe[f"{side}_plan"]
+            )
+            identity = ordered_api.ordered_scenario_reform_identity(plan)
+            if plan != recipe[f"{side}_plan"] or _identity_core(
+                recorded.model_dump(mode="json")
+            ) != _identity_core(identity.model_dump(mode="json")):
+                problems.append(
+                    f"its {side} plan does not resolve its common reference and ordered member deltas"
+                )
+            api.ReformIdentity.model_validate(
+                document["execution_receipt"][side]
+            )
+            if _identity_core(
+                document["execution_receipt"][side]
+            ) != _identity_core(identity.model_dump(mode="json")):
+                problems.append(
+                    f"its {side} identity does not bind its actual ordered execution plan"
+                )
+        return problems + (
+            _shared_baseline_problems(dashboard, members) if combined else []
+        )
+    except (
+        api.ReceiptError,
+        ReceiptUnavailable,
+        ValueError,
+        KeyError,
+        TypeError,
+    ) as error:
+        return [f"its ordered comparison cannot be reconstructed: {error}"]
+
+
 def _validate_common_reference(common):
     from uk_budget_data.budget_policy import (
         policy_record,
@@ -924,12 +1402,13 @@ def _validate_common_reference(common):
         raise ValueError(
             "the common policy source record has a different digest"
         )
-    if common["policy_record"] != policy_record():
+    if not _same_metadata(common["policy_record"], policy_record()):
         raise ValueError(
             "the common policy source record differs from the running definitions"
         )
-    if common["parameter_changes"] != _encoded_parameters(
-        pre_budget_policy_changes()
+    if not _same_metadata(
+        common["parameter_changes"],
+        _encoded_parameters(pre_budget_policy_changes()),
     ):
         raise ValueError(
             "the common policy parameters differ from their source record"
@@ -950,24 +1429,36 @@ def _validate_common_reference(common):
 
 def _comparison_metadata_problems(document):
     """Validate a single's effective identities against its recorded recipe."""
+    try:
+        requires_common = _requires_common_policy_reference(document)
+    except ValueError as error:
+        return [str(error)]
     dashboard = document.get("dashboard") or {}
     comparison = dashboard.get("policy_comparison")
+    if (
+        not dashboard.get("members")
+        and dashboard.get("composition") is not None
+    ):
+        return ["it records a composition without its member records"]
     if dashboard.get("members"):
         if comparison is not None:
             return [
                 "a combined run must use its common-policy composition, not a single recipe"
             ]
-        return (
-            composition_problems(document)
-            if _requires_common_policy_reference(document)
-            else []
-        )
+        return composition_problems(document)
     if comparison is None:
-        if _requires_common_policy_reference(document):
+        if requires_common:
             return [
                 "its native execution model requires an explicit common-policy comparison"
             ]
         return []  # Historical receipts did not use a shared policy reference.
+    from uk_budget_data.publication import phase_recipe
+
+    if (
+        isinstance(comparison, dict)
+        and comparison.get("schema") == phase_recipe.SINGLE_SCHEMA
+    ):
+        return _ordered_recipe_problems(document, combined=False)
     api, _ = receipt_api()
     try:
         if (
@@ -985,6 +1476,7 @@ def _comparison_metadata_problems(document):
             raise ValueError("invalid single-policy comparison recipe")
         common = comparison["common_policy_reference"]
         _validate_common_reference(common)
+        _validate_comparison_model(document, common)
         problems = []
         for side in ("baseline", "reform"):
             delta = _delta_scenario(comparison[f"{side}_delta"])

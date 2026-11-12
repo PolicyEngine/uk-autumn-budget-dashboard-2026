@@ -487,7 +487,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -951,7 +955,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -1418,7 +1426,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -1888,7 +1900,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -2358,7 +2374,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -2822,7 +2842,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -3286,7 +3310,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -3750,7 +3778,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -4214,7 +4246,11 @@
           "representation": "policyengine-uk.scenario/v1"
         },
         "model": {
-          "version": "2.174.1"
+          "install_origin": null,
+          "name": "policyengine-uk",
+          "version": "2.174.1",
+          "wheel_sha256": null,
+          "wheel_sha256_evidence": null
         },
         "reform": {
           "binding": "content",
@@ -4226,8 +4262,9 @@
       }
     }
   ],
-  "installed_api_path": "policyengine==6.17.2:policyengine/provenance/receipt.py",
-  "installed_api_sha256": "f9fe5dc0abad00bd39b33a3c9c70bc5bf59c69bd8c5e3c1ea5dc959ab239047a",
+  "installed_api_path": "policyengine==6.18.0:policyengine/provenance/receipt.py",
+  "installed_api_sha256": "bf7b6530fd86413d89b19c001c442c13b3b2cb81ab2a3625c2f47fedf2c10bb2",
+  "installed_wrapper_version": "6.18.0",
   "native_policy_comparison": {
     "common_policy_reference": {
       "identity": {
@@ -4651,6 +4688,7 @@
       "resolved_common_policy/v1",
       "resolved_common_policy_phases/v1"
     ],
+    "required_model_version_floor": "2.174.1",
     "required_model_versions": [
       "2.174.1"
     ],
@@ -4662,6 +4700,6 @@
       "uk-budget-dashboard/policy-comparison/v2"
     ]
   },
-  "notice": "METADATA-ONLY native9 compatibility fixtures from genuine installed policyengine6.17.2/UK2.174.1. No simulation, outputs, certificate or sourceAPI release claim. Synthetic revision a*40 never enters these content-bound identities.",
-  "original_wire_sha256": "6583672205f359dd58d600b7a25843504423e19e8a01326931be696671455d77"
+  "notice": "METADATA-ONLY native9 compatibility fixtures from genuine installed policyengine6.18.0/UK2.174.1. No simulation, outputs, certificate or sourceAPI release claim. Synthetic revision a*40 never enters these content-bound identities.",
+  "original_wire_sha256": "6657531fd2a9c5559476050fc763f213ea26ac952c52da0ea5601a29b4d0a008"
 }

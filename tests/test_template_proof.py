@@ -270,14 +270,17 @@ def test_combined_proofs_preserve_every_member_and_both_sides():
         "reform": [],
     }
 
+    # Distinct member ids retain two occurrences of the same actual leaf.
+    # The combined execution applies canonical member order within a phase.
+    second_pure = pure.model_copy(update={"id": "pure2"})
     assert combined_templates_proof(
-        [pure, manual, pure], config, REVISION
+        [pure, manual, second_pure], config, REVISION
     ) == {
         "baseline": [
             ["apply_benefit_receipt_payment"],
             ["apply_benefit_receipt_payment"],
         ],
-        "reform": [["apply_vat_base_change"], None, ["apply_vat_base_change"]],
+        "reform": [None, ["apply_vat_base_change"], ["apply_vat_base_change"]],
     }
 
 
@@ -285,6 +288,9 @@ def test_native_generation_refuses_structural_members_without_artifact_recipes(
     monkeypatch,
 ):
     world = World()
+    monkeypatch.setitem(
+        sys.modules, "policyengine.provenance.ordered_scenario", None
+    )
     monkeypatch.setattr(
         generate, "code_revision", lambda root: world.revision()
     )

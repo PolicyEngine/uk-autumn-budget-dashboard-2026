@@ -372,4 +372,41 @@ def test_each_households_measure_changes_its_net_income(household):
         household, reform.baseline_scenario_for(DataConfig()), [year]
     )[year]
     after = calculator.simulate(household, reform.to_scenario(), [year])[year]
+    if household.measure_id == "fuel_duty_rise_deferral":
+        from policyengine_uk import Simulation
+
+        from uk_budget_data.forecast import with_forecast
+
+        # Actual pre-Budget duty reaches 60.03p in April 2027; native law
+        # reaches 60.59p in July. The annual saving on this household's
+        # fuel is consequently less than £10, including VAT. Test the
+        # duty-and-VAT arithmetic rather than a historical chart floor.
+        situation = build_situation(household, [year], points=11)
+        pre = Simulation(
+            situation=situation,
+            scenario=with_forecast(reform.baseline_scenario_for(DataConfig())),
+        )
+        selected = Simulation(
+            situation=situation, scenario=with_forecast(reform.to_scenario())
+        )
+        instant = f"{year}-01-01"
+        pre_parameters = pre.tax_benefit_system.parameters(instant).gov.hmrc
+        selected_parameters = selected.tax_benefit_system.parameters(
+            instant
+        ).gov.hmrc
+        litres = pre.calculate("petrol_litres", year)
+        np.testing.assert_array_equal(
+            selected.calculate("petrol_litres", year), litres
+        )
+        expected = (
+            (
+                pre_parameters.fuel_duty.petrol_and_diesel
+                - selected_parameters.fuel_duty.petrol_and_diesel
+            )
+            * litres
+            * (1 + selected_parameters.vat.standard_rate)
+        )
+        assert np.all((expected > 0) & (expected < 10))
+        np.testing.assert_allclose(after - before, expected, atol=0.02, rtol=0)
+        return
     assert np.max(np.abs(after - before)) >= 10

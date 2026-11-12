@@ -173,8 +173,13 @@ def pure_templates(modifier, revision) -> list[str] | None:
 
 def scenario_templates(scenario, revision) -> list:
     """One proof per modifier on a scenario; parameter-only sides have none."""
-    modifier = getattr(scenario, "simulation_modifier", None)
-    return [] if modifier is None else [pure_templates(modifier, revision)]
+    if scenario is None:
+        return []
+    return [
+        pure_templates(part.simulation_modifier, revision)
+        for part in scenario.parts_by_data_load()
+        if part is not None and part.simulation_modifier is not None
+    ]
 
 
 def measure_templates_proof(reform, config, revision) -> dict:
@@ -189,20 +194,35 @@ def measure_templates_proof(reform, config, revision) -> dict:
 
 def combined_templates_proof(members, config, revision) -> dict:
     """Member proofs in the same application order as combined_identities."""
-    result = {"baseline": [], "reform": []}
+    from uk_budget_data.publication.combine import member_order
+
+    phases = {side: [[], []] for side in ("baseline", "reform")}
     configured_included = False
-    for member in members:
-        proof = measure_templates_proof(member, config, revision)
+    for member in member_order(members):
         bound = member.has_custom_baseline() or not configured_included
         if bound:
-            result["baseline"].extend(proof["baseline"])
             configured_included |= not member.has_custom_baseline()
-        result["reform"].extend(proof["reform"])
-    return result
+        for side, scenario in (
+            ("baseline", member.baseline_scenario_for(config)),
+            ("reform", member.to_scenario()),
+        ):
+            if scenario is None or (side == "baseline" and not bound):
+                continue
+            for index, part in enumerate(scenario.parts_by_data_load()):
+                if part is not None and part.simulation_modifier is not None:
+                    phases[side][index].append(
+                        pure_templates(part.simulation_modifier, revision)
+                    )
+    return {side: before + after for side, (before, after) in phases.items()}
 
 
 def modifier_counts(document: dict) -> dict:
     """Number of bound modifiers, from identities already checked by the gate."""
+    from uk_budget_data.publication.phase_recipe import leaf_counts
+
+    ordered = leaf_counts(document)
+    if ordered is not None:
+        return ordered
     dashboard = document.get("dashboard") or {}
     members = dashboard.get("members") or []
     execution = document.get("execution_receipt") or {}
@@ -234,7 +254,12 @@ def record_problems(document: dict) -> list[str]:
             "its modifier templates are not recorded as baseline and reform"
         ]
     known = registered_templates()
-    counts = modifier_counts(document)
+    try:
+        counts = modifier_counts(document)
+    except (ValueError, TypeError, KeyError, RuntimeError) as error:
+        return [
+            f"its ordered modifier template counts cannot be verified: {error}"
+        ]
     problems = []
     hand_written = False
     for side in ("baseline", "reform"):

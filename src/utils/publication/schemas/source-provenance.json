@@ -1,21 +1,34 @@
 {
   "repository": "PolicyEngine/policyengine.py",
-  "base_commit": "6c5590394d7435461cb72f9afb7270dc12be0c73",
-  "status": "unreleased source checkpoint; no package release or installed bundle claim",
-  "runtime_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
-  "source_manifest_sha256": "78727d6b2ee90c3370b89275f3620ed88e5adaf83d67b91ceab0d322a767b133",
+  "commit": "12300f3b335a3c377117d1afc30ada0d62ff1b18",
+  "status": "committed source checkpoint; no published package or installed default-bundle claim",
+  "runtime_source_sha256": "692a6848be3e366a1243fe50668b152692374c88fd4cc94bd67008b78157519c",
+  "source_manifest_sha256": "89ab9119964814911a8128126151f4123f2b3b2f299dcded1527ddcecbd5ae61",
+  "source_wheel_experiment": {
+    "wheel_sha256": "f841305bad4186be039d88c75c04053826b250c33e32746b824f250fd2010451",
+    "declared_version": "6.17.2",
+    "release_claim": false,
+    "notice": "We built this wheel from the recorded source commit. Its declared version does not identify the released PyPI 6.17.2 artifact."
+  },
   "files": [
     {
       "path": "execution_receipt.v1.schema.json",
+      "upstream_path": "src/policyengine/data/schemas/execution_receipt.v1.schema.json",
+      "git_blob_sha1": "ac1a688c3bfa621f2606e1217fc47a4f5a11ad87",
       "sha256": "6f40926cb8b86ec14fc8d9fbf487cae692189a806d9227b9b489ab08a5fc092a"
     },
     {
       "path": "ordered_scenario_plan.v1.schema.json",
+      "upstream_path": "src/policyengine/data/schemas/ordered_scenario_plan.v1.schema.json",
+      "git_blob_sha1": "6fa0ade2b29ca8bf96b4ed8c820b955317fb458e",
       "sha256": "17202db73d38dbff04fe3f2c22388d4d899cdfb31479d1fd8de114435d92e180"
     },
     {
       "path": "ordered_scenario_plan.v1.vectors.json",
-      "sha256": "e299b5761eb781677eb0d049f162f452a96bbc164c20d4d6d5957bb0f5324947"
+      "upstream_path": "src/policyengine/data/schemas/ordered_scenario_plan.v1.vectors.json",
+      "git_blob_sha1": "374c7802a9f9dac216ebad6c4d2a600111e62963",
+      "sha256": "8d1bcd7cffe64735b4c44ece11820b240ccb3605a756db1c19cbd99e47efb87b"
     }
-  ]
+  ],
+  "commit_url": "https://github.com/PolicyEngine/policyengine.py/commit/12300f3b335a3c377117d1afc30ada0d62ff1b18"
 }

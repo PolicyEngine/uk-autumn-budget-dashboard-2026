@@ -2,9 +2,9 @@
 
 Only dedicated compatibility fixtures opt in through World(historical=True,
 archived_pipeline=True). This recreates the former comparison assembly, not
-historical model calculations or real certification. Active native national
-artifacts support parameter deltas; arbitrary structural national recipes
-remain unsupported and fail closed outside this context.
+historical model calculations or real certification. Active structural
+execution uses the genuine ordered-plan API; these fixtures recreate the
+older bare-Scenario interfaces only within this explicit test context.
 
 The legacy composer below is copied verbatim from the reviewed dashboard
 source at 683dd8c2330d0e7fe018dda0d3696500130d7434.
@@ -16,6 +16,7 @@ from typing import Mapping, Optional
 from unittest.mock import patch
 
 from uk_budget_data import forecast
+from uk_budget_data.models import DataConfig
 from uk_budget_data.publication import combine, generate, receipt
 from uk_budget_data.publication.receipt import (
     CodeRevision,
@@ -120,11 +121,111 @@ def absent_reference(*args, **kwargs):
     return None
 
 
+def bare_measure_execution(reform, config, revision):
+    """The archived bare identities paired with their actual raw Scenarios."""
+    identities = receipt.measure_identities(reform, config, revision)
+    scenarios = (reform.baseline_scenario_for(config), reform.to_scenario())
+    return tuple(
+        receipt.ComparisonExecution(identity, scenario)
+        for identity, scenario in zip(identities, scenarios)
+    )
+
+
+def archived_combined_run_identities(
+    combined,
+    ordered,
+    config,
+    revision,
+    uses_config,
+    member_revisions=None,
+):
+    """683dd8c's native phase arguments and exact vendored composer."""
+    baseline = combined.baseline_scenario_for(config, uses_config)
+    return combined_identities(
+        ordered,
+        config,
+        revision,
+        reform_applied_before_data_load=(
+            combined.to_scenario().applied_before_data_load
+        ),
+        baseline_applied_before_data_load=(
+            baseline.applied_before_data_load
+            if baseline is not None
+            else False
+        ),
+        member_revisions=member_revisions,
+    )
+
+
+def bare_combined_execution(
+    members, config, revision, *, member_revisions=None
+):
+    """Carry each approved revision through the archived composition."""
+    ordered = combine.member_order(members)
+    combined = combine.combine_measures(ordered, config)
+    uses_config = any(not member.has_custom_baseline() for member in ordered)
+    baseline, changed, records, composition = archived_combined_run_identities(
+        combined, ordered, config, revision, uses_config, member_revisions
+    )
+    scenarios = (
+        combined.baseline_scenario_for(config, uses_config),
+        combined.to_scenario(),
+    )
+    executions = tuple(
+        receipt.ComparisonExecution(identity, scenario)
+        for identity, scenario in zip((baseline, changed), scenarios)
+    )
+    return executions, records, composition
+
+
+def archived_area_identities(
+    reform_id, years, revision, member_revisions=None
+):
+    """683dd8c's area identity assembly using the fixture's live definitions."""
+    from uk_budget_data import geography
+
+    reform = geography.get_reform(reform_id)
+    config = DataConfig(years=list(years))
+    if reform_id not in geography.PACKAGES:
+        return receipt.measure_identities(reform, config, revision)
+    ordered = combine.member_order(
+        [geography.get_reform(key) for key in geography.PACKAGES[reform_id]]
+    )
+    executions, _, _ = bare_combined_execution(
+        ordered, config, revision, member_revisions=member_revisions
+    )
+    return tuple(execution.identity for execution in executions)
+
+
+def archived_simulate_reform(reform, dataset, years):
+    """683dd8c's watched raw-Scenario build, under synthetic fixture builders."""
+    from uk_budget_data import data_limits, geography
+
+    baseline, changed = geography._reform_scenarios(
+        reform, years, check_composition=True
+    )
+    return tuple(
+        data_limits.watched_build(
+            geography.build_microsimulation, dataset, scenario
+        )
+        for scenario in (baseline, changed)
+    )
+
+
 def comparison_targets():
     """Every callable changed by this explicitly archived test context."""
+    from uk_budget_data import geography
+
     replacements = [
         (forecast, "with_forecast", bare_scenario),
         (combine, "check_consistency", absent_reference),
+        (
+            generate,
+            "_combined_run_identities",
+            archived_combined_run_identities,
+        ),
+        (geography, "_area_identities", archived_area_identities),
+        (geography, "simulate_reform", archived_simulate_reform),
     ]
     for module in (receipt, generate):
         replacements.extend(
@@ -134,6 +235,8 @@ def comparison_targets():
                 (module, "comparison_metadata", absent_reference),
                 (module, "common_policy_reference", absent_reference),
                 (module, "combined_identities", combined_identities),
+                (module, "measure_execution", bare_measure_execution),
+                (module, "combined_execution", bare_combined_execution),
             ]
         )
     return replacements

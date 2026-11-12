@@ -497,6 +497,7 @@ class World:
         before_the_floor=False,
         parameter_changes=None,
         baseline_parameter_changes=None,
+        reform_definition=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -547,6 +548,13 @@ class World:
             if baseline_parameter_changes is not None
             else None
         )
+        if reform_definition is not None:
+            from uk_budget_data.models import DataConfig
+
+            scenario = reform_definition.to_scenario()
+            baseline_scenario = reform_definition.baseline_scenario_for(
+                DataConfig(years=sorted(values))
+            )
         baseline_identity = baseline_identity or bind(
             baseline_scenario, name=f"{key} baseline", revision=revision
         )
@@ -565,7 +573,28 @@ class World:
             scenario, name=key, revision=revision
         )
         policy_comparison = None
-        if not self.historical and not members:
+        if (
+            not self.historical
+            and not members
+            and reform_definition is not None
+        ):
+            from uk_budget_data.models import DataConfig
+
+            policy_comparison = receipt_module.comparison_metadata(
+                reform_definition, DataConfig(years=sorted(values)), revision
+            )
+            self._recipes[self._recipe_key(baseline_identity)] = (
+                policy_comparison["baseline_delta"]
+            )
+            self._recipes[self._recipe_key(reform_identity)] = (
+                policy_comparison["reform_delta"]
+            )
+            self._recipes.setdefault("members", {})[key] = {
+                side: policy_comparison[f"{side}_delta"]
+                for side in ("baseline", "reform")
+            }
+            self._save_recipes()
+        elif not self.historical and not members:
             common = receipt_module.common_policy_reference(revision)
             baseline_delta = receipt_module._parameter_delta(baseline_scenario)
             # Preserve an explicitly supplied identity as an intentional test
@@ -588,7 +617,11 @@ class World:
         if modifier_templates is None:
             counts = receipt_module.template_proof.modifier_counts(
                 {
-                    "dashboard": {"members": members},
+                    "dashboard": {
+                        "members": members,
+                        "composition": composition,
+                        "policy_comparison": policy_comparison,
+                    },
                     "execution_receipt": {
                         "baseline": json.loads(
                             baseline_identity.model_dump_json()
@@ -712,6 +745,49 @@ class World:
                         )
             common = receipt_module.common_policy_reference(self.revision())
             name = "+".join(record["id"] for record in records)
+            if any(
+                "application" in record[f"{side}_delta"]
+                for record in records
+                for side in ("baseline", "reform")
+            ):
+                from uk_budget_data.publication import phase_recipe
+
+                for record in records:
+                    for side in ("baseline", "reform"):
+                        key = f"{side}_delta"
+                        if "application" not in record[key]:
+                            record[key] = phase_recipe.bare_plan(
+                                receipt_module._delta_scenario(record[key]),
+                                self.revision(),
+                            )
+                plans = {
+                    side: phase_recipe.resolve_plan(
+                        common,
+                        [
+                            record[f"{side}_delta"]
+                            for record in records
+                            if side != "baseline" or record["baseline_bound"]
+                        ],
+                    )
+                    for side in ("baseline", "reform")
+                }
+                return (
+                    records,
+                    {
+                        "method": phase_recipe.METHOD,
+                        "common_policy_reference": common,
+                        **{
+                            f"{side}_plan": plan
+                            for side, plan in plans.items()
+                        },
+                    },
+                    tuple(
+                        phase_recipe.ordered_api().ordered_scenario_reform_identity(
+                            plan, name=f"{name} {side}"
+                        )
+                        for side, plan in plans.items()
+                    ),
+                )
             composed = tuple(
                 receipt_module.scenario_identity(
                     receipt_module._resolved_scenario(

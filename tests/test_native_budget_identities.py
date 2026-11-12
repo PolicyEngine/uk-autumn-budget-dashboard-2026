@@ -6,6 +6,7 @@ and the runtime's parameter-scenario assembly.
 
 import copy
 import json
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -294,6 +295,9 @@ def test_cash_isa_baseline_modifier_is_refused_without_public_phase_api(
 ):
     api, _ = receipt.receipt_api()
     monkeypatch.delattr(api, "phased_scenario_reform_identity", raising=False)
+    monkeypatch.setitem(
+        sys.modules, "policyengine.provenance.ordered_scenario", None
+    )
     cash = reforms.get_reform(reforms.CASH_ISA_LIMIT_ID)
     assert cash.baseline_simulation_modifier is not None
     with pytest.raises(
