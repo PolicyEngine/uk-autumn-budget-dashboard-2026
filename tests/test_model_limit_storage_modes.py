@@ -5,7 +5,8 @@ from types import SimpleNamespace
 
 import numpy
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from uk_budget_data import model_limits
 

@@ -6,7 +6,8 @@ from pathlib import Path
 from types import CodeType, SimpleNamespace
 
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from uk_budget_data import data_limits, measure_templates
 
