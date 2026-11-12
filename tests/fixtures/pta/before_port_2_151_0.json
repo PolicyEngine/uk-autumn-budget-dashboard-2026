@@ -1,0 +1,4089 @@
+{
+"weekly_rates": {
+"2027": 250.71102654036292,
+"2028": 256.97926869010473,
+"2029": 263.40345052335056
+},
+"rows": [
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1062.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 93.08,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1062.4,
+"income_tax_without_allowance": 93.08,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1063.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 93.28,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1063.4,
+"income_tax_without_allowance": 93.28,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1064.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 93.48,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1064.4,
+"income_tax_without_allowance": 93.48,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1113.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 103.28,
+"income_tax_with_allowance": 25.95
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1113.4,
+"income_tax_without_allowance": 103.28,
+"income_tax_with_allowance": 25.95
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1204.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 121.48,
+"income_tax_with_allowance": 74.48
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1204.4,
+"income_tax_without_allowance": 121.48,
+"income_tax_with_allowance": 74.48
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1213.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 123.28,
+"income_tax_with_allowance": 79.28
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1213.4,
+"income_tax_without_allowance": 123.28,
+"income_tax_with_allowance": 79.28
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1344.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 149.48,
+"income_tax_with_allowance": 149.15
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1344.4,
+"income_tax_without_allowance": 149.48,
+"income_tax_with_allowance": 149.15
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1345.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 149.68,
+"income_tax_with_allowance": 149.68
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1345.4,
+"income_tax_without_allowance": 149.68,
+"income_tax_with_allowance": 149.68
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1346.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 149.88,
+"income_tax_with_allowance": 149.88
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1346.4,
+"income_tax_without_allowance": 149.88,
+"income_tax_with_allowance": 149.88
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.2
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.2
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1062.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 93.08,
+"income_tax_with_allowance": 93.08
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1062.4,
+"income_tax_without_allowance": 93.08,
+"income_tax_with_allowance": 93.08
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1063.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 93.28,
+"income_tax_with_allowance": 93.28
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1063.4,
+"income_tax_without_allowance": 93.28,
+"income_tax_with_allowance": 93.28
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1064.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 93.48,
+"income_tax_with_allowance": 93.48
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1064.4,
+"income_tax_without_allowance": 93.48,
+"income_tax_with_allowance": 93.48
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1113.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 103.28,
+"income_tax_with_allowance": 103.28
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1113.4,
+"income_tax_without_allowance": 103.28,
+"income_tax_with_allowance": 103.28
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1204.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 121.48,
+"income_tax_with_allowance": 121.48
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1204.4,
+"income_tax_without_allowance": 121.48,
+"income_tax_with_allowance": 121.48
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1213.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 123.28,
+"income_tax_with_allowance": 123.28
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1213.4,
+"income_tax_without_allowance": 123.28,
+"income_tax_with_allowance": 123.28
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1344.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 149.48,
+"income_tax_with_allowance": 149.48
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1344.4,
+"income_tax_without_allowance": 149.48,
+"income_tax_with_allowance": 149.48
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1345.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 149.68,
+"income_tax_with_allowance": 149.68
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1345.4,
+"income_tax_without_allowance": 149.68,
+"income_tax_with_allowance": 149.68
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1346.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 149.88,
+"income_tax_with_allowance": 149.88
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1346.4,
+"income_tax_without_allowance": 149.88,
+"income_tax_with_allowance": 149.88
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2027,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1062.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 88.43,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1062.4,
+"income_tax_without_allowance": 88.43,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1063.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 88.62,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1063.4,
+"income_tax_without_allowance": 88.62,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1064.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 88.81,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1064.4,
+"income_tax_without_allowance": 88.81,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1113.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 98.12,
+"income_tax_with_allowance": 20.78
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1113.4,
+"income_tax_without_allowance": 98.12,
+"income_tax_with_allowance": 20.78
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1204.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 115.41,
+"income_tax_with_allowance": 68.41
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1204.4,
+"income_tax_without_allowance": 115.41,
+"income_tax_with_allowance": 68.41
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1213.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 117.12,
+"income_tax_with_allowance": 73.12
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1213.4,
+"income_tax_without_allowance": 117.12,
+"income_tax_with_allowance": 73.12
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1344.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 142.01,
+"income_tax_with_allowance": 141.67
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1344.4,
+"income_tax_without_allowance": 142.01,
+"income_tax_with_allowance": 141.67
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1345.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 142.2,
+"income_tax_with_allowance": 142.2
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1345.4,
+"income_tax_without_allowance": 142.2,
+"income_tax_with_allowance": 142.2
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1346.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 142.39,
+"income_tax_with_allowance": 142.39
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1346.4,
+"income_tax_without_allowance": 142.39,
+"income_tax_with_allowance": 142.39
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1445.54,
+"income_tax_with_allowance": 1445.54
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1445.54,
+"income_tax_with_allowance": 1445.54
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4496.89,
+"income_tax_with_allowance": 4496.89
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4496.89,
+"income_tax_with_allowance": 4496.89
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4497.1,
+"income_tax_with_allowance": 4497.1
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4497.1,
+"income_tax_with_allowance": 4497.1
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 13177.87,
+"income_tax_with_allowance": 13177.87
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 13177.87,
+"income_tax_with_allowance": 13177.87
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.19
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.19
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1062.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 88.43,
+"income_tax_with_allowance": 88.43
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1062.4,
+"income_tax_without_allowance": 88.43,
+"income_tax_with_allowance": 88.43
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1063.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 88.62,
+"income_tax_with_allowance": 88.62
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1063.4,
+"income_tax_without_allowance": 88.62,
+"income_tax_with_allowance": 88.62
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1064.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 88.81,
+"income_tax_with_allowance": 88.81
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1064.4,
+"income_tax_without_allowance": 88.81,
+"income_tax_with_allowance": 88.81
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1113.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 98.12,
+"income_tax_with_allowance": 98.12
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1113.4,
+"income_tax_without_allowance": 98.12,
+"income_tax_with_allowance": 98.12
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1204.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 115.41,
+"income_tax_with_allowance": 115.41
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1204.4,
+"income_tax_without_allowance": 115.41,
+"income_tax_with_allowance": 115.41
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1213.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 117.12,
+"income_tax_with_allowance": 117.12
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1213.4,
+"income_tax_without_allowance": 117.12,
+"income_tax_with_allowance": 117.12
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1344.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 142.01,
+"income_tax_with_allowance": 142.01
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1344.4,
+"income_tax_without_allowance": 142.01,
+"income_tax_with_allowance": 142.01
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1345.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 142.2,
+"income_tax_with_allowance": 142.2
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1345.4,
+"income_tax_without_allowance": 142.2,
+"income_tax_with_allowance": 142.2
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1346.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 142.39,
+"income_tax_with_allowance": 142.39
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1346.4,
+"income_tax_without_allowance": 142.39,
+"income_tax_with_allowance": 142.39
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1445.54,
+"income_tax_with_allowance": 1445.54
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1445.54,
+"income_tax_with_allowance": 1445.54
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4496.89,
+"income_tax_with_allowance": 4496.89
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4496.89,
+"income_tax_with_allowance": 4496.89
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4497.1,
+"income_tax_with_allowance": 4497.1
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4497.1,
+"income_tax_with_allowance": 4497.1
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 13177.87,
+"income_tax_with_allowance": 13177.87
+},
+{
+"year": 2027,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 13177.87,
+"income_tax_with_allowance": 13177.87
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1387.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 158.08,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1387.4,
+"income_tax_without_allowance": 158.08,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1388.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 158.28,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1388.4,
+"income_tax_without_allowance": 158.28,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1389.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 158.48,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1389.4,
+"income_tax_without_allowance": 158.48,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1438.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 168.28,
+"income_tax_with_allowance": 25.95
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1438.4,
+"income_tax_without_allowance": 168.28,
+"income_tax_with_allowance": 25.95
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1538.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 188.28,
+"income_tax_with_allowance": 79.28
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1538.4,
+"income_tax_without_allowance": 188.28,
+"income_tax_with_allowance": 79.28
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1626.9,
+"employment_income": 0.0,
+"income_tax_without_allowance": 205.98,
+"income_tax_with_allowance": 126.48
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1626.9,
+"income_tax_without_allowance": 205.98,
+"income_tax_with_allowance": 126.48
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1864.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 253.48,
+"income_tax_with_allowance": 253.15
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1864.4,
+"income_tax_without_allowance": 253.48,
+"income_tax_with_allowance": 253.15
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1865.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 253.68,
+"income_tax_with_allowance": 253.68
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1865.4,
+"income_tax_without_allowance": 253.68,
+"income_tax_with_allowance": 253.68
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1866.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 253.88,
+"income_tax_with_allowance": 253.88
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1866.4,
+"income_tax_without_allowance": 253.88,
+"income_tax_with_allowance": 253.88
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.2
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.2
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1387.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 158.08,
+"income_tax_with_allowance": 158.08
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1387.4,
+"income_tax_without_allowance": 158.08,
+"income_tax_with_allowance": 158.08
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1388.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 158.28,
+"income_tax_with_allowance": 158.28
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1388.4,
+"income_tax_without_allowance": 158.28,
+"income_tax_with_allowance": 158.28
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1389.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 158.48,
+"income_tax_with_allowance": 158.48
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1389.4,
+"income_tax_without_allowance": 158.48,
+"income_tax_with_allowance": 158.48
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1438.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 168.28,
+"income_tax_with_allowance": 168.28
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1438.4,
+"income_tax_without_allowance": 168.28,
+"income_tax_with_allowance": 168.28
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1538.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 188.28,
+"income_tax_with_allowance": 188.28
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1538.4,
+"income_tax_without_allowance": 188.28,
+"income_tax_with_allowance": 188.28
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1626.9,
+"employment_income": 0.0,
+"income_tax_without_allowance": 205.98,
+"income_tax_with_allowance": 205.98
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1626.9,
+"income_tax_without_allowance": 205.98,
+"income_tax_with_allowance": 205.98
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1864.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 253.48,
+"income_tax_with_allowance": 253.48
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1864.4,
+"income_tax_without_allowance": 253.48,
+"income_tax_with_allowance": 253.48
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1865.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 253.68,
+"income_tax_with_allowance": 253.68
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1865.4,
+"income_tax_without_allowance": 253.68,
+"income_tax_with_allowance": 253.68
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1866.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 253.88,
+"income_tax_with_allowance": 253.88
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1866.4,
+"income_tax_without_allowance": 253.88,
+"income_tax_with_allowance": 253.88
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2028,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1387.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 150.18,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1387.4,
+"income_tax_without_allowance": 150.18,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1388.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 150.37,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1388.4,
+"income_tax_without_allowance": 150.37,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1389.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 150.56,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1389.4,
+"income_tax_without_allowance": 150.56,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1438.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 159.87,
+"income_tax_with_allowance": 17.53
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1438.4,
+"income_tax_without_allowance": 159.87,
+"income_tax_with_allowance": 17.53
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1538.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 178.87,
+"income_tax_with_allowance": 69.87
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1538.4,
+"income_tax_without_allowance": 178.87,
+"income_tax_with_allowance": 69.87
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1626.9,
+"employment_income": 0.0,
+"income_tax_without_allowance": 195.68,
+"income_tax_with_allowance": 116.18
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1626.9,
+"income_tax_without_allowance": 195.68,
+"income_tax_with_allowance": 116.18
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1864.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 240.81,
+"income_tax_with_allowance": 240.47
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1864.4,
+"income_tax_without_allowance": 240.81,
+"income_tax_with_allowance": 240.47
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1865.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 241.0,
+"income_tax_with_allowance": 241.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1865.4,
+"income_tax_without_allowance": 241.0,
+"income_tax_with_allowance": 241.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1866.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 241.19,
+"income_tax_with_allowance": 241.19
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1866.4,
+"income_tax_without_allowance": 241.19,
+"income_tax_with_allowance": 241.19
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1444.73,
+"income_tax_with_allowance": 1444.73
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1444.73,
+"income_tax_with_allowance": 1444.73
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4492.62,
+"income_tax_with_allowance": 4492.62
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4492.62,
+"income_tax_with_allowance": 4492.62
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4492.83,
+"income_tax_with_allowance": 4492.83
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4492.83,
+"income_tax_with_allowance": 4492.83
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 13173.6,
+"income_tax_with_allowance": 13173.6
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 13173.6,
+"income_tax_with_allowance": 13173.6
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.19
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.19
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1387.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 150.18,
+"income_tax_with_allowance": 150.18
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1387.4,
+"income_tax_without_allowance": 150.18,
+"income_tax_with_allowance": 150.18
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1388.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 150.37,
+"income_tax_with_allowance": 150.37
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1388.4,
+"income_tax_without_allowance": 150.37,
+"income_tax_with_allowance": 150.37
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1389.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 150.56,
+"income_tax_with_allowance": 150.56
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1389.4,
+"income_tax_without_allowance": 150.56,
+"income_tax_with_allowance": 150.56
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1438.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 159.87,
+"income_tax_with_allowance": 159.87
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1438.4,
+"income_tax_without_allowance": 159.87,
+"income_tax_with_allowance": 159.87
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1538.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 178.87,
+"income_tax_with_allowance": 178.87
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1538.4,
+"income_tax_without_allowance": 178.87,
+"income_tax_with_allowance": 178.87
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1626.9,
+"employment_income": 0.0,
+"income_tax_without_allowance": 195.68,
+"income_tax_with_allowance": 195.68
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1626.9,
+"income_tax_without_allowance": 195.68,
+"income_tax_with_allowance": 195.68
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1864.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 240.81,
+"income_tax_with_allowance": 240.81
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1864.4,
+"income_tax_without_allowance": 240.81,
+"income_tax_with_allowance": 240.81
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1865.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 241.0,
+"income_tax_with_allowance": 241.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1865.4,
+"income_tax_without_allowance": 241.0,
+"income_tax_with_allowance": 241.0
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1866.4,
+"employment_income": 0.0,
+"income_tax_without_allowance": 241.19,
+"income_tax_with_allowance": 241.19
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1866.4,
+"income_tax_without_allowance": 241.19,
+"income_tax_with_allowance": 241.19
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1444.73,
+"income_tax_with_allowance": 1444.73
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1444.73,
+"income_tax_with_allowance": 1444.73
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4492.62,
+"income_tax_with_allowance": 4492.62
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4492.62,
+"income_tax_with_allowance": 4492.62
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4492.83,
+"income_tax_with_allowance": 4492.83
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4492.83,
+"income_tax_with_allowance": 4492.83
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 13173.6,
+"income_tax_with_allowance": 13173.6
+},
+{
+"year": 2028,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 13173.6,
+"income_tax_with_allowance": 13173.6
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.01,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1722.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 225.16,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1722.8,
+"income_tax_without_allowance": 224.61,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1723.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 225.36,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1723.8,
+"income_tax_without_allowance": 224.81,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1724.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 225.56,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1724.8,
+"income_tax_without_allowance": 225.01,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1773.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 235.36,
+"income_tax_with_allowance": 26.03
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1773.8,
+"income_tax_without_allowance": 234.79,
+"income_tax_with_allowance": 24.51
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1873.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 255.36,
+"income_tax_with_allowance": 79.36
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1873.8,
+"income_tax_without_allowance": 254.76,
+"income_tax_with_allowance": 77.76
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 2062.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 293.16,
+"income_tax_with_allowance": 180.16
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2062.8,
+"income_tax_without_allowance": 292.5,
+"income_tax_with_allowance": 178.4
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 2400.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 360.76,
+"income_tax_with_allowance": 360.43
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2400.8,
+"income_tax_without_allowance": 359.99,
+"income_tax_with_allowance": 358.38
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 2401.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 360.96,
+"income_tax_with_allowance": 360.96
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2401.8,
+"income_tax_without_allowance": 360.19,
+"income_tax_with_allowance": 358.91
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 2402.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 361.16,
+"income_tax_with_allowance": 361.16
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2402.8,
+"income_tax_without_allowance": 360.39,
+"income_tax_with_allowance": 359.44
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1483.43,
+"income_tax_with_allowance": 1483.43
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4478.63,
+"income_tax_with_allowance": 4478.63
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4478.83,
+"income_tax_with_allowance": 4478.83
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 11401.26,
+"income_tax_with_allowance": 11401.26
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.2,
+"income_tax_with_allowance": 0.2
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.01,
+"income_tax_with_allowance": 0.01
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1722.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 225.16,
+"income_tax_with_allowance": 225.16
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1722.8,
+"income_tax_without_allowance": 224.61,
+"income_tax_with_allowance": 224.61
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1723.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 225.36,
+"income_tax_with_allowance": 225.36
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1723.8,
+"income_tax_without_allowance": 224.81,
+"income_tax_with_allowance": 224.81
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1724.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 225.56,
+"income_tax_with_allowance": 225.56
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1724.8,
+"income_tax_without_allowance": 225.01,
+"income_tax_with_allowance": 225.01
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1773.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 235.36,
+"income_tax_with_allowance": 235.36
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1773.8,
+"income_tax_without_allowance": 234.79,
+"income_tax_with_allowance": 234.79
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1873.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 255.36,
+"income_tax_with_allowance": 255.36
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1873.8,
+"income_tax_without_allowance": 254.76,
+"income_tax_with_allowance": 254.76
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 2062.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 293.16,
+"income_tax_with_allowance": 293.16
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2062.8,
+"income_tax_without_allowance": 292.5,
+"income_tax_with_allowance": 292.5
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 2400.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 360.76,
+"income_tax_with_allowance": 360.76
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2400.8,
+"income_tax_without_allowance": 359.99,
+"income_tax_with_allowance": 359.99
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 2401.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 360.96,
+"income_tax_with_allowance": 360.96
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2401.8,
+"income_tax_without_allowance": 360.19,
+"income_tax_with_allowance": 360.19
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 2402.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 361.16,
+"income_tax_with_allowance": 361.16
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2402.8,
+"income_tax_without_allowance": 360.39,
+"income_tax_with_allowance": 360.39
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1486.0,
+"income_tax_with_allowance": 1486.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1483.43,
+"income_tax_with_allowance": 1483.43
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.0,
+"income_tax_with_allowance": 4486.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4478.63,
+"income_tax_with_allowance": 4478.63
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4486.2,
+"income_tax_with_allowance": 4486.2
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4478.83,
+"income_tax_with_allowance": 4478.83
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 11432.0,
+"income_tax_with_allowance": 11432.0
+},
+{
+"year": 2029,
+"region": "LONDON",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 11401.26,
+"income_tax_with_allowance": 11401.26
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.01,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1722.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 213.9,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1722.8,
+"income_tax_without_allowance": 213.38,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1723.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 214.09,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1723.8,
+"income_tax_without_allowance": 213.57,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1724.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 214.28,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1724.8,
+"income_tax_without_allowance": 213.76,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1773.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 223.59,
+"income_tax_with_allowance": 14.26
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1773.8,
+"income_tax_without_allowance": 223.05,
+"income_tax_with_allowance": 12.77
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 1873.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 242.59,
+"income_tax_with_allowance": 66.59
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1873.8,
+"income_tax_without_allowance": 242.02,
+"income_tax_with_allowance": 65.02
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 2062.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 278.5,
+"income_tax_with_allowance": 165.5
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2062.8,
+"income_tax_without_allowance": 277.88,
+"income_tax_with_allowance": 163.78
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 2400.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 342.72,
+"income_tax_with_allowance": 342.39
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2400.8,
+"income_tax_without_allowance": 341.99,
+"income_tax_with_allowance": 340.38
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 2401.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 342.91,
+"income_tax_with_allowance": 342.91
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2401.8,
+"income_tax_without_allowance": 342.18,
+"income_tax_with_allowance": 340.9
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 2402.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 343.1,
+"income_tax_with_allowance": 343.1
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2402.8,
+"income_tax_without_allowance": 342.37,
+"income_tax_with_allowance": 341.42
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1443.9,
+"income_tax_with_allowance": 1443.9
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1441.33,
+"income_tax_with_allowance": 1441.33
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4488.26,
+"income_tax_with_allowance": 4488.26
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4480.53,
+"income_tax_with_allowance": 4480.53
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4488.47,
+"income_tax_with_allowance": 4488.47
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4480.74,
+"income_tax_with_allowance": 4480.74
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 13038.67,
+"income_tax_with_allowance": 13038.67
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 70,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 13006.4,
+"income_tax_with_allowance": 13006.4
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 0.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11000.0,
+"private_pension_income": 0.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 597.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 597.0,
+"income_tax_without_allowance": 0.0,
+"income_tax_with_allowance": 0.0
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 598.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 0.19,
+"income_tax_with_allowance": 0.19
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 598.0,
+"income_tax_without_allowance": 0.01,
+"income_tax_with_allowance": 0.01
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1722.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 213.9,
+"income_tax_with_allowance": 213.9
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1722.8,
+"income_tax_without_allowance": 213.38,
+"income_tax_with_allowance": 213.38
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1723.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 214.09,
+"income_tax_with_allowance": 214.09
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1723.8,
+"income_tax_without_allowance": 213.57,
+"income_tax_with_allowance": 213.57
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1724.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 214.28,
+"income_tax_with_allowance": 214.28
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1724.8,
+"income_tax_without_allowance": 213.76,
+"income_tax_with_allowance": 213.76
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1773.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 223.59,
+"income_tax_with_allowance": 223.59
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1773.8,
+"income_tax_without_allowance": 223.05,
+"income_tax_with_allowance": 223.05
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 1873.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 242.59,
+"income_tax_with_allowance": 242.59
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 1873.8,
+"income_tax_without_allowance": 242.02,
+"income_tax_with_allowance": 242.02
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 2062.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 278.5,
+"income_tax_with_allowance": 278.5
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2062.8,
+"income_tax_without_allowance": 277.88,
+"income_tax_with_allowance": 277.88
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 2400.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 342.72,
+"income_tax_with_allowance": 342.72
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2400.8,
+"income_tax_without_allowance": 341.99,
+"income_tax_with_allowance": 341.99
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 2401.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 342.91,
+"income_tax_with_allowance": 342.91
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2401.8,
+"income_tax_without_allowance": 342.18,
+"income_tax_with_allowance": 342.18
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 2402.8,
+"employment_income": 0.0,
+"income_tax_without_allowance": 343.1,
+"income_tax_with_allowance": 343.1
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 2402.8,
+"income_tax_without_allowance": 342.37,
+"income_tax_with_allowance": 342.37
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 8027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 1443.9,
+"income_tax_with_allowance": 1443.9
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 8027.0,
+"income_tax_without_allowance": 1441.33,
+"income_tax_with_allowance": 1441.33
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4488.26,
+"income_tax_with_allowance": 4488.26
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23027.0,
+"income_tax_without_allowance": 4480.53,
+"income_tax_with_allowance": 4480.53
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 23028.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 4488.47,
+"income_tax_with_allowance": 4488.47
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 23028.0,
+"income_tax_without_allowance": 4480.74,
+"income_tax_with_allowance": 4480.74
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 48027.0,
+"employment_income": 0.0,
+"income_tax_without_allowance": 13038.67,
+"income_tax_with_allowance": 13038.67
+},
+{
+"year": 2029,
+"region": "SCOTLAND",
+"age": 60,
+"state_pension": 11973.0,
+"private_pension_income": 0.0,
+"employment_income": 48027.0,
+"income_tax_without_allowance": 13006.4,
+"income_tax_with_allowance": 13006.4
+}
+]
+}
