@@ -17,7 +17,10 @@ simulations calculate (:func:`observing`), not inferred from its source.
 Variables are compared with the metadata core reads during calculation,
 including formula end dates and conditions, and with their abolition
 parameters. Stored inputs are also compared, for each missing input and
-every model formula directly reading it or its limited parameters.
+every model formula directly reading it or its limited parameters. A
+shared upstream index can be marked parameter_change_only: changing that
+index is held, while an unrelated formula merely reading it is not a
+reader of the missing input.
 
 On built simulations two things are compared for parameters: what formulas
 read under those parameters at the start of each year (the system's cached
@@ -62,6 +65,17 @@ class DataLimit:
     parameters: tuple[str, ...]
     missing_input: str
     reason: str
+    # Shared upstream paths whose changes affect the missing input, but
+    # whose use alone does not identify a structural reader of that input.
+    parameter_change_only: tuple[str, ...] = ()
+
+    def __post_init__(self):
+        if not isinstance(self.parameter_change_only, tuple) or any(
+            not isinstance(path, str) for path in self.parameter_change_only
+        ):
+            raise ValueError("parameter_change_only must be a tuple of paths")
+        if not set(self.parameter_change_only) <= set(self.parameters):
+            raise ValueError("parameter_change_only must be within parameters")
 
 
 DATA_LIMITS = (
@@ -402,6 +416,9 @@ DATA_LIMITS = (
             "gov.economic_assumptions.indices.obr.per_capita.gdp",
         ),
         missing_input="individual_savings_account_dividend_income",
+        parameter_change_only=(
+            "gov.economic_assumptions.indices.obr.per_capita.gdp",
+        ),
         reason="The certified data do not record tax-free dividend income within ISAs. The model's default is 0: no ISA dividend income is added to capital or market income. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
     ),
     DataLimit(
@@ -495,6 +512,7 @@ def registry_digest(limits: Iterable[DataLimit]) -> str:
                     list(limit.parameters),
                     limit.missing_input,
                     limit.reason,
+                    list(limit.parameter_change_only),
                 ]
                 for limit in limits
             ],
@@ -3396,14 +3414,17 @@ def _formulas_touched(observation) -> dict:
 
 def _reads(limit: DataLimit, names: set) -> bool:
     """Whether code using ``names`` reads what ``limit`` covers: its missing
-    input, a parameter path under it, or every segment of one (formulas
-    reach parameters by attribute)."""
+    input, a structural parameter path under it, or every segment of one
+    (formulas reach parameters by attribute). Shared upstream-only paths
+    still hold actual parameter changes; reading them alone does not make
+    a formula a reader of this missing input."""
     if limit.missing_input in names or ANY_NAME in names:
         return True
     return any(
         set(prefix.split(".")) <= names
         or any(_under(name, prefix) for name in names)
         for prefix in limit.parameters
+        if prefix not in limit.parameter_change_only
     )
 
 
