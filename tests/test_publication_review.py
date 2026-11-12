@@ -39,8 +39,18 @@ VALUES = {2027: -1.0, 2028: -2.0}
 
 
 @pytest.fixture
-def world():
-    instance = World()
+def world(request, monkeypatch):
+    from uk_budget_data.publication import combine
+
+    # Only tests explicitly parametrized as historical exercise the old
+    # single-phase composition contract. Other gate tests use native recipes.
+    instance = World(
+        historical=getattr(request, "param", None) == "historical"
+    )
+    # These are receipt/gate tests with dummy simulations. Real parameter
+    # consistency is covered by test_combine; do not construct model
+    # simulations while testing the surrounding fake-data workflow.
+    monkeypatch.setattr(combine, "check_consistency", lambda *args: None)
     yield instance
     instance.close()
 
@@ -494,7 +504,7 @@ def test_a_combined_receipt_must_be_its_members_composition(world):
             {2027: -2.0},
             reform_identity=identity,
         )
-        with pytest.raises(PublishError, match="not the composition"):
+        with pytest.raises(PublishError, match="resolved common reference"):
             stage(manifest, claim.path, **args(world))
     honest = combined(world, manifest, ["alpha", "beta"], {2027: -2.0})
     stage(manifest, honest.path, **args(world))
@@ -649,6 +659,7 @@ def _claim(world, manifest, records):
     )
 
 
+@pytest.mark.parametrize("world", ["historical"], indirect=True)
 def test_a_members_own_baseline_cannot_be_left_out(world):
     """Review round 4 (blocker): two members with the same baseline of
     their own each have it applied; marking one unapplied was accepted."""
@@ -692,7 +703,10 @@ def test_a_member_record_must_be_its_published_identity(world, field, value):
     assert records[1]["reform"][field] != value
     records[1]["reform"][field] = value
     claim = _claim(world, manifest, records)
-    with pytest.raises(PublishError, match="different reform definition"):
+    with pytest.raises(
+        PublishError,
+        match="reform identity does not bind the common reference and its delta",
+    ):
         stage(manifest, claim.path, **args(world))
 
 
@@ -715,6 +729,7 @@ def test_an_invalid_unapplied_baseline_is_a_problem_not_a_crash(world):
 # --- round 5 (publication review) ------------------------------------------
 
 
+@pytest.mark.parametrize("world", ["historical"], indirect=True)
 def test_a_structural_baseline_cannot_pass_as_the_configured_one(world):
     """Review round 5 (blocker): copying a member's structural baseline
     into the configured-baseline field let one of its applications be
@@ -792,8 +807,8 @@ def test_an_honest_configured_parameter_baseline_is_shared(world):
         members,
         config,
         revision,
-        reform_applied_before_data_load=False,
-        baseline_applied_before_data_load=False,
+        reform_applied_before_data_load=True,
+        baseline_applied_before_data_load=True,
     )
     assert [r["baseline_bound"] for r in records] == [True, False]
     document = {
@@ -1314,7 +1329,7 @@ def test_a_receipt_model_failing_validation_is_raised_not_refused(world):
 
     with (
         patch.object(generate, "code_revision", lambda root: world.revision()),
-        patch.object(api, "reform_identity", broken),
+        patch.object(api, "scenario_reform_identity", broken),
     ):
         with pytest.raises(ValidationError, match="ReformIdentity"):
             generate.generate_artifacts(
@@ -1353,7 +1368,7 @@ class _BrokenIdentity:
         # The configured baseline, bound when a run first records it.
         ("scenario_reform_identity", "configured baseline", False, True),
         # A combined run's composed identities.
-        ("composed_reform_identity", None, True, False),
+        ("scenario_reform_identity", "alpha+beta baseline", True, False),
     ],
     ids=["measure", "configured baseline", "combined"],
 )

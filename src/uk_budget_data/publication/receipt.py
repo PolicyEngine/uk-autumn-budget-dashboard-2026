@@ -424,9 +424,30 @@ def _requires_common_policy_reference(document) -> bool:
 
 def comparison_identity(scenario, *, name: str, revision: CodeRevision):
     """Bind the effective reference plus policy, using its actual phase."""
-    return scenario_identity(
-        comparison_scenario(scenario), name=name, revision=revision
-    )
+    try:
+        effective = comparison_scenario(scenario)
+    except ReceiptUnavailable:
+        api, _ = receipt_api()
+        bind_phases = getattr(api, "phased_scenario_reform_identity", None)
+        if not callable(bind_phases):
+            raise
+        from uk_budget_data.forecast import with_forecast
+
+        try:
+            # Household definitions can bind a real structural scenario
+            # once the installed public API supports its actual phases.
+            # National recipes still require comparison_scenario's
+            # parameter-only contract and cannot publish a modifier here.
+            return bind_phases(
+                with_forecast(scenario),
+                code_revision=revision.as_binding(),
+                name=name,
+            )
+        except (api.ReceiptError, ValueError) as error:
+            if is_code_defect(error):
+                raise
+            raise ReceiptUnavailable(name, str(error)) from error
+    return scenario_identity(effective, name=name, revision=revision)
 
 
 def _encoded_parameters(value):

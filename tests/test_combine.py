@@ -158,9 +158,7 @@ def test_members_without_their_own_baseline_use_the_configured_one():
     }
 
 
-def test_the_registered_package_is_the_generic_combination_of_its_members(
-    monkeypatch,
-):
+def test_the_registered_package_is_the_generic_combination_of_its_members():
     """Differential: the combined candidate package carries exactly the
     generic combiner's parameter changes and modifiers, in member order."""
     members = [
@@ -172,40 +170,27 @@ def test_the_registered_package_is_the_generic_combination_of_its_members(
     assert (package.baseline_parameter_changes or {}) == sides["baseline"][
         "parameter_changes"
     ]
-    # Lists in member order (by id), so a dropped or repeated modifier
-    # shows.
-    assert [m.__name__ for m in sides["baseline"]["modifiers"]] == [
-        "pre_budget_vat_on_domestic_electricity",
-    ]
-    # The registered package must run that same composed baseline, once.
-    # Probe the modifier's boundary without building a simulation.
-    calls = []
+    # Native parameters replace the former formula wrappers. Neither
+    # package route may apply those policies a second time.
+    assert sides["baseline"]["modifiers"] == []
+    assert sides["reform"]["modifiers"] == []
+    assert package.simulation_modifier is None
+    assert package.baseline_simulation_modifier is None
+    from uk_budget_data.forecast import with_forecast
 
-    def record_vat_change(sim, **changes):
-        calls.append((sim, changes))
-        return sim
-
-    monkeypatch.setattr(
-        "uk_budget_data.budget_measures."
-        "pre_budget_vat_on_domestic_electricity.apply_vat_base_change",
-        record_vat_change,
-    )
-    sim = object()
-    assert package.baseline_simulation_modifier is not None
-    assert package.baseline_simulation_modifier(sim) is sim
-    package_calls = calls.copy()
-    calls.clear()
-    for modifier in sides["baseline"]["modifiers"]:
-        assert modifier(sim) is sim
-    assert package_calls == calls
-    assert [m.__name__ for m in sides["reform"]["modifiers"]] == [
-        "bus_fare_cap_2027",
-        "carers_allowance_earnings_taper",
-        "zero_vat_on_domestic_electricity",
-        "pump_vat_on_fuel_duty_deferral",
-        "household_energy_payment_2026",
-        "pension_tax_allowance",
-    ]
+    generic = combine_measures(members, DataConfig())
+    for registered_side, generic_side in (
+        (
+            package.baseline_scenario_for(DataConfig()),
+            generic.baseline_scenario_for(DataConfig()),
+        ),
+        (package.to_scenario(), generic.to_scenario()),
+    ):
+        registered = with_forecast(registered_side)
+        composed = with_forecast(generic_side)
+        assert registered.parameter_changes == composed.parameter_changes
+        assert registered.parts_by_data_load()[1] is None
+        assert composed.parts_by_data_load()[1] is None
 
 
 def test_the_engine_and_the_combiner_agree_on_two_members_changes():

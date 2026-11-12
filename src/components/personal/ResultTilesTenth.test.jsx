@@ -65,13 +65,13 @@ describe("ResultTiles' average for your income tenth", () => {
     expect(screen.queryByText(/9\.99/)).toBeNull();
   });
 
-  it("is the tenth under current law, as the card below names it, when the policies move you across a boundary (W6 G1)", () => {
+  it("is the tenth under pre-Budget policy, as the card below names it, when the policies move you across a boundary (W6 G1)", () => {
     files.current = { "income_distribution.csv": { status: "ready", rows: DISTRIBUTION } };
     catalogueRef.current = catalogue({
       distributional_impact: DECILES.map((decile, i) => ({ reform_id: "alpha", year: 2027, decile, value: (i + 1) / 10 })),
     });
-    // £29,500 is the 29.5th percentile (3rd tenth) under current law and
-    // £30,500 the 30.5th (4th tenth) with the policies
+    // £29,500 is the 29.5th percentile (3rd tenth) under pre-Budget policy and
+    // £30,500 the 30.5th (4th tenth) with Budget policies
     render(
       <ResultTiles
         totals={{ before: 29500, after: 30500, change: 1000 }}

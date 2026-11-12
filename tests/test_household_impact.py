@@ -843,15 +843,16 @@ def test_a_pensioner_is_paid_the_full_rate_or_the_amount_entered_on_the_forecast
             ] == pytest.approx(paid, abs=0.01)
 
 
-def test_the_full_new_state_pension_in_2028_29_is_octobers():
-    """£259.24 a week in 2028-29 on the October 2026 forecast. The March
-    forecast policyengine-uk 2.151.0 shipped gave £256.98; from 2.164.1
-    (OBR October 2026 economic assumptions) the engine ships October's
-    rate itself, so the two agree."""
+def test_the_full_new_state_pension_in_2028_29_keeps_native_rounding():
+    """UK #2751 rounds each projected weekly rate to the nearest 5p.
+
+    October's 3.4% rise on £250.70 gives £259.20 after that rounding;
+    the former unrounded cumulative projection gave £259.24.
+    """
     weekly = household_impact.full_new_state_pension(2028) / 52
-    assert round(weekly, 2) == 259.24
+    assert round(weekly, 2) == 259.20
     native = PARAMETERS.get_child(NEW_STATE_PENSION)("2028-01-01")
-    assert round(float(native), 2) == 259.24
+    assert round(float(native), 2) == 259.20
 
 
 @pytest.mark.parametrize("year", POLICY_YEARS)
@@ -2133,13 +2134,13 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             True,
         ),
         # The Machine Games Duty rise: losses on higher-stake machines,
-        # from 2027-28
+        # from 1 April 2027, the final five days of model year 2026-27
         ("machine_games_duty_rise", {}, 2027, True),
         (
             "machine_games_duty_rise",
             {"higher_stake_machine_losses": 1_000},
             2026,
-            True,
+            False,
         ),
         (
             "machine_games_duty_rise",
@@ -2374,11 +2375,12 @@ def test_cash_isa_payments_reach_the_pre_budget_side_and_its_note():
     assert plain["net_income"]["change"] == pytest.approx(0, abs=0.01)
 
 
-def test_machine_games_losses_pay_the_higher_rate_from_2027_28():
+def test_machine_games_losses_pay_the_higher_rate_from_1_april_2027():
     """£1,000 a year lost on higher-stake machines is the household's
     standard-rate machine takings: 20% duty before the Budget and 25% from
     2027-28, so the household is £50 a year worse off, shown in the gambling
-    duty row and with the assumption's note; nothing in 2026-27."""
+    duty row and with the assumption's note. The final five days of model
+    year 2026-27 carry five days of the same duty change."""
     from uk_budget_data.reforms import MACHINE_GAMES_DUTY_ID
 
     answers = Answers(
@@ -2393,7 +2395,9 @@ def test_machine_games_losses_pay_the_higher_rate_from_2027_28():
     early = calculate(
         answers, [MACHINE_GAMES_DUTY_ID], 2026, skip_unaffected=False
     )
-    assert early["net_income"]["change"] == pytest.approx(0, abs=0.01)
+    assert early["net_income"]["change"] == pytest.approx(
+        -50 * 5 / 365, abs=0.01
+    )
     # Without the answer, nothing moves
     plain = calculate(
         dataclasses.replace(answers, higher_stake_machine_losses=0),

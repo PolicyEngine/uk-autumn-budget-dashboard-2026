@@ -374,7 +374,7 @@ export function positionSummary(position, change, netBefore, side = "after") {
   // A short caption, not the "N in 100 people…" sentence (HH1): the
   // definition is in the tile's tip, once
   const headline = lowerCount(shown)
-    ? `Among people in the UK, ${side === "before" ? "under current law" : "with the selected policies"}`
+    ? `Among people in the UK, ${side === "before" ? "under pre-Budget policy" : "with the selected Budget policies"}`
     : "Your income percentile is not available.";
   const after = position.after;
   const before = placeLabel(position.before);

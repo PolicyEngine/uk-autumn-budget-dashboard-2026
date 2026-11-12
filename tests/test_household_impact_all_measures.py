@@ -1,8 +1,9 @@
-"""Every candidate measure on the household route (POST /api/household-impact).
+"""The Budget comparison on the household route (POST /api/household-impact).
 
 The household route runs each side as a ``policyengine_uk.Simulation`` with
 the side's ``Scenario`` (parameter changes and simulation modifiers), so all
-seven measures apply to a household, the six with formula modifiers included.
+native policy measures and the retained withdrawn designs share the same
+pre-Budget policy reference and native economic assumptions.
 
 - Hand checks: each modifier measure's change is recomputed from the
   parameters and the spending entered.
@@ -18,17 +19,17 @@ import dataclasses
 import pytest
 
 from uk_budget_data import household_impact, personal_impact
-from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
-    SPRING_SHARE,
-    WINTER_SHARE,
-    zero_vat_on_domestic_electricity,
+from uk_budget_data.budget_policy import (
+    native_policy_changes,
+    pre_budget_policy_changes,
+    pre_budget_policy_timeline,
 )
 from uk_budget_data.forecast import forecast_parameters, with_forecast
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.combine import combine_measures
 from uk_budget_data.reforms import (
     FUEL_DUTY,
-    fuel_duty_deferral_rates,
+    fiscal_year_means,
     get_reform,
 )
 
@@ -94,8 +95,9 @@ def test_fuel_duty_deferral_is_the_duty_cut_plus_vat_on_the_litres(year):
     (``petrol_litres = petrol_spending / petrol_price``), with spending and
     prices held fixed. policyengine-uk holds the duty rate at its fiscal-year
     mean through each model year (the parameter is blended, so it reads the
-    same on every month's first day), and the measure sets that mean
-    (``fuel_duty_deferral_rates``). The household pays the duty difference
+    same on every month's first day). The explicit pre-Budget timeline
+    supplies the reference and the selected measure restores native law.
+    The household pays the duty difference
     on each litre, and VAT at 20% on it: the change is 1.2 x duty
     difference x litres."""
     petrol, diesel = 1_500, 500
@@ -107,9 +109,10 @@ def test_fuel_duty_deferral_is_the_duty_cut_plus_vat_on_the_litres(year):
     assert {current_law(f"{year}-{m:02d}-01") for m in range(1, 13)} == {
         current_law(f"{year}-01-01")
     }
-    difference = current_law(f"{year}-01-01") - (
-        fuel_duty_deferral_rates()[str(year)]
+    pre_budget = fiscal_year_means(
+        tuple(pre_budget_policy_timeline(FUEL_DUTY).items())
     )
+    difference = pre_budget[str(year)] - current_law(f"{year}-01-01")
     duty_cut = difference * litres
     assert duty_cut > 1
     result = calculate(
@@ -259,20 +262,17 @@ def test_electricity_spending_defaults_to_the_ons_average():
 @pytest.mark.parametrize(
     "year, spending, weight",
     [
-        (2026, 1_040, WINTER_SHARE),
-        (2027, 1_040, SPRING_SHARE),
-        (2027, 2_000, SPRING_SHARE),
+        (2026, 1_040, 5 / 365),
+        (2027, 1_040, 86 / 366),
+        (2027, 2_000, 86 / 366),
     ],
 )
 def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     year, spending, weight
 ):
     """5% VAT on VAT-inclusive spending is spending x 0.05 / 1.05; zero
-    rated from 1 October 2026 (the October to March share of 2026-27's
-    use) to 30 June 2027 (the April to June share of 2027-28's use)."""
-    assert zero_vat_on_domestic_electricity.__defaults__[0] == (
-        pytest.approx(-0.05 * WINTER_SHARE)
-    )
+    rated for the additional April-June extension: five days in fiscal
+    2026-27 and 86 in fiscal 2027-28, on both sides' native day weighting."""
     result = calculate(
         Answers(year, electricity_spending=spending),
         year,
@@ -285,20 +285,13 @@ def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     )
 
 
-@pytest.mark.parametrize(
-    "year, weight", [(2026, WINTER_SHARE), (2027, SPRING_SHARE)]
-)
-def test_the_vat_row_is_nothing_before_the_budget_and_the_cut_after(
+@pytest.mark.parametrize("year, weight", [(2026, 5 / 365), (2027, 86 / 366)])
+def test_the_vat_row_reports_the_pre_budget_surcharge_relative_to_native_law(
     year, weight
 ):
-    """policyengine-uk 2.153.5 and later zero-rate Great Britain's domestic
-    electricity from 1 October 2026 to 31 March 2027 in current law
-    (gov.hmrc.vat.domestic_electricity_rate). The measure is scored against
-    5% in every month, so its pre-Budget side holds the 5% and its Budget
-    side takes the zero-rated months off it, once
-    (tests/test_electricity_vat_baseline.py). On any engine the page's VAT
-    row, which shows only the change the measures make, is then £0 before
-    the Budget and the whole cut after it."""
+    """Native vat_change is vat minus baseline_vat. Native law already
+    includes the extension, so pre-Budget VAT is higher by the extension's
+    amount and the selected current-law side is zero relative to native."""
     result = calculate(
         Answers(year, electricity_spending=1_040),
         year,
@@ -306,41 +299,43 @@ def test_the_vat_row_is_nothing_before_the_budget_and_the_cut_after(
     )
     row = programme(result, "vat_change")
     cut = 1_040 * 0.05 * weight / 1.05
-    assert row["baseline"] == pytest.approx(0, abs=PENNY)
-    assert row["reform"] == pytest.approx(-cut, abs=0.01)
+    assert row["baseline"] == pytest.approx(cut, abs=0.01)
+    assert row["reform"] == pytest.approx(0, abs=PENNY)
     assert row["change"] == pytest.approx(-cut, abs=0.01)
 
 
-def test_the_pre_budget_side_runs_only_with_the_electricity_measure():
-    """The before side holds electricity's 5% when the electricity measure
-    is selected, and a measure's single keeps it for the others."""
-    hold = (
-        "uk_budget_data.budget_measures.pre_budget_vat_on_domestic_electricity"
-        ":pre_budget_vat_on_domestic_electricity"
-    )
-    cut = household_impact.modifier_name(zero_vat_on_domestic_electricity)
+def test_every_single_retains_the_shared_pre_budget_electricity_reference():
+    """Only selecting electricity restores its native extension; other
+    singles keep the same pre-Budget schedule without formula modifiers."""
     alone = household_impact.measure_sides(["household_energy_payment_2026"])
-    assert hold not in alone.before["modifiers"]
     both = household_impact.measure_sides(
         ["domestic_electricity_zero_vat", "household_energy_payment_2026"]
     )
-    assert hold in both.before["modifiers"]
-    assert cut not in both.before["modifiers"]
-    assert cut in both.after["modifiers"]
-    assert hold not in both.after["modifiers"]
-    # Each single switches one measure on: the electricity measure's own
-    # single cuts, the other measure's keeps the 5% held
-    assert cut in both.singles["domestic_electricity_zero_vat"]["modifiers"]
-    assert hold not in (
-        both.singles["domestic_electricity_zero_vat"]["modifiers"]
-    )
-    assert hold in both.singles["household_energy_payment_2026"]["modifiers"]
-    assert cut not in (
-        both.singles["household_energy_payment_2026"]["modifiers"]
-    )
+    reference = pre_budget_policy_changes()
+    selected = native_policy_changes("domestic_electricity_zero_vat")
+
+    def effective(side):
+        assert side["modifiers"] == []
+        return with_forecast(
+            household_impact.side_scenario(side)
+        ).parameter_changes
+
+    for path, values in selected.items():
+        assert effective(alone.before)[path] == reference[path]
+        assert effective(alone.after)[path] == reference[path]
+        assert effective(both.before)[path] == reference[path]
+        assert effective(both.after)[path] == values
+        assert (
+            effective(both.singles["domestic_electricity_zero_vat"])[path]
+            == values
+        )
+        assert (
+            effective(both.singles["household_energy_payment_2026"])[path]
+            == reference[path]
+        )
 
 
-def test_northern_ireland_keeps_the_electricity_vat_until_april_2027():
+def test_northern_irelands_april_extension_crosses_the_fiscal_year_boundary():
     """The zero rate is Great Britain's to March 2027 and, as the Budget
     expects, UK-wide from April 2027."""
     result = calculate(
@@ -348,14 +343,16 @@ def test_northern_ireland_keeps_the_electricity_vat_until_april_2027():
         2026,
         ["domestic_electricity_zero_vat"],
     )
-    assert result["net_income"]["change"] == 0
+    assert result["net_income"]["change"] == pytest.approx(
+        1_040 * 0.05 * (5 / 365) / 1.05, abs=0.01
+    )
     result = calculate(
         Answers(2027, region="NORTHERN_IRELAND", electricity_spending=1_040),
         2027,
         ["domestic_electricity_zero_vat"],
     )
     assert result["net_income"]["change"] == pytest.approx(
-        1_040 * 0.05 * SPRING_SHARE / 1.05, abs=0.01
+        1_040 * 0.05 * (86 / 366) / 1.05, abs=0.01
     )
 
 

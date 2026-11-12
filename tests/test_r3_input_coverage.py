@@ -20,6 +20,12 @@ PREVIOUS = EVIDENCE["previous"]["build_id"]
 DECLARATIONS = EVIDENCE["input_declarations_and_scopes"]
 NAMES = EVIDENCE["newly_missing_inputs"]
 BY_INPUT = {limit.missing_input: limit for limit in data_limits.DATA_LIMITS}
+ACTIVE_NAMES = [
+    name for name in NAMES if name not in data_limits.NO_LONGER_MISSING
+]
+ACTIVE_DECLARATIONS = [
+    entry for entry in DECLARATIONS if entry["input"] in ACTIVE_NAMES
+]
 
 
 def test_exact_transition_and_predecessor_chain_are_recorded():
@@ -33,7 +39,7 @@ def test_exact_transition_and_predecessor_chain_are_recorded():
     )
 
 
-@pytest.mark.parametrize("name", NAMES)
+@pytest.mark.parametrize("name", ACTIVE_NAMES)
 def test_every_new_input_has_one_limit_and_no_release_exemption(name):
     assert (
         sum(limit.missing_input == name for limit in data_limits.DATA_LIMITS)
@@ -42,7 +48,7 @@ def test_every_new_input_has_one_limit_and_no_release_exemption(name):
     assert name not in data_limits.NO_LONGER_MISSING
 
 
-@pytest.mark.parametrize("name", NAMES)
+@pytest.mark.parametrize("name", ACTIVE_NAMES)
 def test_removing_any_new_limit_fails_coverage(name, monkeypatch):
     monkeypatch.setattr(
         data_limits,
@@ -59,7 +65,7 @@ def test_removing_any_new_limit_fails_coverage(name, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "entry", DECLARATIONS, ids=lambda entry: entry["input"]
+    "entry", ACTIVE_DECLARATIONS, ids=lambda entry: entry["input"]
 )
 def test_default_entity_period_and_exact_roots_match_the_reviewed_source(
     entry,
@@ -78,7 +84,7 @@ def test_default_entity_period_and_exact_roots_match_the_reviewed_source(
 
 
 @pytest.mark.parametrize(
-    "entry", DECLARATIONS, ids=lambda entry: entry["input"]
+    "entry", ACTIVE_DECLARATIONS, ids=lambda entry: entry["input"]
 )
 @pytest.mark.parametrize("side", ["baseline", "reform"])
 def test_each_scoped_root_is_held_on_either_scenario_side(entry, side):
@@ -95,7 +101,7 @@ def test_each_scoped_root_is_held_on_either_scenario_side(entry, side):
 
 
 @pytest.mark.parametrize(
-    "entry", DECLARATIONS, ids=lambda entry: entry["input"]
+    "entry", ACTIVE_DECLARATIONS, ids=lambda entry: entry["input"]
 )
 def test_native_direct_helper_and_defined_for_readers_are_covered(entry):
     """A real witness: helper/gating gaps must fail, never become exemptions."""

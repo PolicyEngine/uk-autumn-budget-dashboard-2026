@@ -184,7 +184,8 @@ def test_template_helpers_and_unfixed_modules_are_hand_written(source):
 def test_calls_and_attributes_in_subscripts_are_hand_written_and_held(
     modifier, sign_off_required
 ):
-    world = World()
+    # Explicit historical single-phase modifier-attestation compatibility.
+    world = World(historical=True)
     reform = Reform(
         id="subscript", name="Subscript", simulation_modifier=modifier
     )
@@ -280,7 +281,7 @@ def test_combined_proofs_preserve_every_member_and_both_sides():
     }
 
 
-def test_generation_records_original_member_proofs_for_combined_runs(
+def test_native_generation_refuses_structural_members_without_artifact_recipes(
     monkeypatch,
 ):
     world = World()
@@ -288,7 +289,9 @@ def test_generation_records_original_member_proofs_for_combined_runs(
         generate, "code_revision", lambda root: world.revision()
     )
     # Parameter consistency has its own real-simulation tests. This test
-    # exercises which original modifiers the generator records.
+    # checks that pure-template proofs cannot bypass a missing phase-aware
+    # national artifact recipe. Household phased identities alone do not
+    # supply that recipe.
     monkeypatch.setattr(combine, "check_consistency", lambda *args: None)
 
     def process(reform, config, baseline, reformed, baseline_scenario):
@@ -324,25 +327,15 @@ def test_generation_records_original_member_proofs_for_combined_runs(
             build=lambda dataset, scenario=None: world.sim(),
             process=process,
         )
-        assert report.refused == {}
-        documents = {
-            reference.key: read_receipt(reference.path)
-            for reference in report.written
+        assert set(report.refused) == {
+            "pure",
+            "helper",
+            "combined--helper+pure",
         }
-        for document in documents.values():
-            assert record_problems(document) == []
-        combined = next(
-            document
-            for key, document in documents.items()
-            if key.startswith("combined")
+        assert all(
+            "structural" in reason for reason in report.refused.values()
         )
-        assert combined["dashboard"]["modifier_templates"] == {
-            "baseline": [["apply_benefit_receipt_payment"]],
-            # Member order is the composer's stable id order.
-            "reform": [None, ["apply_vat_base_change"]],
-        }
-        assert "generation_id" in combined["dashboard"]
-        assert "generation_id" not in documents["pure"]["dashboard"]
+        assert report.written == []
     finally:
         world.close()
 

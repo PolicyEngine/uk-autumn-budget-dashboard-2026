@@ -289,7 +289,11 @@ def test_configured_baseline_is_still_shared_once_in_combined_recipe():
     assert len(bound) == 1
 
 
-def test_cash_isa_baseline_modifier_is_refused_until_phases_can_be_bound():
+def test_cash_isa_baseline_modifier_is_refused_without_public_phase_api(
+    monkeypatch,
+):
+    api, _ = receipt.receipt_api()
+    monkeypatch.delattr(api, "phased_scenario_reform_identity", raising=False)
     cash = reforms.get_reform(reforms.CASH_ISA_LIMIT_ID)
     assert cash.baseline_simulation_modifier is not None
     with pytest.raises(

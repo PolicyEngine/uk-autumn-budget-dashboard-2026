@@ -239,14 +239,34 @@ def test_a_picklable_measure_is_sent_as_itself():
     assert resolve_reform(portable(reform)) is reform
 
 
-def test_an_unpicklable_registered_measure_is_sent_by_id():
+def test_the_native_parameter_package_is_picklable():
     from uk_budget_data.reforms import get_reform
 
     combined = get_reform("autumn_budget_2026_combined")
+    pickle.dumps(combined)
+    assert portable(combined) is combined
+
+
+def test_an_unpicklable_registered_measure_is_sent_by_id(monkeypatch):
+    from uk_budget_data import reforms
+
+    # The current package contains parameters only. Register an explicitly
+    # synthetic structural measure to exercise the worker reference path.
+    combined = Reform(
+        id="synthetic_unpicklable",
+        name="Synthetic unpicklable",
+        simulation_modifier=lambda sim: sim,
+    )
+    native_get_reform = reforms.get_reform
+    monkeypatch.setattr(
+        reforms,
+        "get_reform",
+        lambda key: combined if key == combined.id else native_get_reform(key),
+    )
     with pytest.raises(Exception):
         pickle.dumps(combined)
     reference = portable(combined)
-    assert reference == RegisteredReform("autumn_budget_2026_combined")
+    assert reference == RegisteredReform(combined.id)
     pickle.dumps(reference)
     assert resolve_reform(reference).id == combined.id
 

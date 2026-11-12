@@ -40,11 +40,11 @@ const DROP_FILL = CHART_COLOURS.mutedFill;
 // Over the stacked layers the total is drawn in ink, as on the marginal
 // rate card
 const TOTAL_COLOUR = CHART_COLOURS.ink;
-const TOTAL_NAME = { before: "Net income under current law", after: "Net income with the policies", both: "Net income with the policies", change: "Change in net income" };
+const TOTAL_NAME = { before: "Net income under pre-Budget policy", after: "Net income with Budget policies", both: "Net income with Budget policies", change: "Change in net income" };
 
 export const LEGEND_ITEMS = [
-  { label: "Under current law", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
-  { label: "With the selected policies", color: AFTER_COLOUR, type: "line" },
+  { label: "Under pre-Budget policy", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
+  { label: "With the selected Budget policies", color: AFTER_COLOUR, type: "line" },
 ];
 const DROP_ITEM = { label: "Net income falls as salary rises", color: CHART_COLOURS.grid };
 // The change card's key, as the population charts colour a gain and a loss
@@ -156,7 +156,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const view = sync?.view ?? ownView;
   const setView = sync?.setView ?? setOwnView;
   const isChange = view === "change";
-  // Both: current law and with the policies as two lines, no layers
+  // Both: pre-Budget and with Budget policies as two lines, no layers
   const isBoth = view === "both";
   const side = isBoth ? "after" : view;
   const narrow = useNarrowViewport();
@@ -234,7 +234,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   // runs to the axis's domain, not its last tick (the domain can sit half a
   // step past it).
   const youAt = salary !== null ? valueAt(rows, salary, "total") : null;
-  // Both: your net income under current law too
+  // Both: your net income under pre-Budget policy too
   const youBefore = isBoth && salary !== null ? valueAt(rows, salary, "before") : null;
   const changeReach = Math.max(
     Math.abs(stack.top),
@@ -311,7 +311,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
           : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]]),
     ...(drops.length ? [DROP_ITEM] : []),
   ];
-  const sideWords = view === "before" ? "under current law" : isBoth ? "under current law and with the selected policies" : "with the selected policies";
+  const sideWords = view === "before" ? "under pre-Budget policy" : isBoth ? "under pre-Budget policy and with the selected Budget policies" : "with the selected Budget policies";
   // One plain sentence: your household at your salary
   const youRounded = youValue == null ? null : Math.round(youValue / 10) * 10;
   // A change within £5 of itself at every salary: said in the sentence
@@ -327,7 +327,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
           ? `${at}, the selected policies barely change your household's net income.`
           : `${at}, the selected policies ${youRounded > 0 ? "add" : "take"} about ${formatPounds(Math.abs(youRounded))} a year ${youRounded > 0 ? "to" : "from"} your household's net income${flatChange ? ", about the same at every salary" : ""}.`
         : isBoth && youBefore != null
-          ? `${at}, your household's net income is about ${formatPounds(Math.round(youBefore / 10) * 10)} a year under current law and ${formatPounds(Math.round(youValue / 10) * 10)} with the selected policies.`
+          ? `${at}, your household's net income is about ${formatPounds(Math.round(youBefore / 10) * 10)} a year under pre-Budget policy and ${formatPounds(Math.round(youValue / 10) * 10)} with the selected Budget policies.`
           : `${at}, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
   const description = isChange
     ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, while partner income and everything else stay fixed.`
@@ -361,8 +361,8 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
           ...layerColumns,
           ...(isBoth
             ? [
-                { key: "before", label: "Net income under current law (£)", decimals: 2 },
-                { key: "after", label: "Net income with the policies (£)", decimals: 2 },
+                { key: "before", label: "Net income under pre-Budget policy (£)", decimals: 2 },
+                { key: "after", label: "Net income with Budget policies (£)", decimals: 2 },
                 { key: "change", label: "Change in net income (£)", decimals: 2 },
               ]
             : [{ key: "total", label: `${TOTAL_NAME[view]} (£)`, decimals: 2 }]),
@@ -494,7 +494,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 strokeDasharray={!netParts && view === "before" ? BEFORE_DASH : undefined}
               />
               {isBoth && (
-                // Current law dashed, over the policies' solid line so both show where they meet
+                // Pre-Budget dashed, over the policies' solid line so both show where they meet
                 <path
                   className="earnings-total earnings-total-before"
                   d={linePath(rows, x, y, "before")}

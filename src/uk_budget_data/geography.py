@@ -2099,13 +2099,18 @@ def _area_identities(reform_id: str, years, revision, member_revisions=None):
     )
     combined = combine.combine_measures(members, config)
     uses_config = any(not member.has_custom_baseline() for member in members)
-    baseline = combined.baseline_scenario_for(config, uses_config)
+    baseline = publication_receipt.comparison_scenario(
+        combined.baseline_scenario_for(config, uses_config)
+    )
+    effective_reform = publication_receipt.comparison_scenario(
+        combined.to_scenario()
+    )
     identities = publication_receipt.combined_identities(
         members,
         config,
         revision,
         reform_applied_before_data_load=(
-            combined.to_scenario().applied_before_data_load
+            effective_reform.applied_before_data_load
         ),
         baseline_applied_before_data_load=(
             baseline.applied_before_data_load

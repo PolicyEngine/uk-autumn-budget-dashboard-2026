@@ -109,10 +109,15 @@ def test_only_code_bound_sides_depend_on_the_commit(measure_id, one, two):
 
 def test_some_measures_are_code_bound_and_some_by_content():
     # Otherwise the property above would hold vacuously for one kind.
-    bindings = {
-        definitions.measure_definition(m, COMMIT)["reform"]["binding"]
-        for m in MEASURES
-    }
+    # The retained cash diversion modifier binds the baseline; registered
+    # native restorations themselves are parameter-only content bindings.
+    bindings = set()
+    for measure_id in MEASURES:
+        definition = definitions.measure_definition(measure_id, COMMIT)
+        assert "error" not in definition, (measure_id, definition)
+        bindings.update(
+            definition[side]["binding"] for side in ("baseline", "reform")
+        )
     assert bindings == {"content", "code_revision"}
 
 

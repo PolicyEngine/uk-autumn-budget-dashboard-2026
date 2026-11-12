@@ -1,29 +1,46 @@
-"""The Pension Tax Allowance (``pension_tax_allowance``): HM Treasury's
-explainer cases for 2027-28 (Budget 2026), and the Scottish rule."""
+"""Native PTA against the runtime's actual pre-Budget comparison.
+
+HM Treasury's 2027-28 examples use a full new State Pension of £13,036.40.
+The installed native forecast has that rate too. Separate cases derive the
+later years' thresholds from the native weekly rate, without installing
+the retained historical formula wrapper on top of current law.
+"""
+
+import math
 
 import pytest
 from policyengine_uk import Simulation
 
 from uk_budget_data import reforms
-from uk_budget_data.budget_measures.pension_tax_allowance import (
-    pension_tax_allowance,
-)
+from uk_budget_data.budget_policy import native_policy_changes
+from uk_budget_data.forecast import forecast_parameters, with_forecast
 
 YEAR = 2027
 
 
-def _pensioner(income, region="LONDON", age=70):
+def _pensioner(income, region="LONDON", age=70, year=YEAR):
     return {
-        "people": {"p": {"age": {YEAR: age}, "state_pension": {YEAR: income}}},
+        "people": {"p": {"age": {year: age}, "state_pension": {year: income}}},
         "benunits": {"b": {"members": ["p"]}},
-        "households": {"h": {"members": ["p"], "region": {YEAR: region}}},
+        "households": {"h": {"members": ["p"], "region": {year: region}}},
     }
 
 
+def _simulations(situation):
+    """The same factory and policy basis used by the household runtime."""
+    measure = reforms._create_state_pension_income_tax_protection()
+    baseline = Simulation(
+        situation=situation,
+        scenario=with_forecast(measure.to_baseline_scenario()),
+    )
+    reformed = Simulation(
+        situation=situation, scenario=with_forecast(measure.to_scenario())
+    )
+    return baseline, reformed
+
+
 def _income_tax(situation, year=YEAR):
-    baseline = Simulation(situation=situation)
-    reformed = Simulation(situation=situation)
-    pension_tax_allowance(reformed)
+    baseline, reformed = _simulations(situation)
     return (
         float(baseline.calculate("income_tax", year)[0]),
         float(reformed.calculate("income_tax", year)[0]),
@@ -44,6 +61,10 @@ def _income_tax(situation, year=YEAR):
     ],
 )
 def test_the_explainers_cases(income, before, after):
+    # HM Treasury's published threshold is a source assertion, rather than
+    # an old model's unrounded forecast silently standing in for the rule.
+    weekly = forecast_parameters().gov.dwp.state_pension.new_state_pension
+    assert weekly.amount(str(YEAR)) * 52 == pytest.approx(13_036.40)
     baseline, reformed = _income_tax(_pensioner(income))
     assert baseline == pytest.approx(before, abs=0.01)
     assert reformed == pytest.approx(after, abs=0.01)
@@ -65,18 +86,53 @@ def test_under_state_pension_age_nothing_changes():
 
 @pytest.mark.parametrize("year", [2026, 2030])
 def test_outside_2027_to_2029_nothing_changes(year):
-    situation = _pensioner(13_036.40)
-    for person in situation["people"].values():
-        for key in person:
-            person[key] = {year: list(person[key].values())[0]}
-    situation["households"]["h"]["region"] = {year: "LONDON"}
+    situation = _pensioner(13_036.40, year=year)
     baseline, reformed = _income_tax(situation, year)
     assert reformed == pytest.approx(baseline, abs=0.01)
 
 
 def test_the_measure_is_the_tax_reduction():
     measure = reforms.get_reform(reforms.STATE_PENSION_ALLOWANCE_ID)
-    assert measure.simulation_modifier is pension_tax_allowance
+    assert measure.parameter_changes == native_policy_changes(
+        reforms.STATE_PENSION_ALLOWANCE_ID
+    )
+    assert measure.simulation_modifier is None
+    assert measure.baseline_simulation_modifier is None
+    assert measure.baseline_parameter_changes is None
+
+
+@pytest.mark.parametrize("year", [2027, 2028, 2029])
+def test_native_allowance_follows_the_forecast_and_is_applied_once(year):
+    """£150 over the native full pension withdraws £50 of relief.
+
+    The explainer specifies 20% of the full pension above the Personal
+    Allowance, rounded up to pounds, then £1 withdrawn for each £3 of total
+    income above the full pension. Native uprated thresholds supply the
+    later years; the historical wrapper supplies none of these values.
+    """
+    parameters = forecast_parameters()(str(year)).gov
+    full_pension = 52 * parameters.dwp.state_pension.new_state_pension.amount
+    personal_allowance = (
+        parameters.hmrc.income_tax.allowances.personal_allowance.amount
+    )
+    full_relief = math.ceil(
+        round(0.2 * (full_pension - personal_allowance), 6)
+    )
+    before_tax = 0.2 * (full_pension + 150 - personal_allowance)
+    relief = full_relief - 50
+    baseline, reformed = _simulations(
+        _pensioner(full_pension + 150, year=year)
+    )
+    assert float(baseline.calculate("pension_tax_allowance", year)[0]) == 0
+    assert float(reformed.calculate("pension_tax_allowance", year)[0]) == (
+        pytest.approx(relief, abs=0.01)
+    )
+    assert float(baseline.calculate("income_tax", year)[0]) == pytest.approx(
+        before_tax, abs=0.01
+    )
+    assert float(reformed.calculate("income_tax", year)[0]) == pytest.approx(
+        before_tax - relief, abs=0.01
+    )
 
 
 def test_isa_interest_is_left_out_of_total_income():
@@ -148,9 +204,7 @@ def test_universal_credit_deducts_the_tax_after_the_pta(income_variable):
     income_tax. The £93.28 PTA lowers that deduction too, so earned income
     rises by £93.28 and UC takes back 55% of it (£51.30): +£41.97 net."""
     situation = _mixed_age_couple_on_uc(income_variable)
-    baseline = Simulation(situation=situation)
-    reformed = Simulation(situation=situation)
-    pension_tax_allowance(reformed)
+    baseline, reformed = _simulations(situation)
 
     def get(sim, variable):
         return sim.calculate(variable, YEAR)

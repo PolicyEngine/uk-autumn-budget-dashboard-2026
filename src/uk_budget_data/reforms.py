@@ -492,26 +492,18 @@ def _create_state_pension_income_tax_protection(
     design = design or STATE_PENSION_PROTECTION_DESIGN
     modifier, description = STATE_PENSION_PROTECTION_DESIGNS[design]
     if design == "tax_reduction":
-        return Reform(
-            id=STATE_PENSION_ALLOWANCE_ID,
-            name="Pension Tax Allowance",
-            description=description,
-            parameter_changes=native_policy_changes(
-                STATE_PENSION_ALLOWANCE_ID
-            ),
-        )
+        modifier = None
+        changes = native_policy_changes(STATE_PENSION_ALLOWANCE_ID)
+    else:
+        # The allowance designs move taxable income and the capital gains
+        # rate; the native tax reduction leaves both unchanged.
+        changes = static_capital_gains()
     return Reform(
         id=STATE_PENSION_ALLOWANCE_ID,
         name="Pension Tax Allowance",
         description=description,
         simulation_modifier=modifier,
-        # The PTA ("tax_reduction") lowers the liability and leaves taxable
-        # income, and so the capital gains rate, alone: no capital gains
-        # pin, which would only add noise in the years it is not in force.
-        # The allowance designs move taxable income, so they carry it.
-        parameter_changes=(
-            None if design == "tax_reduction" else static_capital_gains()
-        ),
+        parameter_changes=changes,
     )
 
 
@@ -980,16 +972,10 @@ def _create_household_energy_payment_2026() -> Reform:
 # limit. The parameter is not uprated, so writing every year from the
 # first is the whole change. The property allowance (£1,000) is unchanged.
 #
-# Who gains is set in the data, not here. From the national build 0639b9c7
-# (Microcosm's trading_allowance_receipts stage) the data store each
-# trader's gross receipts: a trader drawn as already claiming the £1,000
-# allowance has receipts of profit plus £1,000, any other trader profit
-# plus £3,000. The draw's shares are 72% for profits up to £4,500, 14% from
-# £4,500 to £9,000 and none above, set so that an earlier national gave
-# HMRC's estimate (about 400,000 people paying £380 less on average). The
-# engine then relieves a claimant by up to £3,000 less their stored £1,000
-# and no other trader. The description says so; the earlier data stored no
-# receipts, and the engine then relieved a profit up to £3,000 in full.
+# Native relief shares one allowance across trade and miscellaneous income,
+# using receipts, expenses and recorded claim status. The current certified
+# data lack claim status and miscellaneous income; the data-limit registry
+# holds the national estimate rather than carrying old claimant-band scores.
 TRADING_ALLOWANCE_RAISED = 3_000
 TRADING_ALLOWANCE_FROM = 2027
 
@@ -999,16 +985,14 @@ def _create_trading_allowance_raise() -> Reform:
         id=TRADING_ALLOWANCE_ID,
         name="Trading allowance raised to £3,000",
         description=(
-            f"From 6 April {TRADING_ALLOWANCE_FROM} the "
-            "trading allowance, which relieves trading receipts in place "
-            "of actual expenses, rises from £1,000 to "
+            f"From 6 April {TRADING_ALLOWANCE_FROM} the government raises "
+            "the trading allowance from £1,000 to "
             f"£{TRADING_ALLOWANCE_RAISED:,}, for income tax and Class 4 "
-            "National Insurance. The surveys behind our data record "
-            "traders' profits, not their receipts, so we assume who already "
-            "claims the £1,000 allowance: 72% of traders with profits up to "
-            "£4,500, 14% of those with profits from £4,500 to £9,000 and "
-            "none above. Only those traders gain, and we count no one who "
-            "switches from actual expenses to the larger allowance."
+            "National Insurance. The native model shares the allowance "
+            "across trading receipts and eligible miscellaneous income, considers "
+            "actual expenses and uses recorded claim status. We cannot "
+            "estimate its national effect on the certified data, which "
+            "lack trading-allowance claim status and eligible miscellaneous income."
         ),
         parameter_changes=native_policy_changes(TRADING_ALLOWANCE_ID),
     )
@@ -1100,7 +1084,9 @@ def _create_cash_isa_limit_kept() -> Reform:
 # The household calculator must supply that subset as well as total
 # standard-rate takings. The national publication hold remains: adopting
 # the native formula does not establish coverage in the certified data.
-MACHINE_GAMES_DUTY_FROM = 2027
+# First affected model tax year: the native 1 April 2027 start contributes
+# five days to 2026-27 (6 April 2026 to 5 April 2027).
+MACHINE_GAMES_DUTY_FROM = 2026
 MACHINE_GAMES_DUTY_HIGHER_STAKE_RATE = 0.25
 
 

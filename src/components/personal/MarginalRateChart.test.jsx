@@ -100,9 +100,9 @@ describe("MarginalRateChart", () => {
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     // One view at a time: After first, with its total only
-    expect(optionsLabel(document.body)).toBe("With the policies");
-    expect(screen.getByText("Total rate with the policies")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate under current law")).not.toBeInTheDocument();
+    expect(optionsLabel(document.body)).toBe("With Budget policies");
+    expect(screen.getByText("Total rate with Budget policies")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate under pre-Budget policy")).not.toBeInTheDocument();
     // Every shared component has a chip, so the two cards' keys line up;
     // one with nothing for this household is disabled
     fireEvent.click(screen.getByRole("button", { name: /with no effect for you$/ }));
@@ -113,8 +113,8 @@ describe("MarginalRateChart", () => {
     // One sentence: the rate, then the rate as money; its parts in More info
     expect(screen.getByText(/^At £110,000 your marginal tax rate stays at 62%, so of your next £1,000 you keep £380\./)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    // The parts are always the rate with the policies (own.after), so it says so
-    expect(screen.getByText(/your marginal rate with the policies consists of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
+    // The parts are always the rate with Budget policies (own.after), so it says so
+    expect(screen.getByText(/your marginal rate with Budget policies consists of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
     // The PA taper's note, which the legend had behind an "i", is a definition
     expect(document.querySelector(".chart-more-info")).toHaveTextContent(/Personal allowance taper/);
   });
@@ -178,9 +178,9 @@ describe("MarginalRateChart", () => {
   it("switches between before, after and the change, each with its own legend", () => {
     const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
-    chooseOption(document.body, "Current law");
-    expect(screen.getByText("Total rate under current law")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate with the policies")).not.toBeInTheDocument();
+    chooseOption(document.body, "Pre-Budget");
+    expect(screen.getByText("Total rate under pre-Budget policy")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate with Budget policies")).not.toBeInTheDocument();
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     chooseOption(document.body, "Change");
     expect(screen.getByText("Change in marginal rate")).toBeInTheDocument();
@@ -203,16 +203,16 @@ describe("MarginalRateChart", () => {
 
   it("describes the downloaded image by the view drawn: one total, and that side's parts (W6 G1)", () => {
     expect(rateExportDescription("before", true, "2027-28")).toBe(
-      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28 under current law, by part.",
+      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28 under pre-Budget policy, by part.",
     );
     expect(rateExportDescription("after", false, "2027-28")).toBe(
-      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28 with the policies.",
+      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28 with Budget policies.",
     );
     expect(rateExportDescription("change", false, "2027-28")).toBe(
       "The change the selected policies make to the share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28, in percentage points.",
     );
     for (const view of ["before", "after", "change"]) {
-      expect(rateExportDescription(view, true, "2027-28")).not.toMatch(/under current law and with/);
+      expect(rateExportDescription(view, true, "2027-28")).not.toMatch(/under pre-Budget policy and with/);
     }
   });
 
@@ -256,18 +256,18 @@ describe("MarginalRateChart", () => {
       return text;
     };
     expect(tip("before")).toMatch(/Income tax/);
-    expect(tip("before")).toMatch(/Total rate under current law.*42%/);
-    expect(tip("before")).not.toMatch(/Total rate with the policies/);
-    expect(tip("after")).toMatch(/Total rate with the policies.*45%/);
-    expect(tip("after")).not.toMatch(/Total rate under current law/);
+    expect(tip("before")).toMatch(/Total rate under pre-Budget policy.*42%/);
+    expect(tip("before")).not.toMatch(/Total rate with Budget policies/);
+    expect(tip("after")).toMatch(/Total rate with Budget policies.*45%/);
+    expect(tip("after")).not.toMatch(/Total rate under pre-Budget policy/);
     expect(tip("change")).toMatch(/Change in marginal rate.*\+3pp/);
     expect(tip("change")).not.toMatch(/Income tax|Total rate/);
   });
 
   it("draws the totals alone when the API sends no parts", () => {
     render(<MarginalRateChart sweep={sweep(null)} salary={110000} yearLabel="2027-28" />);
-    expect(screen.getByText("With the selected policies")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate with the policies")).not.toBeInTheDocument();
+    expect(screen.getByText("With the selected Budget policies")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate with Budget policies")).not.toBeInTheDocument();
     expect(screen.getByText(/^At £110,000 your marginal tax rate stays at 62%, so of your next £1,000 you keep £380\./)).toBeInTheDocument();
   });
 });
@@ -276,7 +276,7 @@ describe("the two Across earnings cards in step", () => {
   it("share one list of components: the same chips in the same order on both, those with nothing disabled", async () => {
     const { sweepChips, SWEEP_COMPONENTS } = await import("./sweepComponents");
     const net = sweepChips("net", new Set(["market_income", "income_tax", "national_insurance"]), { label: "Net income after", colour: "x" });
-    const rate = sweepChips("rate", new Set(["income_tax", "national_insurance"]), { label: "Total rate with the policies", colour: "x" });
+    const rate = sweepChips("rate", new Set(["income_tax", "national_insurance"]), { label: "Total rate with Budget policies", colour: "x" });
     expect(net.map((chip) => chip.label).slice(0, -1)).toEqual(rate.map((chip) => chip.label).slice(0, -1));
     expect(net.map((chip) => chip.key).slice(0, -1)).toEqual(SWEEP_COMPONENTS.map((component) => component.key));
     const by = (chips, key) => chips.find((chip) => chip.key === key);
@@ -314,12 +314,12 @@ describe("changeRateTicks headroom", () => {
 describe("the Both view (Vahid, 28 Oct)", () => {
   it("describes both totals in its export, and lists both and the change in its tooltip", () => {
     expect(rateExportDescription("both", true, "2027-28")).toBe(
-      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28, under current law and with the policies.",
+      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28, under pre-Budget policy and with Budget policies.",
     );
     const { container } = render(
       <RateTooltip active yearLabel="2027-28" parts={null} view="both" payload={[{ payload: { income: 30000, beforeRaw: 0.2, afterRaw: 0, change: -0.2 } }]} />,
     );
     const rows = [...container.querySelectorAll(".chart-tooltip-row")].map((row) => row.textContent);
-    expect(rows).toEqual(["Total rate under current law20%", "Total rate with the policies0%", "Change−20pp"]);
+    expect(rows).toEqual(["Total rate under pre-Budget policy20%", "Total rate with Budget policies0%", "Change−20pp"]);
   });
 });

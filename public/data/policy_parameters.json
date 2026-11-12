@@ -2,8 +2,8 @@
   "schema": "uk-budget-dashboard/policy-parameters/v1",
   "generator": "uk-budget-data policy-table",
   "engine": {
-    "policyengine": "6.11.1",
-    "policyengine_uk": "2.151.0"
+    "policyengine": "6.17.2",
+    "policyengine_uk": "2.174.1"
   },
   "years": [
     2026,
@@ -15,7 +15,7 @@
   ],
   "measures": {
     "fuel_duty_rise_deferral": {
-      "description": "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
+      "description": "The 5p cut in fuel duty continues to 30 June 2027. The main rate rises to 60.59p a litre on 1 July 2027 and follows the native RPI schedule after that. Compared with the actual pre-Budget schedule, including the January and March 2027 steps; the model applies its own fuel and VAT treatment.",
       "display": "schedule",
       "rows": [
         {
@@ -27,6 +27,13 @@
             {
               "key": "2026-04-01",
               "label": "1 April 2026",
+              "year": 2026,
+              "before": 52.95,
+              "after": 52.95
+            },
+            {
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 52.95,
               "after": 52.95
@@ -49,116 +56,250 @@
               "key": "2027-04-01",
               "label": "1 April 2027",
               "year": 2027,
-              "before": 60.59,
+              "before": 60.03,
               "after": 52.95
             },
             {
               "key": "2027-07-01",
               "label": "1 July 2027",
               "year": 2027,
-              "before": 60.59,
+              "before": 60.03,
               "after": 60.59
             },
             {
               "key": "2028-04-01",
               "label": "1 April 2028",
               "year": 2028,
-              "before": 63.21,
+              "before": 62.62,
               "after": 63.21
             },
             {
               "key": "2029-04-01",
               "label": "1 April 2029",
               "year": 2029,
-              "before": 65.13,
+              "before": 64.52,
               "after": 65.13
             },
             {
               "key": "2030-04-01",
               "label": "1 April 2030",
               "year": 2030,
-              "before": 67.07,
+              "before": 66.44,
               "after": 67.07
             },
             {
               "key": "2031-04-01",
               "label": "1 April 2031",
               "year": 2031,
-              "before": 68.61,
+              "before": 67.96,
               "after": 68.61
             }
           ],
           "source": {
             "before": {
-              "kind": "measure_schedule",
-              "where": "reforms.py FUEL_DUTY_CURRENT_LAW: current law in policyengine-uk's petrol_and_diesel.yaml, by date"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.fuel_duty_rise_deferral.paths.gov.hmrc.fuel_duty.petrol_and_diesel",
+              "path": "gov.hmrc.fuel_duty.petrol_and_diesel",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.legislation.gov.uk/uksi/2026/164",
+                "https://www.legislation.gov.uk/uksi/2026/555/made",
+                "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
+              ]
             },
             "after": {
-              "kind": "measure_schedule",
-              "where": "reforms.py fuel_duty_deferral_schedule()"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.fuel_duty.petrol_and_diesel, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.fuel_duty.petrol_and_diesel",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "currency-GBP"
             }
-          }
+          },
+          "note": "Pre-Budget snapshot da31e8698: statutory January/March 2027 steps, petrol/diesel 60.03p April 2027 then October RPI. Both sides state the unchanged rates from 6 April 2026 so the first scored fiscal year has complete coverage. LPG and natural gas preserve that snapshot's full rates after March; adding missing RPI to them is a separate reference change."
         },
         {
-          "label": "Fuel duty, averaged over the year",
-          "unit": "pence_per_litre",
-          "unit_words": "pence a litre",
+          "label": "Fuel duty on LPG",
+          "unit": "pence",
+          "unit_words": "pence a kilogram",
           "primary": false,
           "points": [
             {
-              "key": "2026",
-              "label": "2026-27",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
-              "before": 53.964247,
-              "after": 52.95
+              "before": 28.88,
+              "after": 28.88
             },
             {
-              "key": "2027",
-              "label": "2027-28",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
+              "year": 2026,
+              "before": 28.88,
+              "after": 28.88
+            },
+            {
+              "key": "2027-01-01",
+              "label": "1 January 2027",
+              "year": 2026,
+              "before": 30.52,
+              "after": 28.88
+            },
+            {
+              "key": "2027-03-01",
+              "label": "1 March 2027",
+              "year": 2026,
+              "before": 31.61,
+              "after": 28.88
+            },
+            {
+              "key": "2027-07-01",
+              "label": "1 July 2027",
               "year": 2027,
-              "before": 60.625792,
-              "after": 58.8306
+              "before": 31.61,
+              "after": 33.05
             },
             {
-              "key": "2028",
-              "label": "2028-29",
+              "key": "2028-04-01",
+              "label": "1 April 2028",
               "year": 2028,
-              "before": 63.236301,
-              "after": 63.236301
+              "before": 31.61,
+              "after": 34.48
             },
             {
-              "key": "2029",
-              "label": "2029-30",
+              "key": "2029-04-01",
+              "label": "1 April 2029",
               "year": 2029,
-              "before": 65.156575,
-              "after": 65.156575
+              "before": 31.61,
+              "after": 35.52
             },
             {
-              "key": "2030",
-              "label": "2030-31",
+              "key": "2030-04-01",
+              "label": "1 April 2030",
               "year": 2030,
-              "before": 67.091096,
-              "after": 67.091096
+              "before": 31.61,
+              "after": 36.58
             },
             {
-              "key": "2031",
-              "label": "2031-32",
+              "key": "2031-04-01",
+              "label": "1 April 2031",
               "year": 2031,
-              "before": 68.630492,
-              "after": 68.630492
+              "before": 31.61,
+              "after": 37.42
             }
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.fuel_duty.petrol_and_diesel, at 6 April of each year"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.fuel_duty_rise_deferral.paths.gov.hmrc.fuel_duty.lpg",
+              "path": "gov.hmrc.fuel_duty.lpg",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.legislation.gov.uk/uksi/2026/164",
+                "https://www.legislation.gov.uk/uksi/2026/555/made",
+                "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
+              ]
             },
             "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py fuel_duty_deferral_rates(): gov.hmrc.fuel_duty.petrol_and_diesel; current law elsewhere"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.fuel_duty.lpg, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.fuel_duty.lpg",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "currency-GBP"
             }
           },
-          "note": "As modelled: each fiscal year's rates weighted by their days, as the simulation applies them"
+          "note": "Pre-Budget snapshot da31e8698: statutory January/March 2027 steps, petrol/diesel 60.03p April 2027 then October RPI. Both sides state the unchanged rates from 6 April 2026 so the first scored fiscal year has complete coverage. LPG and natural gas preserve that snapshot's full rates after March; adding missing RPI to them is a separate reference change."
+        },
+        {
+          "label": "Fuel duty on natural gas",
+          "unit": "pence",
+          "unit_words": "pence a kilogram",
+          "primary": false,
+          "points": [
+            {
+              "key": "2026-04-01",
+              "label": "1 April 2026",
+              "year": 2026,
+              "before": 22.57,
+              "after": 22.57
+            },
+            {
+              "key": "2026-04-06",
+              "label": "6 April 2026",
+              "year": 2026,
+              "before": 22.57,
+              "after": 22.57
+            },
+            {
+              "key": "2027-01-01",
+              "label": "1 January 2027",
+              "year": 2026,
+              "before": 23.85,
+              "after": 22.57
+            },
+            {
+              "key": "2027-03-01",
+              "label": "1 March 2027",
+              "year": 2026,
+              "before": 24.7,
+              "after": 22.57
+            },
+            {
+              "key": "2027-07-01",
+              "label": "1 July 2027",
+              "year": 2027,
+              "before": 24.7,
+              "after": 25.82
+            },
+            {
+              "key": "2028-04-01",
+              "label": "1 April 2028",
+              "year": 2028,
+              "before": 24.7,
+              "after": 26.94
+            },
+            {
+              "key": "2029-04-01",
+              "label": "1 April 2029",
+              "year": 2029,
+              "before": 24.7,
+              "after": 27.76
+            },
+            {
+              "key": "2030-04-01",
+              "label": "1 April 2030",
+              "year": 2030,
+              "before": 24.7,
+              "after": 28.59
+            },
+            {
+              "key": "2031-04-01",
+              "label": "1 April 2031",
+              "year": 2031,
+              "before": 24.7,
+              "after": 29.24
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.fuel_duty_rise_deferral.paths.gov.hmrc.fuel_duty.natural_gas",
+              "path": "gov.hmrc.fuel_duty.natural_gas",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.legislation.gov.uk/uksi/2026/164",
+                "https://www.legislation.gov.uk/uksi/2026/555/made",
+                "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
+              ]
+            },
+            "after": {
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.fuel_duty.natural_gas, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.fuel_duty.natural_gas",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "currency-GBP"
+            }
+          },
+          "note": "Pre-Budget snapshot da31e8698: statutory January/March 2027 steps, petrol/diesel 60.03p April 2027 then October RPI. Both sides state the unchanged rates from 6 April 2026 so the first scored fiscal year has complete coverage. LPG and natural gas preserve that snapshot's full rates after March; adding missing RPI to them is a separate reference change."
         }
       ]
     },
@@ -217,113 +358,139 @@
           ],
           "source": {
             "before": {
-              "kind": "documented",
-              "where": "no such reduction under current law"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.state_pension_income_tax_protection.paths.gov.hmrc.income_tax.reliefs.pension_tax_allowance.in_effect",
+              "path": "gov.hmrc.income_tax.reliefs.pension_tax_allowance.in_effect",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer"
+              ]
             },
             "after": {
-              "kind": "modifier_constant",
-              "where": "20% of the full new State Pension (policyengine-uk gov.dwp.state_pension.new_state_pension.amount x 52, rounded down to 5p a week) above the personal allowance (gov.hmrc.income_tax.allowances.personal_allowance.amount), rounded up; budget_measures/pension_tax_allowance.py pension_tax_allowance(first_year, last_year)"
+              "kind": "native_formula",
+              "where": "policyengine_uk.variables.gov.hmrc.income_tax.reliefs.pension_tax_allowance: ceil(round(rate * max(0, WEEKS_IN_YEAR * new_state_pension.amount - personal_allowance.amount), 6)), while in_effect; values from the native parameter tree",
+              "path": "gov.hmrc.income_tax.reliefs.pension_tax_allowance.in_effect",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540"
             }
           },
-          "note": "For people over State Pension age; reduced by £1 for every £3 of total income above the full new State Pension"
+          "note": "Before the native income taper and the cap at tax remaining; eligibility follows State Pension age."
         }
       ]
     },
     "domestic_electricity_zero_vat": {
-      "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
-      "display": "switch",
+      "description": "The existing zero rate of VAT on domestic electricity in Great Britain is extended through 30 June 2027, with Northern Ireland included from 1 April 2027. Compared with the actual pre-Budget policy, which already zero-rated Great Britain through March 2027. The model day-weights the dated rates; gas is unchanged.",
+      "display": "schedule",
       "rows": [
         {
-          "label": "VAT on domestic electricity",
+          "label": "VAT rate on domestic electricity, Great Britain",
           "unit": "percent",
           "unit_words": null,
           "primary": true,
           "points": [
             {
-              "key": "2026-10-01/2027-06-30",
-              "label": "October 2026 to June 2027",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
               "before": 0.05,
+              "after": 0.05
+            },
+            {
+              "key": "2026-10-01",
+              "label": "1 October 2026",
+              "year": 2026,
+              "before": 0.0,
               "after": 0.0
+            },
+            {
+              "key": "2027-04-01",
+              "label": "1 April 2027",
+              "year": 2027,
+              "before": 0.05,
+              "after": 0.0
+            },
+            {
+              "key": "2027-07-01",
+              "label": "1 July 2027",
+              "year": 2027,
+              "before": 0.05,
+              "after": 0.05
             }
           ],
           "source": {
             "before": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/pre_budget_vat_on_domestic_electricity.py pre_budget_vat_on_domestic_electricity(baseline_rate)"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.domestic_electricity_zero_vat.paths.gov.hmrc.vat.domestic_electricity_rate.great_britain",
+              "path": "gov.hmrc.vat.domestic_electricity_rate.great_britain",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.legislation.gov.uk/uksi/2026/987/contents/made",
+                "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html"
+              ]
             },
             "after": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its SPRING_SHARE (the April to June share), October 2026 to June 2027 (the dates in the measure's description)"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.vat.domestic_electricity_rate.great_britain, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.vat.domestic_electricity_rate.great_britain",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
             }
-          }
+          },
+          "note": "Actual pre-Budget law: Great Britain already has 0% from October 2026 through March 2027; Northern Ireland has 5%. Only the April–June extension is reversed."
         },
         {
-          "label": "VAT on domestic electricity, averaged over the year",
+          "label": "VAT rate on domestic electricity, Northern Ireland",
           "unit": "percent",
           "unit_words": null,
           "primary": false,
           "points": [
             {
-              "key": "2026",
-              "label": "2026-27",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
               "before": 0.05,
-              "after": 0.021657
+              "after": 0.05
             },
             {
-              "key": "2027",
-              "label": "2027-28",
+              "key": "2027-04-01",
+              "label": "1 April 2027",
               "year": 2027,
               "before": 0.05,
-              "after": 0.03885
+              "after": 0.0
             },
             {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.05,
-              "after": 0.05
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.05,
-              "after": 0.05
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.05,
-              "after": 0.05
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
+              "key": "2027-07-01",
+              "label": "1 July 2027",
+              "year": 2027,
               "before": 0.05,
               "after": 0.05
             }
           ],
           "source": {
             "before": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/pre_budget_vat_on_domestic_electricity.py pre_budget_vat_on_domestic_electricity(baseline_rate)"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.domestic_electricity_zero_vat.paths.gov.hmrc.vat.domestic_electricity_rate.northern_ireland",
+              "path": "gov.hmrc.vat.domestic_electricity_rate.northern_ireland",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.legislation.gov.uk/uksi/2026/987/contents/made",
+                "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html"
+              ]
             },
             "after": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027)"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.vat.domestic_electricity_rate.northern_ireland, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.vat.domestic_electricity_rate.northern_ireland",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
             }
           },
-          "note": "As modelled: the cut weighted in 2026-27 by the October to March share of a year's electricity use and in 2027-28 by the April to June share, not by their days in force"
+          "note": "Actual pre-Budget law: Great Britain already has 0% from October 2026 through March 2027; Northern Ireland has 5%. Only the April–June extension is reversed."
         }
       ]
     },
     "property_income_rates_up": {
-      "description": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
-      "display": "path",
+      "description": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above pre-Budget policy, which includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
+      "display": "schedule",
       "rows": [
         {
           "label": "Property basic rate",
@@ -332,56 +499,36 @@
           "primary": true,
           "points": [
             {
-              "key": "2026",
-              "label": "2026-27",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
               "before": 0.2,
               "after": 0.2
             },
             {
-              "key": "2027",
-              "label": "2027-28",
+              "key": "2027-04-06",
+              "label": "6 April 2027",
               "year": 2027,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
               "before": 0.22,
               "after": 0.24
             }
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.property.basic, at 6 April of each year"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.property_income_rates_up.paths.gov.hmrc.income_tax.rates.property.basic",
+              "path": "gov.hmrc.income_tax.rates.property.basic",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=142"
+              ]
             },
             "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.basic; current law elsewhere"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.income_tax.rates.property.basic, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.income_tax.rates.property.basic",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
             }
           }
         },
@@ -392,56 +539,36 @@
           "primary": false,
           "points": [
             {
-              "key": "2026",
-              "label": "2026-27",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
               "before": 0.4,
               "after": 0.4
             },
             {
-              "key": "2027",
-              "label": "2027-28",
+              "key": "2027-04-06",
+              "label": "6 April 2027",
               "year": 2027,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
               "before": 0.42,
               "after": 0.44
             }
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.property.higher, at 6 April of each year"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.property_income_rates_up.paths.gov.hmrc.income_tax.rates.property.higher",
+              "path": "gov.hmrc.income_tax.rates.property.higher",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=142"
+              ]
             },
             "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.higher; current law elsewhere"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.income_tax.rates.property.higher, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.income_tax.rates.property.higher",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
             }
           }
         },
@@ -452,140 +579,217 @@
           "primary": false,
           "points": [
             {
-              "key": "2026",
-              "label": "2026-27",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
               "before": 0.45,
               "after": 0.45
             },
             {
-              "key": "2027",
-              "label": "2027-28",
+              "key": "2027-04-06",
+              "label": "6 April 2027",
               "year": 2027,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
               "before": 0.47,
               "after": 0.49
             }
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.property.additional, at 6 April of each year"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.property_income_rates_up.paths.gov.hmrc.income_tax.rates.property.additional",
+              "path": "gov.hmrc.income_tax.rates.property.additional",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=142"
+              ]
             },
             "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.additional; current law elsewhere"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.income_tax.rates.property.additional, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.income_tax.rates.property.additional",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
+            }
+          }
+        }
+      ]
+    },
+    "savings_income_rates_up": {
+      "description": "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK: 2 percentage points above pre-Budget policy, which already includes Budget 2025's rises. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+      "display": "schedule",
+      "rows": [
+        {
+          "label": "Savings basic rate",
+          "unit": "percent",
+          "unit_words": null,
+          "primary": true,
+          "points": [
+            {
+              "key": "2026-04-01",
+              "label": "1 April 2026",
+              "year": 2026,
+              "before": 0.2,
+              "after": 0.2
+            },
+            {
+              "key": "2027-04-06",
+              "label": "6 April 2027",
+              "year": 2027,
+              "before": 0.22,
+              "after": 0.24
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.savings_income_rates_up.paths.gov.hmrc.income_tax.rates.savings.basic",
+              "path": "gov.hmrc.income_tax.rates.savings.basic",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=142"
+              ]
+            },
+            "after": {
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.income_tax.rates.savings.basic, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.income_tax.rates.savings.basic",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
+            }
+          }
+        },
+        {
+          "label": "Savings higher rate",
+          "unit": "percent",
+          "unit_words": null,
+          "primary": false,
+          "points": [
+            {
+              "key": "2026-04-01",
+              "label": "1 April 2026",
+              "year": 2026,
+              "before": 0.4,
+              "after": 0.4
+            },
+            {
+              "key": "2027-04-06",
+              "label": "6 April 2027",
+              "year": 2027,
+              "before": 0.42,
+              "after": 0.44
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.savings_income_rates_up.paths.gov.hmrc.income_tax.rates.savings.higher",
+              "path": "gov.hmrc.income_tax.rates.savings.higher",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=142"
+              ]
+            },
+            "after": {
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.income_tax.rates.savings.higher, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.income_tax.rates.savings.higher",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
+            }
+          }
+        },
+        {
+          "label": "Savings additional rate",
+          "unit": "percent",
+          "unit_words": null,
+          "primary": false,
+          "points": [
+            {
+              "key": "2026-04-01",
+              "label": "1 April 2026",
+              "year": 2026,
+              "before": 0.45,
+              "after": 0.45
+            },
+            {
+              "key": "2027-04-06",
+              "label": "6 April 2027",
+              "year": 2027,
+              "before": 0.47,
+              "after": 0.49
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.savings_income_rates_up.paths.gov.hmrc.income_tax.rates.savings.additional",
+              "path": "gov.hmrc.income_tax.rates.savings.additional",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=142"
+              ]
+            },
+            "after": {
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.income_tax.rates.savings.additional, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.income_tax.rates.savings.additional",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
             }
           }
         }
       ]
     },
     "carers_allowance_earnings_taper": {
-      "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
-      "display": "path",
+      "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The native model uses a provisional start of 6 October 2030 until DWP confirms the date within 2030-31. Carers at or below the limit and Scotland's Carer Support Payment are unchanged. The native model applies the couple election, overlapping-benefit rules, taxation and Universal Credit interactions; take-up follows the data.",
+      "display": "schedule",
       "rows": [
         {
-          "label": "Carer's Allowance at £1 a week over the earnings limit",
-          "unit": "gbp",
-          "unit_words": "£ a week",
+          "label": "Earnings taper in force",
+          "unit": "percent",
+          "unit_words": null,
           "primary": true,
           "points": [
             {
-              "key": "2026",
-              "label": "2026-27",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
               "before": 0.0,
               "after": 0.0
             },
             {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.0,
-              "after": 0.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.0,
-              "after": 0.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.0,
-              "after": 0.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
+              "key": "2030-10-06",
+              "label": "6 October 2030",
               "year": 2030,
               "before": 0.0,
-              "after": 95.44
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.0,
-              "after": 97.37
+              "after": 1.0
             }
           ],
           "source": {
             "before": {
-              "kind": "documented",
-              "where": "current law pays no Carer's Allowance above the earnings limit (gov.dwp.carers_allowance.earnings_limit)"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.carers_allowance_earnings_taper.paths.gov.dwp.carers_allowance.earnings_taper.applies",
+              "path": "gov.dwp.carers_allowance.earnings_taper.applies",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html"
+              ]
             },
             "after": {
-              "kind": "modifier_constant",
-              "where": "the weekly rate (gov.dwp.carers_allowance.rate) less taper_rate x £1; budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate, limit_hours, national_living_wage_by_april)"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.dwp.carers_allowance.earnings_taper.applies, on statutory dates before fiscal-year conversion",
+              "path": "gov.dwp.carers_allowance.earnings_taper.applies",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "/1"
             }
           },
-          "figures": {
-            "earnings_limit": {
-              "2030-31": 228,
-              "2031-32": 234
-            },
-            "runs_out": {
-              "2030-31": 324,
-              "2031-32": 332
-            }
-          }
+          "note": "Native start 6 October 2030 is the model assumption until DWP confirms the date."
         }
       ]
     },
     "household_energy_payment_2026": {
       "description": "A one-off £100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
-      "display": "switch",
+      "display": "schedule",
       "rows": [
         {
           "label": "Household energy payment",
@@ -594,30 +798,52 @@
           "primary": true,
           "points": [
             {
-              "key": "2026",
-              "label": "Winter 2026-27",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
+              "year": 2026,
+              "before": 0.0,
+              "after": 0.0
+            },
+            {
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.0,
               "after": 100.0
+            },
+            {
+              "key": "2027-04-06",
+              "label": "6 April 2027",
+              "year": 2027,
+              "before": 0.0,
+              "after": 0.0
             }
           ],
           "source": {
             "before": {
-              "kind": "documented",
-              "where": "no such payment under current law"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.household_energy_payment_2026.paths.gov.treasury.household_energy_payment.amount",
+              "path": "gov.treasury.household_energy_payment.amount",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=117"
+              ]
             },
             "after": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/household_energy_payment_2026.py household_energy_payment_2026(amount)"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.treasury.household_energy_payment.amount, on statutory dates before fiscal-year conversion",
+              "path": "gov.treasury.household_energy_payment.amount",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "currency-GBP"
             }
           },
-          "note": "Paid to households in England in council tax bands A, B, C, D"
+          "note": "Paid once to households in England in council tax bands A, B, C, D."
         }
       ]
     },
     "trading_allowance_raise": {
-      "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. The surveys behind our data record traders' profits, not their receipts, so we assume who already claims the £1,000 allowance: 72% of traders with profits up to £4,500, 14% of those with profits from £4,500 to £9,000 and none above. Only those traders gain, and we count no one who switches from actual expenses to the larger allowance.",
-      "display": "before-after",
+      "description": "From 6 April 2027 the government raises the trading allowance from £1,000 to £3,000, for income tax and Class 4 National Insurance. The native model shares the allowance across trading receipts and eligible miscellaneous income, considers actual expenses and uses recorded claim status. We cannot estimate its national effect on the certified data, which lack trading-allowance claim status and eligible miscellaneous income.",
+      "display": "schedule",
       "rows": [
         {
           "label": "Trading allowance",
@@ -626,91 +852,96 @@
           "primary": true,
           "points": [
             {
-              "key": "2026",
-              "label": "2026-27",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
               "before": 1000.0,
               "after": 1000.0
             },
             {
-              "key": "2027",
-              "label": "2027-28",
+              "key": "2027-04-06",
+              "label": "6 April 2027",
               "year": 2027,
-              "before": 1000.0,
-              "after": 3000.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 1000.0,
-              "after": 3000.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 1000.0,
-              "after": 3000.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 1000.0,
-              "after": 3000.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
               "before": 1000.0,
               "after": 3000.0
             }
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.allowances.trading_allowance, at 6 April of each year"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.trading_allowance_raise.paths.gov.hmrc.income_tax.allowances.trading_allowance",
+              "path": "gov.hmrc.income_tax.allowances.trading_allowance",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html"
+              ]
             },
             "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py _create_trading_allowance_raise(): gov.hmrc.income_tax.allowances.trading_allowance; current law elsewhere"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.hmrc.income_tax.allowances.trading_allowance, on statutory dates before fiscal-year conversion",
+              "path": "gov.hmrc.income_tax.allowances.trading_allowance",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "currency-GBP"
             }
-          },
-          "note": "Relieves trading receipts in place of actual expenses"
+          }
         }
       ]
     },
     "bus_fare_cap_2027": {
-      "description": "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at £3 fares (£230m, divided by 0.9 for operator participation, over £2,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get £0. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
-      "display": "switch",
+      "description": "Single bus fares on participating services in England outside London are capped at £2 from 1 January to 31 December 2027. This was announced in July 2026, before the Autumn Budget, so the actual pre-Budget and current-law scenarios both retain it. Its incremental Budget effect is zero on this reference. The former dashboard allocated the Treasury costing instead. London is outside the national cap.",
+      "display": "before-after",
       "rows": [
         {
           "label": "Single bus fare cap",
           "unit": "gbp",
-          "unit_words": "£ a single fare",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {
-              "key": "2027-01-01/2027-12-31",
-              "label": "January to December 2027",
+              "key": "2026-04-01",
+              "label": "1 April 2026",
               "year": 2026,
               "before": 3.0,
+              "after": 3.0
+            },
+            {
+              "key": "2027-01-01",
+              "label": "1 January 2027",
+              "year": 2026,
+              "before": 2.0,
               "after": 2.0
+            },
+            {
+              "key": "2028-01-01",
+              "label": "1 January 2028",
+              "year": 2027,
+              "before": null,
+              "after": null,
+              "before_label": "no cap",
+              "after_label": "no cap"
             }
           ],
           "source": {
             "before": {
-              "kind": "documented",
-              "where": "Budget 2026 Table 6.1 row 4; GOV.UK, 22 July 2026"
+              "kind": "pre_budget_parameter",
+              "where": "budget_policy.json measures.bus_fare_cap_2027.paths.gov.dft.bus.fares.cap",
+              "path": "gov.dft.bus.fares.cap",
+              "model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+              "references": [
+                "https://www.gov.uk/guidance/3-national-bus-fare-cap",
+                "https://www.gov.uk/government/speeches/2-bus-fares-from-january-2027"
+              ]
             },
             "after": {
-              "kind": "documented",
-              "where": "Budget 2026 Table 6.1 row 4; GOV.UK, 22 July 2026"
+              "kind": "engine_parameter",
+              "where": "policyengine-uk 2.174.1 gov.dft.bus.fares.cap, on statutory dates before fiscal-year conversion",
+              "path": "gov.dft.bus.fares.cap",
+              "model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+              "parameter_unit": "currency-GBP"
             }
           },
-          "note": "Participating services in England outside London. Modelled as the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of spending at £3 fares while the cap runs (budget_measures/bus_fare_cap_2027.py bus_fare_cap_2027(fall)); London residents get £0"
+          "note": "DfT announced the £2 cap for January to December 2027 on 22 July 2026. It was already pre-Budget policy and is kept on both sides; this registered measure has no additional effect against actual pre-Budget policy. An unbounded value means no cap.",
+          "null_label": "no cap"
         }
       ]
     }
@@ -876,15 +1107,15 @@
             "key": "2030",
             "label": "2030-31",
             "year": 2030,
-            "before": 30057.886645,
-            "after": 30057.886645
+            "before": 30057.844616,
+            "after": 30057.844616
           },
           {
             "key": "2031",
             "label": "2031-32",
             "year": 2031,
-            "before": 30713.202893,
-            "after": 30713.202893
+            "before": 30713.123819,
+            "after": 30713.123819
           }
         ],
         "source": {

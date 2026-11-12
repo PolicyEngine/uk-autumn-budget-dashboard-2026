@@ -1550,6 +1550,8 @@ def publication_manifest(
                 git_sha=r.code_revision().git_sha,
                 baseline_identity=baseline_identity,
                 reform_identity=reform_identity,
+                parameter_changes=configured.parameter_changes or {},
+                baseline_parameter_changes=configured.baseline_parameter_changes,
                 modifier_templates=measure_templates_proof(
                     configured,
                     DataConfig(years=list(years)),

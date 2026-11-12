@@ -193,8 +193,8 @@ export default function ProgrammeTable({
           columns: [
             { key: "group", label: "Group" },
             { key: "item", label: "Item" },
-            { key: "before", label: "Current law (£)", decimals: 0 },
-            { key: "after", label: "With the policies (£)", decimals: 0 },
+            { key: "before", label: "Pre-Budget (£)", decimals: 0 },
+            { key: "after", label: "With Budget policies (£)", decimals: 0 },
             { key: "change", label: "Change (£)", decimals: 0 },
           ],
           rows: [
@@ -259,8 +259,8 @@ export default function ProgrammeTable({
               columns: [
                 { key: "section", label: "Section" },
                 { key: "item", label: "Item" },
-                { key: "before", label: "Current law" },
-                { key: "after", label: "With the policies" },
+                { key: "before", label: "Pre-Budget" },
+                { key: "after", label: "With Budget policies" },
                 { key: "change", label: "Change" },
               ],
               rows: policyCsvRows(activePolicy),
@@ -392,12 +392,12 @@ export default function ProgrammeTable({
               </th>
               {wide && (
                 <th scope="col" className="num">
-                  Current law
+                  Pre-Budget
                 </th>
               )}
               {wide && (
                 <th scope="col" className="num">
-                  With the policies
+                  With Budget policies
                 </th>
               )}
               <th scope="col" className="num">

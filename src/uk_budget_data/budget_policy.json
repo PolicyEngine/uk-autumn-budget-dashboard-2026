@@ -195,9 +195,10 @@
     "fuel_duty_rise_deferral": {
       "paths": {
         "gov.hmrc.fuel_duty.petrol_and_diesel": {
-          "start": "2027-01-01",
+          "start": "2026-04-06",
           "stop": "2033-04-05",
           "pre_budget_values": {
+            "2026-04-06": 0.5295,
             "2027-01-01": 0.5595,
             "2027-03-01": 0.5795,
             "2027-04-01": 0.6003,
@@ -207,6 +208,7 @@
             "2031-04-01": 0.6796
           },
           "native_values": {
+            "2026-04-06": 0.5295,
             "2027-01-01": 0.5295,
             "2027-07-01": 0.6059,
             "2028-04-01": 0.6321,
@@ -217,13 +219,15 @@
           "extend_pre_budget_by_native_rpi": true
         },
         "gov.hmrc.fuel_duty.lpg": {
-          "start": "2027-01-01",
+          "start": "2026-04-06",
           "stop": "2033-04-05",
           "pre_budget_values": {
+            "2026-04-06": 0.2888,
             "2027-01-01": 0.3052,
             "2027-03-01": 0.3161
           },
           "native_values": {
+            "2026-04-06": 0.2888,
             "2027-01-01": 0.2888,
             "2027-07-01": 0.3305,
             "2028-04-01": 0.3448,
@@ -233,13 +237,15 @@
           }
         },
         "gov.hmrc.fuel_duty.natural_gas": {
-          "start": "2027-01-01",
+          "start": "2026-04-06",
           "stop": "2033-04-05",
           "pre_budget_values": {
+            "2026-04-06": 0.2257,
             "2027-01-01": 0.2385,
             "2027-03-01": 0.247
           },
           "native_values": {
+            "2026-04-06": 0.2257,
             "2027-01-01": 0.2257,
             "2027-07-01": 0.2582,
             "2028-04-01": 0.2694,
@@ -254,7 +260,7 @@
         "https://www.legislation.gov.uk/uksi/2026/555/made",
         "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
       ],
-      "note": "Pre-Budget snapshot da31e8698: statutory January/March 2027 steps, petrol/diesel 60.03p April 2027 then October RPI. LPG and natural gas preserve that snapshot's full rates after March; adding missing RPI to them is a separate reference change."
+      "note": "Pre-Budget snapshot da31e8698: statutory January/March 2027 steps, petrol/diesel 60.03p April 2027 then October RPI. Both sides state the unchanged rates from 6 April 2026 so the first scored fiscal year has complete coverage. LPG and natural gas preserve that snapshot's full rates after March; adding missing RPI to them is a separate reference change."
     },
     "bus_fare_cap_2027": {
       "paths": {

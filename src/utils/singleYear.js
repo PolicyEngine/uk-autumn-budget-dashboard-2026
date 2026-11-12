@@ -617,7 +617,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "One year",
-    "The year you choose in the bar above. Net income is before housing costs (we do not take off rent; no selected policy changes it), under current law and with the selected policies.",
+    "The year you choose in the bar above. Net income is before housing costs (we do not take off rent; no selected policy changes it), under pre-Budget policy and with the selected Budget policies.",
   ],
   [
     "Salary",

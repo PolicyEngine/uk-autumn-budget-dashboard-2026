@@ -12,9 +12,9 @@
     "notes": "An explicit dated rollback removes all tracked Autumn Budget 2026 policy changes before data loading. Selecting a measure restores only its native current-law parameter timeline. Unselected measures remain at pre-Budget policy."
   },
   "calibration": {
-    "status": "pre_budget",
+    "status": "updated",
     "source": "the certified Microcosm UK dataset pinned by policyengine 6.17.2",
-    "vintage": "as pinned by the installed bundle; the receipt records its exact identity"
+    "vintage": "Microcosm UK national cut eeb6093e, calibrated on 7 November 2026 and pinned by policyengine 6.17.2. Updated describes adoption of this certified cut; target vintages remain those in its certification, without a claim that every fiscal target reflects the Budget."
   },
   "notes": "policyengine-uk 2.174.1 ships the native October 2026 economic assumptions. Baseline and reform share those assumptions without a dashboard growth-rate override. The former obr_october_2026.json overlay remains archived for attribution of old published estimates and is not applied to new simulations. The actual pre-Budget policy rollback is separate from the forecast and from the certified dataset. Changes from model, data, forecast and policy-reference adoption must be reconciled separately; adopting this basis does not certify unchanged old published estimates."
 }

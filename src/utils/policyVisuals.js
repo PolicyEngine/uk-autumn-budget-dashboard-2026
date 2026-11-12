@@ -153,7 +153,7 @@ export function carersTaperView(entry) {
  */
 export function energyReachView(entry, visual) {
   const row = mainRow(entry);
-  const point = row?.points?.[0];
+  const point = row?.points?.find((candidate) => differs(candidate) && candidate.after > 0);
   const paid = /bands ([A-H](?:, [A-H])*)/.exec(row?.note ?? "")?.[1]?.split(", ");
   if (!point || !(point.after > 0) || !paid || !visual?.bands || !visual?.reach) return null;
   const bands = [...visual.bands];

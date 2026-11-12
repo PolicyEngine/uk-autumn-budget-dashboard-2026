@@ -59,7 +59,7 @@ export const GLOSSARY = {
   ownRuns: {
     term: "Policies we run on their own",
     meaning:
-      "A simulation of each policy alone against current law; adding these up leaves out how policies interact.",
+      "We simulate each policy alone against pre-Budget policy; adding these up leaves out how policies interact.",
   },
   static: {
     term: "Static estimates",
