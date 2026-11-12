@@ -58,8 +58,11 @@ export const OBR_DIFFERENCE_POINTS = {
         2027: "Official total also includes £8m Other AME (current)",
       },
     },
-    // The ONS base is 10% to 12% lower than DESNZ's
-    { reason: "Coverage", text: "ONS spending base falls 10–12% below ours (DESNZ)" },
+    // Budget 2026 policy costings, page 12: the costing grows its base with
+    // "the OBR's forecast for growth in nominal consumer expenditure on
+    // electricity"; policyengine-uk uprates electricity_consumption with
+    // the OBR's CPI
+    { reason: null, text: "We grow spending with CPI; government uses the OBR's electricity spending forecast" },
   ],
   state_pension_income_tax_protection: [
     // About 670,000 gain in 2027-28, against the Treasury's 500,000
@@ -150,7 +153,7 @@ export const OBR_DEVIATION_NOTES = {
   household_energy_payment_2026:
     "Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, which the OBR certified (the Treasury rounds it to £2,625 million in the Budget's Table 6.1). The gap arises because the costing also covers two things we don't model: the devolved governments' share of the funding (about £425 million, our estimate using the Barnett formula) and £100 million for councils in England for targeted support. Without them, about £2,100 million remains for the payment in England, and our estimate reaches 94% of it. The government spends up to £2,000 million of that on £100 payments to as many as 20 million households, and neither the OBR nor the Treasury itemises the rest. Both estimates fall to zero from 2027-28.",
   domestic_electricity_zero_vat:
-    "Our cost exceeds the VAT receipts in the government's costing, which the OBR certified, by £106m (14%) in 2026-27 (£840m against £734m) and by £57m (19%) in 2027-28 (£353m against £296m). The OBR adds £21m and £8m of Other AME (current) in its detailed policy table, Table 1.1, and the Treasury rounds the totals to £755m and £305m in Table 6.1. The official costing also covers charities, residential care and some businesses, and includes households switching from gas to electricity. Both make the official figure larger, so neither explains the gap. We price DESNZ's domestic electricity volumes at the average prices households pay, and grow that spending with CPI. The government based its costing on ONS consumer spending, which falls 10% to 12% below our DESNZ base. If we scaled our cost down by that much, it would exceed the VAT line by 1% to 3% in 2026-27 and 5% to 8% in 2027-28.",
+    "We compare our cost with the VAT receipts in the government's costing, which the OBR certified: £734m in 2026-27 and £296m in 2027-28. The OBR adds £21m and £8m of Other AME (current) in its detailed policy table, Table 1.1, and the Treasury rounds the totals to £755m and £305m in Table 6.1. The official costing also covers charities, residential care and some businesses, and includes households switching from gas to electricity. Both make the official figure larger. We count only the VAT on households' electricity bills, and we hold their spending fixed. We score every month against 5%, as the government does in its costing, and we weight each year by its share of a year's electricity use. We grow households' electricity spending with CPI, while the government grows its spending base with the OBR's forecast of consumer spending on electricity.",
   carers_allowance_earnings_taper:
     "Our static estimate reaches about 60% of the official costing in both years we compare: £24 million against £40 million in 2030-31, and £48 million against £80 million in 2031-32. The OBR gives £38 million and £79 million before the Treasury rounds them. They include £5 million and £10 million of extra block grant for Scotland, where the Scottish Government pays Carer Support Payment in place of Carer's Allowance. The UK government spends the rest, £33 million and £69 million, on Carer's Allowance and Universal Credit, and the costing has no line for income tax (OBR policy Table 1.1). Before we subtract the income tax on the higher allowance (£15 million and £32 million) for our net cost, we estimate £39 million and £79 million, which exceed that spending by about a sixth. The official figure also includes a labour-supply response, which we don't model. HMRC collects the income tax on the allowance through PAYE, and we don't count that tax against Universal Credit earnings, so we estimate a larger Universal Credit saving.",
   state_pension_income_tax_protection:

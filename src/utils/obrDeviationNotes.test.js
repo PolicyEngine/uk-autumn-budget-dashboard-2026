@@ -79,7 +79,12 @@ describe("why our estimates differ from the official costings", () => {
     expect(text("carers_allowance_earnings_taper")).not.toMatch(/explains most of the gap/);
     expect(text("state_pension_income_tax_protection")).toMatch(/670,000 vs 500,000/);
     expect(text("domestic_electricity_zero_vat")).not.toMatch(/meter records/);
-    expect(text("domestic_electricity_zero_vat")).toMatch(/ONS spending base falls 10–12% below ours \(DESNZ\)/);
+    // The note and the points give no reason that rests on the two spending
+    // bases (ONS against DESNZ): that reason was written for earlier data
+    const staleBase = /below ours \(DESNZ\)|10% to 12% below|DESNZ base|DESNZ's domestic electricity volumes/;
+    expect(text("domestic_electricity_zero_vat")).not.toMatch(staleBase);
+    expect(OBR_DEVIATION_NOTES.domestic_electricity_zero_vat).not.toMatch(staleBase);
+    expect(text("domestic_electricity_zero_vat")).toMatch(/We grow spending with CPI; government uses the OBR's electricity spending forecast/);
     expect(text("fuel_duty_rise_deferral")).toMatch(/Government appears to assume 5p back on 1 Jan; law phases it/);
     expect(text("savings_income_rates_up")).toMatch(/included ISA interest/);
     expect(text("savings_income_rates_up")).not.toMatch(/miss(?:es)? ISA interest/);
@@ -93,7 +98,8 @@ describe("why our estimates differ from the official costings", () => {
     const note = (id) => OBR_DEVIATION_NOTES[id];
     const text = (id) => OBR_DIFFERENCE_POINTS[id].map((point) => point.text ?? Object.values(point.byYear).join(" ")).join(" ");
     expect(note("household_energy_payment_2026")).toMatch(/^Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, which the OBR certified/);
-    expect(note("domestic_electricity_zero_vat")).toMatch(/^Our cost exceeds the VAT receipts in the government's costing, which the OBR certified, by £106m \(14%\) in 2026-27 \(£840m against £734m\) and by £57m \(19%\)/);
+    // Electricity gives the official lines and no figure of ours: the table beside the note shows ours and the gap
+    expect(note("domestic_electricity_zero_vat")).toMatch(/^We compare our cost with the VAT receipts in the government's costing, which the OBR certified: £734m in 2026-27 and £296m in 2027-28\./);
     expect(note("domestic_electricity_zero_vat")).not.toMatch(/within about 4%/);
     expect(note("trading_allowance_raise")).toMatch(/^From 2028-29 our estimate trails the matching income tax and NICs lines of the government's costing, which the OBR certified, by [^]*The OBR gives those lines as £221m, £165m, £171m and £178m in its detailed policy table, Table 1\.1\./);
     expect(note("property_income_rates_up")).toMatch(/ours exceeds the income tax line of the government's costing, which the OBR certified, by 9% to 11%: \+£429m against \+£394m in 2029-30/);
@@ -204,9 +210,9 @@ describe("why our estimates differ from the official costings", () => {
 
     // Electricity: the VAT line, Other AME (current) beside it
     const vat = (year) => line(2, "VAT", year);
-    const elec = (year) => our("domestic_electricity_zero_vat", year);
-    const gap = (year) => `by £${m(elec(year)) - m(vat(year))}m (${m((elec(year) / vat(year) - 1) * 100)}%)`;
-    expect(note("domestic_electricity_zero_vat")).toContain(`${gap("2026-27")} in 2026-27 (£${m(elec("2026-27"))}m against £${m(vat("2026-27"))}m) and ${gap("2027-28")} in 2027-28 (£${m(elec("2027-28"))}m against £${m(vat("2027-28"))}m)`);
+    expect(note("domestic_electricity_zero_vat")).toContain(`the government's costing, which the OBR certified: £${m(vat("2026-27"))}m in 2026-27 and £${m(vat("2027-28"))}m in 2027-28.`);
+    // No figure of ours and no gap in the note, so a regeneration can't leave one stale
+    expect(note("domestic_electricity_zero_vat")).not.toMatch(/against £|exceeds?|falls? (short|below)|\(\d+%\)/);
     expect(note("domestic_electricity_zero_vat")).toContain(`adds £${m(line(2, "Other AME (current)", "2026-27"))}m and £${m(line(2, "Other AME (current)", "2027-28"))}m of Other AME (current)`);
     for (const [year, label] of [[2026, "2026-27"], [2027, "2027-28"]]) {
       expect(point("domestic_electricity_zero_vat", year)).toContain(`Official total also includes £${m(line(2, "Other AME (current)", label))}m Other AME (current)`);
@@ -214,9 +220,9 @@ describe("why our estimates differ from the official costings", () => {
       expect(point("domestic_electricity_zero_vat", year)).not.toContain(`£${m(vat(label))}m`);
     }
     expect(panel("domestic_electricity_zero_vat")).toMatch(new RegExp(`^VAT £${m(vat("2026-27"))}m, £${m(vat("2027-28"))}m:`));
-    // The ONS base, 88% to 90% of ours (2024 and 2025)
-    const scaled = (year) => [0.88, 0.9].map((share) => (elec(year) * share) / vat(year) - 1);
-    expect(note("domestic_electricity_zero_vat")).toContain(`exceed the VAT line by ${span(scaled("2026-27").map((x) => x * 100), "%")} in 2026-27 and ${span(scaled("2027-28").map((x) => x * 100), "%")} in 2027-28`);
+    // What each side does, from the costing (page 12) and the measure
+    expect(note("domestic_electricity_zero_vat")).toContain("We score every month against 5%, as the government does in its costing, and we weight each year by its share of a year's electricity use.");
+    expect(note("domestic_electricity_zero_vat")).toContain("We grow households' electricity spending with CPI, while the government grows its spending base with the OBR's forecast of consumer spending on electricity.");
 
     // Fuel duty: the only line, and gaps a reader can check against the labels
     const duty = (year) => m(line(3, "Fuel Duty", year));
