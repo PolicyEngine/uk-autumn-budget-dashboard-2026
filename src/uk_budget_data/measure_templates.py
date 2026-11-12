@@ -592,6 +592,114 @@ def _finite_number(value, name):
     return float(value)
 
 
+# The engine's own VAT rates the VAT base template can hold a baseline
+# against, each with the rate its spending input is priced at.
+# policyengine-uk 2.153.5 and later charge domestic electricity at
+# gov.hmrc.vat.domestic_electricity_rate (great_britain and
+# northern_ireland) in ``domestic_energy_vat``, on the bill net of
+# gov.simulation.vat.energy_input_price_basis_rate: the VAT the data's
+# prices include, never the rate being modelled. ``baseline_vat`` charges
+# the same bill at the engine's own law.
+_OWN_VAT_RATES = {
+    "gov.hmrc.vat.domestic_electricity_rate": (
+        "gov.simulation.vat.energy_input_price_basis_rate"
+    ),
+}
+# Where a simulation records each (spending variable, year) whose baseline
+# the template already holds, so two holds never add up.
+_HELD_VAT_BASELINES = "_uk_budget_data_held_vat_baselines"
+
+
+def _has_parameter(root, path):
+    """Whether the installed engine's parameters hold ``path``."""
+    node = root
+    for part in path.split("."):
+        children = getattr(node, "children", None)
+        if not children or part not in children:
+            return False
+        node = children[part]
+    return True
+
+
+def _parameter_at(parameters, period, path):
+    node = parameters(period)
+    for part in path.split("."):
+        node = getattr(node, part)
+    return node
+
+
+def _rate_at(parameters, period, path):
+    value = _parameter_at(parameters, period, path)
+    try:
+        rate = float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{path} must be a finite number") from None
+    rate = _finite_number(rate, path)
+    if rate < 0:
+        raise ValueError(f"{path} must be nonnegative")
+    return rate
+
+
+def _own_vat_rate_paths(sim, own_rate_parameter, baseline_rate):
+    """``(own rate, price basis)`` paths where the installed engine charges
+    the spending at a rate of its own, else None."""
+    if own_rate_parameter is None:
+        return None
+    if own_rate_parameter not in _OWN_VAT_RATES:
+        raise ValueError(
+            "own_rate_parameter must be one of "
+            + ", ".join(sorted(_OWN_VAT_RATES))
+        )
+    if baseline_rate is None:
+        raise ValueError(
+            "own_rate_parameter needs baseline_rate: the rate the measure "
+            "is scored against"
+        )
+    root = sim.tax_benefit_system.parameters
+    if not _has_parameter(root, own_rate_parameter):
+        return None
+    price_basis = _OWN_VAT_RATES[own_rate_parameter]
+    for path in (
+        f"{own_rate_parameter}.great_britain",
+        f"{own_rate_parameter}.northern_ireland",
+        price_basis,
+    ):
+        if not _has_parameter(root, path):
+            raise ValueError(
+                f"the installed policyengine-uk has {own_rate_parameter} "
+                f"but not {path}, so the VAT base template cannot hold "
+                "its baseline"
+            )
+    return own_rate_parameter, price_basis
+
+
+def _eligible_vat_spending(household, period, spending_variable):
+    spending = np.asarray(household(spending_variable, period))
+    if not np.isfinite(spending).all() or (spending < 0).any():
+        raise ValueError("Eligible spending must be finite and nonnegative")
+    return spending
+
+
+def _held_vat_baseline(household, period, parameters, spending, rate, paths):
+    """``(net bill, VAT to add)`` so the engine's own charge on
+    ``spending`` becomes ``rate``: the bill net of the VAT its prices
+    include, as the engine takes it, and that net bill times ``rate`` less
+    the engine's own rate where the household lives."""
+    own_rate, price_basis = paths
+    net = spending / (1 + _rate_at(parameters, period, price_basis))
+    great_britain = _rate_at(parameters, period, f"{own_rate}.great_britain")
+    northern_ireland = _rate_at(
+        parameters, period, f"{own_rate}.northern_ireland"
+    )
+    country = household("country", period)
+    engine_rate = np.where(
+        country == country.possible_values.NORTHERN_IRELAND,
+        northern_ireland,
+        great_britain,
+    )
+    return net, net * (rate - engine_rate)
+
+
 def apply_vat_base_change(
     sim,
     *,
@@ -601,6 +709,7 @@ def apply_vat_base_change(
     end_year,
     baseline_rate=None,
     geography="UK",
+    own_rate_parameter=None,
 ):
     """Pass a signed VAT rate change through VAT-inclusive eligible spending.
 
@@ -615,6 +724,30 @@ def apply_vat_base_change(
     households keep the baseline VAT, as for a change that applies in Great
     Britain only, such as the temporary zero rate on domestic electricity).
     Call from a module-level modifier with finite JSON default arguments.
+
+    ``own_rate_parameter`` names the rate the engine itself charges this
+    spending at, where it has one (``_OWN_VAT_RATES``: domestic electricity
+    from policyengine-uk 2.153.5). It needs ``baseline_rate``, the rate the
+    measure is scored against. On an engine with that rate, for the years
+    in the bounds, the template
+
+    - takes the bill net of the VAT its prices include, as the engine does;
+    - holds the baseline at ``baseline_rate``: where the engine's own rate
+      for the year differs (current law zero-rates Great Britain's domestic
+      electricity from October 2026 to March 2027), it adds the difference
+      to ``vat`` and to ``baseline_vat`` alike, for every household whatever
+      ``geography`` says. The change then starts from ``baseline_rate``,
+      the reformed rate is ``baseline_rate + rate_change`` (never below
+      zero) and ``vat_change`` is the measure's change alone.
+
+    Both sides of a measure must hold the same baseline: its pre-Budget
+    side with a ``rate_change`` of 0, which holds and changes nothing. One
+    simulation takes one hold for a spending variable and year; a second is
+    refused. The hold reads the simulation's own rate, so it assumes no
+    measure also changes that rate by parameter
+    (``tests/test_electricity_vat_baseline.py`` checks the registry). On an
+    engine without the rate nothing is held, and the template works as it
+    does without the argument.
     """
     years = _annual_years(start_year, end_year)
     if geography not in ("GB", "UK"):
@@ -634,28 +767,39 @@ def apply_vat_base_change(
         explicit_rate < 0 or explicit_rate + delta < 0
     ):
         raise ValueError("Baseline and reformed VAT rates must be nonnegative")
+    own_paths = _own_vat_rate_paths(sim, own_rate_parameter, explicit_rate)
     native = sim.tax_benefit_system.get_variable("vat")
 
     def formula(household, period, parameters):
         current = _call_formula(native, household, period, parameters)
         if period.start.year not in years:
             return current
-        old_rate = (
-            parameters(period).gov.hmrc.vat.reduced_rate
-            if explicit_rate is None
-            else explicit_rate
-        )
-        old_rate = _finite_number(old_rate, "baseline_rate")
-        if old_rate < 0 or old_rate + delta < 0:
-            raise ValueError(
-                "Baseline and reformed VAT rates must be nonnegative"
+        if own_paths is None:
+            old_rate = (
+                parameters(period).gov.hmrc.vat.reduced_rate
+                if explicit_rate is None
+                else explicit_rate
             )
-        spending = np.asarray(household(spending_variable, period))
-        if not np.isfinite(spending).all() or (spending < 0).any():
-            raise ValueError(
-                "Eligible spending must be finite and nonnegative"
+            old_rate = _finite_number(old_rate, "baseline_rate")
+            if old_rate < 0 or old_rate + delta < 0:
+                raise ValueError(
+                    "Baseline and reformed VAT rates must be nonnegative"
+                )
+            spending = _eligible_vat_spending(
+                household, period, spending_variable
             )
-        adjustment = spending * delta / (1 + old_rate)
+            held = 0
+            adjustment = spending * delta / (1 + old_rate)
+        else:
+            net, held = _held_vat_baseline(
+                household,
+                period,
+                parameters,
+                _eligible_vat_spending(household, period, spending_variable),
+                explicit_rate,
+                own_paths,
+            )
+            adjustment = net * delta
         if geography == "GB":
             country = household("country", period)
             adjustment = np.where(
@@ -663,13 +807,54 @@ def apply_vat_base_change(
                 adjustment,
                 0,
             )
-        return current + adjustment
+        return current + held + adjustment
 
+    if own_paths is not None:
+        _hold_vat_baseline(
+            sim, spending_variable, years, explicit_rate, own_paths
+        )
     _replace_formula(sim, "vat", formula)
     # Held while a model limit covers VAT (vat_consumption_coverage did,
     # until policyengine-uk #2187 grossed it by survey coverage).
     _warn_if_variable_model_limited("vat")
     return sim
+
+
+def _hold_vat_baseline(sim, spending_variable, years, rate, own_paths):
+    """Add to ``baseline_vat`` what ``apply_vat_base_change`` adds to
+    ``vat`` to hold the baseline, so ``vat_change`` (``vat`` less
+    ``baseline_vat``, the only VAT in household tax) leaves it out."""
+    held = getattr(sim, _HELD_VAT_BASELINES, None)
+    if held is None:
+        held = set()
+        setattr(sim, _HELD_VAT_BASELINES, held)
+    wanted = {(spending_variable, year) for year in years}
+    if held & wanted:
+        raise ValueError(
+            f"the VAT baseline on {spending_variable} is already held on "
+            "this simulation for "
+            + ", ".join(str(year) for _, year in sorted(held & wanted))
+            + "; apply one side of the measure, not both"
+        )
+    native = sim.tax_benefit_system.get_variable("baseline_vat")
+    if native is None:
+        raise ValueError(
+            "the installed policyengine-uk has a rate of its own for "
+            f"{spending_variable} but no baseline_vat to hold with it"
+        )
+
+    def formula(household, period, parameters):
+        current = _call_formula(native, household, period, parameters)
+        if period.start.year not in years:
+            return current
+        spending = _eligible_vat_spending(household, period, spending_variable)
+        _, extra = _held_vat_baseline(
+            household, period, parameters, spending, rate, own_paths
+        )
+        return current + extra
+
+    _replace_formula(sim, "baseline_vat", formula)
+    held |= wanted
 
 
 def _call_formula(variable, entity, period, parameters):
