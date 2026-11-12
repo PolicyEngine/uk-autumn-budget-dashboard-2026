@@ -1129,6 +1129,28 @@ def test_cash_isa_limit_needs_the_calculators_answer():
     assert before == pytest.approx(after, abs=PENNY)
 
 
+def test_cash_isa_limit_keeps_the_households_gross_income_fixed():
+    """Changing where the answered savings earn interest changes tax, not
+    the household's answered gross resources. On the adopted engine,
+    other_investment_income is part of market_income, so adding the
+    counterfactual interest there would create extra gross resources.
+    """
+    year = 2029
+    household = situation(
+        {
+            "p": _person(
+                year,
+                employment_income=70_000,
+                cash_isa_subscriptions=20_000,
+            )
+        }
+    )
+    before, after = change(
+        "cash_isa_limit_kept", household, "market_income", year
+    )
+    assert before == pytest.approx(after, abs=PENNY)
+
+
 def test_cash_isa_limit_on_survey_data_taxes_a_share_at_the_deposit_rate():
     """Survey data that store cash ISA payments (policyengine-uk 2.164.1 has
     the variable; defined here first, as it is there) and other investment
@@ -1171,7 +1193,8 @@ def test_cash_isa_limit_on_survey_data_taxes_a_share_at_the_deposit_rate():
             def apply(self):
                 self.add_variable(cash_isa_subscriptions)
 
-        _apply_reform_class(Define, sim)
+        if "cash_isa_subscriptions" not in sim.tax_benefit_system.variables:
+            _apply_reform_class(Define, sim)
         sim.set_input("cash_isa_subscriptions", year, np.array([20_000.0]))
         if modify:
             planned_cash_isa_limit(sim)
