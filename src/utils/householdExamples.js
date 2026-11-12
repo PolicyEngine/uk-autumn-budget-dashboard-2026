@@ -137,9 +137,10 @@ export const HOUSEHOLD_EXAMPLES = [
     spendingSource: decileSpending(5).source,
   },
   {
-    // Takes the commuter's place (Vahid, 28 October 2026): the savings
-    // income tax rise is in the Household calculator only (not in the
-    // national results, calculatorOnlyMeasures.js), always included there.
+    // Takes the commuter's place (Vahid, 28 October 2026), for the savings
+    // income tax rise: in the Household calculator only until it was
+    // published as a static costing (11 November 2026), and since then a
+    // measure of the national results, selected in the header like the rest.
     // A basic-rate taxpayer whose savings interest is well above their
     // £1,000 Personal Savings Allowance, so the 2-point rise reaches £9,000
     // of it: about £180 a year. Salary and interest together stay inside
@@ -197,7 +198,7 @@ export const HOUSEHOLD_EXAMPLES = [
     short: "Landlord",
     description: "£50,000 salary, rent from a flat, savings interest",
     icon: "briefcase",
-    // The property rate (the savings rate is not in the release): its
+    // The property rate (the saver's card features the savings rate): its
     // colour on the card and its own part. The savings interest stays an
     // input: it is part of the household
     measure: "property_income_rates_up",
@@ -223,8 +224,8 @@ export const HOUSEHOLD_EXAMPLES = [
     short: "Small landlord",
     description: "£45,000 salary, £6,000 from a flat, £2,000 interest",
     icon: "key",
-    // The property rate, as the landlord's (the savings rate is not in the
-    // release); the savings interest stays an input
+    // The property rate, as the landlord's (the saver's card features the
+    // savings rate); the savings interest stays an input
     measure: "property_income_rates_up",
     measures: ["property_income_rates_up"],
     tag: "Property tax",

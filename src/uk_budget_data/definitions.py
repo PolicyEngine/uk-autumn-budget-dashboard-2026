@@ -59,7 +59,6 @@ from uk_budget_data.publication.receipt import (
 from uk_budget_data.reforms import (
     CASH_ISA_LIMIT_ID,
     MACHINE_GAMES_DUTY_ID,
-    SAVINGS_INCOME_RATES_ID,
     get_reform,
 )
 
@@ -81,7 +80,6 @@ UNREGISTERED = "not a measure the running code registers"
 # receipt to check its definition against, so the page leaves it unchecked;
 # once named, it is checked as any published measure (``checked_measures``).
 CALCULATOR_ONLY_MEASURES = (
-    SAVINGS_INCOME_RATES_ID,
     CASH_ISA_LIMIT_ID,
     MACHINE_GAMES_DUTY_ID,
 )

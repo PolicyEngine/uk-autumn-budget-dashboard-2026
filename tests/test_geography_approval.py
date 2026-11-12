@@ -708,7 +708,9 @@ def test_area_command_refuses_a_changed_definition_before_building(
     simulate.assert_not_called()
 
 
-# -- the registered package: the seven released measures (28 October 2026) --
+# -- the registered package: the nine released measures (seven on Budget day,
+# the £2 bus fare cap from 29 October and the savings rates from 11 November
+# 2026; the helper keeps its Budget-day name) --
 
 
 def _seven_manifest(combined_key_, members):
@@ -723,14 +725,14 @@ def _seven_manifest(combined_key_, members):
     )
 
 
-def test_the_area_run_takes_the_eight_package_under_its_key():
+def test_the_area_run_takes_the_nine_package_under_its_key():
     from uk_budget_data.reforms import (
         AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
         AUTUMN_BUDGET_2026_COMBINED_ID,
     )
 
     seven = sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
-    key = "combined--7baf4e89377bcc9c"
+    key = "combined--f25f6972a09c62a6"
     assert g.manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     manifest = _seven_manifest(key, seven)
     package = [AUTUMN_BUDGET_2026_COMBINED_ID]
@@ -738,20 +740,20 @@ def test_the_area_run_takes_the_eight_package_under_its_key():
     assert g.approved_reforms(manifest)[-1] == AUTUMN_BUDGET_2026_COMBINED_ID
 
 
-def test_the_area_run_refuses_the_withdrawn_nine_measure_package():
+def test_the_area_run_refuses_a_package_with_withdrawn_measures():
     from uk_budget_data.reforms import (
         AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
         AUTUMN_BUDGET_2026_COMBINED_ID,
     )
 
-    nine = sorted(
+    wider = sorted(
         [
             *AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
             "badr_lifetime_limit_cut",
             "employer_ni_relief_under_25s",
         ]
     )
-    manifest = _seven_manifest(combined_key(nine), nine)
+    manifest = _seven_manifest(combined_key(wider), wider)
     assert AUTUMN_BUDGET_2026_COMBINED_ID not in g.approved_reforms(manifest)
-    with pytest.raises(ValueError, match="combined--7baf4e89377bcc9c"):
+    with pytest.raises(ValueError, match="combined--f25f6972a09c62a6"):
         g.approved_reforms(manifest, [AUTUMN_BUDGET_2026_COMBINED_ID])

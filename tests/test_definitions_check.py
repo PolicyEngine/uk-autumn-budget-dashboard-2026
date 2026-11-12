@@ -655,8 +655,11 @@ def test_no_examples_are_computed_for_a_file_the_page_would_not_use(
 
 
 # Review of bc51d6d2: every household request carries the calculator-only
-# savings rise, so the page checks it, and the examples' file records it,
-# only once the publication names it.
+# measures, so the page checks one, and the examples' file records it,
+# only once the publication names it. The cash ISA limit stands for them
+# here; the savings rise was one of them until it was published as a static
+# costing (11 November 2026), and is now checked as any measure is.
+CALCULATOR_ONLY = "cash_isa_limit_kept"
 SAVINGS = "savings_income_rates_up"
 OTHER = next(
     key for key in MEASURES if key not in definitions.CALCULATOR_ONLY_MEASURES
@@ -688,7 +691,8 @@ def test_the_calculator_only_measures_are_the_pages():
         constants[value] if value in constants else json.loads(value)
         for value in re.findall(r"^\s+id: (\w+|\"[a-z_]+\"),$", block, re.M)
     ]
-    assert ids == [SAVINGS, "cash_isa_limit_kept", "machine_games_duty_rise"]
+    assert ids == [CALCULATOR_ONLY, "machine_games_duty_rise"]
+    assert SAVINGS not in ids
     assert tuple(ids) == definitions.CALCULATOR_ONLY_MEASURES
     assert set(ids) <= set(MEASURES)
 
@@ -719,50 +723,77 @@ def test_a_request_checks_every_measure_but_an_unnamed_calculator_only_one(
         assert (key in checked) == expected
 
 
-def test_the_examples_file_leaves_an_unpublished_savings_rise_unchecked(
+def test_the_examples_file_leaves_an_unpublished_calculator_only_measure_unchecked(
     tmp_path,
 ):
-    # Sol's repro: the current requests carry the savings rise, which has no
-    # published receipt; the check stopped before any calculation
+    # Sol's repro: the current requests carry a calculator-only measure,
+    # which has no published receipt; the check stopped before any
+    # calculation
     _publish(tmp_path, {OTHER: _receipt(OTHER)})
-    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    recorded = _precompute()._definitions(tmp_path, [OTHER, CALCULATOR_ONLY])
     assert recorded == definitions.definitions_for({OTHER: COMMIT}, MEASURES)
-    assert SAVINGS not in recorded
+    assert CALCULATOR_ONLY not in recorded
 
 
-def test_the_examples_file_leaves_a_withdrawn_savings_rise_unchecked(tmp_path):
+def test_the_examples_file_leaves_a_withdrawn_calculator_only_measure_unchecked(
+    tmp_path,
+):
     _publish(
         tmp_path,
-        {OTHER: _receipt(OTHER), SAVINGS: _receipt(SAVINGS)},
-        statuses={SAVINGS: m.WITHDRAWN},
+        {OTHER: _receipt(OTHER), CALCULATOR_ONLY: _receipt(CALCULATOR_ONLY)},
+        statuses={CALCULATOR_ONLY: m.WITHDRAWN},
     )
-    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    recorded = _precompute()._definitions(tmp_path, [OTHER, CALCULATOR_ONLY])
     assert list(recorded) == [OTHER]
 
 
-def test_the_examples_file_records_a_published_savings_rise(tmp_path):
-    _publish(tmp_path, {OTHER: _receipt(OTHER), SAVINGS: _receipt(SAVINGS)})
-    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
-    assert sorted(recorded) == sorted([OTHER, SAVINGS])
+def test_the_examples_file_records_a_published_calculator_only_measure(
+    tmp_path,
+):
+    _publish(
+        tmp_path,
+        {OTHER: _receipt(OTHER), CALCULATOR_ONLY: _receipt(CALCULATOR_ONLY)},
+    )
+    recorded = _precompute()._definitions(tmp_path, [OTHER, CALCULATOR_ONLY])
+    assert sorted(recorded) == sorted([OTHER, CALCULATOR_ONLY])
     assert (
         definitions.differences(
-            definitions.receipt_definition(_receipt(SAVINGS)),
-            recorded[SAVINGS],
+            definitions.receipt_definition(_receipt(CALCULATOR_ONLY)),
+            recorded[CALCULATOR_ONLY],
         )
         == []
     )
 
 
-def test_no_examples_are_computed_when_a_published_savings_rise_has_no_receipt(
+def test_no_examples_are_computed_when_a_published_calculator_only_measure_has_no_receipt(
     tmp_path, capsys
 ):
-    _publish(tmp_path, {OTHER: _receipt(OTHER), SAVINGS: None})
+    _publish(tmp_path, {OTHER: _receipt(OTHER), CALCULATOR_ONLY: None})
+    with pytest.raises(SystemExit) as exited:
+        _precompute()._definitions(tmp_path, [OTHER, CALCULATOR_ONLY])
+    assert "would not use these answers" in str(exited.value.code)
+    err = capsys.readouterr().err
+    assert f"{CALCULATOR_ONLY}:" in err and "no published receipt" in err
+    assert f"{OTHER}:" not in err
+
+
+def test_the_savings_rise_is_checked_whether_or_not_it_is_published(tmp_path):
+    # No longer calculator-only: a request that names it needs its approved
+    # definition, as any selected measure's does, so the examples' file is
+    # refused while the publication has no receipt for it
+    assert SAVINGS not in definitions.CALCULATOR_ONLY_MEASURES
+    assert SAVINGS != OTHER
+    _publish(tmp_path, {OTHER: _receipt(OTHER)})
+    assert definitions.checked_measures(tmp_path, [OTHER, SAVINGS]) == [
+        OTHER,
+        SAVINGS,
+    ]
+    assert definitions.checked_measures(
+        tmp_path, [OTHER, SAVINGS, CALCULATOR_ONLY]
+    ) == [OTHER, SAVINGS]
     with pytest.raises(SystemExit) as exited:
         _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
     assert "would not use these answers" in str(exited.value.code)
-    err = capsys.readouterr().err
-    assert f"{SAVINGS}:" in err and "no published receipt" in err
-    assert f"{OTHER}:" not in err
 
 
 class _InProcessPool:
@@ -781,12 +812,13 @@ class _InProcessPool:
 
 def test_the_examples_file_lists_the_measures_it_checks(tmp_path, monkeypatch):
     # The page checks the file's `policies` (householdPresets.js): the
-    # published ones, while every entry's request still carries the rise
+    # published ones, while every entry's request still carries the
+    # calculator-only measure
     module = _precompute()
     data_root = tmp_path / "data"
     _publish(data_root, {OTHER: _receipt(OTHER)})
     requests = tmp_path / "requests.json"
-    request = {"year": 2027, "policies": [OTHER, SAVINGS]}
+    request = {"year": 2027, "policies": [OTHER, CALCULATOR_ONLY]}
     requests.write_text(
         json.dumps([{"preset_id": "p", "year": 2027, "request": request}])
     )
@@ -813,4 +845,7 @@ def test_the_examples_file_lists_the_measures_it_checks(tmp_path, monkeypatch):
     payload = json.loads(out.read_text())
     assert payload["policies"] == [OTHER]
     assert list(payload["definitions"]) == [OTHER]
-    assert payload["entries"][0]["request"]["policies"] == [OTHER, SAVINGS]
+    assert payload["entries"][0]["request"]["policies"] == [
+        OTHER,
+        CALCULATOR_ONLY,
+    ]
