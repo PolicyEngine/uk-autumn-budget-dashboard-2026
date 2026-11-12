@@ -5,6 +5,7 @@ so the modifier's reduction is the maximum the policy table describes.
 """
 
 import __future__
+
 import ast
 import inspect
 import math
