@@ -5,7 +5,7 @@ import PersonalImpactTab from "./PersonalImpactTab";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { fixtureJson } from "../test/publicationFixture";
 import { approvedDefinition } from "../test/definitionsFixture";
-import { SAVINGS_INCOME_RATES_ID } from "../utils/calculatorOnlyMeasures";
+import { CALCULATOR_ONLY_MEASURES } from "../utils/calculatorOnlyMeasures";
 
 vi.mock("./HouseholdCalculator", () => ({
   default: ({ selectedPolicies, publicationKey, expectedEngine, expectedDefinitions, presetEngine, presetDefinitions }) => (
@@ -132,23 +132,25 @@ describe("Household calculator's publication gate", () => {
     expect(screen.getByText(/do not name one model version/)).toBeInTheDocument();
   });
 
-  describe("the calculator-only savings rise, which every household request carries", () => {
+  describe("a calculator-only measure, which every household request carries", () => {
     // Review of bc51d6d2, finding 1: published but not selected, it went in
     // every request unchecked. Once the manifest names it, its receipt's
-    // engine and definition are required as a selected measure's are
-    const SAVINGS = SAVINGS_INCOME_RATES_ID;
-    const savingsDefinition = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "e".repeat(64) } };
-    function withSavings({ named = true, tables = { engine: ENGINE, definition: savingsDefinition } } = {}) {
+    // engine and definition are required as a selected measure's are. The
+    // savings rise was the measure then; it is published now, so the first
+    // of today's calculator-only measures stands in
+    const [CALCULATOR_ONLY] = Object.keys(CALCULATOR_ONLY_MEASURES);
+    const itsDefinition = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "e".repeat(64) } };
+    function publishingIt({ named = true, tables = { engine: ENGINE, definition: itsDefinition } } = {}) {
       return buildMeasureCatalogue({
         manifest: {
           ...base, snapshotSha256: "a".repeat(64),
           measures: {
             alpha: { ...base.measures.alpha, years: [year], unsupported_years: [] },
-            ...(named ? { [SAVINGS]: { ...base.measures.beta, years: [year], unsupported_years: [] } } : {}),
+            ...(named ? { [CALCULATOR_ONLY]: { ...base.measures.beta, years: [year], unsupported_years: [] } } : {}),
           },
           combined: {},
         },
-        tablesByKey: { alpha: { engine: ENGINE, definition: approvedDefinition() }, ...(named && tables ? { [SAVINGS]: tables } : {}) },
+        tablesByKey: { alpha: { engine: ENGINE, definition: approvedDefinition() }, ...(named && tables ? { [CALCULATOR_ONLY]: tables } : {}) },
       });
     }
     function showAlpha(value, remove = vi.fn()) {
@@ -162,22 +164,22 @@ describe("Household calculator's publication gate", () => {
     const data = (name) => JSON.parse(screen.getByTestId("live-calculator").dataset[name]);
 
     it("is checked against its receipt once the publication names it, selected or not", () => {
-      showAlpha(withSavings());
+      showAlpha(publishingIt());
       // The household's answers and the examples' both
-      expect(data("definitions")).toEqual({ alpha: approvedDefinition(), [SAVINGS]: savingsDefinition });
-      expect(data("presetDefinitions")).toEqual({ alpha: approvedDefinition(), [SAVINGS]: savingsDefinition });
+      expect(data("definitions")).toEqual({ alpha: approvedDefinition(), [CALCULATOR_ONLY]: itsDefinition });
+      expect(data("presetDefinitions")).toEqual({ alpha: approvedDefinition(), [CALCULATOR_ONLY]: itsDefinition });
       expect(data("engine")).toEqual(ENGINE);
       expect(data("presetEngine")).toEqual(ENGINE);
     });
 
     it.each([
       ["a receipt with no definition", { engine: ENGINE }, /record no definition/],
-      ["a receipt with a short commit", { engine: ENGINE, definition: { ...savingsDefinition, git_sha: "abc1234" } }, /names no full commit/],
+      ["a receipt with a short commit", { engine: ENGINE, definition: { ...itsDefinition, git_sha: "abc1234" } }, /names no full commit/],
     ])("leaves the calculator unavailable when the publication names it with %s", (_, tables, why) => {
-      const remove = showAlpha(withSavings({ tables }));
+      const remove = showAlpha(publishingIt({ tables }));
       expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
       const listed = screen.getAllByRole("listitem").map((item) => item.textContent);
-      expect(listed).toEqual([expect.stringMatching(new RegExp(`^${withSavings().byId.get(SAVINGS).name}: `))]);
+      expect(listed).toEqual([expect.stringMatching(new RegExp(`^${publishingIt().byId.get(CALCULATOR_ONLY).name}: `))]);
       expect(listed[0]).toMatch(why);
       // Not selected, it can't be removed from the selection: no such button
       expect(screen.queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
@@ -186,9 +188,9 @@ describe("Household calculator's publication gate", () => {
 
     it.each([
       ["no verified receipt", null],
-      ["a receipt that names other versions", { engine: { ...ENGINE, policyengine: "6.10.1" }, definition: savingsDefinition }],
+      ["a receipt that names other versions", { engine: { ...ENGINE, policyengine: "6.10.1" }, definition: itsDefinition }],
     ])("withholds the calculator when the publication names it with %s", (_, tables) => {
-      showAlpha(withSavings({ tables }));
+      showAlpha(publishingIt({ tables }));
       expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
       expect(screen.getByText(/do not name one model version/)).toBeInTheDocument();
     });
@@ -197,13 +199,13 @@ describe("Household calculator's publication gate", () => {
     // request once removed, so no Remove is offered for it either
     it.each([
       ["records no definition", { engine: ENGINE }, /record no definition/],
-      ["names a short commit", { engine: ENGINE, definition: { ...savingsDefinition, git_sha: "abc1234" } }, /names no full commit/],
+      ["names a short commit", { engine: ENGINE, definition: { ...itsDefinition, git_sha: "abc1234" } }, /names no full commit/],
     ])("offers no remove when it is selected and its receipt %s", (_, tables, why) => {
-      const value = withSavings({ tables });
+      const value = publishingIt({ tables });
       const remove = vi.fn();
       render(
         <MeasureCatalogueProvider catalogue={value}>
-          <PersonalImpactTab selectedPolicies={["alpha", SAVINGS]} policies={value.measures} year={year} onRemoveUnavailable={remove} />
+          <PersonalImpactTab selectedPolicies={["alpha", CALCULATOR_ONLY]} policies={value.measures} year={year} onRemoveUnavailable={remove} />
         </MeasureCatalogueProvider>,
       );
       expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
@@ -213,12 +215,12 @@ describe("Household calculator's publication gate", () => {
     });
 
     it("offers no remove when it is selected but the publication holds it back", () => {
-      const value = withSavings();
-      value.byId.get(SAVINGS).displayable = false;
+      const value = publishingIt();
+      value.byId.get(CALCULATOR_ONLY).displayable = false;
       const remove = vi.fn();
       render(
         <MeasureCatalogueProvider catalogue={value}>
-          <PersonalImpactTab selectedPolicies={["alpha", SAVINGS]} policies={value.measures} year={year} onRemoveUnavailable={remove} />
+          <PersonalImpactTab selectedPolicies={["alpha", CALCULATOR_ONLY]} policies={value.measures} year={year} onRemoveUnavailable={remove} />
         </MeasureCatalogueProvider>,
       );
       expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
@@ -227,7 +229,7 @@ describe("Household calculator's publication gate", () => {
     });
 
     it("is left unchecked while the publication does not name it, as it has no receipt", () => {
-      showAlpha(withSavings({ named: false }));
+      showAlpha(publishingIt({ named: false }));
       expect(data("definitions")).toEqual({ alpha: approvedDefinition() });
       expect(data("presetDefinitions")).toEqual({ alpha: approvedDefinition() });
     });

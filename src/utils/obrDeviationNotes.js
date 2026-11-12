@@ -11,7 +11,10 @@ import { policyDetailsFor } from "./policyDetails";
  * tagged Timing, Coverage, Behaviour or Scope, by year where a figure
  * changes), and NOT_COMPARABLE_SHORT for a year that cannot be compared.
  * OBR_DEVIATION_NOTES and OBR_COMPARISON_BASES are the full Budget-day
- * texts, for the table's Difference tip and the CSV.
+ * texts, for the table's Difference tip and the CSV. A note may take
+ * figures from the release in place of typed ones (OBR_NOTE_FIGURES,
+ * fillNote): the passages it marks show only with figures that bear them
+ * out.
  *
  * Each is keyed by measure id and shows only while the measure's card
  * entry (policyDetails.js) still fits it: the publication describes the
@@ -101,8 +104,19 @@ export const OBR_DIFFERENCE_POINTS = {
   ],
   savings_income_rates_up: [
     { reason: "Timing", text: "Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29" },
-    { reason: "Coverage", text: "Our savings calibration included ISA interest, so we estimate too little tax" },
-    { reason: null, text: "We are correcting the data" },
+    // EFO October 2026, paragraph 3.17: the response reduces the yield by
+    // around £0.2bn a year; ours is static
+    { reason: "Behaviour", text: "Official includes savers moving into ISAs: about £0.2bn a year" },
+    // OBR policy table 1.1, measure 62, Onshore CT: £78m, £80m and £81m;
+    // Table 6.1's total is that plus income tax (£443m, £475m and £510m)
+    {
+      reason: "Scope",
+      byYear: {
+        2029: "Official total also includes £78m of onshore corporation tax",
+        2030: "Official total also includes £80m of onshore corporation tax",
+        2031: "Official total also includes £81m of onshore corporation tax",
+      },
+    },
   ],
   bus_fare_cap_2027: [
     // OBR policy table 1.1, measure 4: the grant (PSCE in RDEL) −113.10 and
@@ -165,8 +179,57 @@ export const OBR_DEVIATION_NOTES = {
   property_income_rates_up:
     "The government counts the tax in its costing when taxpayers pay it, after the tax year it relates to. The OBR adds almost no Self Assessment receipts from the savings and property rate rises in 2027-28 and £1.0bn in 2028-29 (Economic and fiscal outlook, Table 4.4), so we don't compare those two years with our tax-year figures. From 2029-30 ours exceeds the income tax line of the government's costing, which the OBR certified, by 9% to 11%: +£429m against +£394m in 2029-30 (the OBR's detailed policy table, Table 1.1, measure 61). The Table 6.1 total we show, +£435m in 2029-30, also includes the costing's onshore corporation tax, Scottish BGA (current) and Scottish self-financed expenditure lines. The OBR says landlords incorporating and lower compliance reduce the costing's yield by about £0.1bn a year (paragraph 3.17), which we don't model, so before behaviour the official income tax line would exceed ours.",
   savings_income_rates_up:
-    "Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29. From 2029-30 ours reaches 68% to 69% of the income tax line of the government's costing, which the OBR certified (the OBR's detailed policy table, Table 1.1, measure 62): +£307m against +£443m in 2029-30. The Table 6.1 total we show, +£520m in 2029-30, also includes the costing's Onshore CT line. The OBR says savers moving money into ISAs and other tax-advantaged assets reduce the costing's yield by about £0.2bn a year (Economic and fiscal outlook, paragraph 3.17). We don't model that response, so before it the official income tax line would exceed ours by more. The gap turns on how much savings income faces the raised basic, higher and additional rates: about £32bn to £36bn a year from 2029-30 to 2031-32 on the official income tax line before that response, against £15bn to £17bn in ours. Most of that difference comes from our data. We calibrated savings interest to HMRC's figures on a different basis: ours included interest in ISAs, which HMRC leaves out of its figures, so our taxable interest came out about a third too low. We are correcting this, with HMRC's other savings income and the OBR's savings income growth, and will update the dashboard with the corrected data.",
+    "Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29. The OBR puts the costing's income tax at £63m in 2027-28 and £483m in 2028-29 (its detailed policy table, Table 1.1, measure 62), and adds almost no Self Assessment receipts from the savings and property rate rises in 2027-28 and £1.0bn in 2028-29 (Economic and fiscal outlook, October 2026, Table 4.4, page 91). HMRC estimates that about 12% of taxpayers will pay £113 more on average in 2027-28 (HMRC policy paper, Income Tax: changes to tax rates for property and savings income, 29 October 2026, gov.uk/government/publications/income-tax-changes-to-tax-rates-for-property-and-savings-income). On the OBR's forecast of 41.6 million taxpayers that year (its detailed forecast tables for receipts, Table 4.18), that comes to about £0.56bn of extra tax for 2027-28: our arithmetic on HMRC's and the OBR's published figures, not an official estimate. [[We estimate {ours2027} for that tax year.]] We publish a static costing: we hold everyone's savings income fixed. The OBR says savers moving money into ISAs and other tax-advantaged assets reduce the costing's yield by about £0.2bn a year (Economic and fiscal outlook, October 2026, paragraph 3.17, page 69). [[From 2029-30 our estimate exceeds the income tax line of the government's costing, which the OBR certified, by {gap} a year, less than that response: {ours2029} against +£443m in 2029-30.]] The Table 6.1 total we show, +£520m in 2029-30, also includes £78m of onshore corporation tax.",
 };
+
+/**
+ * The figures a note takes from the release, by measure id: a function of
+ * our published estimates (`ours`: £m by the fiscal year's start year, the
+ * figures the comparison draws) giving each {placeholder} of the note its
+ * text, or null where the figures do not bear the passage out. So no note
+ * states one of our figures, or a comparison that rests on them, from
+ * typed text that a regeneration could leave behind.
+ *
+ * Savings: the OBR's income tax line is typed (its policy Table 1.1,
+ * measure 62: £443m, £475m and £510m from 2029-30); ours is read. The gap
+ * shows only while ours exceeds the line in every year from 2029-30 by
+ * less than the £200m a year the OBR gives for savers' response
+ * (paragraph 3.17), which is what the passage says. Max's separate rule
+ * (2 and 11 November 2026) sends a raw gap over £200m back to him;
+ * this rounded display condition is not that release threshold.
+ */
+export const OBR_NOTE_FIGURES = {
+  savings_income_rates_up: (ours) => {
+    const line = { 2029: 443, 2030: 475, 2031: 510 };
+    const whole = (year) => (Number.isFinite(ours?.[year]) ? Math.round(ours[year]) : null);
+    const gaps = Object.keys(line).map((year) => (whole(year) === null ? null : whole(year) - line[year]));
+    const within = gaps.every((gap) => gap !== null && gap > 0 && gap < 200);
+    const [least, most] = [Math.min(...gaps), Math.max(...gaps)];
+    return {
+      ours2027: whole(2027) > 0 ? `£${whole(2027)}m` : null,
+      ours2029: within ? `+£${whole(2029)}m` : null,
+      gap: within ? (least === most ? `£${least}m` : `£${least}m to £${most}m`) : null,
+    };
+  },
+};
+
+/**
+ * A note with its marked passages settled: each [[passage]] with every
+ * {placeholder} in it replaced from `values`, or left out whole when any
+ * of them has no value there (null, missing or blank). A note with no
+ * marked passage comes back as it is.
+ */
+export function fillNote(text, values = {}) {
+  if (typeof text !== "string" || !text.includes("[[")) return text;
+  const valueOf = (name) => (Object.hasOwn(values ?? {}, name) && typeof values[name] === "string" && values[name].trim() ? values[name] : null);
+  return text
+    .replace(/\[\[([\s\S]*?)\]\]/g, (_, passage) => {
+      const names = [...passage.matchAll(/\{(\w+)\}/g)].map((match) => match[1]);
+      return names.every((name) => valueOf(name) !== null) ? passage.replace(/\{(\w+)\}/g, (__, name) => valueOf(name)) : "";
+    })
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 
 /**
  * What each side counts, as one line ("Official: …. Ours: …."), for the
@@ -226,10 +289,16 @@ const fittingText = (measure, texts) => {
 
 /**
  * A comparison row's note: the one `notes` has for its catalogue measure,
- * while its card entry fits it (policyDetailsFor); else null.
+ * while its card entry fits it (policyDetailsFor); else null. `ours` is
+ * the measure's own published figures (£m by the fiscal year's start
+ * year): a note that takes figures from the release (OBR_NOTE_FIGURES)
+ * shows the passages they bear out, and none of them without figures.
  */
-export function deviationNoteFor(measure, notes = OBR_DEVIATION_NOTES) {
-  return fittingText(measure, notes);
+export function deviationNoteFor(measure, notes = OBR_DEVIATION_NOTES, ours = null) {
+  const text = fittingText(measure, notes);
+  if (text === null) return null;
+  const figures = Object.hasOwn(OBR_NOTE_FIGURES, measure.id) ? OBR_NOTE_FIGURES[measure.id](ours ?? {}) : {};
+  return fillNote(text, figures);
 }
 
 /**

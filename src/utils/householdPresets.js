@@ -35,9 +35,9 @@ const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id
 
 /**
  * The measures an example's request is for: `policies`, then the
- * calculator-only measures every household request carries (the savings
- * rise, calculatorOnlyMeasures.js). The file's `policies` stay the
- * published ones; every entry is for these.
+ * calculator-only measures every household request carries
+ * (calculatorOnlyMeasures.js). The file's `policies` stay the published
+ * ones; every entry is for these.
  */
 export const presetPolicies = (preset, policies) => withCalculatorOnly(policies);
 

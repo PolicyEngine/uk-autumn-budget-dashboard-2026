@@ -338,9 +338,9 @@ describe("the household calculation, from the fixture", () => {
     expect(calculateButton()).not.toBeDisabled();
   });
 
-  it("for any selection, the card counts the selection as the header does and names the savings rise", async () => {
+  it("for any selection, the card counts the selection as the header does and names the calculator-only measures", async () => {
     // The header's Policies control counts the selection ("All 7"); the
-    // result also covers the savings rise the calculator adds, which the card
+    // result also covers the measures the calculator adds, which the card
     // names rather than counting (production showed "with 8 policies")
     await fc.assert(
       fc.asyncProperty(fc.subarray(SUPPORTED_POLICY_IDS, { minLength: 1 }), async (ids) => {
@@ -359,11 +359,13 @@ describe("the household calculation, from the fixture", () => {
         const tile = headlineCard().querySelector(".result-tiles .forecast-tile");
         const unit = ids.length === 1 ? "policy" : "policies";
         expect(tile.querySelector(".result-policies-link")).toHaveTextContent(
-          new RegExp(`^${ids.length} ${unit}, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty$`),
+          new RegExp(`^${ids.length} ${unit}, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty$`),
         );
-        // The request carries both, so the card must name them
-        expect(household.at(-1).policies).toContain("savings_income_rates_up");
+        // The request carries both, so the card must name them. The savings
+        // rise is published now: asked only when selected, never added
         expect(household.at(-1).policies).toContain("cash_isa_limit_kept");
+        expect(household.at(-1).policies).toContain("machine_games_duty_rise");
+        expect(household.at(-1).policies).not.toContain("savings_income_rates_up");
       }),
       { numRuns: 8 },
     );
@@ -388,9 +390,9 @@ describe("the household calculation, from the fixture", () => {
       "Income percentile",
     ]);
     // The selected policies, counted as the header counts them, and the
-    // savings rise the calculator always adds, named
+    // measures the calculator always adds, named
     expect(tiles[0]).toHaveTextContent(
-      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies, the savings income tax rise, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty`,
+      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies, the cash ISA limit kept at £20,000 and the rise in Machine Games Duty`,
     );
     expect(changeValue()).toBe("+£3,765");
     // All three figures in the tiles' one headline class, the change not
@@ -1284,7 +1286,7 @@ describe("a household calculation from other definitions", () => {
     rerender(tab(rest));
     expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
     expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
-    // With the savings rise the calculator always adds
+    // With the measures the calculator always adds
     expect(yours().at(-1).policies).toEqual(withCalculatorOnly(rest));
   });
 
@@ -1418,55 +1420,58 @@ describe("a household calculation from other definitions", () => {
   });
 });
 
-// Review of 34133276, P3: once published, the savings rise goes in every
+// Review of 34133276, P3: once published, a calculator-only measure (the
+// savings rise, then; the cash ISA limit stands in now) goes in every
 // request, selected or not. Refused for its definition, it can't be removed
 // from the selection, so the calculator offers no Remove for it
-describe("a household calculation refused for the calculator-only savings rise", () => {
-  const SAVINGS = "savings_income_rates_up";
-  const SAVINGS_POLICY = { id: SAVINGS, name: "Savings income tax up" };
-  const withSavings = [...POLICIES_FOR_TEST, SAVINGS_POLICY];
-  const savingsCatalogue = buildMeasureCatalogue({
+describe("a household calculation refused for a calculator-only measure", () => {
+  const CALCULATOR_ONLY = "cash_isa_limit_kept";
+  // Named as the page's own list names it (calculatorOnlyMeasures.js), so
+  // the refusal reads the same whichever name the calculator takes
+  const CALCULATOR_ONLY_POLICY = { id: CALCULATOR_ONLY, name: "Cash ISA limit kept at £20,000" };
+  const withIt = [...POLICIES_FOR_TEST, CALCULATOR_ONLY_POLICY];
+  const itsCatalogue = buildMeasureCatalogue({
     manifest: {
       ...fixtureJson("manifest.json"),
-      measures: Object.fromEntries(withSavings.map((policy) => [policy.id, {
+      measures: Object.fromEntries(withIt.map((policy) => [policy.id, {
         ...baseEntry, ...policy, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [],
       }])),
       combined: {},
     },
-    tablesByKey: Object.fromEntries(withSavings.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE, definition: approvedDefinition(policy.id) }])),
+    tablesByKey: Object.fromEntries(withIt.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE, definition: approvedDefinition(policy.id) }])),
   });
-  const otherSavings = (id) => {
+  const itsOtherDefinition = (id) => {
     const definition = approvedDefinition(id);
-    return id === SAVINGS ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
+    return id === CALCULATOR_ONLY ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
   };
-  function renderWithSavings(props) {
+  function renderWithIt(props) {
     return render(
-      <PersonalImpactTab selectedPolicies={SUPPORTED_POLICY_IDS} policies={withSavings} year={2029} {...props} />,
-      { wrapper: ({ children }) => <MeasureCatalogueProvider catalogue={savingsCatalogue}>{children}</MeasureCatalogueProvider> },
+      <PersonalImpactTab selectedPolicies={SUPPORTED_POLICY_IDS} policies={withIt} year={2029} {...props} />,
+      { wrapper: ({ children }) => <MeasureCatalogueProvider catalogue={itsCatalogue}>{children}</MeasureCatalogueProvider> },
     );
   }
 
   it("lists it unavailable, with no figure, and offers no remove: it is not selected", async () => {
-    expect(SUPPORTED_POLICY_IDS).not.toContain(SAVINGS);
-    serve((body) => json(householdAnswerFor(body)), otherSavings);
+    expect(SUPPORTED_POLICY_IDS).not.toContain(CALCULATOR_ONLY);
+    serve((body) => json(householdAnswerFor(body)), itsOtherDefinition);
     const remove = vi.fn();
-    renderWithSavings({ onRemoveUnavailable: remove });
+    renderWithIt({ onRemoveUnavailable: remove });
     toResults();
     const region = await results();
     expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
     expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      `${SAVINGS_POLICY.name}: its reform binding differs`,
+      `${CALCULATOR_ONLY_POLICY.name}: its reform binding differs`,
     ]);
     expect(region.textContent).not.toMatch(/£\d/);
     expect(within(region).queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
     expect(remove).not.toHaveBeenCalled();
     // It was asked with the rise, naming its approved definition
-    expect(yours()[0].policies).toContain(SAVINGS);
+    expect(yours()[0].policies).toContain(CALCULATOR_ONLY);
   });
 
   it.each([
-    ["it alone", [SAVINGS]],
-    ["it and a selected measure", [SAVINGS, SUPPORTED_POLICY_IDS[0]]],
+    ["it alone", [CALCULATOR_ONLY]],
+    ["it and a selected measure", [CALCULATOR_ONLY, SUPPORTED_POLICY_IDS[0]]],
   ])("offers no remove when %s is refused, though selected: every request carries it", async (_, refused) => {
     // Re-review of edf98756, P3: removed from the selection, it goes back in
     serve((body) => json(householdAnswerFor(body)), (id) => {
@@ -1474,7 +1479,7 @@ describe("a household calculation refused for the calculator-only savings rise",
       return refused.includes(id) ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
     });
     const remove = vi.fn();
-    renderWithSavings({ selectedPolicies: [...SUPPORTED_POLICY_IDS, SAVINGS], onRemoveUnavailable: remove });
+    renderWithIt({ selectedPolicies: [...SUPPORTED_POLICY_IDS, CALCULATOR_ONLY], onRemoveUnavailable: remove });
     toResults();
     const region = await results();
     expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
@@ -1485,7 +1490,7 @@ describe("a household calculation refused for the calculator-only savings rise",
 
   it("answers when the API computes it from its approved definition", async () => {
     serve((body) => json(householdAnswerFor(body)));
-    renderWithSavings();
+    renderWithIt();
     toResults();
     expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
   });

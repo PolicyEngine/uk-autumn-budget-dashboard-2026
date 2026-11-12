@@ -15,23 +15,6 @@
  */
 
 export const UNMODELLED_VISUALS = {
-  // "rise by 2 points across the UK, to 24%, 44% and 49%"
-  "savings-income-tax": {
-    kind: "bars",
-    caption: "Income tax rates on savings income",
-    max: 55,
-    rows: [
-      { label: "Basic rate", base: 22, value: 24, text: "22% → 24%" },
-      { label: "Higher rate", base: 42, value: 44, text: "42% → 44%" },
-      { label: "Additional rate", base: 47, value: 49, text: "47% → 49%" },
-    ],
-    tone: "loss",
-    // 22%, 42% and 47% are the rates Budget 2025 set for 6 April 2027, not
-    // the rates before it (20%, 40% and 45%): OBR EFO October 2026, 3.17
-    key: { base: "Already set for 6 Apr 2027", add: "2 points more" },
-    derived: { "22, 42, 47": "each rate 2 points below its new 24%, 44% and 49% (paragraph 6.247)" },
-    alt: "Income tax rates on savings income from 6 April 2027: 2 points above the rates the previous Budget set for that date, basic rate 22% to 24%, higher rate 42% to 44%, additional rate 47% to 49%.",
-  },
   // "rises from 20% to 25%"
   "machine-games-duty": {
     kind: "bars",

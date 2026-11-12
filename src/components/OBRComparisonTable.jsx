@@ -341,12 +341,21 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   }
 
   const yearLabel = fiscalYear(selectedYear);
+  // A measure's own published figures in every year shown, in £m by the
+  // fiscal year's start year: a note takes from them any figure of ours
+  // it gives, so none is typed into its text (obrDeviationNotes.js)
+  const oursByYear = (id) =>
+    Object.fromEntries(
+      selectedRows
+        .filter((row) => row.reform_id === id && isValue(row.policyengine_value))
+        .map((row) => [Number(row.year), row.policyengine_value * 1000]),
+    );
   // Each row with what each side counts and why it differs from the
   // official costing, while they were written for the measure as published
   const rows = comparisonRows(selectedRows, selectedPolicies, selectedYear, showBehavioural, catalogue, windows).map((row) => ({
     ...row,
     basis: comparisonBasisFor(row.measure, bases),
-    note: deviationNoteFor(row.measure, notes),
+    note: deviationNoteFor(row.measure, notes, oursByYear(row.id)),
     points: differencePointsFor(row.measure, points),
     panelBasis: panelBasisFor(row.measure, panelBases),
   }));

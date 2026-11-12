@@ -121,13 +121,14 @@ describe("MethodologyTab", () => {
     const topic = container.querySelector("#method-household-policies");
     expect(topic).not.toBeNull();
     const items = [...topic.querySelectorAll("li")].map((item) => item.textContent);
-    // The published measures, then the three the calculator alone adds (on
-    // the page: the eight published and these three, eleven in all)
-    expect(items).toHaveLength(catalogue.measures.length + 3);
-    expect(topic).toHaveTextContent(`${catalogue.measures.length + 3} policies`);
+    // The published measures, then the two the calculator alone adds (on
+    // the page: the nine published, the savings income tax rise among them
+    // since 11 November 2026, and these two, eleven in all)
+    expect(items).toHaveLength(catalogue.measures.length + 2);
+    expect(topic).toHaveTextContent(`${catalogue.measures.length + 2} policies`);
     for (const measure of catalogue.measures) expect(items.some((item) => item.startsWith(measure.name))).toBe(true);
-    expect(items.slice(-3)).toEqual([
-      "Savings income tax up (calculator only, held back from the national results)",
+    expect(items.some((item) => /^Savings income tax up \(calculator only/.test(item))).toBe(false);
+    expect(items.slice(-2)).toEqual([
       "Cash ISA limit kept at £20,000 (calculator only, held back from the national results)",
       "Machine Games Duty up to 25% on higher-stake machines (calculator only, held back from the national results)",
     ]);
@@ -180,6 +181,9 @@ describe("MethodologyTab", () => {
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
     expect(card.querySelectorAll("li")).toHaveLength(0);
     expect(card).toHaveTextContent("cannot be costed household by household");
+    // The savings income tax rise is published (11 November 2026): no
+    // longer said to be held back here
+    expect(card.textContent).not.toMatch(/held back|savings income/i);
     const link = within(card).getByRole("link", { name: "Budget policies we do not model", hidden: true });
     expect(link).toHaveAttribute("href", "?tab=policies#budget-measures-not-modelled");
     fireEvent.click(link);

@@ -77,23 +77,8 @@ export const UNMODELLED_POINT_LABELS = ["For a household", "Who it reaches", "Wh
 
 export const UNMODELLED_MEASURES = [
   {
-    id: "savings-income-tax",
-    order: 1,
-    reason: "coming-soon",
-    name: "Tax on savings interest up 2 points",
-    starts: "6 Apr 2027",
-    summary: "Raises tax on savings income by 2 points, to 24%, 44% and 49%.",
-    points: [
-      { label: "For a household", text: "Each £100 of taxable interest pays £2 more tax." },
-      { label: "Who it reaches", text: "People with taxable savings interest across the UK." },
-      { label: "Why we leave it out", text: "Held back: calibrated on another basis, our taxable interest is too low." },
-    ],
-    costings: [{ row: 62, values: [15, 125, 555, 520, 555, 590] }],
-    sources: [budget("paragraph 6.247")],
-  },
-  {
     id: "adjusted-triple-lock",
-    order: 2,
+    order: 1,
     reason: "separately",
     name: "Adjusted Triple Lock for the State Pension",
     starts: "Apr 2030",
@@ -116,7 +101,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "bank-surcharge",
-    order: 3,
+    order: 2,
     reason: "outside",
     name: "Bank surcharge up from 3% to 6% for 15 months",
     starts: "1 Jan 2027",
@@ -131,7 +116,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "pubs-business-rates-relief",
-    order: 4,
+    order: 3,
     reason: "outside",
     name: "Business rates relief for pubs and venues up to 35%",
     starts: "1 Apr 2027",
@@ -146,7 +131,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "online-marketplace-liability",
-    order: 5,
+    order: 4,
     reason: "outside",
     name: "Online marketplaces to collect the tax on UK sellers' sales",
     starts: "1 Oct 2027",
@@ -161,7 +146,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "your-first-home",
-    order: 6,
+    order: 5,
     reason: "outside",
     name: "Your First Home equity loan scheme",
     starts: "Apr 2027",
@@ -182,7 +167,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "machine-games-duty",
-    order: 7,
+    order: 6,
     reason: "data",
     name: "Machine Games Duty up from 20% to 25%",
     starts: "1 Apr 2027",
@@ -207,7 +192,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "cash-isa-limit",
-    order: 8,
+    order: 7,
     reason: "data",
     name: "Cash ISA limit kept at £20,000",
     starts: "6 Apr 2027",
@@ -228,7 +213,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "national-living-wage",
-    order: 9,
+    order: 8,
     reason: "data",
     name: "Minimum wage up 3.9%",
     starts: "1 Apr 2027",
@@ -244,7 +229,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "universal-credit-surplus-earnings",
-    order: 10,
+    order: 9,
     reason: "data",
     name: "Universal Credit surplus earnings threshold stays at £2,500",
     starts: "1 Apr 2027",
@@ -259,7 +244,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "mileage-rates",
-    order: 11,
+    order: 10,
     reason: "data",
     name: "Tax-free mileage rates up",
     starts: "Apr 2026 / Apr 2027",
@@ -274,7 +259,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "company-car-tax",
-    order: 12,
+    order: 11,
     reason: "data",
     name: "Company car tax up 1 point in 2030-31",
     starts: "6 Apr 2030",
@@ -289,7 +274,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "business-asset-disposal-relief",
-    order: 13,
+    order: 12,
     reason: "data",
     name: "Business Asset Disposal Relief limit down to £500,000",
     starts: "6 Apr 2027",
@@ -307,7 +292,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "first-time-buyer-isa",
-    order: 14,
+    order: 13,
     reason: "data",
     name: "First Time Buyer ISA, and a lower Lifetime ISA charge",
     starts: "Oct 2026 / Apr 2029",
@@ -325,7 +310,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "parental-allowance",
-    order: 15,
+    order: 14,
     reason: "data",
     name: "Parental pay for self-employed fathers, partners and adopters",
     starts: "Apr 2029",
@@ -351,7 +336,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "gas-standing-charges",
-    order: 16,
+    order: 15,
     reason: "data",
     name: "Gas standing charges to end",
     // Budget paragraph 4.3: "aiming for delivery by the end of 2027 or as soon

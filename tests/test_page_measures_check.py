@@ -148,16 +148,19 @@ def test_an_api_missing_a_measure_fails_and_names_it(tmp_path):
 
 
 def test_reads_the_calculator_only_ids_from_the_page():
-    """Today's: the savings rise (a constant) and the cash ISA limit."""
+    """Today's: the cash ISA limit and the Machine Games Duty rise. The
+    savings rise left the list when it was published (11 November 2026)."""
     ids = check.calculator_only_ids()
-    assert ids[:2] == ["savings_income_rates_up", "cash_isa_limit_kept"]
+    assert ids[:2] == ["cash_isa_limit_kept", "machine_games_duty_rise"]
+    assert "savings_income_rates_up" not in ids
     assert check.calculator_only_ids("no/such/file.js") == []
 
 
 def test_an_api_that_refuses_a_calculator_only_measure_fails(tmp_path):
     """The page sends the calculator-only measures with every household,
     so an API deployed before one was registered breaks every calculation
-    though it knows every measure the manifest lists (#377)."""
+    though it knows every measure the manifest lists (#377). The file
+    here is made up: an id as an exported constant, and one as a string."""
     ids = ["fuel", "vat"]
     extra = tmp_path / "calculatorOnlyMeasures.js"
     extra.write_text(

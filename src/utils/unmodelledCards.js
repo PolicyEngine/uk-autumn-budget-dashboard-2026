@@ -82,16 +82,6 @@ export const UNMODELLED_CARDS = {
   "gas-standing-charges": {
     category: { label: "Energy", icon: "flame" },
   },
-  // Rates "2 percentage points" above current law's (Budget 2025's 22%);
-  // the basic rate as the tiles, from policy_parameters.json's 2027-28 row
-  "savings-income-tax": {
-    category: { label: "Income tax", icon: "wallet" },
-    inForce: { from: "2027-04" },
-    parameters: {
-      display: "table",
-      rows: [row("Savings basic rate", "percent", null, [{ key: "2027", label: "2027-28", year: 2027, before: 0.22, after: 0.24 }])],
-    },
-  },
   // The cut "to £12,000 for savers under 65 from 6 April 2027 does not go
   // ahead: the limit stays at £20,000"
   "cash-isa-limit": {

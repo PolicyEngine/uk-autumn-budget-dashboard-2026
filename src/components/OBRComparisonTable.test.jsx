@@ -17,7 +17,7 @@ import { geographyFetch } from "../test/geographyFixture";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
 import { ALPHA, BETA, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
-import { OBR_DEVIATION_STATEMENT } from "../utils/obrDeviationNotes";
+import { OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT } from "../utils/obrDeviationNotes";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { downloadFile } from "../utils/downloadFile";
 
@@ -137,8 +137,9 @@ describe("why our estimates differ from the official costings", () => {
   const NOTE = "Most of the gap is in the 2029-30 base; timing affects only the first two years.";
   const BASIS = "Official: income tax, after behaviour. Ours: income tax, static.";
   const POINTS = [{ reason: "Timing", text: "Official counts Self Assessment tax a year later." }, { reason: "Coverage", text: "Our data tax too little savings interest." }];
-  const renderNoted = ({ description = ENTRY.writtenFor, notes = { [ID]: NOTE }, bases = { [ID]: BASIS }, points = {} } = {}) => {
-    const impact = ["reform_id,reform_name,year,value", `${ID},${ENTRY.name},2030,0.3`].join("\n");
+  // `ours`: our estimate by year, £bn (one year unless a test gives more)
+  const renderNoted = ({ description = ENTRY.writtenFor, notes = { [ID]: NOTE }, bases = { [ID]: BASIS }, points = {}, ours = { 2030: 0.3 } } = {}) => {
+    const impact = ["reform_id,reform_name,year,value", ...Object.entries(ours).map(([year, value]) => `${ID},${ENTRY.name},${year},${value}`)].join("\n");
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -229,6 +230,37 @@ describe("why our estimates differ from the official costings", () => {
     fireEvent.mouseLeave(anchor);
     fireEvent.focus(anchor);
     expect(screen.getByRole("tooltip")).toHaveTextContent(`${BASIS} ${NOTE}`);
+  });
+
+  // The savings note as the page ships it gives our figures from the
+  // estimates the comparison draws, never from typed text (Max, 11
+  // November 2026). Invented figures: ours above the note's income tax
+  // line (£443m, £475m and £510m from 2029-30) by £57m, £65m and £90m
+  it("fills the published note's own figures from the estimates beside it", async () => {
+    renderNoted({ notes: OBR_DEVIATION_NOTES, ours: { 2027: 0.4, 2028: 0.45, 2029: 0.5, 2030: 0.54, 2031: 0.6 } });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    show("Table");
+    const anchor = within(tableRow()).getAllByRole("cell")[4].querySelector(".difference-note-anchor");
+    fireEvent.mouseEnter(anchor);
+    const tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("We estimate £400m for that tax year.");
+    expect(tip).toHaveTextContent("our estimate exceeds the income tax line of the government's costing, which the OBR certified, by £57m to £90m a year, less than that response: +£500m against +£443m in 2029-30.");
+    // No marks or placeholders reach the page
+    expect(tip.textContent).not.toMatch(/\[\[|\]\]|[{}]/);
+  });
+
+  it("leaves those passages out while the estimates do not bear them out", async () => {
+    // One year only, as the other tests here: no figure for 2027-28, and
+    // none for every year from 2029-30
+    renderNoted({ notes: OBR_DEVIATION_NOTES });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    show("Table");
+    const anchor = within(tableRow()).getAllByRole("cell")[4].querySelector(".difference-note-anchor");
+    fireEvent.mouseEnter(anchor);
+    const tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29.");
+    expect(tip).toHaveTextContent("We publish a static costing: we hold everyone's savings income fixed.");
+    expect(tip.textContent).not.toMatch(/We estimate £|our estimate exceeds|less than that response|\[\[|\]\]|[{}]/);
   });
 
   it("adds each note to the table's CSV download", async () => {

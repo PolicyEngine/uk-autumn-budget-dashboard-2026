@@ -34,7 +34,7 @@ import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
 import { receiptDefinitionFor, reportedDefinitions, requestedDefinitions, route } from "./test/definitionsFixture";
-import { SAVINGS_INCOME_RATES_ID, withoutCalculatorOnly } from "./utils/calculatorOnlyMeasures";
+import { CALCULATOR_ONLY_MEASURES, withoutCalculatorOnly } from "./utils/calculatorOnlyMeasures";
 import { OBR_CARD_TITLE, OBR_PENDING } from "./components/OBRComparisonTable";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
@@ -259,10 +259,11 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         const asked = requests.filter((r) => route(r.url) === HOUSEHOLD_API);
         expect(asked.filter(yours).map((r) => JSON.parse(r.body).include)).toEqual([[], ["sweep"], ["by_policy"]]);
         // Every request, the example cards' too, names each measure it
-        // asks about with that measure's approved commit. The saver's card
-        // also asks with the calculator-only savings rise, which has no
-        // published figures and so no approved definition to name
-        expect(asked.some((r) => JSON.parse(r.body).policies.includes(SAVINGS_INCOME_RATES_ID))).toBe(true);
+        // asks about with that measure's approved commit. Each also asks
+        // with the calculator-only measures, which have no published
+        // figures and so no approved definition to name
+        const [calculatorOnly] = Object.keys(CALCULATOR_ONLY_MEASURES);
+        expect(asked.some((r) => JSON.parse(r.body).policies.includes(calculatorOnly))).toBe(true);
         for (const r of asked) {
           const named = requestedDefinitions(r.url);
           expect(named.map(([id]) => id)).toEqual(withoutCalculatorOnly(JSON.parse(r.body).policies).sort());

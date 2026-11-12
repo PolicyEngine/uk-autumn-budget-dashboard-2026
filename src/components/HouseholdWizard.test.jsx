@@ -128,8 +128,9 @@ describe("the personal impact form", () => {
     const spending = groupToggle("Spending");
     expect(spending).toHaveAttribute("aria-expanded", "true");
     expect(document.getElementById(spending.getAttribute("aria-controls"))).toBeVisible();
-    // No selected policy reads anything; the savings rise, always in the
-    // request, reads savings interest, so only that step splits its answers
+    // No selected policy reads anything; the cash ISA limit, always in the
+    // request, reads cash ISA payments (for an under-65), and savings
+    // interest is always first, so only that step splits its answers
     expect([...document.querySelectorAll(".household-step-optional-toggle")].map((toggle) => toggle.getAttribute("aria-controls"))).toEqual([
       "household-step-savings-panel-optional",
     ]);
@@ -368,11 +369,11 @@ describe("the personal impact form", () => {
     const examples = buttons.slice(1);
     expect(examples.every((item) => card(item).querySelector(".household-card-description").textContent.length > 0)).toBe(true);
     // No catalogue here: no example features a measure it does not publish
-    // (#185 on #104), so no tag; but the saver's savings rise, which the
-    // calculator offers whatever is published (calculatorOnlyMeasures.js)
+    // (#185 on #104), so no tag, the saver's card included: the savings
+    // rise it features is a published measure now, named only while the
+    // catalogue lists it (HouseholdCards.test.jsx)
     const tagged = examples.filter((item) => card(item).querySelector(".household-card-tag") !== null);
-    expect(tagged.map((item) => item.querySelector(".household-card-name").textContent)).toEqual(["A saver with interest income"]);
-    expect(card(tagged[0]).querySelector(".household-card-tag")).toHaveTextContent("Savings income tax up");
+    expect(tagged.map((item) => item.querySelector(".household-card-name").textContent)).toEqual([]);
     // Your household: its title, one line and the call to action, no hints
     expect(yoursCard()).not.toHaveTextContent("Salary");
     expect(yoursCard()).toHaveTextContent("Enter your household");
@@ -621,8 +622,9 @@ describe("the personal impact form", () => {
 });
 
 describe("the selected policies' questions", () => {
-  // The Budget's eight announced measures and the £2 bus fare cap, by id
-  // and published name (the name SEVEN kept from the seven-measure package)
+  // The nine published measures (the Budget's announced measures, the £2
+  // bus fare cap and, since 11 November 2026, the savings rise), by id and
+  // published name (the name SEVEN kept from the seven-measure package)
   const SEVEN = [
     { id: "fuel_duty_rise_deferral", name: "Fuel duty cut extended" },
     { id: "state_pension_income_tax_protection", name: "Pension Tax Allowance" },
@@ -977,7 +979,7 @@ describe("the selected policies' questions", () => {
     }
   });
 
-  it("always adds the savings income tax rise to a household's request, the cards' too", async () => {
+  it("always adds the calculator-only measures to a household's request, the cards' too, and the savings rise only when it is selected", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
     const urls = [];
@@ -992,10 +994,12 @@ describe("the selected policies' questions", () => {
         return new Response("{}", { status: 404 });
       }),
     );
-    // The header's selection: the published measures, savings not among them
+    // The header's selection: every published measure but the savings rise
+    // (published since 11 November 2026, so a reader can leave it out)
     const published = ALL_SEVEN.filter((id) => id !== "savings_income_rates_up");
-    // The published measures' approved definitions; the savings rise has
-    // none, having no published figures (calculatorOnlyMeasures.js)
+    // The selected measures' approved definitions; the calculator-only
+    // measures have none, having no published figures
+    // (calculatorOnlyMeasures.js)
     const expectedDefinitions = Object.fromEntries(published.map((id) => [id, approvedDefinition(id)]));
     try {
       form(published, { year: 2027, expectedDefinitions });
@@ -1005,7 +1009,9 @@ describe("the selected policies' questions", () => {
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
-      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up", "cash_isa_limit_kept", "machine_games_duty_rise"]);
+      expect(headline()[0].policies).toEqual([...published, "cash_isa_limit_kept", "machine_games_duty_rise"]);
+      // Not selected, the savings rise is not asked: it is no longer added
+      expect(bodies.some((body) => body.policies.includes("savings_income_rates_up"))).toBe(false);
       // Asked, not refused for having no approved definition, and naming
       // only the published measures' definitions
       const named = published.map((id) => [id, APPROVED_COMMIT]).sort();
@@ -1014,7 +1020,7 @@ describe("the selected policies' questions", () => {
       // same definitions
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
       expect(cards.length).toBeGreaterThan(0);
-      expect(cards.every((body) => body.policies.slice(-3).join() === "savings_income_rates_up,cash_isa_limit_kept,machine_games_duty_rise")).toBe(true);
+      expect(cards.every((body) => body.policies.slice(-2).join() === "cash_isa_limit_kept,machine_games_duty_rise")).toBe(true);
       for (const body of cards) expect(requestedDefinitions(urls[bodies.indexOf(body)]).sort()).toEqual(named);
     } finally {
       vi.unstubAllGlobals();

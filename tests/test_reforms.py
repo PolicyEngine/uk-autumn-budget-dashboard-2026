@@ -68,14 +68,13 @@ CANDIDATES = (
     "machine_games_duty_rise",
 )
 # Individual candidates that are not components of the combined package.
-# Registered but held back from the package: the savings rates' yield is
-# about 60% of Table 6.1 because the data miss ISA interest (Vahid and Max,
-# 28 Oct); the data hold no payments into cash ISAs, so the cash ISA limit
-# is the Household calculator's only (María, 29 Oct); so is the Machine
-# Games Duty rise, whose engine change reaches lower-stake machines too
-# on survey data (2 Nov).
+# Registered but held back from the package: the data hold no payments into
+# cash ISAs, so the cash ISA limit is the Household calculator's only
+# (María, 29 Oct); so is the Machine Games Duty rise, whose engine change
+# reaches lower-stake machines too on survey data (2 Nov). The savings
+# rates, held back on Budget day while the savings data were corrected,
+# joined the package as a static costing on 11 November (Max).
 NOT_IN_PACKAGE = (
-    "savings_income_rates_up",
     "cash_isa_limit_kept",
     "machine_games_duty_rise",
 )
@@ -171,23 +170,62 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     )
 
 
-def test_the_package_is_the_eight_announced_measures():
+def test_the_package_is_the_nine_announced_measures():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
     # Seven on Budget day: the announced measures with savings rates held
     # back (Table 6.1 row 62); property rates are row 61. Eight from
-    # 29 October 2026 with the £2 bus fare cap. Ten registered: the savings
-    # rates held back and the cash ISA limit, Household calculator only.
-    # Eleven with the Machine Games Duty rise, likewise (2 November 2026).
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
+    # 29 October 2026 with the £2 bus fare cap. Nine from 11 November 2026
+    # with the savings rates, as a static costing. Eleven registered: the
+    # cash ISA limit and the Machine Games Duty rise (2 November 2026) are
+    # the Household calculator's only.
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
     assert len(reforms._MEASURE_FACTORIES) == 11
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--7baf4e89377bcc9c"
+    assert key == "combined--f25f6972a09c62a6"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All eight announced measures")
+    assert description.startswith("All nine announced measures")
+
+
+def test_the_savings_rates_are_in_the_package_and_not_the_calculators_only():
+    """Published as a static costing (Max, 11 November 2026): in the
+    package beside the property rates, in the registry's order, with the
+    same two-point rise the registry gives it alone, and no longer among
+    the measures the page adds to every household request."""
+    from uk_budget_data import definitions
+
+    components = list(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
+    assert "savings_income_rates_up" in components
+    assert "savings_income_rates_up" not in NOT_IN_PACKAGE
+    assert (
+        "savings_income_rates_up" not in definitions.CALCULATOR_ONLY_MEASURES
+    )
+    assert set(definitions.CALCULATOR_ONLY_MEASURES) == set(NOT_IN_PACKAGE)
+    # The package lists its members in the registry's order
+    registered = [m for m in CANDIDATES if m in components]
+    assert components == registered
+    assert (
+        components.index("savings_income_rates_up")
+        == components.index("property_income_rates_up") + 1
+    )
+    # A static costing: rates only, no modifier on either side
+    measure = get_reform("savings_income_rates_up")
+    assert measure.simulation_modifier is None
+    assert measure.baseline_simulation_modifier is None
+    assert not measure.baseline_parameter_changes
+    assert set(measure.parameter_changes) == set(
+        reforms.SAVINGS_INCOME_RATE_PATHS
+    )
+    assert "no behavioural response" in measure.description
+    combined = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
+    for path in reforms.SAVINGS_INCOME_RATE_PATHS:
+        assert (
+            combined.parameter_changes[path] == measure.parameter_changes[path]
+        )
+    assert "Savings income tax rates up" in combined.description
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -1024,8 +1062,8 @@ CARD_TEXT_BLOCKS = {
         r"export const SPENDING_MEASURES = \[.*\];"
     ],
     # The measures the Household calculator always adds and the national
-    # results never carry (the savings rates rise and the cash ISA limit),
-    # which no receipt lists, so the page has to name them; as
+    # results never carry (the cash ISA limit and the Machine Games Duty
+    # rise), which no receipt lists, so the page has to name them; as
     # measureCatalogue.test.jsx allows
     "utils/calculatorOnlyMeasures.js": [
         r"(?s)export const CALCULATOR_ONLY_MEASURES = \{.*?\n\};"

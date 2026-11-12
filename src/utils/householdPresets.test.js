@@ -37,7 +37,7 @@ describe("the examples' precomputed results (public/data/household_presets.json)
   it("answer the page's own requests: re-run the precompute if an example or the form changes", () => {
     for (const entry of file.entries) {
       const preset = HOUSEHOLD_EXAMPLES.find((example) => example.id === entry.preset_id);
-      // The saver's with the calculator-only savings rise it turns on
+      // Each with the calculator-only measures every request carries
       const asked = buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies: presetPolicies(preset, file.policies) });
       expect(requestKey(entry.request), entry.preset_id).toBe(requestKey(asked));
     }

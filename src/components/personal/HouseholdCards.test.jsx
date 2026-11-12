@@ -7,8 +7,9 @@ import { fixtureJson } from "../../test/publicationFixture";
 
 // #104 review (m23, P2): a card names the measures it features only while
 // the catalogue publishes every one of them. The landlord's card features the
-// property income measure; the saver's, the calculator-only savings rise,
-// which the catalogue never lists.
+// property income measure; the saver's, the savings rise, which the
+// catalogue lists since it was published (11 November 2026: before that it
+// was calculator-only, and the card named it from the page's own list).
 const baseEntry = fixtureJson("manifest.json").measures.alpha;
 const NAMES = {
   fuel_duty_rise_deferral: "Fuel duty cut extended",
@@ -45,8 +46,12 @@ it("names none while it is withdrawn (on Budget day, say)", () => {
   expect(tagOf("A landlord with savings", publishing(["state_pension_income_tax_protection"]))).toBeNull();
 });
 
-it("names the savings rise on the saver's card, though the catalogue does not list it", () => {
-  expect(tagOf("A saver with interest income", publishing(["fuel_duty_rise_deferral"]))).toBe("Savings income tax up");
+it("names the savings rise on the saver's card while it is published", () => {
+  expect(tagOf("A saver with interest income", publishing(["savings_income_rates_up"]))).toBe("Savings income tax up");
+});
+
+it("names none on the saver's card while the catalogue does not list the savings rise", () => {
+  expect(tagOf("A saver with interest income", publishing(["fuel_duty_rise_deferral"]))).toBeNull();
 });
 
 describe("a card's year bars", () => {
@@ -195,8 +200,9 @@ describe("an example card's chip tooltip (W6 G1)", () => {
       </MeasureCatalogueProvider>,
     );
     const card = screen.getByRole("button", { name: /^A landlord with savings/ }).closest(".household-card");
-    // Its own measure, property only (the savings rate is not in the
-    // release), with its own part, never cut short
+    // Its own measure, property only (the card features one measure; the
+    // saver's card features the savings rate), with its own part, never
+    // cut short
     expect([...card.querySelectorAll(".household-card-tag")].map((tag) => tag.textContent)).toEqual(["Property income tax up−£200"]);
     const tag = card.querySelector(".household-card-tags");
     fireEvent.mouseEnter(tag);

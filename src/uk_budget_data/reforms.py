@@ -1247,6 +1247,11 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     STATE_PENSION_ALLOWANCE_ID,
     ELECTRICITY_VAT_ID,
     PROPERTY_INCOME_RATES_ID,
+    # 11 November 2026 (Max): the savings rates rise, Table 6.1 row 62,
+    # held back since Budget day while the savings data were corrected,
+    # joins as a static costing with the next certified data. Package of
+    # nine.
+    SAVINGS_INCOME_RATES_ID,
     # Budget day: registered once announced (HCWS421). Its cells in some
     # deciles rest on fewer than 3 survey households, so the combined run
     # refuses while it is here: drop it and keep it in _MEASURE_FACTORIES,
@@ -1255,7 +1260,7 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     HOUSEHOLD_ENERGY_PAYMENT_ID,
     TRADING_ALLOWANCE_ID,
     # 29 October 2026 (María): the £2 bus fare cap, left out on Budget day
-    # only because runs were in flight. Package of eight.
+    # only because runs were in flight.
     BUS_FARE_CAP_ID,
 )
 
@@ -1266,14 +1271,15 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
 # Also withdrawn that day: the savings and property income tax rates as one
 # measure (``UNEARNED_INCOME_RATES_ID``), split into the property and the
 # savings measures, Table 6.1 rows 61 and 62. Nine registered since the £2
-# bus fare cap (29 October 2026); eight in the package (savings held back).
+# bus fare cap (29 October 2026); all nine in the package since the savings
+# rates joined it (11 November 2026).
 # The cash ISA limit kept at £20,000 (Table 6.1 row 11) joined on
 # 29 October, for the Household calculator only: ten registered. The
 # Machine Games Duty rise (row 56) joined on 2 November, likewise for the
-# Household calculator only: eleven registered. Each of the three held
+# Household calculator only: eleven registered. Each of the two held
 # back joins the package by adding its id to
 # AUTUMN_BUDGET_2026_COMBINED_COMPONENTS (and leaving
-# calculatorOnlyMeasures.js).
+# calculatorOnlyMeasures.js and definitions.CALCULATOR_ONLY_MEASURES).
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,

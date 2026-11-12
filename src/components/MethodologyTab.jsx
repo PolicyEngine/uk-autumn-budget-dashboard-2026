@@ -425,8 +425,7 @@ function MethodologyTab({ onShowTab }) {
             <p className="method-more">
               Some Budget policies act on something the model or its survey data do not hold, such as
               prices, ISAs or business mileage, or have rules not yet published, so they cannot be
-              costed household by household. The rise in income tax rates on savings income is
-              modelled but held back from this release, for the reason its card gives.{" "}
+              costed household by household.{" "}
               <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
                 Budget policies we do not model
               </ViewLink>
