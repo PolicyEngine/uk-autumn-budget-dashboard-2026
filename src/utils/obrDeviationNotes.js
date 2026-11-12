@@ -191,8 +191,9 @@ export const OBR_DEVIATION_NOTES = {
  * measure 62: £443m, £475m and £510m from 2029-30); ours is read. The gap
  * shows only while ours exceeds the line in every year from 2029-30 by
  * less than the £200m a year the OBR gives for savers' response
- * (paragraph 3.17), which is what the passage says (Max, 11 November
- * 2026: a gap of £200m or more goes back to him, not onto the page).
+ * (paragraph 3.17), which is what the passage says. Max's separate rule
+ * (2 and 11 November 2026) sends a raw gap over £200m back to him;
+ * this rounded display condition is not that release threshold.
  */
 export const OBR_NOTE_FIGURES = {
   savings_income_rates_up: (ours) => {

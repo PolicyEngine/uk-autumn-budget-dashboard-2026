@@ -31,6 +31,9 @@ const REGISTERED = [
   ...readFileSync("src/uk_budget_data/reforms.py", "utf8").matchAll(/^(?!AUTUMN_BUDGET_2026_COMBINED)[A-Z0-9_]+_ID = "([a-z0-9_]+)"$/gm),
 ].map((match) => match[1]);
 
+// Max's release threshold uses raw published values, before display rounding.
+const expectSavingsReleaseGap = (ours, official) => expect(ours - official).toBeLessThanOrEqual(200);
+
 describe("why our estimates differ from the official costings", () => {
   it("reads the Table 6.1 measures from the mapping, each once", () => {
     expect(COMPARED.length).toBeGreaterThan(0);
@@ -346,14 +349,18 @@ describe("why our estimates differ from the official costings", () => {
     expect(savNote).toContain(`We estimate £${m(sav("2027-28"))}m for that tax year.`);
     const savGaps = FROM_2029.map((year) => m(sav(year)) - m(savTax(year)));
     const savGapText = Math.min(...savGaps) === Math.max(...savGaps) ? `£${savGaps[0]}m` : pounds(savGaps, "m");
-    expect(savNote).toContain(`by ${savGapText} a year, less than that response: +£${m(sav("2029-30"))}m against +£${m(savTax("2029-30"))}m in 2029-30.`);
-    // The £200m bar (Max, 2 and 11 November): from 2029-30 ours exceeds the
-    // income tax line, by less than the £0.2bn a year the OBR gives for
-    // savers' response (EFO paragraph 3.17). A year outside it goes back to
-    // him before the page says anything else, so this fails first
-    for (const gap of savGaps) {
-      expect(gap).toBeGreaterThan(0);
-      expect(gap).toBeLessThan(200);
+    // Max, 2 and 11 November: only a raw gap over £200m in a checked year
+    // goes back to him. The renderer separately requires a positive
+    // rounded gap below £200m to make its "less than" comparison.
+    for (const year of FROM_2029) expectSavingsReleaseGap(sav(year), savTax(year));
+    if (OBR_NOTE_FIGURES.savings_income_rates_up(savOurs).gap !== null) {
+      expect(savNote).toContain(`by ${savGapText} a year, less than that response: +£${m(sav("2029-30"))}m against +£${m(savTax("2029-30"))}m in 2029-30.`);
+      for (const gap of savGaps) {
+        expect(gap).toBeGreaterThan(0);
+        expect(gap).toBeLessThan(200);
+      }
+    } else {
+      expect(savNote).not.toContain("less than that response");
     }
     expect(savNote).toContain("reduce the costing's yield by about £0.2bn a year (Economic and fiscal outlook, October 2026, paragraph 3.17, page 69)");
     expect(savNote).toContain(`also includes £${m(savCt("2029-30"))}m of onshore corporation tax.`);
@@ -658,11 +665,26 @@ describe("a note's figures from the release (fillNote, OBR_NOTE_FIGURES)", () =>
     for (const none of [null, undefined, {}]) {
       expect(savings(none)).not.toMatch(/We estimate|our estimate exceeds|less than that response/);
     }
-    // On the bar itself, and below the line: said neither way
+    // At the rounded display boundary, and below the line: said neither way
     expect(OBR_NOTE_FIGURES[SAVINGS]({ 2029: 643, 2030: 600, 2031: 600 }).gap).toBeNull();
     expect(OBR_NOTE_FIGURES[SAVINGS]({ 2029: 443, 2030: 600, 2031: 600 }).gap).toBeNull();
     expect(OBR_NOTE_FIGURES[SAVINGS]({ 2029: 642, 2030: 476, 2031: 511 }).gap).toBe("£1m to £199m");
     expect(OBR_NOTE_FIGURES[SAVINGS]({ 2029: 543, 2030: 575, 2031: 610 }).gap).toBe("£100m");
+  });
+
+  it.each([
+    [199.6, true],
+    [200, true],
+    [200.4, false],
+  ])("separates the raw release threshold from display rounding at a £%sm gap", (gap, allowed) => {
+    const ours = { 2029: LINE[2029] + gap, 2030: LINE[2030] + 100, 2031: LINE[2031] + 100 };
+    const releaseCheck = () => expectSavingsReleaseGap(ours[2029], LINE[2029]);
+    if (allowed) expect(releaseCheck).not.toThrow();
+    else expect(releaseCheck).toThrow();
+    // All three round to £200m, so none supports the renderer's strict
+    // "less than" sentence, even though the first two need no new ruling.
+    expect(OBR_NOTE_FIGURES[SAVINGS](ours).gap).toBeNull();
+    expect(savings(ours)).not.toMatch(/our estimate exceeds|less than that response/);
   });
 
   it("gives a measure with no figures of its own its note as written", () => {
