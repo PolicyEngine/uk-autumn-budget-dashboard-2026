@@ -1,40 +1,44 @@
-"""The OBR October 2026 forecast every simulation is built on.
+"""Native October assumptions on both sides of the policy comparison.
 
-Checks the stored values against the EFO tables they cite, and that the
-forecast reaches the baseline and the reform alike. Household simulations
-only: no microsimulation.
+The forecast source is the certified model, while the policy baseline is
+an explicit pre-Budget rollback. Household tests exercise construction;
+these checks do not need population data.
 """
 
+import json
+from importlib.metadata import version
+from importlib.resources import files
+from pathlib import Path
+
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
+from uk_budget_data.budget_policy import pre_budget_policy_changes
 from uk_budget_data.forecast import (
+    NATIVE_FORECAST_PATHS,
+    OBR,
+    archived_forecast_record,
     forecast_parameter_changes,
+    forecast_parameters,
     forecast_record,
+    forecast_scenario,
     with_forecast,
 )
 
-OBR = "gov.economic_assumptions.yoy_growth.obr."
 INPUTS = "gov.economic_assumptions.statutory_uprating_inputs."
 YEARS = range(2026, 2032)
 
-# EFO October 2026, Table A.1 (page 180), calendar years 2026 to 2031.
+# EFO October 2026 Table A.1: rounded headline growth, percent.
 TABLE_A1 = {
     "consumer_price_index": [3.1, 3.4, 2.1, 2.1, 2.0, 2.0],
     "rpi": [3.6, 4.3, 3.0, 3.0, 2.3, 2.2],
     "average_earnings": [3.7, 3.0, 2.2, 2.3, 2.5, 2.6],
     "house_prices": [2.1, 2.4, 2.8, 2.8, 2.7, 2.7],
 }
-# Table A.2 (page 182): change since March, 2026 to 2030.
-TABLE_A2 = {
-    "consumer_price_index": [0.8, 1.5, 0.1, 0.1, 0.0],
-    "rpi": [0.5, 1.3, 0.3, 0.1, 0.0],
-    "average_earnings": [0.4, 0.6, 0.1, 0.1, 0.1],
-    "house_prices": [-0.3, -0.5, 0.1, 0.2, 0.3],
-}
-# Table A.3 (page 182): the triple-lock guarantee, 2026-27 to 2031-32,
-# the highest of Q2 earnings growth, Q3 CPI and 2.5%, in that calendar year.
+# EFO Table A.3: the highest of Q2 earnings, Q3 CPI and 2.5%.
 TRIPLE_LOCK = {
     2026: 3.9,
     2027: 3.4,
@@ -43,7 +47,6 @@ TRIPLE_LOCK = {
     2030: 2.5,
     2031: 2.6,
 }
-
 H = {
     "people": {"p": {"age": {2026: 70}}},
     "benunits": {"b": {"members": ["p"]}},
@@ -52,128 +55,142 @@ H = {
 
 
 @pytest.fixture(scope="module")
-def current_law():
+def native():
     return Simulation(situation=H).tax_benefit_system.parameters
 
 
 @pytest.fixture(scope="module")
-def october():
+def comparison():
     return Simulation(
         situation=H, scenario=with_forecast(None)
     ).tax_benefit_system.parameters
 
 
-def test_stored_values_are_table_a1_to_one_decimal():
-    """Tables 1.6 and 1.7 at four decimals round to Table A.1; house prices
-    are Table A.1 itself."""
-    changes = forecast_parameter_changes()
-    for series, row in TABLE_A1.items():
-        stored = changes[OBR + series]
-        exact = series == "house_prices"
-        assert [
-            stored[f"{y}-01-01.{y}-12-31"] for y in YEARS
-        ] == pytest.approx(
-            [v / 100 for v in row], abs=1e-9 if exact else 0.00051
-        ), series
+def test_reviewed_bundle_contains_native_october_forecast():
+    """A bundle upgrade must review its native forecast and policy record."""
+    assert version("policyengine") == "6.17.2"
+    assert version("policyengine-uk") == "2.174.1"
+    assert version("policyengine-core") == "3.33.3"
+    source = (
+        files("policyengine_uk")
+        .joinpath("parameters/gov/economic_assumptions/yoy_growth.yaml")
+        .read_text()
+    )
+    assert "2026-2031: OBR forecast from the October 2026 EFO" in source
 
 
-def test_engine_march_values_are_the_same_rows(current_law):
-    """October minus the change since March gives the engine's value: the
-    rows chosen are the rows the engine stores (to 0.1pp rounding)."""
-    for series, change in TABLE_A2.items():
-        engine = current_law.get_child(OBR + series)
-        for i, year in enumerate(range(2026, 2031)):
-            march = TABLE_A1[series][i] - change[i]
-            assert engine(f"{year}-01-01") * 100 == pytest.approx(
-                march, abs=0.11
-            ), (series, year)
-
-
-def test_the_forecast_reaches_the_growth_rates(october):
+def test_native_headline_values_match_table_a1(native):
     for series, row in TABLE_A1.items():
         for year, value in zip(YEARS, row):
-            assert october.get_child(OBR + series)(
+            assert native.get_child(OBR + series)(
                 f"{year}-01-01"
             ) == pytest.approx(value / 100, abs=0.00051), (series, year)
 
 
-def test_published_statutory_inputs_are_kept(october, current_law):
-    for name, instant in (
-        ("cpi_september", "2026-09-01"),
-        ("awe_total_pay_may_july", "2026-07-01"),
-    ):
-        assert october.get_child(INPUTS + name)(
-            instant
-        ) == current_law.get_child(INPUTS + name)(instant)
-    assert october.get_child(INPUTS + "cpi_september")("2026-09-01") == 0.035
-    assert (
-        october.get_child(INPUTS + "awe_total_pay_may_july")("2026-07-01")
-        == 0.039
-    )
-
-
-def test_triple_lock_matches_table_a3(october):
-    def published(rate):
-        return round(rate * 1000) / 10
-
-    for year, guarantee in TRIPLE_LOCK.items():
-        cpi = published(
-            october.get_child(INPUTS + "cpi_september")(f"{year}-09-01")
-        )
-        awe = published(
-            october.get_child(INPUTS + "awe_total_pay_may_july")(
-                f"{year}-07-01"
+def test_forecast_only_scenario_has_no_policy_or_macro_override(native):
+    scenario = forecast_scenario()
+    assert not scenario.parameter_changes
+    assert scenario.simulation_modifier is None
+    assert scenario.applied_before_data_load
+    actual = Simulation(
+        situation=H, scenario=scenario
+    ).tax_benefit_system.parameters
+    for path in NATIVE_FORECAST_PATHS:
+        for year in YEARS:
+            instant = f"{year}-01-01"
+            assert actual.get_child(path)(instant) == native.get_child(path)(
+                instant
             )
+
+
+def test_native_parameter_reader_does_not_apply_the_policy_rollback(native):
+    path = "gov.hmrc.income_tax.allowances.trading_allowance"
+    assert forecast_parameters().get_child(path)("2027-06-01") == 3_000
+    assert native.get_child(path)("2027-06-01") == 3_000
+
+
+def test_readback_is_native_and_is_never_the_applied_scenario(native):
+    changes = forecast_parameter_changes()
+    assert set(changes) == set(NATIVE_FORECAST_PATHS)
+    for path, values in changes.items():
+        for period, value in values.items():
+            assert value == native.get_child(path)(period.split(".")[0])
+    assert not forecast_scenario().parameter_changes
+
+
+def test_policy_rollback_leaves_all_native_forecast_inputs_unchanged(
+    native, comparison
+):
+    for path in NATIVE_FORECAST_PATHS:
+        for year in YEARS:
+            instant = f"{year}-01-01"
+            assert comparison.get_child(path)(instant) == native.get_child(
+                path
+            )(instant)
+    assert not any(
+        path.startswith("gov.economic_assumptions.")
+        for path in with_forecast(None).parameter_changes
+    )
+
+
+def test_published_statutory_outturns_are_kept(native, comparison):
+    for name, instant, expected in (
+        ("cpi_september", "2026-09-01", 0.035),
+        ("awe_total_pay_may_july", "2026-07-01", 0.039),
+    ):
+        assert native.get_child(INPUTS + name)(instant) == expected
+        assert comparison.get_child(INPUTS + name)(instant) == expected
+
+
+def test_native_triple_lock_matches_table_a3(comparison):
+    for year, expected in TRIPLE_LOCK.items():
+        cpi = comparison.get_child(INPUTS + "cpi_september")(f"{year}-09-01")
+        awe = comparison.get_child(INPUTS + "awe_total_pay_may_july")(
+            f"{year}-07-01"
         )
-        assert max(cpi, awe, 2.5) == pytest.approx(guarantee), year
+        assert max(round(cpi * 1000) / 10, round(awe * 1000) / 10, 2.5) == (
+            pytest.approx(expected)
+        )
 
 
-def test_state_pension_follows_the_triple_lock(october):
-    amount = october.gov.dwp.state_pension.new_state_pension.amount
-    for year in range(2027, 2032):
-        ratio = amount(f"{year + 1}-06-01") / amount(f"{year}-06-01")
-        assert ratio == pytest.approx(
-            1 + TRIPLE_LOCK[year] / 100, abs=1e-4
-        ), year
-
-
-def test_baseline_and_reform_get_the_same_forecast():
-    """A measure that changes nothing gives the same parameters on both
-    sides, and both are October's, not the engine's March."""
+def test_empty_measure_and_baseline_are_equivalent():
     baseline = Simulation(situation=H, scenario=with_forecast(None))
-    reform = Simulation(
-        situation=H, scenario=with_forecast(Scenario(parameter_changes={}))
-    )
-    path = INPUTS + "cpi_september"
-    for year in range(2027, 2031):
-        instant = f"{year}-09-01"
-        assert baseline.tax_benefit_system.parameters.get_child(path)(
-            instant
-        ) == reform.tax_benefit_system.parameters.get_child(path)(instant)
+    reform = Simulation(situation=H, scenario=with_forecast(Scenario()))
     for year in (2027, 2028, 2029):
-        assert baseline.calculate(
-            "state_pension", year
-        ).sum() == pytest.approx(reform.calculate("state_pension", year).sum())
+        for variable in ("state_pension", "income_tax", "pension_credit"):
+            assert reform.calculate(variable, year) == pytest.approx(
+                baseline.calculate(variable, year)
+            ), (year, variable)
 
 
-def test_a_measure_wins_over_the_forecast():
-    changed = with_forecast(
-        Scenario(
-            parameter_changes={OBR + "rpi": {"2030-01-01.2030-12-31": 0.05}}
-        )
+@given(rate=st.floats(min_value=0, max_value=1, allow_nan=False))
+@settings(max_examples=12, deadline=None)
+def test_selected_measure_takes_precedence_without_mutating_rollback(rate):
+    """Scenario composition preserves arbitrary selected parameter values."""
+    rollback = pre_budget_policy_changes()
+    path = "gov.hmrc.income_tax.rates.property.basic"
+    period = next(iter(rollback[path]))
+    original = rollback[path][period]
+    changed = with_forecast(Scenario(parameter_changes={path: {period: rate}}))
+    assert changed.parameter_changes[path][period] == rate
+    assert pre_budget_policy_changes()[path][period] == original
+
+
+def test_measure_specific_macro_change_keeps_its_precedence():
+    path = OBR + "rpi"
+    period = "2030-01-01.2030-12-31"
+    scenario = with_forecast(
+        Scenario(parameter_changes={path: {period: 0.05}})
     )
-    assert (
-        changed.parameter_changes[OBR + "rpi"]["2030-01-01.2030-12-31"] == 0.05
-    )
-    assert (
-        changed.parameter_changes[OBR + "rpi"]["2027-01-01.2027-12-31"]
-        == 0.0432
-    )
+    assert scenario.parameter_changes[path] == {period: 0.05}
+    assert set(scenario.parameter_changes) == set(
+        pre_budget_policy_changes()
+    ) | {path}
 
 
-def test_every_simulation_route_uses_the_forecast(monkeypatch):
-    """The national builder passes the forecast on every side, current law
-    included."""
+def test_national_builder_uses_the_policy_comparison_on_both_sides(
+    monkeypatch,
+):
     from uk_budget_data import pipeline
 
     seen = []
@@ -183,151 +200,65 @@ def test_every_simulation_route_uses_the_forecast(monkeypatch):
         lambda **kwargs: seen.append(kwargs["scenario"]),
     )
     pipeline.build_microsimulation(None, None)
-    pipeline.build_microsimulation(None, Scenario(parameter_changes={}))
+    pipeline.build_microsimulation(None, Scenario())
+    assert len(seen) == 2
     for scenario in seen:
-        assert scenario.parameter_changes[OBR + "consumer_price_index"] == (
-            forecast_parameter_changes()[OBR + "consumer_price_index"]
-        )
+        assert scenario.parameter_changes == pre_budget_policy_changes()
         assert scenario.applied_before_data_load
 
 
-def test_record_names_its_source():
+def test_native_record_cannot_depend_on_the_archived_overlay(monkeypatch):
+    from uk_budget_data import forecast
+
+    def archive_is_not_an_input():
+        raise AssertionError("historical overlay used for a native forecast")
+
+    monkeypatch.setattr(
+        forecast, "archived_forecast_record", archive_is_not_an_input
+    )
     record = forecast_record()
+    assert record["mode"] == "native"
+    assert record["model_version"] == version("policyengine-uk")
     assert record["vintage"] == "OBR EFO October 2026"
-    for entry in record["parameter_changes"].values():
-        assert entry["source"], entry
+    assert record["parameter_changes"]
+    assert all(
+        entry["source"] for entry in record["parameter_changes"].values()
+    )
+    assert not forecast_scenario().parameter_changes
 
 
-def test_fuel_duty_path_is_the_obr_rate_then_october_rpi():
-    """60.59p from April 2027 (EFO October 2026, paragraph 3.19), then each
-    April the previous calendar year's October RPI, to 0.01p; the baseline
-    and the fuel duty measure share it."""
+def test_historical_overlay_remains_available_for_old_result_attribution():
+    assert archived_forecast_record()["vintage"] == "OBR EFO October 2026"
+    assert archived_forecast_record()["parameter_changes"][OBR + "rpi"][
+        "values"
+    ]
+
+
+def test_fuel_table_reads_actual_pre_budget_policy():
+    from uk_budget_data.budget_policy import pre_budget_policy_timeline
     from uk_budget_data.forecast import FUEL_DUTY, fuel_duty_rpi_steps
-    from uk_budget_data.reforms import FUEL_DUTY_CURRENT_LAW
 
     steps = dict(fuel_duty_rpi_steps())
-    assert steps["2027-04-01"] == 0.6059
-    rpi = forecast_parameter_changes()[OBR + "rpi"]
-    for year in range(2028, 2033):
-        growth = rpi[f"{year - 1}-01-01.{year - 1}-12-31"]
-        expected = steps[f"{year - 1}-04-01"] * (1 + growth)
-        assert steps[f"{year}-04-01"] == pytest.approx(expected, abs=5e-5)
-    assert {
-        day: rate for day, rate in FUEL_DUTY_CURRENT_LAW if day in steps
-    } == (steps)
-    changes = forecast_parameter_changes()[FUEL_DUTY]
-    assert changes["2027-04-01.2028-03-31"] == 0.6059
+    assert steps["2027-04-01"] == 0.6003
+    assert steps["2027-04-01"] != 0.6059
+    assert steps == {
+        day: value
+        for day, value in pre_budget_policy_timeline(FUEL_DUTY).items()
+        if day.endswith("-04-01")
+    }
 
 
-def test_derived_series_follow_october_cpi():
-    """CPI after housing costs: policyengine-uk's own derivation on the
-    October CPI and rents; social rent: September CPI + 1% (England's cap),
-    the published 3.5% for 2027, then the previous year's CPI to 1 d.p."""
-    from policyengine_uk.utils import create_ahc_deflator as ahc
-
-    from uk_budget_data.forecast import forecast_parameters
-
-    changes = forecast_parameter_changes()
-    indices = forecast_parameters().gov.economic_assumptions.indices
-    derived = ahc.create_modified_cpi_forecast(
-        indices.obr.consumer_price_index,
-        indices.ofwat.water_bills,
-        indices.obr.rent,
-        ahc.historical_modified_cpi,
-        ahc.initial_weights,
-        2026,
-        2031,
+def test_declared_basis_separates_policy_from_native_macro_and_data():
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "data_inputs/publication_basis.json"
     )
-    by_period = dict(zip(derived.period, derived.modified_cpi_yoy))
-    cpi = changes[OBR + "consumer_price_index"]
-    for year in YEARS:
-        key = f"{year}-01-01.{year}-12-31"
-        assert changes[OBR + "consumer_price_index_ahc"][key] == pytest.approx(
-            by_period[f"{year}-01-01"], abs=5e-5
-        ), {
-            "year": year,
-            "stored_ahc": changes[OBR + "consumer_price_index_ahc"][key],
-            "derived_ahc": by_period[f"{year}-01-01"],
-            "stored_cpi": cpi[key],
-            "stored_rent": changes[OBR + "rent"][key],
-            "initial_weights": ahc.initial_weights,
-            "derived_components": derived.to_dict(orient="records"),
-        }
-        if year == 2027:
-            assert changes[OBR + "social_rent"][key] == 0.045
-        elif year > 2027:
-            previous = cpi[f"{year - 1}-01-01.{year - 1}-12-31"]
-            assert changes[OBR + "social_rent"][key] == pytest.approx(
-                round(previous * 100, 1) / 100 + 0.01
-            ), year
-
-
-def test_council_tax_is_expenditure_table_5_1(october):
-    """England's receipts: £46.806bn in 2026-27 on £44.117bn in 2025-26,
-    then £49.257bn (expenditure Table 5.1)."""
-    council_tax = october.gov.economic_assumptions.yoy_growth.obr.council_tax
-    assert council_tax.england("2026-01-01") == pytest.approx(
-        46.806 / 44.117 - 1, abs=5e-5
-    )
-    assert council_tax.england("2027-01-01") == pytest.approx(
-        49.256614 / 46.806 - 1, abs=5e-5
-    )
-
-
-def test_the_installed_engine_does_not_yet_carry_the_october_forecast():
-    """Tripwire (María, #290): once policyengine-uk carries the OBR October
-    2026 forecast itself (PolicyEngine/policyengine-uk#2711) and the bundle
-    moves to that release, this fails. Then remove the override
-    (forecast/obr_october_2026.json and with_forecast) in that PR rather
-    than applying the October values twice over the engine's own."""
-    from policyengine_uk.system import system
-
-    headline = ("consumer_price_index", "rpi", "average_earnings")
-    stored = forecast_record()["parameter_changes"]
-    matches = []
-    for name in headline:
-        node = system.parameters.get_child(OBR + name)
-        for period, value in stored[OBR + name]["values"].items():
-            day = period.split(".")[0]
-            matches.append(abs(node(day) - value) < 5e-5)
-    assert not all(matches), (
-        "the installed policyengine-uk already carries the OBR October 2026 "
-        "CPI, RPI and earnings forecast: remove the forecast override "
-        "(policyengine-uk#2711)"
-    )
-
-
-def test_the_declared_basis_names_the_installed_engine_and_no_march_rates():
-    """data_inputs/publication_basis.json goes into every receipt and the
-    public manifest (publication/receipt.py, ``load_basis``). It says which
-    policyengine-uk ships the October 2026 forecast as its own growth rates.
-    That must be the installed one, and the record must not say the October
-    rates are applied over March 2026's, which held only while the engine
-    shipped the March forecast (to policyengine-uk 2.151.0). So this fails
-    on any engine but the one the record names: the record moves with the
-    pin, in the same pull request."""
-    import json
-    from importlib.metadata import version
-    from pathlib import Path
-
-    path = Path(__file__).resolve().parents[1] / (
-        "data_inputs/publication_basis.json"
-    )
-    basis = json.loads(path.read_text(encoding="utf-8"))
+    basis = json.loads(path.read_text())
     ships = f"policyengine-uk {version('policyengine-uk')} ships"
     assert ships in basis["forecast"]["vintage"]
     assert ships in basis["notes"]
-    for text in (basis["forecast"]["vintage"], basis["notes"]):
-        assert "March 2026" not in text
-
-    # Naming the native forecast must not hide the retained overlay's
-    # older per-capita population derivation. This checks the declaration,
-    # not approval of a new macro path or removal of the tripwire above.
-    assert (
-        "per-capita GDP, mixed income and non-labour income" in basis["notes"]
-    )
-    assert "older population path" in basis["notes"]
-    assert (
-        "Household weights use the installed model's October population path."
-        in basis["notes"]
-    )
+    assert basis["forecast"]["mode"] == "native"
+    assert basis["policy"]["baseline"] == "actual_pre_autumn_budget_2026"
+    assert basis["policy"]["reform"] == "selected_native_current_law_measures"
+    assert "without a dashboard growth-rate override" in basis["notes"]
+    assert "old published estimates" in basis["notes"]

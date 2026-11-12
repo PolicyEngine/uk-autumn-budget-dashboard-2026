@@ -1246,9 +1246,9 @@ def household_entities(
         people[0]["self_employment_income"] = (
             answers.self_employment_receipts - answers.self_employment_expenses
         )
-        people[0][
-            "self_employment_gross_receipts"
-        ] = answers.self_employment_receipts
+        people[0]["self_employment_gross_receipts"] = (
+            answers.self_employment_receipts
+        )
     if answers.is_carer:
         # Only for a carer, so a non-carer's household is exactly as before
         # (no care_hours: policyengine-uk's default, 0)
@@ -1314,12 +1314,13 @@ def household_entities(
         # gives it back unchanged without journeys
         household["bus_fare_spending"] = answers.bus_fare_spending
     if answers.higher_stake_machine_losses:
-        # Only when answered, so every other household is exactly as
-        # before. policyengine-uk has no input for higher-stake machines
-        # (policyengine-uk#2731 adds one in 2.167.0): the measure raises the
-        # standard rate, and these are the household's only standard-rate
-        # takings, so its change is exact
+        # Higher-stake takings are a subset of standard-rate takings.
+        # The native Budget rule moves this subset to the higher rate;
+        # other standard-rate machines keep their existing rate.
         household["machine_games_standard_rate_net_takings"] = (
+            answers.higher_stake_machine_losses
+        )
+        household["machine_games_standard_rate_higher_stake_net_takings"] = (
             answers.higher_stake_machine_losses
         )
     if answers.brma is not None:
@@ -2108,8 +2109,7 @@ SKIP_REASONS = {
         "2027-28"
     ),
     "cash_isa_limit_kept": (
-        "no cash ISA payments over £12,000, aged 65 or over, or before "
-        "2027-28"
+        "no cash ISA payments over £12,000, aged 65 or over, or before 2027-28"
     ),
     "trading_allowance_raise": (
         "no self-employment receipts, or before 2027-28"

@@ -70,6 +70,13 @@ AREA_CODE_PATHS = {
         "The measure registry (get_reform) and the parameter changes written "
         "there."
     ),
+    "src/uk_budget_data/budget_policy.py": (
+        "The explicit pre-Budget policy rollback and selected native "
+        "current-law restoration used by every simulation."
+    ),
+    "src/uk_budget_data/budget_policy.json": (
+        "The source-bound pre-Budget policy values and native measure paths."
+    ),
     "src/uk_budget_data/measure_templates.py": (
         "The templates the modifiers call (rate and threshold changes, "
         "formula replacement)."
