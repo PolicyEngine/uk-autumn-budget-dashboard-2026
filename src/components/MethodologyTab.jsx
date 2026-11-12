@@ -292,7 +292,7 @@ function MethodologyTab({ onShowTab }) {
                       </>
                     ),
                     more: [
-                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, forecasts the OBR published before the October 2026 one, and ONS population estimates.",
+                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, receipts and spending totals from the OBR's March 2026 and October 2026 forecasts, and ONS population estimates.",
                       "The local-area file's calibration targets constituency and local-authority totals as well.",
                     ],
                   },
@@ -301,12 +301,12 @@ function MethodologyTab({ onShowTab }) {
                   "Projection",
                   <>
                     We project incomes and prices to each year we show, with the growth rates of
-                    the <SourceLink id="obr_efo_current" />, which we apply over{" "}
-                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s own
-                    assumptions (the OBR&apos;s March 2026 forecast); after the forecast period,
+                    the <SourceLink id="obr_efo_current" />, which{" "}
+                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink> also uses for
+                    its own assumptions; after the forecast period,
                     the OBR&apos;s long-run assumptions (
                     <SourceLink id="obr_fiscal_risks">Fiscal risks and sustainability</SourceLink>).
-                    Some series keep the March path (
+                    A few series are not that forecast&apos;s own (
                     <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>).
                   </>,
                 ],
@@ -886,7 +886,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
-          summary="Some charts add up separate policy runs, some inputs and the weights do not follow the October 2026 forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+          summary="Some charts add up separate policy runs, a few growth rates are not the October 2026 forecast's own, fuel duty covers households' own fuel only, and surveys under-record some incomes."
           note={<ImprovementsNote />}
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
@@ -908,25 +908,25 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={ECONOMIC_ASSUMPTIONS}
             title="Economic assumptions"
-            preview="The October 2026 forecast · What keeps the March path · Weights · Fuel duty"
+            preview="The October 2026 forecast · Series not from it · Weights · Fuel duty"
           >
             <p className="method-more">
               The Budget figures grow prices, earnings, rents, mortgage interest, other incomes and
               council tax at the rates of the <SourceLink id="obr_efo_current" />, in the baseline
-              and the reform alike; we apply them over policyengine-uk&apos;s March 2026 rates, with these exceptions:
+              and the reform alike. The fuel volumes behind fuel duty and the population follow that
+              forecast too, and 2025 is the outturn it publishes. Three things differ:
             </p>
             <ul className="method-list">
-              <li>The fuel volumes behind fuel duty, and the population, keep the March 2026 path.</li>
-              <li>
-                2025 keeps policyengine-uk&apos;s figures, not the October forecast&apos;s revisions:
-                average earnings growth stays at 5.3%, against October&apos;s 4.1%.
-              </li>
               <li>Mortgage interest keeps policyengine-uk&apos;s growth from 2030, where the OBR&apos;s table stops.</li>
               <li>
                 CPI after housing costs and social rents are PolicyEngine&apos;s own derivations from
                 the October figures, not OBR series.
               </li>
-              <li>The weights keep the certified dataset&apos;s calibration to earlier OBR forecasts.</li>
+              <li>
+                Calibration fits the weights to OBR receipts and spending totals for 2025. Most take
+                2024-25 from the March 2026 forecast&apos;s tables and 2025-26 from the October 2026
+                forecast&apos;s.
+              </li>
             </ul>
             <p className="method-more">
               Current law&apos;s fuel duty is 60.59p a litre from April 2027, then rises each April
@@ -968,6 +968,10 @@ function MethodologyTab({ onShowTab }) {
                 Treasury&apos;s costing: about 670,000 in 2027-28, against 500,000.
               </li>
               <li>The data hold few small traders, the people the trading allowance reaches.</li>
+              <li>
+                The surveys record traders&apos; profits, not their receipts, so the trading allowance
+                figures rest on our assumption of who already claims the £1,000 allowance.
+              </li>
               <li>Electricity spending grows with CPI, not the energy price cap; the electricity VAT zero rate scales with it.</li>
             </ul>
             <p className="method-more">
