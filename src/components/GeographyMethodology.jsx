@@ -1,12 +1,8 @@
 import { CATEGORY_BREAKS } from "../utils/geography/classify";
 import { formatFigure } from "../utils/geography/format";
-import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, Target, Info } from "lucide-react";
+import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, Sigma, Target, Info } from "lucide-react";
 import FactList from "./methodology/FactList";
-import { ExternalLink } from "./methodology/MethodUi";
 import "./GeographyMethodology.css";
-
-export const METHOD_NOTE_URL =
-  "https://github.com/PolicyEngine/microcosm/issues/1131";
 
 const breaks = (outcome) => {
   const { small, large } = CATEGORY_BREAKS[outcome];
@@ -101,11 +97,22 @@ function GeographyMethodology() {
             "Local calibration",
             {
               points: [
-                "The local-area file's calibration targets local totals of council tax bands, electricity and gas use, employment and self-employment income, Universal Credit, age, tenure and rents.",
-                "Calibration targets savings, property, pension and road-fuel incomes, and carers, by region at most, so the map for a policy acting on them follows age, tenure and earnings, not observed local totals.",
+                "The local-area file's calibration targets local totals of council tax bands, electricity and gas use, employment and self-employment income, Universal Credit, age, tenure and rents. It also targets HMRC pension-income amounts and recipient counts by constituency and local authority.",
+                "Calibration targets savings, property and road-fuel incomes, and carers, by region at most, so the map for a policy acting on them follows age, tenure and earnings, not observed local totals.",
               ],
             },
             Target,
+          ],
+          [
+            "National figures",
+            {
+              points: [
+                "We estimate constituency figures on the local-area file's own weights and do not scale them to the national figures, so a policy's constituency figures, taken together, need not match its national figure.",
+                "The local-area file matches HMRC's totals of property, dividend and private pension income by income band less closely than the national file does, so maps for policies that act on those incomes rest on a looser fit.",
+                "Use a constituency figure as an estimate of a policy's effect on households there. Its 90% interval reflects resampling with fitted weights held fixed; it leaves out uncertainty from calibration and differences between the two files. For a policy's total, use the national figures.",
+              ],
+            },
+            Sigma,
           ],
           [
             "Later years",
@@ -117,10 +124,6 @@ function GeographyMethodology() {
           ],
         ]}
       />
-      <p className="method-more">
-        <ExternalLink href={METHOD_NOTE_URL}>Read the method note for constituency figures</ExternalLink>
-        .
-      </p>
     </div>
   );
 }

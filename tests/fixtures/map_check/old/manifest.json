@@ -1,0 +1,12 @@
+{
+  "measures": {
+    "alpha_rates_up": {
+      "artifact": "artifacts/alpha_rates_up/stale0000",
+      "name": "Alpha rates up"
+    },
+    "beta_payment": {
+      "artifact": "artifacts/beta_payment/bbbb0001",
+      "name": "Beta payment"
+    }
+  }
+}

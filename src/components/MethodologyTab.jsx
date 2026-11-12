@@ -679,7 +679,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_SECTIONS.geography}
             title="Figures by area"
-            preview="Disclosure checks · 90% intervals · Map colours · Local calibration"
+            preview="Disclosure checks · 90% intervals · Map colours · Local calibration · National figures"
           >
             <p className="method-more">
               Constituency figures come from the same survey as the national ones. We publish each
