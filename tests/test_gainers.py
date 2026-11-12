@@ -10,10 +10,10 @@ row's figures blank when a group rests on fewer than the floor.
 from types import SimpleNamespace
 
 import numpy as np
-from microdf import MicroSeries
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from microdf import MicroSeries
 
 from uk_budget_data.calculators import (
     DIRECT_EFFECT_MIN_GBP,

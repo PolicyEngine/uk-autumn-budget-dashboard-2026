@@ -302,7 +302,7 @@ function MethodologyTab({ onShowTab }) {
                   <>
                     We project incomes and prices to each year we show, with the growth rates of
                     the <SourceLink id="obr_efo_current" />, which{" "}
-                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink> also uses for
+                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>{" "}also uses for
                     its own assumptions; after the forecast period,
                     the OBR&apos;s long-run assumptions (
                     <SourceLink id="obr_fiscal_risks">Fiscal risks and sustainability</SourceLink>).
