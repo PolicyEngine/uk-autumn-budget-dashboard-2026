@@ -181,6 +181,9 @@ describe("MethodologyTab", () => {
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
     expect(card.querySelectorAll("li")).toHaveLength(0);
     expect(card).toHaveTextContent("cannot be costed household by household");
+    // The savings income tax rise is published (11 November 2026): no
+    // longer said to be held back here
+    expect(card.textContent).not.toMatch(/held back|savings income/i);
     const link = within(card).getByRole("link", { name: "Budget policies we do not model", hidden: true });
     expect(link).toHaveAttribute("href", "?tab=policies#budget-measures-not-modelled");
     fireEvent.click(link);

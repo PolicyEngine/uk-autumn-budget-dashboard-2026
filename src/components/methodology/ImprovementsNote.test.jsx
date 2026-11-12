@@ -5,11 +5,12 @@ import { IMPROVEMENTS_NOTE } from "./improvementsText";
 
 // The note as Max approved it (28 October 2026, "Use the widened text"),
 // character for character: the coordinator's whats-improving-note.md, less
-// the date and the poverty and people-affected item (30 October 2026)
+// the date and the poverty and people-affected item (30 October 2026), and
+// less the savings income tax rise's item, done: the dashboard publishes
+// its national figures (11 November 2026)
 const APPROVED = `What we're improving
 
 The next update of these results will:
-- add national figures for the savings income tax rise, once we have improved our savings income data (the calculator already includes it);
 - apply the trading allowance to miscellaneous income as well as trading income, which will raise our estimate of its cost;
 - correct how the Carer's Allowance taper interacts with overlapping benefits, such as the State Pension, in 2030-31;
 - extend the fuel duty cut to road fuel gases (LPG and natural gas), as the government's costing does;
@@ -29,7 +30,9 @@ const asText = ({ title, parts }) =>
 describe("What we're improving (ImprovementsNote)", () => {
   it("says exactly the approved note, every item kept", () => {
     expect(asText(IMPROVEMENTS_NOTE)).toBe(APPROVED);
-    expect(IMPROVEMENTS_NOTE.parts.map(({ items }) => items.length)).toEqual([5, 2]);
+    expect(IMPROVEMENTS_NOTE.parts.map(({ items }) => items.length)).toEqual([4, 2]);
+    // The savings rise's national figures are published: no longer promised
+    expect(asText(IMPROVEMENTS_NOTE)).not.toMatch(/savings/i);
   });
 
   it("shows it as a titled section, its leads as lines and its bullets as lists", () => {

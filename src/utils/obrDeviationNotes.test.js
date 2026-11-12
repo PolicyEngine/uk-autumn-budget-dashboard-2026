@@ -8,12 +8,14 @@ import {
   OBR_DEVIATION_NOTES,
   OBR_DEVIATION_STATEMENT,
   OBR_DIFFERENCE_POINTS,
+  OBR_NOTE_FIGURES,
   OBR_PANEL_BASES,
   REASON_TYPES,
   basisSides,
   pointsForYear,
   comparisonBasisFor,
   deviationNoteFor,
+  fillNote,
   missingDeviationNotes,
 } from "./obrDeviationNotes";
 import { POLICY_DETAILS } from "./policyDetails";
@@ -81,8 +83,12 @@ describe("why our estimates differ from the official costings", () => {
     expect(text("domestic_electricity_zero_vat")).not.toMatch(/meter records/);
     expect(text("domestic_electricity_zero_vat")).toMatch(/ONS spending base falls 10–12% below ours \(DESNZ\)/);
     expect(text("fuel_duty_rise_deferral")).toMatch(/Government appears to assume 5p back on 1 Jan; law phases it/);
-    expect(text("savings_income_rates_up")).toMatch(/included ISA interest/);
-    expect(text("savings_income_rates_up")).not.toMatch(/miss(?:es)? ISA interest/);
+    // Savings, published as a static costing (11 November 2026): the
+    // earlier texts said our data taxed too little interest, which the
+    // corrected data no longer do
+    expect(text("savings_income_rates_up")).not.toMatch(/ISA interest|too little|correcting/);
+    expect(OBR_DEVIATION_NOTES.savings_income_rates_up).not.toMatch(/included interest in ISAs|a third too low|We are correcting|will update the dashboard/);
+    expect(text("savings_income_rates_up")).toMatch(/Official includes savers moving into ISAs: about £0\.2bn a year/);
   });
 
   // Max, 28 Oct: compare with the line of the OBR's policy Table 1.1 that
@@ -97,7 +103,7 @@ describe("why our estimates differ from the official costings", () => {
     expect(note("domestic_electricity_zero_vat")).not.toMatch(/within about 4%/);
     expect(note("trading_allowance_raise")).toMatch(/^From 2028-29 our estimate trails the matching income tax and NICs lines of the government's costing, which the OBR certified, by [^]*The OBR gives those lines as £221m, £165m, £171m and £178m in its detailed policy table, Table 1\.1\./);
     expect(note("property_income_rates_up")).toMatch(/ours exceeds the income tax line of the government's costing, which the OBR certified, by 9% to 11%: \+£429m against \+£394m in 2029-30/);
-    expect(note("savings_income_rates_up")).toMatch(/^Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29\. From 2029-30 ours reaches 68% to 69% of the income tax line of the government's costing, which the OBR certified[^]*\+£307m against \+£443m in 2029-30/);
+    expect(note("savings_income_rates_up")).toMatch(/^Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29\. The OBR puts the costing's income tax at £63m in 2027-28 and £483m in 2028-29 \(its detailed policy table, Table 1\.1, measure 62\)[^]*our estimate exceeds the income tax line of the government's costing, which the OBR certified, by /);
     // Fuel duty's is the one costing the OBR could not certify (EFO October 2026, chapter 3)
     expect(note("fuel_duty_rise_deferral")).toMatch(/£273 million below the official figure in 2026-27 \(£301 million against £574 million\)[^]*the government's estimate, which the OBR used but could not certify/);
     expect(note("fuel_duty_rise_deferral")).not.toMatch(/OBR certified|certified by the OBR/);
@@ -326,26 +332,52 @@ describe("why our estimates differ from the official costings", () => {
     FROM_2029.forEach((year, i) => expect(point("property_income_rates_up", 2029 + i)).toContain(`Ours exceeds income tax by ${m(propPct[i])}%`));
     expect(panel("property_income_rates_up")).toContain(`from 2029-30: ${FROM_2029.map((year) => `£${m(propTax(year))}m`).join(", ")}`);
 
-    // Savings: the income tax line; the base taxed at the 2-point higher
-    // rates, before the OBR's £0.2bn a year ISA response (paragraph 3.17)
+    // Savings, a static costing: the official lines the note types, from
+    // the OBR's table; and the passages that give our figures, filled from
+    // the release's own (OBR_NOTE_FIGURES), as the page fills them from the
+    // figures the comparison draws
     const sav = (year) => our("savings_income_rates_up", year);
     const savTax = (year) => line(62, "Income tax", year);
-    expect(note("savings_income_rates_up")).toContain(`ours reaches ${span(FROM_2029.map((year) => (sav(year) / savTax(year)) * 100), "%")} of the income tax line`);
-    expect(note("savings_income_rates_up")).toContain(`+£${m(sav("2029-30"))}m against +£${m(savTax("2029-30"))}m in 2029-30`);
-    const base = (value) => value / 0.02 / 1000;
-    expect(note("savings_income_rates_up")).toContain(`about ${pounds(FROM_2029.map((year) => base(savTax(year) + 200)), "bn")} a year from 2029-30 to 2031-32 on the official income tax line before that response, against ${pounds(FROM_2029.map((year) => base(sav(year))), "bn")} in ours`);
+    const savCt = (year) => line(62, "Onshore CT", year);
+    const savOurs = Object.fromEntries(Object.keys(ours.savings_income_rates_up.values).map((year) => [Number(year.slice(0, 4)), sav(year)]));
+    const savNote = deviationNoteFor({ id: "savings_income_rates_up", description: POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up").writtenFor }, OBR_DEVIATION_NOTES, savOurs);
+    expect(savNote).not.toMatch(/\[\[|\]\]|[{}]/);
+    expect(savNote).toContain(`The OBR puts the costing's income tax at £${m(savTax("2027-28"))}m in 2027-28 and £${m(savTax("2028-29"))}m in 2028-29`);
+    expect(savNote).toContain(`We estimate £${m(sav("2027-28"))}m for that tax year.`);
+    const savGaps = FROM_2029.map((year) => m(sav(year)) - m(savTax(year)));
+    const savGapText = Math.min(...savGaps) === Math.max(...savGaps) ? `£${savGaps[0]}m` : pounds(savGaps, "m");
+    expect(savNote).toContain(`by ${savGapText} a year, less than that response: +£${m(sav("2029-30"))}m against +£${m(savTax("2029-30"))}m in 2029-30.`);
+    // The £200m bar (Max, 2 and 11 November): from 2029-30 ours exceeds the
+    // income tax line, by less than the £0.2bn a year the OBR gives for
+    // savers' response (EFO paragraph 3.17). A year outside it goes back to
+    // him before the page says anything else, so this fails first
+    for (const gap of savGaps) {
+      expect(gap).toBeGreaterThan(0);
+      expect(gap).toBeLessThan(200);
+    }
+    expect(savNote).toContain("reduce the costing's yield by about £0.2bn a year (Economic and fiscal outlook, October 2026, paragraph 3.17, page 69)");
+    expect(savNote).toContain(`also includes £${m(savCt("2029-30"))}m of onshore corporation tax.`);
+    FROM_2029.forEach((year, i) => expect(point("savings_income_rates_up", 2029 + i)).toContain(`Official total also includes £${m(savCt(year))}m of onshore corporation tax`));
+    // The total is those two lines and no other
+    expect(t11.filter((l) => l.measure === 62).map((l) => l.category)).toEqual(["Income tax", "Onshore CT", null]);
+    for (const year of FROM_2029) expect(total(62, year), year).toBeCloseTo(savTax(year) + savCt(year), 3);
     expect(panel("savings_income_rates_up")).toContain(`from 2029-30: ${FROM_2029.map((year) => `£${m(savTax(year))}m`).join(", ")}`);
+    // HMRC's policy paper of 29 October 2026 (about 12% of taxpayers, £113
+    // more on average in 2027-28) on the OBR's count of taxpayers that year
+    // (detailed forecast tables, receipts, Table 4.18: 41.6 million): the
+    // note's arithmetic, to the nearest £0.01bn
+    expect(savNote).toContain("HMRC estimates that about 12% of taxpayers will pay £113 more on average in 2027-28");
+    expect(savNote).toContain(`On the OBR's forecast of 41.6 million taxpayers that year (its detailed forecast tables for receipts, Table 4.18), that comes to about £${((0.12 * 41.6e6 * 113) / 1e9).toFixed(2)}bn of extra tax for 2027-28: our arithmetic on HMRC's and the OBR's published figures, not an official estimate.`);
+    expect(savNote).toContain("gov.uk/government/publications/income-tax-changes-to-tax-rates-for-property-and-savings-income");
 
-    // The OBR's responses (savers moving into ISAs, about £0.2bn a year;
-    // landlords incorporating and lower compliance, about £0.1bn) cut its
-    // income tax lines, and we model neither, so before them each line
-    // would exceed ours by more (savings) or at all (property)
+    // The OBR's response for property (landlords incorporating and lower
+    // compliance, about £0.1bn) cuts its income tax line, and we don't
+    // model it, so before it the line would exceed ours
     for (const year of FROM_2029) {
-      expect(savTax(year), year).toBeGreaterThan(sav(year));
       expect(propTax(year) + 100, year).toBeGreaterThan(prop(year));
     }
-    expect(note("savings_income_rates_up")).toContain("We don't model that response, so before it the official income tax line would exceed ours by more.");
-    expect(note("savings_income_rates_up")).not.toMatch(/widens the gap/);
+    expect(note("savings_income_rates_up")).toContain("We publish a static costing: we hold everyone's savings income fixed.");
+    expect(note("savings_income_rates_up")).not.toMatch(/widens the gap|would exceed ours/);
     expect(note("property_income_rates_up")).toContain("so before behaviour the official income tax line would exceed ours.");
 
     // Bus fares: the government counts the DESNZ capital savings (PSGI in
@@ -493,7 +525,9 @@ describe("why our estimates differ from the official costings", () => {
     for (const id of new Set([...COMPARED, ...Object.keys(OBR_DEVIATION_NOTES), ...Object.keys(OBR_COMPARISON_BASES)])) {
       const entry = POLICY_DETAILS.find((candidate) => candidate.id === id);
       expect(entry, id).toBeDefined();
-      expect(deviationNoteFor({ id, description: entry.writtenFor }), id).toBe(OBR_DEVIATION_NOTES[id]);
+      // As written; one that takes figures from the release, without the
+      // passages that need them when it is given none
+      expect(deviationNoteFor({ id, description: entry.writtenFor }), id).toBe(fillNote(OBR_DEVIATION_NOTES[id]));
       expect(comparisonBasisFor({ id, description: entry.writtenFor }), id).toBe(OBR_COMPARISON_BASES[id]);
     }
   });
@@ -515,5 +549,127 @@ describe("why our estimates differ from the official costings", () => {
       expect(textFor({ id, description: written[id] }, { [id]: "  " })).toBeNull();
       expect(textFor({ id, description: written[id] }, { [id]: " Timing. " })).toBe("Timing.");
     }
+  });
+});
+
+// A note may take our figures from the release in place of typed ones
+// (Max, 11 November 2026: no figure that a regeneration gives is typed into
+// reader text). The page passes each measure's published estimates
+// (OBRComparisonTable.jsx); here, invented ones
+describe("a note's figures from the release (fillNote, OBR_NOTE_FIGURES)", () => {
+  const SAVINGS = "savings_income_rates_up";
+  // The OBR's income tax line for the savings rates from 2029-30 (policy
+  // Table 1.1, measure 62), from the same file the notes test reads
+  const t11 = JSON.parse(readFileSync("src/test/fixtures/obrPolicyTable11.json", "utf8")).lines;
+  const LINE = Object.fromEntries(
+    ["2029-30", "2030-31", "2031-32"].map((year) => [Number(year.slice(0, 4)), t11.find((l) => l.measure === 62 && l.category === "Income tax").values[year]]),
+  );
+  const savings = (ours) => deviationNoteFor({ id: SAVINGS, description: POLICY_DETAILS.find((entry) => entry.id === SAVINGS).writtenFor }, OBR_DEVIATION_NOTES, ours);
+  const passages = (text) => [...text.matchAll(/\[\[([\s\S]*?)\]\]/g)].map((match) => match[1]);
+  const placeholders = (text) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]);
+
+  it("leaves a note with no marked passage as it is, and anything that is not text", () => {
+    fc.assert(
+      fc.property(fc.string().filter((text) => !text.includes("[[")), (text) => {
+        expect(fillNote(text)).toBe(text);
+        expect(fillNote(text, { gap: "£1m" })).toBe(text);
+      }),
+    );
+    expect(fillNote(null)).toBeNull();
+    expect(fillNote(undefined)).toBeUndefined();
+  });
+
+  it("shows a passage only when every figure in it has a value, and leaves it out whole otherwise", () => {
+    const text = "Always. [[Ours reaches {a} against {b}.]] [[Then {c}.]] The end.";
+    const value = fc.option(fc.constantFrom("£1m", "9%", "  ", ""), { nil: null });
+    fc.assert(
+      fc.property(fc.record({ a: value, b: value, c: value }, { requiredKeys: [] }), (values) => {
+        const has = (name) => typeof values[name] === "string" && values[name].trim() !== "";
+        const first = has("a") && has("b") ? ` Ours reaches ${values.a} against ${values.b}.` : "";
+        const second = has("c") ? ` Then ${values.c}.` : "";
+        const filled = fillNote(text, values);
+        expect(filled).toBe(`Always.${first}${second} The end.`);
+        // Never the marks, a placeholder or a doubled space
+        expect(filled).not.toMatch(/\[\[|\]\]|[{}]|\s{2}/);
+      }),
+    );
+    // A name the values object only inherits is no value
+    expect(fillNote("A. [[B {constructor}.]] C.", {})).toBe("A. C.");
+    expect(fillNote("[[Only {a}.]]", {})).toBe("");
+  });
+
+  it("keeps every placeholder inside a marked passage, with a figure defined for each", () => {
+    for (const [id, text] of Object.entries(OBR_DEVIATION_NOTES)) {
+      const outside = text.replace(/\[\[[\s\S]*?\]\]/g, "");
+      expect(outside, id).not.toMatch(/[{}]|\[\[|\]\]/);
+      const asked = passages(text).flatMap(placeholders);
+      // Each marked passage asks for a figure: a plain sentence needs no marks
+      for (const passage of passages(text)) expect(placeholders(passage).length, `${id}: ${passage}`).toBeGreaterThan(0);
+      if (asked.length === 0) {
+        expect(Object.hasOwn(OBR_NOTE_FIGURES, id), id).toBe(false);
+        continue;
+      }
+      expect(Object.keys(OBR_NOTE_FIGURES[id]({})).sort(), id).toEqual([...new Set(asked)].sort());
+      // With no figures, the note still reads as whole sentences
+      const bare = fillNote(text, OBR_NOTE_FIGURES[id]({}));
+      expect(bare, id).toMatch(/^[A-Z].*\.$/s);
+      expect(bare, id).not.toMatch(/\[\[|\]\]|[{}]|\s{2}/);
+    }
+    expect(Object.keys(OBR_NOTE_FIGURES).filter((id) => !Object.hasOwn(OBR_DEVIATION_NOTES, id))).toEqual([]);
+    // No other text takes figures: the points, bases and panel lines are plain
+    const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
+    for (const line of strings([OBR_DEVIATION_STATEMENT, OBR_DIFFERENCE_POINTS, NOT_COMPARABLE_SHORT, OBR_COMPARISON_BASES, OBR_PANEL_BASES])) {
+      expect(line).not.toMatch(/\[\[|\]\]|[{}]/);
+    }
+  });
+
+  it("savings: gives the gap only while ours exceeds the OBR's income tax line by less than £200m in every year from 2029-30", () => {
+    expect(LINE).toEqual({ 2029: 443, 2030: 475, 2031: 510 });
+    const amount = fc.option(fc.double({ min: -100, max: 1500, noNaN: true }), { nil: undefined });
+    fc.assert(
+      fc.property(fc.record({ 2027: amount, 2029: amount, 2030: amount, 2031: amount }), (ours) => {
+        const gaps = Object.keys(LINE).map((year) => (ours[year] === undefined ? null : Math.round(ours[year]) - LINE[year]));
+        const within = gaps.every((gap) => gap !== null && gap > 0 && gap < 200);
+        const figures = OBR_NOTE_FIGURES[SAVINGS](ours);
+        expect(figures.gap !== null).toBe(within);
+        expect(figures.ours2029 !== null).toBe(within);
+        expect(figures.ours2027 !== null).toBe(ours[2027] !== undefined && Math.round(ours[2027]) > 0);
+        const text = savings(ours);
+        expect(text).toMatch(/^[A-Z].*\.$/s);
+        expect(text).not.toMatch(/\[\[|\]\]|[{}]|\s{2}|NaN|undefined|null|Infinity/);
+        // The comparison with the OBR's line, and the claim that the gap is
+        // smaller than savers' response, show together or not at all
+        expect(text.includes("less than that response")).toBe(within);
+        expect(text.includes("our estimate exceeds the income tax line")).toBe(within);
+        if (within) {
+          const [least, most] = [Math.min(...gaps), Math.max(...gaps)];
+          expect(text).toContain(`by ${least === most ? `£${least}m` : `£${least}m to £${most}m`} a year, less than that response: +£${Math.round(ours[2029])}m against +£${LINE[2029]}m in 2029-30.`);
+          expect(most).toBeLessThan(200);
+          expect(least).toBeGreaterThan(0);
+        }
+        // What the official sources say stays, whatever our figures are
+        expect(text).toContain("HMRC estimates that about 12% of taxpayers will pay £113 more on average in 2027-28");
+        expect(text).toContain("about £0.2bn a year (Economic and fiscal outlook, October 2026, paragraph 3.17, page 69)");
+        expect(text.includes("We estimate £")).toBe(figures.ours2027 !== null);
+      }),
+      { numRuns: 500 },
+    );
+    // Without figures (the page before its tables load): no passage of ours
+    for (const none of [null, undefined, {}]) {
+      expect(savings(none)).not.toMatch(/We estimate|our estimate exceeds|less than that response/);
+    }
+    // On the bar itself, and below the line: said neither way
+    expect(OBR_NOTE_FIGURES[SAVINGS]({ 2029: 643, 2030: 600, 2031: 600 }).gap).toBeNull();
+    expect(OBR_NOTE_FIGURES[SAVINGS]({ 2029: 443, 2030: 600, 2031: 600 }).gap).toBeNull();
+    expect(OBR_NOTE_FIGURES[SAVINGS]({ 2029: 642, 2030: 476, 2031: 511 }).gap).toBe("£1m to £199m");
+    expect(OBR_NOTE_FIGURES[SAVINGS]({ 2029: 543, 2030: 575, 2031: 610 }).gap).toBe("£100m");
+  });
+
+  it("gives a measure with no figures of its own its note as written", () => {
+    const id = "property_income_rates_up";
+    const measure = { id, description: POLICY_DETAILS.find((entry) => entry.id === id).writtenFor };
+    expect(deviationNoteFor(measure, OBR_DEVIATION_NOTES, { 2029: 500 })).toBe(OBR_DEVIATION_NOTES[id]);
+    // Marks in another measure's text have no figures to fill them: left out
+    expect(deviationNoteFor(measure, { [id]: "Timing. [[Ours reaches {gap}.]]" }, { 2029: 500 })).toBe("Timing.");
   });
 });

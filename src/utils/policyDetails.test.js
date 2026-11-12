@@ -185,4 +185,15 @@ describe("nounOf: a measure as a noun after 'the'", () => {
     const savings = POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up");
     expect(nounOf({ id: savings.id, description: savings.writtenFor })).toBe("savings income tax rise");
   });
+  it("links the savings income measure's card to Budget 2026's policy paper, not Budget 2025's", async () => {
+    const { POLICY_DETAILS } = await import("./policyDetails");
+    const savings = POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up");
+    // HMRC, 29 October 2026: the paper the comparison's note cites
+    expect(savings.source).toEqual({
+      label: "HMRC: Income Tax: changes to tax rates for property and savings income",
+      href: "https://www.gov.uk/government/publications/income-tax-changes-to-tax-rates-for-property-and-savings-income",
+    });
+    // Budget 2025's paper, on the rises this one adds to, also covered dividends
+    expect(`${savings.source.label} ${savings.source.href}`).not.toMatch(/dividend/i);
+  });
 });

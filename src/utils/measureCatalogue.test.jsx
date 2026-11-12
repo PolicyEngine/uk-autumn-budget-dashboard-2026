@@ -255,6 +255,9 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   line above each note, by the same rule (#297);
   // - OBR_DIFFERENCE_POINTS, OBR_PANEL_BASES and NOT_COMPARABLE_SHORT: the
   //   same, as the side panel's short lines, by the same rule.
+  // - OBR_NOTE_FIGURES: the figures a measure's note takes from its own
+  //   published estimates, used only to fill that note (obrDeviationNotes
+  //   .test.js); it names a measure only to find its note.
   // - CALCULATOR_ONLY_MEASURES: the measures held back from the release and
   //   so never in the manifest, which the Household calculator always adds
   //   to a household's request (Vahid and María, 28 October): the cash ISA
@@ -282,7 +285,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "utils/calculatorOnlyMeasures.js": [/export const CALCULATOR_ONLY_MEASURES = \{[\s\S]*?\n\};/],
     "utils/explainers.js": [/export const EXPLAINERS = \[[\s\S]*?\n\];/],
     "components/methodology/improvementsText.js": [/export const IMPROVEMENTS_NOTE = \{[\s\S]*?\n\};/],
-    "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/, /export const OBR_DIFFERENCE_POINTS = \{[\s\S]*?\n\};/, /export const OBR_PANEL_BASES = \{[\s\S]*?\n\};/, /export const NOT_COMPARABLE_SHORT = \{[\s\S]*?\n\};/],
+    "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/, /export const OBR_DIFFERENCE_POINTS = \{[\s\S]*?\n\};/, /export const OBR_PANEL_BASES = \{[\s\S]*?\n\};/, /export const NOT_COMPARABLE_SHORT = \{[\s\S]*?\n\};/, /export const OBR_NOTE_FIGURES = \{[\s\S]*?\n\};/],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const outsideAllowed = (path, text) => (allowed[relative(root, path)] ?? []).reduce((rest, block) => rest.replace(block, ""), text);

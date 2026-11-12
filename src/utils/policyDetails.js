@@ -515,9 +515,11 @@ export const POLICY_DETAILS = [
     affects: "People with savings interest",
     type: "Income tax",
     inForce: { from: "2027-04" },
+    // Budget 2026's policy paper (HMRC, 29 October 2026); the card linked
+    // Budget 2025's, on the rises this one adds to
     source: {
-      label: "HMRC: changes to tax rates for property, savings and dividend income",
-      href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
+      label: "HMRC: Income Tax: changes to tax rates for property and savings income",
+      href: "https://www.gov.uk/government/publications/income-tax-changes-to-tax-rates-for-property-and-savings-income",
     },
     budgetRows: [62],
   },
