@@ -252,7 +252,7 @@ export const POLICY_DETAILS = [
     sentence: "extending employers' National Insurance relief to under-25s",
     name: "Employer NI relief for under-25s",
     description: "No employer National Insurance for employees under 25",
-    writtenFor: "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (£50,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
+    writtenFor: "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (£50,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data carry an apprentice indicator; its presence alone does not establish its variation or accuracy. Apprentices keep the model's existing employer NI treatment.",
     summary: "Employers pay no National Insurance on earnings up to £50,270 for under-25s.",
     points: [
       { label: "Extends", text: "The under-21 relief to ages 21 to 24." },

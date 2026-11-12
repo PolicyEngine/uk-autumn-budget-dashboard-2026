@@ -601,8 +601,9 @@ def _create_employer_ni_relief_under_25s() -> Reform:
             "upper earnings limit (£50,270) for employees under 25, "
             "extending the under-21 relief to ages 21 to 24. Wages are held "
             "fixed, so it changes revenue, not household incomes. The data "
-            "identify no apprentices, so the cost includes 21 to 24-year-old "
-            "apprentices, whose employers already pay none in law."
+            "carry an apprentice indicator; its presence alone does not "
+            "establish its variation or accuracy. Apprentices keep the "
+            "model's existing employer NI treatment."
         ),
         simulation_modifier=employer_ni_relief_ages_21_to_24,
     )

@@ -1,0 +1,558 @@
+{
+  "schema": "uk-budget-dashboard/input-coverage-transition/v1",
+  "current": {
+    "build_id": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+    "dataset_sha256": "b35b336242caef97892efdc475d35a55160ef22388f42ebf2a610b410dd60837",
+    "policyengine": "6.16.2",
+    "policyengine_uk": "2.165.1",
+    "policyengine_uk_commit": "648b112443b6d7c9a7ecda16712729e997ce84fe",
+    "core": "3.33.3",
+    "metadata_audit_sha256": "669d306611d41642be512407bf9bd27b606a343da76591e16f19e39fd43490eb"
+  },
+  "previous": {
+    "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+    "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+    "policyengine_uk": "2.151.0",
+    "complete_missing_inputs_evidence_sha256": "bfee7f4e68359ae199ee23641a971889e4da00ba50759418fd1ff11db8200639"
+  },
+  "method": "SHA-verified HDF column-label metadata plus registered input names; newly_missing is current missing names minus complete predecessor missing names. No record arrays, formulas or simulations used by this audit.",
+  "limitations": [
+    "Not a degeneracy, usability or certification gate",
+    "Forensic audit remains unchanged with newly_missing_inputs null; this fixture records the separately derived set",
+    "Column presence does not establish useful/nonzero variation",
+    "National company-car, MGD and cash-ISA holds remain"
+  ],
+  "newly_missing_inputs": [
+    "child_limit_adoption_exception",
+    "child_limit_continuation_exception",
+    "child_limit_multiple_birth_exception",
+    "child_limit_non_consensual_conception_exception",
+    "child_limit_non_parental_caring_exception",
+    "company_car_availability",
+    "company_car_private_use_payments",
+    "company_car_registered_from_6_april_2020",
+    "electricity_consumption_kwh",
+    "gas_consumption_kwh",
+    "housing_benefit_family_premium_category",
+    "housing_benefit_has_main_phase_esa",
+    "housing_benefit_permitted_work_disregard",
+    "individual_savings_account_dividend_income",
+    "is_in_first_year_of_apprenticeship",
+    "lifetime_isa_first_time_buyer",
+    "lifetime_isa_months_since_first_payment",
+    "lifetime_isa_terminally_ill",
+    "lifetime_isa_withdrawals",
+    "lifetime_isa_withdrawals_towards_first_home",
+    "main_residential_property_purchased_is_in_uk",
+    "main_residential_property_purchased_with_mortgage",
+    "ni_epg_full_rate_applies",
+    "non_cash_isa_cash_interest",
+    "severe_disability_premium_joint_occupier_exclusion_applies",
+    "would_claim_wales_childcare_offer"
+  ],
+  "released_missing_input_limits": [
+    {
+      "key": "remote_uk_horseracing_betting",
+      "input": "remote_uk_horseracing_betting_net_losses"
+    },
+    {
+      "key": "land_based_fixed_odds_betting",
+      "input": "land_based_fixed_odds_betting_net_losses"
+    },
+    {
+      "key": "horse_and_dog_pool_betting",
+      "input": "horse_and_dog_pool_betting_net_losses"
+    },
+    {
+      "key": "remote_other_betting",
+      "input": "remote_other_betting_net_losses"
+    },
+    {
+      "key": "betting_exchange_commission",
+      "input": "betting_exchange_commission"
+    },
+    {
+      "key": "machine_games_lower_rate",
+      "input": "machine_games_lower_rate_net_takings"
+    },
+    {
+      "key": "machine_games_standard_rate",
+      "input": "machine_games_standard_rate_net_takings"
+    },
+    {
+      "key": "machine_games_higher_rate",
+      "input": "machine_games_higher_rate_net_takings"
+    },
+    {
+      "key": "remote_gaming",
+      "input": "remote_gaming_net_losses"
+    },
+    {
+      "key": "bingo",
+      "input": "bingo_net_receipts"
+    },
+    {
+      "key": "pool_betting",
+      "input": "pool_betting_net_receipts"
+    },
+    {
+      "key": "national_lottery",
+      "input": "national_lottery_ticket_spending"
+    },
+    {
+      "key": "land_based_casino",
+      "input": "land_based_casino_net_losses"
+    }
+  ],
+  "input_declarations_and_scopes": [
+    {
+      "input": "child_limit_adoption_exception",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.universal_credit.elements.child",
+        "gov.dwp.tax_credits.child_tax_credit"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/dwp/child_limit_exceptions/child_limit_adoption_exception.py",
+      "direct_readers": [
+        "is_CTC_child_limit_exception",
+        "is_CTC_child_limit_own_exception",
+        "uc_child_limit_disregarded",
+        "uc_child_limit_exception"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "e68345121b02baa2ee63a2ae7ce4aedd68f75ef298b2cb2a1ab80f6e8748e8a4"
+    },
+    {
+      "input": "child_limit_continuation_exception",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.universal_credit.elements.child",
+        "gov.dwp.tax_credits.child_tax_credit"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/dwp/child_limit_exceptions/child_limit_continuation_exception.py",
+      "direct_readers": [
+        "is_CTC_child_limit_own_exception",
+        "uc_child_limit_exception"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "4d91070e82e13b6c0d9fa0e5fb53de19840b31c6f7e2168a47cc8d1f96fc66f6"
+    },
+    {
+      "input": "child_limit_multiple_birth_exception",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.universal_credit.elements.child",
+        "gov.dwp.tax_credits.child_tax_credit"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/dwp/child_limit_exceptions/child_limit_multiple_birth_exception.py",
+      "direct_readers": [
+        "is_CTC_child_limit_own_exception",
+        "uc_child_limit_exception"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "7cfe7368a2921c766a473b61008fb4d9aa1c1d15428bc7faa7c36d4f313f5ddb"
+    },
+    {
+      "input": "child_limit_non_consensual_conception_exception",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.universal_credit.elements.child",
+        "gov.dwp.tax_credits.child_tax_credit"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/dwp/child_limit_exceptions/child_limit_non_consensual_conception_exception.py",
+      "direct_readers": [
+        "is_CTC_child_limit_own_exception",
+        "uc_child_limit_exception"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "366df2d7ec493c5ef43598ce6533dcb1da0fa5348148ea37a72fbbd18dd52f2c"
+    },
+    {
+      "input": "child_limit_non_parental_caring_exception",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.universal_credit.elements.child",
+        "gov.dwp.tax_credits.child_tax_credit"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/dwp/child_limit_exceptions/child_limit_non_parental_caring_exception.py",
+      "direct_readers": [
+        "is_CTC_child_limit_exception",
+        "is_CTC_child_limit_own_exception",
+        "uc_child_limit_disregarded",
+        "uc_child_limit_exception"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "de13fd7d9a0e2e1175175542f65c6da186e685e92df0bbaf62a57d61e0d1a185"
+    },
+    {
+      "input": "company_car_availability",
+      "default": 1,
+      "default_words": "default is 1",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.income_tax.benefits_in_kind.company_car",
+        "gov.hmrc.income_tax.benefits_in_kind.car_fuel"
+      ],
+      "definition_path": "policyengine_uk/variables/input/company_car/company_car_availability.py",
+      "direct_readers": [],
+      "helper_readers": [
+        "company_car_benefit",
+        "car_fuel_benefit"
+      ],
+      "definition_sha256": "134085e05a002a4c9a1198d4517d8bdd81116ab8de2efabc0041682025d25f9c"
+    },
+    {
+      "input": "company_car_private_use_payments",
+      "default": 0,
+      "default_words": "default is 0",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.income_tax.benefits_in_kind.company_car",
+        "gov.hmrc.income_tax.benefits_in_kind.car_fuel"
+      ],
+      "definition_path": "policyengine_uk/variables/input/company_car/company_car_private_use_payments.py",
+      "direct_readers": [
+        "company_car_benefit"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "bc39b3ffe4eee11aca96f7af600dbaec815b64601966aec50f454cc1249e9d61"
+    },
+    {
+      "input": "company_car_registered_from_6_april_2020",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.income_tax.benefits_in_kind.company_car",
+        "gov.hmrc.income_tax.benefits_in_kind.car_fuel"
+      ],
+      "definition_path": "policyengine_uk/variables/input/company_car/company_car_registered_from_6_april_2020.py",
+      "direct_readers": [
+        "company_car_appropriate_percentage"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "53a2250b99186cdd2fa82042c581f5f52656d9cf04c898585d11adea5d98256a"
+    },
+    {
+      "input": "electricity_consumption_kwh",
+      "default": -1,
+      "default_words": "default is -1",
+      "entity": "Household",
+      "period": "MONTH",
+      "parameter_roots": [
+        "gov.ofgem.energy_price_guarantee_northern_ireland"
+      ],
+      "definition_path": "policyengine_uk/variables/input/consumption/electricity_consumption_kwh.py",
+      "direct_readers": [],
+      "helper_readers": [
+        "monthly_ni_epg_subsidy",
+        "ni_epg_subsidy_calculable"
+      ],
+      "definition_sha256": "494799ed708a0251b11ed329afea5d9e3b0d90113762950aa14ae4b95c38f1df"
+    },
+    {
+      "input": "gas_consumption_kwh",
+      "default": -1,
+      "default_words": "default is -1",
+      "entity": "Household",
+      "period": "MONTH",
+      "parameter_roots": [
+        "gov.ofgem.energy_price_guarantee_northern_ireland"
+      ],
+      "definition_path": "policyengine_uk/variables/input/consumption/gas_consumption_kwh.py",
+      "direct_readers": [],
+      "helper_readers": [
+        "monthly_ni_epg_subsidy",
+        "ni_epg_subsidy_calculable"
+      ],
+      "definition_sha256": "b2517f0802ebd86d4acb093f1e139f2c566c9b00f85593a86926d50499f5b672"
+    },
+    {
+      "input": "housing_benefit_family_premium_category",
+      "default": {
+        "enum": "NONE"
+      },
+      "default_words": "default is NONE",
+      "entity": "BenUnit",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.housing_benefit.premiums.family"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/dwp/housing_benefit/housing_benefit_family_premium_category.py",
+      "direct_readers": [
+        "housing_benefit_family_premium"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "d62601106e35722d9f09f1b0001b7c9eb80c7ac02947f4831f54413cb5c90812"
+    },
+    {
+      "input": "housing_benefit_has_main_phase_esa",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "BenUnit",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.housing_benefit.allowances"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/dwp/housing_benefit/housing_benefit_has_main_phase_esa.py",
+      "direct_readers": [
+        "housing_benefit_main_phase_esa_allowance_adjustment"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "053034218fd9f3b66e53ad374c73aacdf3be5158e6b29415d910885f7593a52a"
+    },
+    {
+      "input": "housing_benefit_permitted_work_disregard",
+      "default": 0,
+      "default_words": "default is 0",
+      "entity": "BenUnit",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.housing_benefit.means_test.income_disregard",
+        "gov.dwp.pension_credit.earnings_disregard"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/dwp/housing_benefit/applicable_income/housing_benefit_permitted_work_disregard.py",
+      "direct_readers": [
+        "housing_benefit_applied_standard_earnings_disregard",
+        "housing_benefit_savings_credit_only_income"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "dd300aa8343b35a487e096ac5cf031379bde635ce7e6c4b525b1d15dd87e4556"
+    },
+    {
+      "input": "individual_savings_account_dividend_income",
+      "default": 0,
+      "default_words": "default is 0",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.local_authorities.kingston_upon_thames.council_tax_reduction.non_dep_deduction",
+        "gov.local_authorities.merton.council_tax_reduction.non_dep_deduction",
+        "gov.local_authorities.newham.council_tax_reduction.non_dep_deduction",
+        "gov.local_authorities.oxford.council_tax_reduction.non_dep_deduction",
+        "gov.local_authorities.westminster.council_tax_reduction.non_dep_deduction",
+        "gov.economic_assumptions.indices.obr.per_capita.gdp"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/hmrc/isa/individual_savings_account_dividend_income.py",
+      "direct_readers": [
+        "capital_income",
+        "market_income"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "2562a3ff28d16051ee459b215d777e0aba80ed400bd018c0cfd56225797a8b1c"
+    },
+    {
+      "input": "is_in_first_year_of_apprenticeship",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.minimum_wage"
+      ],
+      "definition_path": "policyengine_uk/variables/household/income/is_in_first_year_of_apprenticeship.py",
+      "direct_readers": [
+        "qualifies_for_apprentice_minimum_wage"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "4ac6d6af5a12ad2f50f2316bf89069527bc73792d8fca186cb66529bea5fbca6"
+    },
+    {
+      "input": "lifetime_isa_first_time_buyer",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.isa.lifetime"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/hmrc/isa/lifetime_isa_first_time_buyer.py",
+      "direct_readers": [
+        "lifetime_isa_withdrawal_charge"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "0efb217f93af96b0a2f6e64bfc6f16a9c31b0ff120e5cb645fd2c4a7a1c8679a"
+    },
+    {
+      "input": "lifetime_isa_months_since_first_payment",
+      "default": 0,
+      "default_words": "default is 0",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.isa.lifetime"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/hmrc/isa/lifetime_isa_months_since_first_payment.py",
+      "direct_readers": [
+        "lifetime_isa_withdrawal_charge"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "dd858709e8bc6abe25029dc871cb13212696fa1c46517e5c309d56bb6237d66c"
+    },
+    {
+      "input": "lifetime_isa_terminally_ill",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.isa.lifetime"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/hmrc/isa/lifetime_isa_terminally_ill.py",
+      "direct_readers": [
+        "lifetime_isa_withdrawal_charge"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "e0623c39771d87324d364a1a12ce56ab92fa1512f0f7b00839a3a878c9d75f87"
+    },
+    {
+      "input": "lifetime_isa_withdrawals",
+      "default": 0,
+      "default_words": "default is 0",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.isa.lifetime"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/hmrc/isa/lifetime_isa_withdrawals.py",
+      "direct_readers": [
+        "lifetime_isa_withdrawal_charge"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "3592ff520fad363f504f595a5be1c863ff72ec59c2d41186c45bcba550e6f854"
+    },
+    {
+      "input": "lifetime_isa_withdrawals_towards_first_home",
+      "default": 0,
+      "default_words": "default is 0",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.isa.lifetime"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/hmrc/isa/lifetime_isa_withdrawals_towards_first_home.py",
+      "direct_readers": [
+        "lifetime_isa_withdrawal_charge"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "cb0fd163df8c80128c0826c15f2f6286748bfaf8235119f3e57cc27a148a5d57"
+    },
+    {
+      "input": "main_residential_property_purchased_is_in_uk",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Household",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.isa.lifetime"
+      ],
+      "definition_path": "policyengine_uk/variables/household/consumption/main_residential_property_purchased_is_in_uk.py",
+      "direct_readers": [
+        "lifetime_isa_withdrawal_charge"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "80073338fc3d2839ddf52721c5e993d7f4d7bcb1a799da01ae5a5fdb74b54327"
+    },
+    {
+      "input": "main_residential_property_purchased_with_mortgage",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Household",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.isa.lifetime"
+      ],
+      "definition_path": "policyengine_uk/variables/household/consumption/main_residential_property_purchased_with_mortgage.py",
+      "direct_readers": [
+        "lifetime_isa_withdrawal_charge"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "00599138bd489bed26ba1ce2e8bff1ccc71f9d150c18f1edcebc927e7fb635f9"
+    },
+    {
+      "input": "ni_epg_full_rate_applies",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "Household",
+      "period": "MONTH",
+      "parameter_roots": [
+        "gov.ofgem.energy_price_guarantee_northern_ireland"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/treasury/price_cap_subsidy/ni_epg_full_rate_applies.py",
+      "direct_readers": [],
+      "helper_readers": [
+        "monthly_ni_epg_subsidy",
+        "ni_epg_subsidy_calculable"
+      ],
+      "definition_sha256": "f1ea96cebe46c4e0c82f531bc879d0e24130bb83eb1a297f4002221ca94ac242"
+    },
+    {
+      "input": "non_cash_isa_cash_interest",
+      "default": 0,
+      "default_words": "default is 0",
+      "entity": "Person",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.hmrc.isa.cash_interest_charge",
+        "gov.hmrc.income_tax.rates.savings.basic"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/hmrc/isa/non_cash_isa_cash_interest.py",
+      "direct_readers": [
+        "isa_cash_interest_flat_rate_charge"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "978e42ac7e026ed76a31650644a31f206a7a3db7c49c511b6f3b69aa0787a96d"
+    },
+    {
+      "input": "severe_disability_premium_joint_occupier_exclusion_applies",
+      "default": false,
+      "default_words": "default is False",
+      "entity": "BenUnit",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.dwp.disability_premia",
+        "gov.local_authorities.scotland.council_tax_reduction.working_age.young_person_follows_universal_credit"
+      ],
+      "definition_path": "policyengine_uk/variables/household/demographic/severe_disability_premium_joint_occupier_exclusion_applies.py",
+      "direct_readers": [
+        "has_non_dependant_for_severe_disability_premium"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "78bdf9d8b9cb29625d0085f067c40c13dba31272555569f48d34210939756fc8"
+    },
+    {
+      "input": "would_claim_wales_childcare_offer",
+      "default": true,
+      "default_words": "default is True",
+      "entity": "BenUnit",
+      "period": "YEAR",
+      "parameter_roots": [
+        "gov.welsh_government.childcare_offer"
+      ],
+      "definition_path": "policyengine_uk/variables/gov/welsh_government/childcare_offer/would_claim_wales_childcare_offer.py",
+      "direct_readers": [
+        "wales_childcare_offer_eligible"
+      ],
+      "helper_readers": [],
+      "definition_sha256": "1f932a9960f897fa0f7d219468b2b29285c7945539abb2c293a331da9db7bf46"
+    }
+  ]
+}

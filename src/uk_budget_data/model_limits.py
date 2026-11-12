@@ -12,13 +12,17 @@ differ under one of those parameters, compared as
 ``uk_budget_data.data_limits`` compares them (the stored trees by position
 and effective value, and what formulas read at each year's start), or in
 one of those variables: its formulas or what decides how they run, or the
-values stored for it (recorded as ``variable:<name>``). A limit expires on
+values stored for it (recorded as ``variable:<name>``). A limit may opt
+into explicit-input-only stored comparisons while retaining full behavior
+checks; unknown input bookkeeping remains conservative. A limit expires on
 its own: once the model has the fix, nothing is recorded, and its tripwire
 test fails so the limit is removed.
 """
 
 import hashlib
+import inspect
 import json
+import types
 from dataclasses import dataclass
 from typing import Callable, Iterable
 
@@ -45,6 +49,10 @@ class ModelLimit:
     # Variables a measure can change the limit through without changing a
     # covered parameter: a replaced formula, or a value stored on one side.
     variables: tuple[str, ...] = ()
+    # Opt in only when native derived values may legitimately differ under
+    # supported parameters. Formula/metadata and explicit input differences
+    # remain covered; unknown input bookkeeping falls back to all known.
+    stored_inputs_only: bool = False
 
 
 # How a receipt records a covered variable that differs.
@@ -166,6 +174,99 @@ _PENSION_AGE_EARNINGS_PARAMETERS = (
 )
 
 
+# Household casino incidence is not the statutory operator-band calculation.
+# This review hold survives retirement of the missing-losses data limit.
+# No native implementation has reviewed positive support evidence yet.
+# Entries must bind (native identity, independent review reference); changing
+# this set requires a reviewed native statutory-band/incidence witness.
+_CASINO_REVIEWED_NATIVE_SUPPORT: tuple[tuple[str, str], ...] = ()
+_CASINO_KNOWN_UNSUPPORTED_SOURCE = (
+    "178341b62d98f955740163c1d10289425b61570e45a6089c9f3b860e4f7ee239"
+)
+
+
+def _casino_native_source_digest(system) -> str | None:
+    """Source identity for the native-source review/expiry tripwire."""
+    try:
+        variable = system.get_variable("gaming_duty")
+        source = inspect.getsource(type(variable)).strip()
+    except (AttributeError, KeyError, OSError, TypeError, ValueError):
+        return None
+    return hashlib.sha256(source.encode()).hexdigest()
+
+
+def _casino_code_identity(code):
+    """Content identity, excluding installation paths and line numbers."""
+    return [
+        code.co_code.hex(),
+        list(code.co_names),
+        list(code.co_freevars),
+        list(code.co_cellvars),
+        code.co_argcount,
+        code.co_kwonlyargcount,
+        [
+            (
+                _casino_code_identity(value)
+                if isinstance(value, types.CodeType)
+                else repr(value)
+            )
+            for value in code.co_consts
+        ],
+    ]
+
+
+def _casino_native_identity(system) -> str | None:
+    """Bind source and active callable content; never infer capability."""
+    source = _casino_native_source_digest(system)
+    if source is None:
+        return None
+    try:
+        variable = system.get_variable("gaming_duty")
+        formulas = []
+        for date, function in sorted(variable.formulas.items()):
+            if (
+                not isinstance(function, types.FunctionType)
+                or function.__closure__
+            ):
+                return None
+            formulas.append(
+                [
+                    str(date),
+                    _casino_code_identity(function.__code__),
+                    repr(function.__defaults__),
+                    repr(function.__kwdefaults__),
+                ]
+            )
+        if not formulas:
+            return None
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return None
+    return hashlib.sha256(
+        json.dumps([source, formulas], separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def _casino_statutory_bands_reviewed(system) -> bool:
+    """A conservative review hold, not an automatic capability detector.
+
+    The reviewed positive set is empty. Neither parameter presence, package
+    version, model attributes nor a measure's replacement can establish a
+    fix. A future positive entry also needs independent native behaviour
+    evidence and an updated source/expiry tripwire in that adoption.
+    """
+    identity = _casino_native_identity(system)
+    return identity is not None and any(
+        identity == reviewed and bool(reference.strip())
+        for reviewed, reference in _CASINO_REVIEWED_NATIVE_SUPPORT
+    )
+
+
+def _installed_casino_statutory_bands_reviewed() -> bool:
+    from policyengine_uk.system import system
+
+    return _casino_statutory_bands_reviewed(system)
+
+
 # policyengine-uk 2.151.0 (6.11.1's adoption, PR 238) has the fixes for
 # three limits, so they expired: the State Pension add-on and protected
 # payments rise by September CPI (#2336), benefits rise by the published
@@ -199,6 +300,25 @@ MODEL_LIMITS = (
         installed_fixed=_installed_minimum_guarantee_earnings,
         from_year=2027,
     ),
+    ModelLimit(
+        key="casino_statutory_gaming_bands",
+        parameters=("gov.hmrc.gambling_duty.gaming",),
+        variables=("gaming_duty",),
+        stored_inputs_only=True,
+        fixed_by="independently reviewed native statutory-band household-incidence support",
+        reason=(
+            "The installed household model charges casino losses at one "
+            "effective rate and does not read the statutory operator gaming "
+            "bands. The data carrying casino losses do not establish a "
+            "mapping from those bands to household incidence. Changes to "
+            "the statutory bands, or to the casino-duty calculation, are "
+            "held at provisional until native support is independently "
+            "reviewed. The supported household effective-rate parameter "
+            "is not a statutory-band costing."
+        ),
+        fixed=_casino_statutory_bands_reviewed,
+        installed_fixed=_installed_casino_statutory_bands_reviewed,
+    ),
 )
 
 
@@ -215,6 +335,7 @@ def _registry_digest(limits: Iterable[ModelLimit]) -> str:
                     limit.fixed_by,
                     limit.reason,
                     limit.from_year,
+                    limit.stored_inputs_only,
                 ]
                 for limit in limits
             ],
@@ -296,7 +417,11 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
                     from_year=limit.from_year,
                 )
             differing += _variables_differing(
-                sim_baseline, sim_reform, limit.variables, behaviour
+                sim_baseline,
+                sim_reform,
+                limit.variables,
+                behaviour,
+                inputs_only=limit.stored_inputs_only,
             )
             if differing:
                 touched.append(record(limit, differing))
@@ -364,7 +489,9 @@ def parameters_differing(sim_baseline, sim_reform, prefixes) -> list:
 _VARIABLE_METADATA = ("end", "defined_for", "uprating", "set_input")
 
 
-def _variables_differing(sim_baseline, sim_reform, names, behaviour):
+def _variables_differing(
+    sim_baseline, sim_reform, names, behaviour, *, inputs_only=False
+):
     """The covered variables that differ between two simulations, as a
     record names them (``variable:<name>``).
 
@@ -374,7 +501,9 @@ def _variables_differing(sim_baseline, sim_reform, names, behaviour):
     it closes over and the globals it looks up, so a template applied with
     other arguments shows), whether it is neutralised, what it adds and
     subtracts, its default and :data:`_VARIABLE_METADATA`; or when the
-    values stored for it differ (:func:`_stored`). What can't be read
+    values stored for it differ (:func:`_stored`). With inputs_only,
+    compare explicit input records only, not ordinary derived caches;
+    unknown input bookkeeping remains conservative. What can't be read
     counts as different.
     """
     systems = (sim_baseline.tax_benefit_system, sim_reform.tax_benefit_system)
@@ -388,7 +517,9 @@ def _variables_differing(sim_baseline, sim_reform, names, behaviour):
             continue
         try:
             same_values = _same_stored(
-                _stored(sim_baseline, name), _stored(sim_reform, name)
+                _stored(sim_baseline, name),
+                _stored(sim_reform, name),
+                inputs_only=inputs_only,
             )
         except Exception:  # noqa: BLE001 - unreadable means different
             same_values = False
@@ -442,10 +573,12 @@ def _stored(sim, name):
     return inputs, known
 
 
-def _same_stored(base, reform) -> bool:
+def _same_stored(base, reform, *, inputs_only=False) -> bool:
     """Whether two simulations store the same for a variable (NaN equal to
     NaN): the same inputs in the same slots, and the same value in every
-    slot both hold. True where either can't be read."""
+    slot both hold. With inputs_only, compare the input slots alone;
+    _stored still treats all known slots as inputs when bookkeeping is
+    unavailable. True for stand-ins without holders."""
     if base is None or reform is None:
         return True
     (base_inputs, base_known), (reform_inputs, reform_known) = base, reform
@@ -455,9 +588,12 @@ def _same_stored(base, reform) -> bool:
             _same_array(base_inputs[slot], reform_inputs[slot])
             for slot in base_inputs
         )
-        and all(
-            _same_array(base_known[slot], reform_known[slot])
-            for slot in base_known.keys() & reform_known.keys()
+        and (
+            inputs_only
+            or all(
+                _same_array(base_known[slot], reform_known[slot])
+                for slot in base_known.keys() & reform_known.keys()
+            )
         )
     )
 

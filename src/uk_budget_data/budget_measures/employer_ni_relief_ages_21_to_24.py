@@ -40,9 +40,9 @@ def employer_ni_relief_ages_21_to_24(
 
     Apprentices (``is_apprentice``) are left as the model has them, as
     under-21s are: they already have the zero rate in law. The certified
-    dataset flags no apprentices, so today this changes no result; the
-    cost therefore includes 21 to 24-year-old apprentices (HMRC prices the
-    apprentice relief at about £0.57bn in 2025-26).
+    dataset now carries this indicator. Column presence alone does not
+    establish its variation or accuracy; the modifier's apprentice
+    treatment is unchanged.
     """
     native = sim.tax_benefit_system.get_variable("ni_class_1_employer")
     thresholds = {
