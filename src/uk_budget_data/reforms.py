@@ -1104,13 +1104,9 @@ def _create_cash_isa_limit_kept() -> Reform:
 #   and D machines too, so it is an upper bound on the static cost (about
 #   1 / 0.757 of it on the Gambling Commission's Category B share; María,
 #   policyengine.py#731, 2 November 2026). Held back from the national
-#   results (calculatorOnlyMeasures.js) until a national figure for the
-#   higher-stake machines alone is finished and checked (11 November
-#   2026). The certified data held no gambling takings at all until
-#   policyengine 6.16.2 (data limit machine_games_standard_rate). On data
-#   that hold them this measure computes the upper bound, so only its
-#   absence from the publication manifest keeps that figure off the page
-#   (tests/test_held_measures.py).
+#   results (calculatorOnlyMeasures.js) until the engine and the data carry
+#   the split. The certified data the dashboard runs on today hold no
+#   gambling takings at all (data limit machine_games_standard_rate).
 # Annual keys: the engine applies the change from 6 April 2027, so
 # 2026-27, which the Treasury also scores at £0, has none of it.
 MACHINE_GAMES_DUTY_FROM = 2027
