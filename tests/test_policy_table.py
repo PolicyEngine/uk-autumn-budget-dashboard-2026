@@ -340,6 +340,7 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "state_pension_income_tax_protection": "path",
         "domestic_electricity_zero_vat": "switch",
         "property_income_rates_up": "path",
+        "savings_income_rates_up": "path",
         "carers_allowance_earnings_taper": "path",
         "household_energy_payment_2026": "switch",
         "trading_allowance_raise": "before-after",

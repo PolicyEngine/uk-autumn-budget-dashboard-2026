@@ -605,9 +605,6 @@ _OWN_VAT_RATES = {
         "gov.simulation.vat.energy_input_price_basis_rate"
     ),
 }
-# Where a simulation records each (spending variable, year) whose baseline
-# the template already holds, so two holds never add up.
-_HELD_VAT_BASELINES = "_uk_budget_data_held_vat_baselines"
 
 
 def _has_parameter(root, path):
@@ -623,9 +620,13 @@ def _has_parameter(root, path):
 
 def _parameter_at(parameters, period, path):
     node = parameters(period)
-    for part in path.split("."):
-        node = getattr(node, part)
-    return node
+    if path == "gov.hmrc.vat.domestic_electricity_rate.great_britain":
+        return node.gov.hmrc.vat.domestic_electricity_rate.great_britain
+    if path == "gov.hmrc.vat.domestic_electricity_rate.northern_ireland":
+        return node.gov.hmrc.vat.domestic_electricity_rate.northern_ireland
+    if path == "gov.simulation.vat.energy_input_price_basis_rate":
+        return node.gov.simulation.vat.energy_input_price_basis_rate
+    raise ValueError(f"No supported VAT baseline parameter reader for {path}")
 
 
 def _rate_at(parameters, period, path):
@@ -824,10 +825,10 @@ def _hold_vat_baseline(sim, spending_variable, years, rate, own_paths):
     """Add to ``baseline_vat`` what ``apply_vat_base_change`` adds to
     ``vat`` to hold the baseline, so ``vat_change`` (``vat`` less
     ``baseline_vat``, the only VAT in household tax) leaves it out."""
-    held = getattr(sim, _HELD_VAT_BASELINES, None)
+    held = getattr(sim, "_uk_budget_data_held_vat_baselines", None)
     if held is None:
         held = set()
-        setattr(sim, _HELD_VAT_BASELINES, held)
+        sim._uk_budget_data_held_vat_baselines = held
     wanted = {(spending_variable, year) for year in years}
     if held & wanted:
         raise ValueError(

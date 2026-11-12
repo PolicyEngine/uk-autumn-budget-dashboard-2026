@@ -1462,7 +1462,8 @@ describe("a household calculation refused for a calculator-only measure", () => 
     expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       `${CALCULATOR_ONLY_POLICY.name}: its reform binding differs`,
     ]);
-    expect(region.textContent).not.toMatch(/£\d/);
+    // The unavailable policy's title contains £20,000; no result amount may appear.
+    expect(region.textContent.replace(CALCULATOR_ONLY_POLICY.name, "")).not.toMatch(/£\d/);
     expect(within(region).queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
     expect(remove).not.toHaveBeenCalled();
     // It was asked with the rise, naming its approved definition

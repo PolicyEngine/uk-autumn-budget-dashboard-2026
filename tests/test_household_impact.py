@@ -253,11 +253,16 @@ def test_a_single_holds_every_other_measure_at_current_law():
     student_loans = household_impact.modifier_name(
         plan_2.baseline_simulation_modifier
     )
-    # The Plan 2 measure's pre-Budget side has its own modifier
-    assert sides.before["modifiers"] == [student_loans]
+    electricity = get_reform("domestic_electricity_zero_vat")
+    pre_budget_electricity = household_impact.modifier_name(
+        electricity.baseline_simulation_modifier
+    )
+    # Both other measures keep their own pre-Budget sides, in member order.
+    baseline_modifiers = [pre_budget_electricity, student_loans]
+    assert sides.before["modifiers"] == baseline_modifiers
     assert sides.singles["threshold_freeze_2031_32"] == {
         "parameter_changes": freeze.parameter_changes,
-        "modifiers": [student_loans],
+        "modifiers": baseline_modifiers,
     }
     # Modifiers in order of measure id: the electricity measure's
     # (domestic_...) before the Plan 2 measure's student loans
