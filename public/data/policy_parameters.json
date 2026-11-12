@@ -616,7 +616,7 @@
       ]
     },
     "trading_allowance_raise": {
-      "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to £3,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
+      "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. The surveys behind our data record traders' profits, not their receipts, so we assume who already claims the £1,000 allowance: 72% of traders with profits up to £4,500, 14% of those with profits from £4,500 to £9,000 and none above. Only those traders gain, and we count no one who switches from actual expenses to the larger allowance.",
       "display": "before-after",
       "rows": [
         {

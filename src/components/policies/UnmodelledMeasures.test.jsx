@@ -338,12 +338,24 @@ describe("UnmodelledMeasures", () => {
     render(<UnmodelledMeasures />);
     open();
     const measure = UNMODELLED_MEASURES.find(({ id }) => id === "cash-isa-limit");
-    // Not in our data yet (#368): the survey data hold no payments into ISAs
+    // In the "Not in our data yet" group (#368). From the national build
+    // 0639b9c7 the data hold ISA payments, so the card no longer says they
+    // lack them: a national figure would rest on where savers put what the
+    // planned limit left out
     expect(measure.reason).toBe("data");
     const card = document.getElementById("unmodelled-cash-isa-limit");
     expect(card.querySelector(".policy-card-points")).toHaveTextContent(
-      /Household calculator only, not the national results: our data lack ISA payments\./,
+      /Household calculator only: a national figure rests on where the excess goes\./,
     );
+    expect(card.querySelector(".policy-card-points")).not.toHaveTextContent(/lack ISA payments|no payments into ISAs/);
+  });
+
+  it("no longer says the model has no ISA payments or bonuses on the First Time Buyer ISA card", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const card = document.getElementById("unmodelled-first-time-buyer-isa");
+    expect(card.querySelector(".policy-card-points")).toHaveTextContent(/The model lacks the new ISA; our data lack Lifetime ISA withdrawals\./);
+    expect(card.querySelector(".policy-card-points")).not.toHaveTextContent(/no ISA payments/);
   });
 
   it("keeps At a glance short and the summary one sentence, and shows every change a card names", () => {

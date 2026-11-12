@@ -157,6 +157,47 @@ describe("MethodologyTab", () => {
     expect(card).toHaveTextContent("roughly half of fuel duty receipts");
   });
 
+  // On policyengine-uk 2.165.1 the engine's own growth rates are the
+  // October 2026 forecast's (its yoy_growth.yaml: "2026-2031: OBR forecast
+  // from the October 2026 EFO", 2025 the outturn that forecast publishes,
+  // fuel volumes from its fuel duty receipts, population from its economy
+  // tables), and the national build 0639b9c7's calibration takes most OBR
+  // totals' 2025-26 from the October 2026 tables. The page said the
+  // opposite for the earlier engine and data; those sentences must not
+  // come back. The retained per-capita overlay still uses an older
+  // population derivation, separately from native October population
+  it("distinguishes the retained per-capita overlay from the native October population path", () => {
+    const { container } = renderTab();
+    const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
+    const card = within(limitations).getByRole("button", { name: "Economic assumptions" }).closest(".method-topic");
+    expect(card).toHaveTextContent("The installed model's fuel volumes and population follow that forecast too, and 2025 is the outturn it publishes.");
+    const differences = [...card.querySelectorAll("ul.method-list li")].map((item) => item.textContent.replace(/\s+/g, " ").trim());
+    expect(differences).toEqual(expect.arrayContaining([
+      "Per-capita GDP, mixed income and non-labour income retain the dashboard overlay's rates, derived using an older population path. Household weights instead follow the installed model's October population path.",
+      "Mortgage interest keeps policyengine-uk's growth from 2030, where the OBR's table stops.",
+      "CPI after housing costs and social rents are PolicyEngine's own derivations from the October figures, not OBR series.",
+      "Calibration fits the weights to OBR receipts and spending totals for 2025. Most take 2024-25 from the March 2026 forecast's tables and 2025-26 from the October 2026 forecast's.",
+    ]));
+    expect(card).not.toHaveTextContent("Three things differ:");
+    const data = container.querySelector(`#${METHOD_SECTIONS.data}`);
+    expect(data).toHaveTextContent("receipts and spending totals from the OBR's March 2026 and October 2026 forecasts");
+    expect(data).toHaveTextContent("A few series are not that forecast's own");
+    // The earlier engine's and data's statements, anywhere in the view
+    const whole = container.querySelector(".method-body");
+    expect(whole).not.toHaveTextContent(/March 2026 rates|keeps? the March|stays at 5\.3%|earlier OBR forecasts|forecasts the OBR published before the October 2026 one|own assumptions \(the OBR's March 2026 forecast\)/);
+    expect(limitations.querySelector(".section-heading")).toHaveTextContent("a few growth rates are not the October 2026 forecast's own");
+  });
+
+  // From the national build 0639b9c7 the data store traders' receipts and
+  // draw who already claims the £1,000 allowance, so the trading allowance
+  // figures rest on that assumption
+  it("says under Survey coverage that the trading allowance rests on who we assume already claims it", () => {
+    const { container } = renderTab();
+    const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
+    const card = within(limitations).getByRole("button", { name: "Survey coverage" }).closest(".method-topic");
+    expect(card).toHaveTextContent("The surveys record traders' profits, not their receipts, so the trading allowance figures rest on our assumption of who already claims the £1,000 allowance.");
+  });
+
   it("says under Policies added up that separate runs leave out interactions, and nothing on survey values no measure replaces", () => {
     const { container } = renderTab();
     const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);

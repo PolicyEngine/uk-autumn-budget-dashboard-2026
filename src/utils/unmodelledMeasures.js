@@ -221,7 +221,11 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "Interest stays tax-free on up to £20,000 a year of new savings." },
       { label: "Who it reaches", text: "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23." },
-      { label: "Why we leave it out", text: "Household calculator only, not the national results: our data lack ISA payments." },
+      // From the national build 0639b9c7 the data hold each adult's ISA
+      // payments (Microcosm's isa_subscriptions stage), so the reason is no
+      // longer the data: a national figure would rest on where savers put
+      // what the planned limit left out (planned_cash_isa_limit.py)
+      { label: "Why we leave it out", text: "Household calculator only: a national figure rests on where the excess goes." },
     ],
     costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
     sources: [
@@ -321,7 +325,10 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "The bonus arrives at purchase, adding to the deposit, not income." },
       { label: "Who it reaches", text: "People saving for a first home, including Lifetime ISA holders." },
-      { label: "Why we leave it out", text: "The model has no ISA payments, bonuses or home purchases." },
+      // policyengine-uk 2.165.1 has the Lifetime ISA's payments, bonus and
+      // withdrawal charge but no First Time Buyer ISA, and the data hold
+      // Lifetime ISA payments but no withdrawals
+      { label: "Why we leave it out", text: "The model lacks the new ISA; our data lack Lifetime ISA withdrawals." },
     ],
     costings: [
       { row: 38, values: [0, 0, 0, 110, 110, 235], note: "Row 38 is the First Time Buyer ISA." },

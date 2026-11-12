@@ -389,7 +389,9 @@ export const POLICY_DETAILS = [
     details: [
       "Applies the taper to carers' weekly net earnings in the survey.",
       "The taper starts within 2030-31, on a date still to come, so the model counts half that year.",
-      "Carers the limit kept out claim at the data's 60% take-up.",
+      // The 60% is the chosen assumption in Microcosm's take-up contract
+      // (carers_allowance_newly_entitled), not a measured take-up claim.
+      "Carers the limit kept out claim at 60%, our assumption.",
       "On Universal Credit, the allowance counts in full as unearned income, so a carer gains nothing.",
       "DWP would deduct the PAYE on it from earnings; the model does not, so such a carer can lose.",
     ],
@@ -594,14 +596,23 @@ export const POLICY_DETAILS = [
     sentence: "raising the trading allowance",
     name: "Trading allowance raised to £3,000",
     description: "Raise the trading allowance from £1,000 to £3,000",
-    writtenFor: "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to £3,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
+    writtenFor: "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. The surveys behind our data record traders' profits, not their receipts, so we assume who already claims the £1,000 allowance: 72% of traders with profits up to £4,500, 14% of those with profits from £4,500 to £9,000 and none above. Only those traders gain, and we count no one who switches from actual expenses to the larger allowance.",
     summary: "Raises the trading allowance from £1,000 to £3,000.",
     points: [
       { label: "What it does", text: "Relieves trading receipts in place of actual expenses." },
       { label: "Covers", text: "Income tax and Class 4 National Insurance." },
     ],
+    // Who gains, as the national build 0639b9c7 draws it (Microcosm's
+    // trading_allowance_receipts stage: TRADING_ALLOWANCE_CLAIMANT_BANDS and
+    // its calibration to HMRC's impact note of 28 October 2026). The stage
+    // stores a claimant's £1,000 of expenses, which policyengine-uk grows
+    // with mixed income, so the extra £2,000 of relief shrinks each year
     details: [
       "Raises the trading allowance parameter to £3,000 from 2027-28.",
+      "Counts only traders we assume already claim it: 72% with profits up to £4,500, 14% from £4,500 to £9,000.",
+      "We set those shares so earlier data matched HMRC's estimate: about 400,000 people paying £380 less on average.",
+      "They deduct up to about £1,900 more in 2027-28 and £1,800 by 2031-32, short of the law's £2,000.",
+      "Leaves out people who switch from actual expenses, and gives miscellaneous income no allowance.",
       "The official costing's income tax and NICs start in 2028-29, when self-assessment payments fall due; ours starts in 2027-28.",
     ],
     starts: "Apr 2027",

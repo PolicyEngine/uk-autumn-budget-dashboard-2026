@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { parseDashboardCsv } from "./loadDashboard";
@@ -97,6 +97,81 @@ describe("why our estimates differ from the official costings", () => {
     expect(text("savings_income_rates_up")).not.toMatch(/ISA interest|too little|correcting/);
     expect(OBR_DEVIATION_NOTES.savings_income_rates_up).not.toMatch(/included interest in ISAs|a third too low|We are correcting|will update the dashboard/);
     expect(text("savings_income_rates_up")).toMatch(/Official includes savers moving into ISAs: about £0\.2bn a year/);
+  });
+
+  // The trading allowance on the national build 0639b9c7: the data store
+  // each trader's gross receipts and draw who already claims the £1,000
+  // allowance (Microcosm's trading_allowance_receipts stage:
+  // TRADING_ALLOWANCE_CLAIMANT_BANDS 0.72 up to £4,500 of profit, 0.14 to
+  // £9,000, none above; claimant receipts = profit + £1,000, any other
+  // trader's = profit + £3,000), so only claimants gain. The shares were set
+  // on an earlier national to HMRC's impact note of 28 October 2026
+  // ("400,000 individuals are estimated to have a reduction in their tax
+  // bill of £380 on average"). The texts for the earlier data, which stored
+  // no receipts, must not come back
+  it("says who gains from the trading allowance as the data draw them, on the card, the registry and the note alike", () => {
+    const id = "trading_allowance_raise";
+    const note = OBR_DEVIATION_NOTES[id];
+    const entry = POLICY_DETAILS.find((candidate) => candidate.id === id);
+    const registry = readFileSync("src/uk_budget_data/reforms.py", "utf8").replace(/"\n\s+f?"/g, "");
+    const points = OBR_DIFFERENCE_POINTS[id].map((point) => point.text);
+    expect(points).toContain("We count only traders we assume already claim the £1,000 allowance");
+    // The shares, the same in each place a reader meets them
+    for (const text of [note, entry.writtenFor, registry]) {
+      expect(text).toMatch(/72% of traders with profits up to £4,500/);
+      expect(text).toMatch(/14% of those with profits from £4,500 to £9,000,? and none above/);
+    }
+    expect(entry.details.join(" ")).toMatch(/72% with profits up to £4,500, 14% from £4,500 to £9,000/);
+    // How we set them, and on what
+    expect(note).toContain("We set those shares so that an earlier version of our data gave HMRC's estimate of about 400,000 people paying £380 less on average.");
+    expect(entry.details.join(" ")).toMatch(/earlier data matched HMRC's estimate: about 400,000 people paying £380 less on average/);
+    // Only claimants gain, and no one switches
+    expect(entry.writtenFor).toMatch(/Only those traders gain, and we count no one who switches from actual expenses to the larger allowance\.$/);
+    expect(note).toContain("We count only traders we assume already claim the £1,000 allowance.");
+    expect(note).not.toContain("HMRC publishes no count");
+    const carers = POLICY_DETAILS.find((candidate) => candidate.id === "carers_allowance_earnings_taper");
+    expect(carers.details.join(" ")).toContain("Carers the limit kept out claim at 60%, our assumption.");
+    expect(carers.details.join(" ")).not.toContain("no published take-up rate exists");
+    // The earlier data's texts are gone from every reader text
+    const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
+    const stale = /no (?:traders' )?gross receipts|[Ww]ithout gross receipts|profits above £3,000 nothing|profit up to £3,000 in full|overstate the gain/;
+    for (const text of [...strings([OBR_DIFFERENCE_POINTS[id], note, OBR_COMPARISON_BASES[id], OBR_PANEL_BASES[id]]), entry.writtenFor, ...entry.details]) {
+      expect(text).not.toMatch(stale);
+    }
+    expect(registry.slice(registry.indexOf("def _create_trading_allowance_raise"), registry.indexOf("def _create_bus_fare_cap_2027"))).not.toMatch(stale);
+
+    // The extra relief a claimant gets: £3,000 less their stored £1,000,
+    // which policyengine-uk grows with per-capita mixed income from the
+    // data's 2024-25 (data/uprating_indices.yaml lists
+    // self_employment_gross_receipts beside self_employment_income). Two
+    // growth paths, which must round alike: policyengine-uk 2.165.1's own
+    // (yoy_growth.yaml, obr.per_capita.mixed_income, 2025 to 2031), which
+    // gives Microcosm's £1,932 and £1,758, and the dashboard's forecast
+    // file's 2026 to 2031 over the engine's 2025, while that file stays
+    const ENGINE = { 2025: 0.0046, 2026: 0.0297, 2027: 0.0323, 2028: 0.0355, 2029: 0.038, 2030: 0.0404, 2031: 0.04 };
+    const paths = [ENGINE];
+    const overlayFile = "src/uk_budget_data/forecast/obr_october_2026.json";
+    if (existsSync(overlayFile)) {
+      const stored = JSON.parse(readFileSync(overlayFile, "utf8")).parameter_changes["gov.economic_assumptions.yoy_growth.obr.per_capita.mixed_income"].values;
+      paths.push({ ...ENGINE, ...Object.fromEntries(Object.entries(stored).map(([period, value]) => [Number(period.slice(0, 4)), value])) });
+    }
+    const growth = (path, year) => Object.entries(path).reduce((index, [y, rate]) => (Number(y) <= year ? index * (1 + rate) : index), 1);
+    const extra = (path, year) => 3000 - 1000 * growth(path, year);
+    expect(Math.round(extra(ENGINE, 2027))).toBe(1932);
+    expect(Math.round(extra(ENGINE, 2031))).toBe(1758);
+    const hundreds = (value) => `£${(Math.round(value / 100) * 100).toLocaleString("en-GB")}`;
+    for (const path of paths) {
+      expect(note).toContain(`Each deducts up to about ${hundreds(extra(path, 2027))} more in 2027-28 and ${hundreds(extra(path, 2031))} by 2031-32, short of the £2,000 the law gives`);
+      expect(entry.details.join(" ")).toContain(`They deduct up to about ${hundreds(extra(path, 2027))} more in 2027-28 and ${hundreds(extra(path, 2031))} by 2031-32, short of the law's £2,000.`);
+      // The relief shrinks every year and never reaches the law's £2,000
+      for (let year = 2027; year < 2031; year += 1) expect(extra(path, year + 1)).toBeLessThan(extra(path, year));
+      expect(extra(path, 2027)).toBeLessThan(2000);
+      // No claimant reaches Class 4: the largest claimant profit, £9,000 in
+      // 2024-25, stays under the £12,570 lower profits limit
+      // (policyengine-uk 2.165.1, class_4/contribution_scale.yaml) to 2031-32
+      expect(9000 * growth(path, 2031)).toBeLessThan(12570);
+    }
+    expect(note).toContain("Those traders' profits fall below the £12,570 at which Class 4 starts, so we estimate no Class 4 effect");
   });
 
   // Max, 28 Oct: compare with the line of the OBR's policy Table 1.1 that
