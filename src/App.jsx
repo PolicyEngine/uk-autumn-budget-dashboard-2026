@@ -113,14 +113,14 @@ function viewFallback(value) {
 
 // The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others stay in the band, faded and
-// inactive, their reason in their accessible names. Pre-measures forecast is current law (incomes and poverty
+// inactive, their reason in their accessible names. Pre-measures forecast uses pre-Budget policy (incomes and poverty
 // without the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
 // PopulationImpactView; the Pre-measures forecast tab's (Living standards,
 // Poverty, Forecast changes) in LivingStandardsTab. Living standards and Poverty
 // are twins: with the selected measures on Population impact, without them
-// (current law) on the Pre-measures forecast.
+// (pre-Budget policy) on the Pre-measures forecast.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
   { value: "household", label: "Household calculator", year: true, policies: true },
@@ -171,7 +171,7 @@ export function opensYoungPeople({ search, hash }) {
 /**
  * Whether a page address is an old link to the Pre-measures forecast tab's
  * former Baseline outlook sub-tab (?tab=outlook or ?tab=living, with
- * ?sub=baseline): incomes and poverty under current law, now its Living
+ * ?sub=baseline): incomes and poverty under pre-Budget policy, now its Living
  * standards sub-tab, the default.
  */
 export function oldOutlookBaseline({ search }) {
@@ -1020,7 +1020,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           policies: policiesLabel(value === "household" ? householdPolicies : selectedPolicies, POLICIES),
           provisional: notice || null,
         }
-      : { policies: value === "outlook" ? "Current law, without the Budget measures" : null, provisional: null };
+      : { policies: value === "outlook" ? "Pre-Budget policy, before the Autumn Budget changes" : null, provisional: null };
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -1069,7 +1069,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   const populationContent = (sub) => {
     if (selectedPolicies.length === 0) return emptyState;
     // Living standards and Poverty show the selected measures' effect; their
-    // twins on the Pre-measures forecast (same names) show current law
+    // twins on the Pre-measures forecast (same names) show pre-Budget policy
     const twin = (twinSub) => <TwinLink tab="outlook" sub={twinSub} onShow={handleTabChange} />;
     if (sub === "living") {
       if (!results) return null;
@@ -1081,7 +1081,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             subtitle="With the selected policies: how they change income growth across the income distribution. The change by income decile is on All households."
           />
           {/* Growth across the distribution with the measures: the twin of
-              the Pre-measures forecast's chart (current law), which links
+              the Pre-measures forecast's chart (pre-Budget policy), which links
               back here */}
           <section className="report-section ls-section">
             <div className="charts-grid">
@@ -1359,7 +1359,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             )}
           </UnavailableNotice>
         ) : value === "outlook" ? (
-          // Current law needs no publication: its sub-tabs read only the
+          // The pre-Budget outlook needs no policy publication: its sub-tabs read only the
           // independent outlook, so they show whatever Population impact shows
           <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} selectedYear={distributionalYear} />
         ) : value === "policies" ? (

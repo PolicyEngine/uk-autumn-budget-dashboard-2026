@@ -1,7 +1,7 @@
 import MeasureRowLabel from "./MeasureRowLabel";
 import { formatBn, formatDifference, rowDecimals, shownDifference } from "./OBRDumbbellChart";
 import { basisLabel } from "../utils/officialBasis";
-import { NOT_COMPARABLE_SHORT, basisSides, pointsForYear } from "../utils/obrDeviationNotes";
+import { basisSides, notComparableShortFor, pointsForYear } from "../utils/obrDeviationNotes";
 import "./ObrDifferencePanel.css";
 
 const isValue = (value) => typeof value === "number" && Number.isFinite(value);
@@ -30,11 +30,12 @@ export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
   const difference = paired ? shownDifference(row.pe, row.obr, decimals) : null;
   const sides = row.panelBasis ?? basisSides(row.basis);
   const points = pointsForYear(row.points, year);
+  const shortReason = notComparableShortFor(row.measure);
   // One line where there is nothing to compare this year
   const why = row.status
     ? row.status
     : row.notComparable !== null && row.notComparable !== undefined
-      ? [`Not comparable in ${yearLabel}.`, points.some((point) => point.text === NOT_COMPARABLE_SHORT[row.id]) ? null : NOT_COMPARABLE_SHORT[row.id] ?? "See the note under the table."].filter(Boolean).join(" ")
+      ? [`Not comparable in ${yearLabel}.`, points.some((point) => point.text === shortReason) ? null : shortReason ?? row.notComparable ?? "See the note under the table."].filter(Boolean).join(" ")
       : !isValue(row.obr)
         ? `No official figure for ${yearLabel}.`
         : !isValue(row.pe)

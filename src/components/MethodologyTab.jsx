@@ -401,7 +401,7 @@ function MethodologyTab({ onShowTab }) {
                     estimate holds fixed.
                   </>,
                 ],
-                ["Years", "Fiscal years, April to March: 2027-28 runs from April 2027 to March 2028."],
+                ["Years", "Model tax years, 6 April to 5 April: 2027-28 runs from 6 April 2027 to 5 April 2028."],
                 [
                   "Prices",
                   <>
@@ -563,7 +563,7 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
-                      "We count the £100 Household Energy Payment in HBAI income. The £2 bus cap already applies on both sides, so selecting it adds no change.",
+                      "We include the one-off cash payment in HBAI income. The fare cap already applies on both sides, so selecting it adds no change.",
                       "People moved out of or into poverty are the change in the rate times that year's population in the pre-Budget projection, to the nearest 1,000.",
                     ],
                   },

@@ -1,6 +1,6 @@
 // Growth across the distribution, with the selected measures: the
-// Pre-measures forecast's "Growth across the distribution" chart (current
-// law) with the same pills, read with the measures from
+// Pre-measures forecast's "Growth across the distribution" chart (pre-Budget
+// policy) with the same pills, read with the measures from
 // public/data/income_growth_with_measures.csv. Shown on Population impact's
 // Living standards sub-tab; its twin without the measures links here and
 // this links back.
@@ -35,7 +35,7 @@ export const SHOWS = [
   {
     value: "growth",
     label: "Growth with the policies (%)",
-    description: "Each group's real income growth with the selected policies in place: the current-law forecast plus the policies' effect.",
+    description: "Each group's real income growth with the selected policies in place: the pre-Budget forecast plus the policies' effect.",
   },
 ];
 

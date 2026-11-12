@@ -111,10 +111,10 @@ export const UNMODELLED_VISUALS = {
     caption: "Surplus earnings threshold",
     max: 3000,
     rows: [
-      { label: "Current law", value: 300, text: "£300", plain: true, dashed: true },
+      { label: "Pre-Budget", value: 300, text: "£300", plain: true, dashed: true },
       { label: "Until Mar 2028", value: 2500, text: "£2,500", tone: "gain" },
     ],
-    alt: "Universal Credit surplus earnings threshold: £2,500 stays until March 2028, rather than falling to £300 under current law.",
+    alt: "Universal Credit surplus earnings threshold: £2,500 stays until March 2028, rather than falling to £300 under pre-Budget policy.",
   },
   // "55p a mile for the first 10,000 business miles is made permanent; above that, 25p rises to 35p"
   "mileage-rates": {

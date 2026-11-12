@@ -29,6 +29,7 @@ from uk_budget_data.living_standards.engine import (
     fy,
     headline_end_year,
     headline_end_year_note,
+    projection_policy_basis,
 )
 from uk_budget_data.living_standards.historical_forecast import (
     PRE_SOURCE,
@@ -132,6 +133,11 @@ def build_outlook(
     ):
         raise ValueError(
             "The projections were run on another engine than the installed one."
+        )
+    if run_meta.get("policy_basis") != projection_policy_basis():
+        raise ValueError(
+            "The projections lack the current pre-Budget policy and native "
+            "forecast basis. Regenerate them; do not relabel saved results."
         )
     uc_fix = run_meta.get("uc_health_element_extension", {"applied": False})
     if needs_uc_health_element_extension(pe_uk) and uc_fix.get(
@@ -628,6 +634,7 @@ def build_outlook(
             or datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "policyengine": pe_version,
             "policyengine_uk": pe_uk,
+            "policy_basis": run_meta["policy_basis"],
             "dataset": {
                 "name": dataset["name"],
                 "tag": dataset["tag"],
@@ -956,6 +963,21 @@ def cpi_ahc_2531_effect(growth: float, start: int, end: int) -> float:
 
 def cpi_ahc_note(median_ahc: list[dict], end_year: int) -> str:
     """CPI after housing costs caveat. The growth itself is stated in the card's summary, not here."""
+    from uk_budget_data.living_standards.forecast import (
+        native_model_forecast_inputs,
+    )
+
+    if (
+        version("policyengine-uk")
+        != PRE_SOURCE["model_inputs"]["policyengine_uk"]
+    ):
+        native_model_forecast_inputs()  # Refuse a misleading model/source label.
+        return (
+            "CPI after housing costs is a PolicyEngine derivation, not an "
+            "OBR-published forecast. This outlook uses the native model's "
+            "October 2026 CPI-AHC path, derived from CPI, rents and water "
+            "bills. No poverty rate uses this deflator."
+        )
 
     def at(y):
         return next(r["real"] for r in median_ahc if r["year"] == fy(y))

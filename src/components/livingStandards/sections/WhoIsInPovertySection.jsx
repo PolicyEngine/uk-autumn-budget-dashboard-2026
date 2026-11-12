@@ -233,7 +233,7 @@ export default function WhoIsInPovertySection({ data }) {
         : `, ${top.d > 0 ? "up" : "down"} ${Math.abs(round1(top.d)).toFixed(1)} points since ${fyDash(from)}`;
   const short = top && (
     <>
-      Under current law, {top.subject.toLowerCase()} have the highest {noun}: <strong>{formatPct(top.z ?? top.a)}</strong> in{" "}
+      Under pre-Budget policy, {top.subject.toLowerCase()} have the highest {noun}: <strong>{formatPct(top.z ?? top.a)}</strong> in{" "}
       {fyDash(to)}
       {change}.
     </>
@@ -282,7 +282,7 @@ export default function WhoIsInPovertySection({ data }) {
         filename: `${measure}-by-${breakdown}`,
         csv: () =>
           seriesCsv({
-            title: `${m.label}: ${b.label.toLowerCase()}`,
+            title: `${m.label}: ${b.label.toLowerCase()}, pre-Budget projection`,
             units: b.children ? "% of children" : "% of people",
             source: CSV_SOURCES.pe,
             rows: [...rows, { label: b.reference, z: allValue }],

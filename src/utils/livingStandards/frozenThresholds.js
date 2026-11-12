@@ -29,15 +29,27 @@ export const TRADING = { key: "trading_allowance", row: "Trading allowance" };
 
 /**
  * The trading allowance the Budget sets, from its measure's row: { start,
- * values } with `start` the first year it differs from current law (the
+ * values } with `start` the first year it differs from the baseline (the
  * year the new level takes effect) and `values` its level by fiscal year
- * from then; null without the measure.
+ * from then; null without the measure. Dated steps are read at 6 April
+ * and persist through the document's declared years; annual points keep
+ * their explicit coverage.
  */
 export function tradingAllowance(document) {
   const found = Object.values(document?.measures ?? {})
     .flatMap((m) => m?.rows ?? [])
     .find((r) => r.label === TRADING.row);
   const points = (found?.points ?? []).filter((p) => Number.isFinite(p.year) && Number.isFinite(p.after));
+  if (points.length && points.every((point) => /^\d{4}-\d{2}-\d{2}$/.test(point.key))) {
+    const dated = [...points].sort((a, b) => a.key.localeCompare(b.key));
+    const years = (document.years ?? []).filter(Number.isInteger).sort((a, b) => a - b);
+    const samples = years
+      .map((year) => ({ year, point: dated.findLast((point) => point.key <= `${year}-04-06`) }))
+      .filter(({ point }) => point);
+    const first = samples.find(({ point }) => point.after !== point.before);
+    if (!first) return null;
+    return { start: first.year, values: Object.fromEntries(samples.filter(({ year }) => year >= first.year).map(({ year, point }) => [year, point.after])) };
+  }
   const first = points.find((p) => p.after !== p.before);
   if (!first) return null;
   return { start: first.year, values: Object.fromEntries(points.filter((p) => p.year >= first.year).map((p) => [p.year, p.after])) };

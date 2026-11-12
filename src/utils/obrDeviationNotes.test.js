@@ -9,12 +9,16 @@ import {
   OBR_DEVIATION_STATEMENT,
   OBR_DIFFERENCE_POINTS,
   OBR_NOTE_FIGURES,
+  OBR_NOTES_WRITTEN_FOR,
   OBR_PANEL_BASES,
   REASON_TYPES,
   basisSides,
   pointsForYear,
   comparisonBasisFor,
   deviationNoteFor,
+  differencePointsFor,
+  panelBasisFor,
+  notComparableShortFor,
   fillNote,
   missingDeviationNotes,
 } from "./obrDeviationNotes";
@@ -109,36 +113,27 @@ describe("why our estimates differ from the official costings", () => {
   // ("400,000 individuals are estimated to have a reduction in their tax
   // bill of £380 on average"). The texts for the earlier data, which stored
   // no receipts, must not come back
-  it("says who gains from the trading allowance as the data draw them, on the card, the registry and the note alike", () => {
+  it("keeps the historical claimant explanation separate from the native model and data limits", () => {
     const id = "trading_allowance_raise";
     const note = OBR_DEVIATION_NOTES[id];
     const entry = POLICY_DETAILS.find((candidate) => candidate.id === id);
     const registry = readFileSync("src/uk_budget_data/reforms.py", "utf8").replace(/"\n\s+f?"/g, "");
-    const points = OBR_DIFFERENCE_POINTS[id].map((point) => point.text);
-    expect(points).toContain("We count only traders we assume already claim the £1,000 allowance");
-    // The shares, the same in each place a reader meets them
-    for (const text of [note, entry.writtenFor, registry]) {
+    for (const text of [note, OBR_NOTES_WRITTEN_FOR[id]]) {
       expect(text).toMatch(/72% of traders with profits up to £4,500/);
       expect(text).toMatch(/14% of those with profits from £4,500 to £9,000,? and none above/);
     }
-    expect(entry.details.join(" ")).toMatch(/72% with profits up to £4,500, 14% from £4,500 to £9,000/);
-    // How we set them, and on what
     expect(note).toContain("We set those shares so that an earlier version of our data gave HMRC's estimate of about 400,000 people paying £380 less on average.");
-    expect(entry.details.join(" ")).toMatch(/earlier data matched HMRC's estimate: about 400,000 people paying £380 less on average/);
-    // Only claimants gain, and no one switches
-    expect(entry.writtenFor).toMatch(/Only those traders gain, and we count no one who switches from actual expenses to the larger allowance\.$/);
-    expect(note).toContain("We count only traders we assume already claim the £1,000 allowance.");
-    expect(note).not.toContain("HMRC publishes no count");
-    const carers = POLICY_DETAILS.find((candidate) => candidate.id === "carers_allowance_earnings_taper");
-    expect(carers.details.join(" ")).toContain("Carers the limit kept out claim at 60%, our assumption.");
-    expect(carers.details.join(" ")).not.toContain("no published take-up rate exists");
-    // The earlier data's texts are gone from every reader text
-    const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
-    const stale = /no (?:traders' )?gross receipts|[Ww]ithout gross receipts|profits above £3,000 nothing|profit up to £3,000 in full|overstate the gain/;
-    for (const text of [...strings([OBR_DIFFERENCE_POINTS[id], note, OBR_COMPARISON_BASES[id], OBR_PANEL_BASES[id]]), entry.writtenFor, ...entry.details]) {
-      expect(text).not.toMatch(stale);
+    for (const text of [entry.writtenFor, entry.details.join(" "), registry]) {
+      expect(text).toMatch(/claim status/);
+      expect(text).toMatch(/miscellaneous income/);
+      expect(text).not.toMatch(/72%|14%/);
     }
-    expect(registry.slice(registry.indexOf("def _create_trading_allowance_raise"), registry.indexOf("def _create_bus_fare_cap_2027"))).not.toMatch(stale);
+    expect(entry.details.join(" ")).toContain("We cannot publish a national estimate on these data.");
+    const native = { id, description: entry.writtenFor };
+    expect(deviationNoteFor(native)).toBeNull();
+    expect(comparisonBasisFor(native)).toBeNull();
+    expect(differencePointsFor(native)).toBeNull();
+    expect(panelBasisFor(native)).toBeNull();
 
     // The extra relief a claimant gets: £3,000 less their stored £1,000,
     // which policyengine-uk grows with per-capita mixed income from the
@@ -162,7 +157,6 @@ describe("why our estimates differ from the official costings", () => {
     const hundreds = (value) => `£${(Math.round(value / 100) * 100).toLocaleString("en-GB")}`;
     for (const path of paths) {
       expect(note).toContain(`Each deducts up to about ${hundreds(extra(path, 2027))} more in 2027-28 and ${hundreds(extra(path, 2031))} by 2031-32, short of the £2,000 the law gives`);
-      expect(entry.details.join(" ")).toContain(`They deduct up to about ${hundreds(extra(path, 2027))} more in 2027-28 and ${hundreds(extra(path, 2031))} by 2031-32, short of the law's £2,000.`);
       // The relief shrinks every year and never reaches the law's £2,000
       for (let year = 2027; year < 2031; year += 1) expect(extra(path, year + 1)).toBeLessThan(extra(path, year));
       expect(extra(path, 2027)).toBeLessThan(2000);
@@ -424,7 +418,7 @@ describe("why our estimates differ from the official costings", () => {
     const savTax = (year) => line(62, "Income tax", year);
     const savCt = (year) => line(62, "Onshore CT", year);
     const savOurs = Object.fromEntries(Object.keys(ours.savings_income_rates_up.values).map((year) => [Number(year.slice(0, 4)), sav(year)]));
-    const savNote = deviationNoteFor({ id: "savings_income_rates_up", description: POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up").writtenFor }, OBR_DEVIATION_NOTES, savOurs);
+    const savNote = deviationNoteFor({ id: "savings_income_rates_up", description: OBR_NOTES_WRITTEN_FOR.savings_income_rates_up }, OBR_DEVIATION_NOTES, savOurs);
     expect(savNote).not.toMatch(/\[\[|\]\]|[{}]/);
     expect(savNote).toContain(`The OBR puts the costing's income tax at £${m(savTax("2027-28"))}m in 2027-28 and £${m(savTax("2028-29"))}m in 2028-29`);
     expect(savNote).toContain(`We estimate £${m(sav("2027-28"))}m for that tax year.`);
@@ -609,19 +603,33 @@ describe("why our estimates differ from the official costings", () => {
     expect(missingDeviationNotes([], notes)).toEqual([]);
   });
 
-  it("shows every note and line for its measure as its card entry was written for", () => {
+  it("shows archived notes only for their own original descriptions", () => {
     for (const id of new Set([...COMPARED, ...Object.keys(OBR_DEVIATION_NOTES), ...Object.keys(OBR_COMPARISON_BASES)])) {
       const entry = POLICY_DETAILS.find((candidate) => candidate.id === id);
       expect(entry, id).toBeDefined();
       // As written; one that takes figures from the release, without the
       // passages that need them when it is given none
-      expect(deviationNoteFor({ id, description: entry.writtenFor }), id).toBe(fillNote(OBR_DEVIATION_NOTES[id]));
-      expect(comparisonBasisFor({ id, description: entry.writtenFor }), id).toBe(OBR_COMPARISON_BASES[id]);
+      expect(deviationNoteFor({ id, description: OBR_NOTES_WRITTEN_FOR[id] }), id).toBe(OBR_NOTES_WRITTEN_FOR[id] === null ? null : fillNote(OBR_DEVIATION_NOTES[id]));
+      expect(comparisonBasisFor({ id, description: OBR_NOTES_WRITTEN_FOR[id] }), id).toBe(OBR_NOTES_WRITTEN_FOR[id] === null ? null : OBR_COMPARISON_BASES[id]);
+    }
+  });
+
+  it("cannot enable old costing claims by updating a native policy card", () => {
+    for (const [id, original] of Object.entries(OBR_NOTES_WRITTEN_FOR)) {
+      const entry = POLICY_DETAILS.find((candidate) => candidate.id === id);
+      expect(entry.writtenFor, id).not.toBe(original);
+      const measure = { id, description: entry.writtenFor };
+      for (const read of [deviationNoteFor, comparisonBasisFor, differencePointsFor, panelBasisFor, notComparableShortFor]) {
+        expect(read(measure), id).toBeNull();
+      }
+      const historical = { id, description: original };
+      expect(differencePointsFor(historical), id).toBe(original === null ? null : OBR_DIFFERENCE_POINTS[id]);
+      expect(panelBasisFor(historical), id).toBe(original === null ? null : OBR_PANEL_BASES[id]);
     }
   });
 
   it("shows a note for no other description, and none for a missing measure or note", () => {
-    const written = Object.fromEntries(POLICY_DETAILS.map((entry) => [entry.id, entry.writtenFor]));
+    const written = OBR_NOTES_WRITTEN_FOR;
     fc.assert(
       fc.property(fc.constantFrom(...COMPARED), fc.string(), (id, description) => {
         fc.pre(description !== written[id]);
@@ -633,9 +641,10 @@ describe("why our estimates differ from the official costings", () => {
       expect(textFor(undefined)).toBeNull();
       expect(textFor(null)).toBeNull();
       const [id] = COMPARED;
-      expect(textFor({ id, description: written[id] }, {})).toBeNull();
-      expect(textFor({ id, description: written[id] }, { [id]: "  " })).toBeNull();
-      expect(textFor({ id, description: written[id] }, { [id]: " Timing. " })).toBe("Timing.");
+      const current = POLICY_DETAILS.find((entry) => entry.id === id).writtenFor;
+      expect(textFor({ id, description: current }, {})).toBeNull();
+      expect(textFor({ id, description: current }, { [id]: "  " })).toBeNull();
+      expect(textFor({ id, description: current }, { [id]: " Timing. " })).toBe("Timing.");
     }
   });
 });
@@ -652,7 +661,7 @@ describe("a note's figures from the release (fillNote, OBR_NOTE_FIGURES)", () =>
   const LINE = Object.fromEntries(
     ["2029-30", "2030-31", "2031-32"].map((year) => [Number(year.slice(0, 4)), t11.find((l) => l.measure === 62 && l.category === "Income tax").values[year]]),
   );
-  const savings = (ours) => deviationNoteFor({ id: SAVINGS, description: POLICY_DETAILS.find((entry) => entry.id === SAVINGS).writtenFor }, OBR_DEVIATION_NOTES, ours);
+  const savings = (ours) => deviationNoteFor({ id: SAVINGS, description: OBR_NOTES_WRITTEN_FOR[SAVINGS] }, OBR_DEVIATION_NOTES, ours);
   const passages = (text) => [...text.matchAll(/\[\[([\s\S]*?)\]\]/g)].map((match) => match[1]);
   const placeholders = (text) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]);
 
@@ -770,9 +779,10 @@ describe("a note's figures from the release (fillNote, OBR_NOTE_FIGURES)", () =>
 
   it("gives a measure with no figures of its own its note as written", () => {
     const id = "property_income_rates_up";
-    const measure = { id, description: POLICY_DETAILS.find((entry) => entry.id === id).writtenFor };
+    const measure = { id, description: OBR_NOTES_WRITTEN_FOR[id] };
     expect(deviationNoteFor(measure, OBR_DEVIATION_NOTES, { 2029: 500 })).toBe(OBR_DEVIATION_NOTES[id]);
     // Marks in another measure's text have no figures to fill them: left out
-    expect(deviationNoteFor(measure, { [id]: "Timing. [[Ours reaches {gap}.]]" }, { 2029: 500 })).toBe("Timing.");
+    const current = { id, description: POLICY_DETAILS.find((entry) => entry.id === id).writtenFor };
+    expect(deviationNoteFor(current, { [id]: "Timing. [[Ours reaches {gap}.]]" }, { 2029: 500 })).toBe("Timing.");
   });
 });

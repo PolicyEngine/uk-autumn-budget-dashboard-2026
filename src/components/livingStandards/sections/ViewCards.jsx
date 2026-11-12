@@ -1,4 +1,4 @@
-// The current-law cards (CurrentLawSection): Incomes over time (household
+// The pre-Budget cards (CurrentLawSection): Incomes over time (household
 // income), Inequality over time, Growth across the distribution (by quintile,
 // between two chosen years) and Poverty over time (rate or depth). Every view's
 // hook runs on each render, so each keeps its own pill choices while the
@@ -40,7 +40,7 @@ export function InequalityOverTimeCard({ data }) {
   const inequality = useInequalityView(data, range, setRange);
   return (
     <ViewCard
-      title="Inequality over time (current law)"
+      title="Inequality over time (pre-Budget policy)"
       icon="trend"
       name="Inequality view"
       value="inequality"

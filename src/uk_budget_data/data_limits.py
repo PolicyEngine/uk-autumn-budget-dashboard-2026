@@ -2377,6 +2377,8 @@ def _engine_parts():
             "drop_values": measurement_branches.drop_calculated_values,
             "drop_years": measurement_branches.drop_calculated_years,
             "retained_inputs": measurement_branches.retained_input_variables,
+            "_drop_computed": Holder.__dict__["_drop_computed"],
+            "_stores_user_input": Holder.__dict__["_stores_user_input"],
         }
         _ENGINE["cleanup_functions"] = cleanup
         _ENGINE["cleanup_codes"] = {
@@ -2384,6 +2386,62 @@ def _engine_parts():
         }
         _ENGINE["cleanup_module"] = measurement_branches
         _ENGINE["model_simulation"] = ModelSimulation
+        from policyengine_core.data_storage import (
+            InMemoryStorage,
+            OnDiskStorage,
+            store_history,
+        )
+        from policyengine_core.holders import helpers as holder_helpers
+
+        # The fetched holder delegates to these metadata-only methods.
+        # Bind their actual implementations too: a storage override could
+        # otherwise read raw arrays behind unchanged Holder methods.
+        metadata_methods = {
+            Holder: (
+                "_drop_computed",
+                "_stores_user_input",
+                "_storage_period",
+                "_seed_input_storage",
+            ),
+            InMemoryStorage: (
+                "has",
+                "is_derived",
+                "mark_derived_except",
+                "drop_computed",
+                "_unmark_input",
+                "_own_inputs",
+                "_release_inputs_if_empty",
+                "_stop_sharing",
+                "_release_if_empty",
+            ),
+            OnDiskStorage: (
+                "has",
+                "is_derived",
+                "mark_derived_except",
+                "drop_computed",
+            ),
+        }
+        _ENGINE["cleanup_metadata_methods"] = {
+            kind: {
+                name: (kind.__dict__[name], kind.__dict__[name].__code__)
+                for name in names
+            }
+            for kind, names in metadata_methods.items()
+        }
+        _ENGINE["cleanup_storage_types"] = (InMemoryStorage, OnDiskStorage)
+        _ENGINE["cleanup_metadata_helpers"] = tuple(
+            (
+                module,
+                name,
+                getattr(module, name),
+                getattr(module, name).__code__,
+            )
+            for module, name in (
+                (holder_helpers, "_is_input"),
+                (holder_helpers, "_period_from_storage_key"),
+                (store_history, "_period_from_storage_key"),
+            )
+        )
     return _ENGINE
 
 
@@ -2509,7 +2567,9 @@ def _observed_get_holder(self, variable_name):
     entries = _THREAD.entries
     if entries and entries[-1].changed:
         frame = sys._getframe(1)
-        if not _engine_internal(frame, entries[-1].frame):
+        if not _engine_internal(
+            frame, entries[-1].frame
+        ) and not _native_cleanup_holder_fetch(self, variable_name, frame):
             entries[-1].observation._read(entries[-1], variable_name, frame)
     return _ENGINE["get_holder"](self, variable_name)
 
@@ -3373,6 +3433,10 @@ def _native_cleanup_holder_fetch(population, variable_name, frame) -> bool:
             is not functions["get_holder"]
             or engine["simulation"].__dict__["get_variable_population"]
             is not functions["get_variable_population"]
+            or engine["holder"].__dict__["_drop_computed"]
+            is not functions["_drop_computed"]
+            or engine["holder"].__dict__["_stores_user_input"]
+            is not functions["_stores_user_input"]
             or module.drop_calculated_values is not functions["drop_values"]
             or module.drop_calculated_years is not functions["drop_years"]
             or module.retained_input_variables
@@ -3407,6 +3471,26 @@ def _native_cleanup_holder_fetch(population, variable_name, frame) -> bool:
                 return False
         if simulation.get_variable_population(variable_name) is not population:
             return False
+        # These downstream methods make the native fetch metadata-only.
+        # A replacement can read raw storage without Holder.get_array, so
+        # preserve the holder-fetch fallback unless both are unchanged and
+        # bound to the exact holder the engine is about to return.
+        holder = population._holders.get(variable_name)
+        if (
+            holder is None
+            or holder.population is not population
+            or holder.simulation is not simulation
+            or not _native_cleanup_metadata_unchanged(holder)
+        ):
+            return False
+        for name in ("_drop_computed", "_stores_user_input"):
+            method = getattr(holder, name, None)
+            if (
+                not isinstance(method, types.MethodType)
+                or method.__self__ is not holder
+                or method.__func__ is not functions[name]
+            ):
+                return False
         helper = frame.f_back
         if helper is None or not any(
             helper.f_code is codes[name]
@@ -3425,6 +3509,53 @@ def _native_cleanup_holder_fetch(population, variable_name, frame) -> bool:
             and calculate.f_locals.get("self") is simulation
         )
     except Exception:  # noqa: BLE001 - unknown metadata fetch stays watched
+        return False
+
+
+def _native_cleanup_metadata_unchanged(holder) -> bool:
+    """The audited holder/storage metadata callees, with their real receivers.
+
+    These checks inspect callables without calling them or reading arrays.
+    Unknown storage implementations and changed helper module aliases revoke
+    the holder-fetch exemption, just as a changed top-level cleanup does.
+    """
+    try:
+        engine = _ENGINE
+        methods = engine["cleanup_metadata_methods"]
+        for kind, bindings in methods.items():
+            for name, (function, code) in bindings.items():
+                if (
+                    kind.__dict__.get(name) is not function
+                    or function.__code__ is not code
+                ):
+                    return False
+        for module, name, function, code in engine["cleanup_metadata_helpers"]:
+            if (
+                sys.modules.get(module.__name__) is not module
+                or getattr(module, name, None) is not function
+                or function.__code__ is not code
+            ):
+                return False
+        memory_type, disk_type = engine["cleanup_storage_types"]
+        subjects = (
+            (holder, engine["holder"]),
+            (holder._memory_storage, memory_type),
+        )
+        if holder._disk_storage is not None:
+            subjects += ((holder._disk_storage, disk_type),)
+        for subject, kind in subjects:
+            if type(subject) is not kind:
+                return False
+            for name, (function, _) in methods[kind].items():
+                method = getattr(subject, name, None)
+                if (
+                    not isinstance(method, types.MethodType)
+                    or method.__self__ is not subject
+                    or method.__func__ is not function
+                ):
+                    return False
+        return True
+    except Exception:  # noqa: BLE001 - unknown metadata stays watched
         return False
 
 

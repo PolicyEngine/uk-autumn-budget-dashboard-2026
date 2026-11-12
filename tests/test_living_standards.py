@@ -213,6 +213,7 @@ def projections():
         "meta": {
             "dataset_sha256": engine.certified_dataset()["sha256"],
             **engine.engine_versions(),
+            "policy_basis": engine.projection_policy_basis(),
             # What run_projections records when it applies the extension.
             "uc_health_element_extension": {
                 "applied": True,
@@ -840,14 +841,18 @@ def test_the_post_document_and_derived_series(tmp_path):
     assert (
         "kept at the pre-Budget value" in series["mortgage_interest"]["source"]
     )
-    # CPI after housing costs is the series the model runs on (one figure
-    # for chart and model), not derived from this test workbook.
-    from uk_budget_data.forecast import OBR, forecast_parameter_changes
-
-    model = forecast_parameter_changes()[OBR + "consumer_price_index_ahc"]
-    assert series["cpi_ahc"]["values"]["2027"] == (
-        model["2027-01-01.2027-12-31"]
+    # An arbitrary workbook must not silently inherit native October
+    # derivations. Only the exact reviewed October workbook opts into that
+    # separate model-input readback.
+    expected = round(
+        pre["cpi_ahc"]["2027"]
+        + series["cpi"]["values"]["2027"]
+        - pre["cpi"]["2027"],
+        4,
     )
+    assert series["cpi_ahc"]["values"]["2027"] == expected
+    assert "approximation" in series["cpi_ahc"]["source"]
+    assert "model_inputs" not in doc
     # Social rent: CPI for the year before (rounded) + 1 point. 2027 takes
     # the published September 2026 CPI (3.5%), not the EFO's 2026 CPI.
     assert "2026" not in series["social_rent"]["values"]

@@ -35,7 +35,7 @@ const pctTickFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 
 // "fall" describes it, and "about as fast" beside a 0 reads as an error
 const nearZero = (bottom, top) => Math.max(Math.abs(bottom), Math.abs(top)) < 0.15;
 
-// Current law, in words, from the signs of the two ends (rounded means, as shown)
+// Pre-Budget policy, in words, from the signs of the two ends (rounded means, as shown)
 export function trendWords(bottom, top) {
   if (nearZero(bottom, top)) return "barely change at either end";
   if (Math.abs(top - bottom) < 0.15) return bottom >= 0 && top >= 0 ? "grow about as fast at the bottom as at the top" : bottom <= 0 && top <= 0 ? "fall about as fast at the bottom as at the top" : "barely change at either end";
@@ -216,7 +216,7 @@ export function annualRange(values) {
  * `measures` ({ rows, reformId, mode }) makes it the card with the
  * selected measures: rows from income_growth_with_measures.csv, the run
  * that stands for the selection, and mode "growth" (growth with the
- * measures: current law's plus the run's effect, withMeasuresRows) or
+ * measures: pre-Budget growth plus the run's effect, withMeasuresRows) or
  * "difference" (the effect itself, in percentage points). The choices are
  * the same pills, kept in the same address parameters.
  */
@@ -369,8 +369,8 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
       </>
     )
   ) : (
-    // In the growth view the rows are current law plus the policies (LS1)
-    <>{measures ? "With the selected policies" : "Under current law"}, real incomes {trendWords(lowMean, highMean)} {ends}.</>
+    // In the growth view the rows are pre-Budget policy plus the selected policies (LS1)
+    <>{measures ? "With the selected policies" : "Under pre-Budget policy"}, real incomes {trendWords(lowMean, highMean)} {ends}.</>
   );
   // The ranges and exact groups, for About this chart
   const low = skip ? `second-lowest-income ${g.share}` : `lowest-income ${g.share}`;
@@ -416,13 +416,13 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const statistic = (block?.statistic || data.income_by_decile.statistic).replace(/decile/, "group");
   const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}. We rank them among themselves.` : "";
   const measuresAbout = !measures
-    ? " Without the policies (current law): real growth of each group's median income before any Budget policy."
+    ? " Without the policies (pre-Budget policy): real growth of each group's median income before the Autumn Budget changes."
     : diff
       ? " With the selected policies: each bar is the policies' effect on that growth, in percentage points: real growth with the policies less growth without them, from the same pair of simulations (the policy's own run, or the selected policies' combined run, and its own baseline)."
-      : " With the selected policies: current law's growth (the Pre-measures forecast tab's chart) plus the policies' effect on it, from the same pair of simulations (the policy's own run, or the selected policies' combined run, and its own baseline). So with less without is exactly the effect.";
+      : " With the selected policies: pre-Budget growth (the Pre-measures forecast tab's chart) plus the policies' effect on it, from the same pair of simulations (the policy's own run, or the selected policies' combined run, and its own baseline). So with less without is exactly the effect.";
   const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} We re-rank groups each year, so this compares positions in the distribution, not the same people.${popNote}${grouping === "vigintile" ? ` ${VIGINTILE_ABOUT}` : ""}`;
   const fileStem = `income-growth${measures ? (diff ? "-effect-of-measures" : "-with-measures") : ""}-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
-  const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected policies" : ", with the selected policies"}` : t);
+  const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected policies" : ", with the selected policies"}` : `${t}, pre-Budget projection`);
 
   return {
     period: periodLabel(first.year, end.year),
@@ -439,7 +439,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     info: {
       shows: `The real change in the median income of each ${g.share} of people, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the policies less without them, in percentage points" : ""}.`,
       how: [
-        measures && "The effect of the policies is growth with them less growth under current law.",
+        measures && "The effect of the policies is growth with them less growth under pre-Budget policy.",
         `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,
         `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${unitWord}${per} and ${between(highVals)}${unitWord} respectively.`,
         popNote.trim(),

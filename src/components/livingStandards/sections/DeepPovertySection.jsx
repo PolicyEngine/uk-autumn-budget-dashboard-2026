@@ -65,7 +65,7 @@ export default function useDepthView(data) {
     // One plain sentence; the bands and the median are defined in About
     summary: (
       <>
-        Under current law, <strong>{formatPct(end.below40)} of people</strong> are in very deep poverty in {fyDash(end.fy)}
+        Under pre-Budget policy, <strong>{formatPct(end.below40)} of people</strong> are in very deep poverty in {fyDash(end.fy)}
         {deepChange}.
       </>
     ),
@@ -87,7 +87,7 @@ export default function useDepthView(data) {
       legendItems: series.map((s) => ({ color: s.colour, label: s.name, type: "rect" })),
       csv: () =>
         seriesCsv({
-          title: "Depth of poverty (AHC)",
+          title: "Depth of poverty (AHC), pre-Budget projection",
           units: "% of people, by band of the model's median income after housing costs",
           source: CSV_SOURCES.pe,
           rows,
