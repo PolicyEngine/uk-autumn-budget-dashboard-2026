@@ -99,10 +99,15 @@ def test_household_vat_is_grossed_by_coverage_and_household_share(variable):
     """#2187 (vat_consumption_coverage): household VAT is what its recorded
     consumption owes at the statutory rates, divided by survey consumption
     coverage times the household share of receipts (0.67 × 0.7). Before
-    #2187 it was divided by 0.38, about 23% higher."""
+    #2187 it was divided by 0.38, about 23% higher. From policyengine-uk
+    2.157.1 (#2319) the model then takes off private school fees' share of
+    VAT receipts, which it counts separately (0.83% in 2027-28). This
+    household has no energy bills, whose VAT the model adds without
+    grossing it up (from 2.153.5)."""
     year = 2027
     sim = Simulation(situation=shopper(year))
-    rates = sim.tax_benefit_system.parameters(f"{year}-01-01").gov.hmrc.vat
+    parameters = sim.tax_benefit_system.parameters(f"{year}-01-01").gov
+    rates = parameters.hmrc.vat
     raw = (
         sim.calculate("full_rate_vat_consumption", year)[0]
         * rates.standard_rate
@@ -110,5 +115,7 @@ def test_household_vat_is_grossed_by_coverage_and_household_share(variable):
         * rates.reduced_rate
     )
     assert raw > 0
+    school_fees = parameters.simulation.vat.private_school_share_of_receipts
+    assert 0 < school_fees < 0.02
     ratio = sim.calculate(variable, year)[0] / raw
-    assert math.isclose(ratio, 1 / (0.67 * 0.7), rel_tol=1e-6)
+    assert math.isclose(ratio, (1 - school_fees) / (0.67 * 0.7), rel_tol=1e-6)

@@ -29,10 +29,13 @@ def energy_cut(sim):
 # The review household's VAT change under the standard rate rise and the
 # energy cut: £500 more VAT on its recorded consumption, grossed up to
 # receipts by survey coverage times the household share (0.67 × 0.7, from
-# policyengine-uk #2187 at 2.151.0), less the cut's £40 (1,680 × 2.5% /
-# 1.05), which the template doesn't gross. On 2.132.6, grossed by 0.38, it
-# was 1,275.79.
-GROSSED_RISE_LESS_CUT = 1026.10
+# policyengine-uk #2187 at 2.151.0), less private school fees' share of
+# receipts, which the model counts separately (0.83% in 2027-28, from
+# policyengine-uk #2319 at 2.157.1), less the cut's £40 (1,680 × 2.5% /
+# 1.05), which the template doesn't gross: 500 / 0.469 × (1 - 0.0083) - 40.
+# It was 1,026.10 on 2.151.0, before the school-fee share, and 1,275.79 on
+# 2.132.6, grossed by 0.38.
+GROSSED_RISE_LESS_CUT = 1017.25
 
 
 def review_household():
