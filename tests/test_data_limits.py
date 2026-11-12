@@ -80,6 +80,16 @@ def simulation(changes=None, modifier=None):
     return Simulation(situation=household(), scenario=scenario)
 
 
+def income_tax_formula_variable(sim):
+    """Select the native formula, as the PTA modifier does: the adopted
+    engine builds income_tax from the pre-charge tax and the WFP charge.
+    Keep _replace_formula's refusal to wrap a composite variable intact.
+    """
+    before_charge = "income_tax_before_winter_fuel_payment_charge"
+    system = sim.tax_benefit_system
+    return before_charge if before_charge in system.variables else "income_tax"
+
+
 # --- the registry --------------------------------------------------------
 
 
@@ -430,7 +440,7 @@ def test_a_replaced_formula_unrelated_to_the_inputs_touches_nothing():
         return person("employment_income", period) * 0
 
     reformed = simulation()
-    _replace_formula(reformed, "income_tax", flat)
+    _replace_formula(reformed, income_tax_formula_variable(reformed), flat)
     assert limits_touched(simulation(), reformed) == []
 
 
@@ -692,7 +702,7 @@ def closing_over_its_simulation(sim):
         assert sim is not None
         return person("employment_income", period) * 0
 
-    _replace_formula(sim, "income_tax", formula)
+    _replace_formula(sim, income_tax_formula_variable(sim), formula)
     return sim
 
 
@@ -1790,7 +1800,7 @@ def income_tax_by_vectorize(sim):
     def formula(person, period, parameters):
         return pricer(person("employment_income", period))
 
-    _replace_formula(sim, "income_tax", formula)
+    _replace_formula(sim, income_tax_formula_variable(sim), formula)
     return sim
 
 
@@ -2142,7 +2152,7 @@ def income_tax_with_a_message(sim):
             raise ValueError(f"negative income in {period}")
         return income * 0.01
 
-    _replace_formula(sim, "income_tax", formula)
+    _replace_formula(sim, income_tax_formula_variable(sim), formula)
     return sim
 
 
@@ -2152,7 +2162,7 @@ def income_tax_by_a_composed_name(sim):
     def formula(person, period, parameters):
         return person(f"{base}_income", period) * 0.01
 
-    _replace_formula(sim, "income_tax", formula)
+    _replace_formula(sim, income_tax_formula_variable(sim), formula)
     return sim
 
 
