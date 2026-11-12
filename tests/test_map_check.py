@@ -162,9 +162,8 @@ def test_the_means_are_simple_means_of_the_published_figures():
 
 def test_the_map_is_set_against_the_national_averages_move():
     c = one(compared(), ALPHA, 2029)
-    old, new = map_check.load_national(
-        map_check.DirectorySource(OLD)
-    ), map_check.load_national(map_check.DirectorySource(NEW))
+    old = map_check.load_national(map_check.DirectorySource(OLD))
+    new = map_check.load_national(map_check.DirectorySource(NEW))
     before, after = old.averages[(ALPHA, 2029)], new.averages[(ALPHA, 2029)]
     assert (before, after) == (Decimal("-10.0"), Decimal("-11.0"))
     drift = map_check.map_against_national(c, before, after)
@@ -191,6 +190,19 @@ def test_the_national_average_comes_from_the_artifact_the_area_run_bound():
     # A blank cell is a withheld national figure.
     assert new.averages[(ALPHA, 2030)] is None
     assert new.averages[(GAMMA, 2029)] == Decimal("2.5")
+
+
+def test_a_folder_with_no_usable_manifest_gives_no_national_figures(tmp_path):
+    shutil.copy(NEW / "constituency.csv", tmp_path / "constituency.csv")
+    empty = map_check.load_national(map_check.DirectorySource(tmp_path))
+    assert (empty.names, empty.averages, empty.order) == ({}, {}, [])
+    (tmp_path / "manifest.json").write_text('{"measures": ["alpha"]}')
+    (tmp_path / "area_provenance.json").write_text('{"reforms": null}')
+    odd = map_check.load_national(map_check.DirectorySource(tmp_path))
+    assert (odd.names, odd.averages, odd.order) == ({}, {}, [])
+    (tmp_path / "manifest.json").write_text("not json")
+    with pytest.raises(map_check.MapCheckError, match="is not JSON"):
+        map_check.load_national(map_check.DirectorySource(tmp_path))
 
 
 def test_a_households_file_weights_the_means():

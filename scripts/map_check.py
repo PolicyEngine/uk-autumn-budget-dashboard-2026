@@ -361,7 +361,12 @@ def load_national(source) -> National:
     decile. A blank cell (withheld) reads as None.
     """
     national = National()
-    measures = _json(source, MANIFEST).get("measures", {})
+    measures = _json(source, MANIFEST).get("measures")
+    bound = _json(source, PROVENANCE).get("reforms")
+    # A section of another shape names no artifact; the report then shows
+    # n/a for the national figures instead of stopping.
+    measures = measures if isinstance(measures, dict) else {}
+    bound = bound if isinstance(bound, dict) else {}
     artifacts: dict[str, str] = {}
     for reform, entry in measures.items():
         national.order.append(reform)
@@ -370,7 +375,6 @@ def load_national(source) -> National:
                 national.names[reform] = str(entry["name"])
             if entry.get("artifact"):
                 artifacts[reform] = str(entry["artifact"])
-    bound = _json(source, PROVENANCE).get("reforms", {})
     for reform, entry in bound.items():
         if isinstance(entry, dict) and entry.get("artifact"):
             artifacts[reform] = str(entry["artifact"])
