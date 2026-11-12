@@ -311,3 +311,15 @@ def test_the_declared_basis_names_the_installed_engine_and_no_march_rates():
     assert ships in basis["notes"]
     for text in (basis["forecast"]["vintage"], basis["notes"]):
         assert "March 2026" not in text
+
+    # Naming the native forecast must not hide the retained overlay's
+    # older per-capita population derivation. This checks the declaration,
+    # not approval of a new macro path or removal of the tripwire above.
+    assert (
+        "per-capita GDP, mixed income and non-labour income" in basis["notes"]
+    )
+    assert "older population path" in basis["notes"]
+    assert (
+        "Household weights use the installed model's October population path."
+        in basis["notes"]
+    )

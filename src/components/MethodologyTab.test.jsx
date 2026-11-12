@@ -163,19 +163,21 @@ describe("MethodologyTab", () => {
   // tables), and the national build 0639b9c7's calibration takes most OBR
   // totals' 2025-26 from the October 2026 tables. The page said the
   // opposite for the earlier engine and data; those sentences must not
-  // come back
-  it("says the growth rates, fuel volumes, population and 2025 follow the October 2026 forecast, with three stated differences", () => {
+  // come back. The retained per-capita overlay still uses an older
+  // population derivation, separately from native October population
+  it("distinguishes the retained per-capita overlay from the native October population path", () => {
     const { container } = renderTab();
     const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
     const card = within(limitations).getByRole("button", { name: "Economic assumptions" }).closest(".method-topic");
-    expect(card).toHaveTextContent("The fuel volumes behind fuel duty and the population follow that forecast too, and 2025 is the outturn it publishes.");
+    expect(card).toHaveTextContent("The installed model's fuel volumes and population follow that forecast too, and 2025 is the outturn it publishes.");
     const differences = [...card.querySelectorAll("ul.method-list li")].map((item) => item.textContent.replace(/\s+/g, " ").trim());
-    expect(differences).toEqual([
+    expect(differences).toEqual(expect.arrayContaining([
+      "Per-capita GDP, mixed income and non-labour income retain the dashboard overlay's rates, derived using an older population path. Household weights instead follow the installed model's October population path.",
       "Mortgage interest keeps policyengine-uk's growth from 2030, where the OBR's table stops.",
       "CPI after housing costs and social rents are PolicyEngine's own derivations from the October figures, not OBR series.",
       "Calibration fits the weights to OBR receipts and spending totals for 2025. Most take 2024-25 from the March 2026 forecast's tables and 2025-26 from the October 2026 forecast's.",
-    ]);
-    expect(card).toHaveTextContent("Three things differ:");
+    ]));
+    expect(card).not.toHaveTextContent("Three things differ:");
     const data = container.querySelector(`#${METHOD_SECTIONS.data}`);
     expect(data).toHaveTextContent("receipts and spending totals from the OBR's March 2026 and October 2026 forecasts");
     expect(data).toHaveTextContent("A few series are not that forecast's own");

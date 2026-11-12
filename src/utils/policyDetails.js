@@ -389,10 +389,9 @@ export const POLICY_DETAILS = [
     details: [
       "Applies the taper to carers' weekly net earnings in the survey.",
       "The taper starts within 2030-31, on a date still to come, so the model counts half that year.",
-      // The 60% is a chosen rate, not a published one (Microcosm's take-up
-      // contract, carers_allowance_newly_entitled: "No published rate
-      // exists for them")
-      "Carers the limit kept out claim at 60%, our assumption: no published take-up rate exists for them.",
+      // The 60% is the chosen assumption in Microcosm's take-up contract
+      // (carers_allowance_newly_entitled), not a measured take-up claim.
+      "Carers the limit kept out claim at 60%, our assumption.",
       "On Universal Credit, the allowance counts in full as unearned income, so a carer gains nothing.",
       "DWP would deduct the PAYE on it from earnings; the model does not, so such a carer can lose.",
     ],

@@ -113,7 +113,11 @@ describe("why our estimates differ from the official costings", () => {
     expect(entry.details.join(" ")).toMatch(/earlier data matched HMRC's estimate: about 400,000 people paying £380 less on average/);
     // Only claimants gain, and no one switches
     expect(entry.writtenFor).toMatch(/Only those traders gain, and we count no one who switches from actual expenses to the larger allowance\.$/);
-    expect(note).toContain("We count only traders who already claim the £1,000 allowance.");
+    expect(note).toContain("We count only traders we assume already claim the £1,000 allowance.");
+    expect(note).not.toContain("HMRC publishes no count");
+    const carers = POLICY_DETAILS.find((candidate) => candidate.id === "carers_allowance_earnings_taper");
+    expect(carers.details.join(" ")).toContain("Carers the limit kept out claim at 60%, our assumption.");
+    expect(carers.details.join(" ")).not.toContain("no published take-up rate exists");
     // The earlier data's texts are gone from every reader text
     const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
     const stale = /no (?:traders' )?gross receipts|[Ww]ithout gross receipts|profits above £3,000 nothing|profit up to £3,000 in full|overstate the gain/;

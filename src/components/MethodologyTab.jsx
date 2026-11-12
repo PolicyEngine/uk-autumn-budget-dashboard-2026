@@ -911,12 +911,17 @@ function MethodologyTab({ onShowTab }) {
             preview="The October 2026 forecast · Series not from it · Weights · Fuel duty"
           >
             <p className="method-more">
-              The Budget figures grow prices, earnings, rents, mortgage interest, other incomes and
-              council tax at the rates of the <SourceLink id="obr_efo_current" />, in the baseline
-              and the reform alike. The fuel volumes behind fuel duty and the population follow that
-              forecast too, and 2025 is the outturn it publishes. Three things differ:
+              The Budget figures grow prices, earnings, rents, mortgage interest and council tax at the
+              rates of the <SourceLink id="obr_efo_current" />, in the baseline and the reform alike.
+              The installed model&apos;s fuel volumes and population follow that forecast too, and 2025
+              is the outturn it publishes. Differences include:
             </p>
             <ul className="method-list">
+              <li>
+                Per-capita GDP, mixed income and non-labour income retain the dashboard overlay&apos;s
+                rates, derived using an older population path. Household weights instead follow the
+                installed model&apos;s October population path.
+              </li>
               <li>Mortgage interest keeps policyengine-uk&apos;s growth from 2030, where the OBR&apos;s table stops.</li>
               <li>
                 CPI after housing costs and social rents are PolicyEngine&apos;s own derivations from
