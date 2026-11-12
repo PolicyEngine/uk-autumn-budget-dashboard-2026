@@ -21,6 +21,7 @@ requires its current receipt rules; this module never reimplements a digest.
 """
 
 import json
+import math
 import os
 import re
 import subprocess
@@ -379,18 +380,239 @@ def scenario_identity(scenario, *, name: str, revision: CodeRevision):
         raise ReceiptUnavailable(name, str(error)) from error
 
 
+RESOLVED_COMMON_POLICY = "resolved_common_policy/v1"
+COMMON_POLICY_SCHEMA = "uk-budget-dashboard/common-policy-reference/v1"
+# No historical dashboard publication used this post-Budget native bundle.
+# A receipt naming it cannot opt back into the old, bare-scenario contract
+# by deleting comparison metadata or editing an untrusted basis label.
+NATIVE_COMMON_POLICY_MODEL_VERSIONS = frozenset({"2.174.1"})
+_PHASE_KEYS = {
+    "reform_applied_before_data_load",
+    "baseline_applied_before_data_load",
+}
+
+
+def comparison_scenario(scenario):
+    """The parameter-only scenario the runtime actually constructs.
+
+    The released receipt composition v1 has one phase and requires
+    disjoint member paths. It cannot describe a before-data reference
+    followed by an after-data modifier. Refuse that case until the public
+    receipt API supports phased scenarios, rather than dropping its timing.
+    """
+    from uk_budget_data.forecast import with_forecast
+
+    effective = with_forecast(scenario)
+    before, after = effective.parts_by_data_load()
+    if after is not None or (
+        before is not None
+        and (before.simulation_modifier is not None or before.dated_reforms)
+    ):
+        raise ReceiptUnavailable(
+            "shared pre-Budget comparison",
+            "the released receipt API cannot bind this phased or structural "
+            "comparison; its modifier and timing must be supported before publication",
+        )
+    return before
+
+
+def _requires_common_policy_reference(document) -> bool:
+    execution = document.get("execution_receipt") or {}
+    model = execution.get("model") or {}
+    return model.get("version") in NATIVE_COMMON_POLICY_MODEL_VERSIONS
+
+
+def comparison_identity(scenario, *, name: str, revision: CodeRevision):
+    """Bind the effective reference plus policy, using its actual phase."""
+    return scenario_identity(
+        comparison_scenario(scenario), name=name, revision=revision
+    )
+
+
+def _encoded_parameters(value):
+    """JSON-safe metadata, with the receipt API's reserved infinity marker."""
+    api, _ = receipt_api()
+    return _encode_parameter_value(value, api.NONFINITE_KEY)
+
+
+def _encode_parameter_value(value, nonfinite_key):
+    if isinstance(value, Mapping):
+        if nonfinite_key in value:
+            raise ValueError(
+                "a parameter payload uses the reserved nonfinite key"
+            )
+        encoded = {}
+        for key, item in value.items():
+            key = str(key)
+            if key in encoded:
+                raise ValueError(
+                    "parameter keys collide after JSON conversion"
+                )
+            encoded[key] = _encode_parameter_value(item, nonfinite_key)
+        return encoded
+    if isinstance(value, float):
+        if math.isnan(value):
+            raise ValueError("a parameter payload contains NaN")
+        if math.isinf(value):
+            return {nonfinite_key: "Infinity" if value > 0 else "-Infinity"}
+    if value is None or type(value) in (str, bool, int, float):
+        return value
+    raise ValueError(f"unsupported parameter metadata: {type(value).__name__}")
+
+
+def _decoded_parameters(value):
+    api, _ = receipt_api()
+    return _decode_parameter_value(value, api.NONFINITE_KEY)
+
+
+def _decode_parameter_value(value, nonfinite_key):
+    if isinstance(value, dict):
+        if nonfinite_key in value:
+            if set(value) != {nonfinite_key} or value[nonfinite_key] not in (
+                "Infinity",
+                "-Infinity",
+            ):
+                raise ValueError("invalid nonfinite parameter marker")
+            return (
+                math.inf if value[nonfinite_key] == "Infinity" else -math.inf
+            )
+        return {
+            key: _decode_parameter_value(item, nonfinite_key)
+            for key, item in value.items()
+        }
+    if value is None or type(value) in (str, bool, int, float):
+        if isinstance(value, float) and not math.isfinite(value):
+            raise ValueError("nonfinite metadata must use the reserved marker")
+        return value
+    raise ValueError("invalid parameter metadata")
+
+
+def common_policy_reference(revision: CodeRevision) -> dict:
+    """The common reference's parameters, identity and complete source record."""
+    from uk_budget_data.budget_policy import policy_record
+
+    api, _ = receipt_api()
+    common = comparison_scenario(None)
+    record = policy_record()
+    if (
+        record["native_model_version"]
+        not in NATIVE_COMMON_POLICY_MODEL_VERSIONS
+    ):
+        raise ReceiptUnavailable(
+            "common pre-Budget policy",
+            "the adopted model needs an explicit comparison downgrade guard before generation",
+        )
+    return {
+        "schema": COMMON_POLICY_SCHEMA,
+        "parameter_changes": _encoded_parameters(common.parameter_changes),
+        "identity": json.loads(
+            scenario_identity(
+                common, name="common pre-Budget policy", revision=revision
+            ).model_dump_json()
+        ),
+        "policy_record": record,
+        "policy_record_sha256": api.content_sha256(record),
+    }
+
+
+def _parameter_delta(scenario) -> dict:
+    """A bare member delta; the reference is not applied to each member."""
+    from policyengine_uk.utils.scenario import Scenario
+
+    if scenario is None:
+        return {"parameter_changes": None, "applied_before_data_load": False}
+    if scenario.simulation_modifier is not None or scenario.dated_reforms:
+        raise ReceiptUnavailable(
+            "shared pre-Budget comparison",
+            "the released receipt API cannot bind structural member deltas "
+            "in the resolved common-policy composition",
+        )
+    # Scenario addition canonicalises paths exactly as runtime composition.
+    normal = Scenario() + scenario
+    return {
+        "parameter_changes": _encoded_parameters(normal.parameter_changes),
+        "applied_before_data_load": normal.applied_before_data_load,
+    }
+
+
+def _delta_scenario(delta):
+    from policyengine_uk.utils.scenario import Scenario
+
+    if (
+        not isinstance(delta, dict)
+        or set(delta) != {"parameter_changes", "applied_before_data_load"}
+        or type(delta["applied_before_data_load"]) is not bool
+    ):
+        raise ValueError("invalid parameter-only member delta")
+    return Scenario(
+        parameter_changes=_decoded_parameters(delta["parameter_changes"]),
+        applied_before_data_load=delta["applied_before_data_load"],
+    )
+
+
+def _resolved_scenario(common: dict, changes):
+    from policyengine_uk.utils.scenario import Scenario
+
+    joined = Scenario(
+        parameter_changes=_decoded_parameters(common["parameter_changes"]),
+        applied_before_data_load=True,
+    ) + Scenario(parameter_changes=changes)
+    before, after = joined.parts_by_data_load()
+    if after is not None:
+        raise ValueError("resolved parameter composition has a late phase")
+    return before
+
+
+def _merged_deltas(records, side: str) -> dict:
+    """Merge only disjoint bare deltas, sharing permitted settings once."""
+    from uk_budget_data.publication.combine import SHARED_SETTINGS
+
+    merged = {}
+    for record in records:
+        if side == "baseline" and not record["baseline_bound"]:
+            continue
+        changes = (
+            _delta_scenario(record[f"{side}_delta"]).parameter_changes or {}
+        )
+        for path, value in changes.items():
+            if path in merged:
+                if path.startswith(SHARED_SETTINGS) and merged[path] == value:
+                    continue
+                raise ValueError(f"two member deltas change {path}")
+            merged[path] = value
+    return merged
+
+
+def comparison_metadata(reform, config, revision, *, reference=None) -> dict:
+    """A single run's inspectable recipe, bound in its artifact digest."""
+    return {
+        "schema": "uk-budget-dashboard/policy-comparison/v1",
+        "common_policy_reference": (
+            reference
+            if reference is not None
+            else common_policy_reference(revision)
+        ),
+        "baseline_delta": _parameter_delta(
+            reform.baseline_scenario_for(config)
+        ),
+        "reform_delta": _parameter_delta(reform.to_scenario()),
+    }
+
+
 def measure_identities(reform, config, revision: CodeRevision):
     """The (baseline, reform) identities of one measure.
 
-    The baseline is ``Reform.baseline_scenario_for``, the one the
-    simulations are built with.
+    Both identities include the runtime's shared pre-Budget reference.
+    The baseline starts with ``Reform.baseline_scenario_for`` and the
+    reform with ``Reform.to_scenario``; their effective parameter-only
+    scenarios run before data load.
     """
     baseline = reform.baseline_scenario_for(config)
     return (
-        scenario_identity(
+        comparison_identity(
             baseline, name=f"{reform.id} baseline", revision=revision
         ),
-        scenario_identity(
+        comparison_identity(
             reform.to_scenario(), name=reform.id, revision=revision
         ),
     )
@@ -405,24 +627,26 @@ def combined_identities(
     baseline_applied_before_data_load: bool,
     member_revisions: Optional[Mapping[str, CodeRevision]] = None,
 ):
-    """The (baseline, reform) identities of a combined run, its members and
-    how they were composed.
+    """Bind the resolved common reference once, then the bare member deltas.
 
-    Each side is the ordered composition of the members' own identities,
-    bound with the phase (before or after data load) that side's combined
-    Scenario runs in. ``members`` must already be in application order.
-
-    Each member record says whether its baseline is one of the composed
-    baselines (``baseline_bound``), and the returned ``composition`` gives
-    each side's phase, so the gate can rebuild both identities from the
-    records alone (:func:`composition_problems`).
-
-    A member in ``member_revisions`` is bound at that revision, the one its
-    own receipt was made at (:func:`approved_revision`), so its record is
-    the identity that receipt holds; the others are bound at ``revision``.
+    Effective member identities remain in their records for comparison
+    with their own approvals. They are not reapplied as runtime members:
+    each already contains the common rollback and would undo earlier
+    restores. The explicit parameter recipe lets the gate rebuild the
+    effective member and combined identities without misusing the released
+    disjoint-path, single-phase composition representation.
     """
     api, _ = receipt_api()
-    baselines, reforms, records = [], [], []
+    if (
+        reform_applied_before_data_load is not True
+        or baseline_applied_before_data_load is not True
+    ):
+        raise ReceiptUnavailable(
+            "combined pre-Budget comparison",
+            "resolved parameter comparisons must be bound in their actual before-data phase",
+        )
+    common = common_policy_reference(revision)
+    records = []
     configured_included = False
     for member in members:
         baseline, reform = measure_identities(
@@ -432,34 +656,40 @@ def combined_identities(
         # which the combined run applies once, so it is bound once.
         bound = member.has_custom_baseline() or not configured_included
         if bound:
-            baselines.append(baseline)
             configured_included |= not member.has_custom_baseline()
-        reforms.append(reform)
         records.append(
             {
                 "id": member.id,
                 "baseline": json.loads(baseline.model_dump_json()),
                 "reform": json.loads(reform.model_dump_json()),
                 "baseline_bound": bound,
+                "baseline_delta": _parameter_delta(
+                    member.baseline_scenario_for(config)
+                ),
+                "reform_delta": _parameter_delta(member.to_scenario()),
             }
         )
     name = "+".join(member.id for member in members)
     composition = {
-        "reform_applied_before_data_load": reform_applied_before_data_load,
-        "baseline_applied_before_data_load": (
-            baseline_applied_before_data_load
-        ),
+        "method": RESOLVED_COMMON_POLICY,
+        "common_policy_reference": common,
+        # with_forecast moves all parameter-only deltas to the reference's
+        # before-data phase, irrespective of their bare Scenario flag.
+        "reform_applied_before_data_load": True,
+        "baseline_applied_before_data_load": True,
     }
     try:
         return (
-            api.composed_reform_identity(
-                baselines,
-                applied_before_data_load=baseline_applied_before_data_load,
+            scenario_identity(
+                _resolved_scenario(
+                    common, _merged_deltas(records, "baseline")
+                ),
+                revision=revision,
                 name=f"{name} baseline",
             ),
-            api.composed_reform_identity(
-                reforms,
-                applied_before_data_load=reform_applied_before_data_load,
+            scenario_identity(
+                _resolved_scenario(common, _merged_deltas(records, "reform")),
+                revision=revision,
                 name=name,
             ),
             records,
@@ -494,10 +724,13 @@ def composition_problems(document: dict) -> list[str]:
     composition = dashboard.get("composition")
     if not members:
         return []
-    if not isinstance(composition, dict) or set(composition) != {
-        "reform_applied_before_data_load",
-        "baseline_applied_before_data_load",
-    }:
+    if isinstance(composition, dict) and "method" in composition:
+        return _resolved_composition_problems(document)
+    if _requires_common_policy_reference(document):
+        return [
+            "its native execution model requires the resolved common-policy composition"
+        ]
+    if not isinstance(composition, dict) or set(composition) != _PHASE_KEYS:
         return ["it does not record how its members were composed"]
     api, _ = receipt_api()
     name = "+".join(str(record.get("id")) for record in members)
@@ -515,7 +748,6 @@ def composition_problems(document: dict) -> list[str]:
             type(record["baseline_bound"]) is not bool for record in members
         ):
             return ["its member records do not say which baselines it applied"]
-        bound = [record for record in members if record["baseline_bound"]]
         baselines = [
             identity
             for identity, record in zip(own_baselines, members)
@@ -549,6 +781,13 @@ def composition_problems(document: dict) -> list[str]:
                 f"its {side} identity is not the composition of its "
                 "member records"
             )
+    return problems + _shared_baseline_problems(dashboard, members)
+
+
+def _shared_baseline_problems(dashboard, members) -> list[str]:
+    """Keep the existing configured-baseline sharing rule on both schemas."""
+    problems = []
+    bound = [record for record in members if record["baseline_bound"]]
     # Only the configured baseline is shared, so applied once for every
     # member that uses it. A member's own baseline is applied for that
     # member: it may never be left out, even when another member's is the
@@ -578,6 +817,172 @@ def composition_problems(document: dict) -> list[str]:
                 f"member {record['id']}'s baseline is not part of the run"
             )
     return problems
+
+
+def _resolved_composition_problems(document: dict) -> list[str]:
+    """Reconstruct a shared-reference recipe without executing any modifier."""
+    dashboard = document["dashboard"]
+    composition = dashboard.get("composition")
+    if (
+        not isinstance(composition, dict)
+        or set(composition)
+        != _PHASE_KEYS | {"method", "common_policy_reference"}
+        or composition.get("method") != RESOLVED_COMMON_POLICY
+    ):
+        return ["it does not record a supported common-policy composition"]
+    if any(composition[field] is not True for field in _PHASE_KEYS):
+        return ["its resolved parameter composition must run before data load"]
+    api, _ = receipt_api()
+    members = dashboard.get("members") or []
+    common = composition["common_policy_reference"]
+    problems = []
+    try:
+        _validate_common_reference(common)
+        if any(
+            type(record["baseline_bound"]) is not bool for record in members
+        ):
+            raise ValueError(
+                "member records do not say which baselines they applied"
+            )
+        for record in members:
+            for side in ("baseline", "reform"):
+                api.ReformIdentity.model_validate(record[side])
+                delta = _delta_scenario(record[f"{side}_delta"])
+                effective = scenario_identity(
+                    _resolved_scenario(common, delta.parameter_changes),
+                    name=f"{record['id']} {side}",
+                    revision=DEFINITION_REVISION,
+                )
+                if _identity_core(record[side]) != _identity_core(
+                    effective.model_dump(mode="json")
+                ):
+                    problems.append(
+                        f"member {record['id']}'s {side} identity does not bind the common reference and its delta"
+                    )
+        for side in ("baseline", "reform"):
+            effective = scenario_identity(
+                _resolved_scenario(common, _merged_deltas(members, side)),
+                name=f"combined {side}",
+                revision=DEFINITION_REVISION,
+            )
+            if _identity_core(
+                document["execution_receipt"].get(side)
+            ) != _identity_core(effective.model_dump(mode="json")):
+                problems.append(
+                    f"its {side} identity is not the resolved common reference and member deltas"
+                )
+    except (api.ReceiptError, ValueError, KeyError, TypeError) as error:
+        return [f"its common-policy recipe cannot be composed: {error}"]
+    return problems + _shared_baseline_problems(dashboard, members)
+
+
+def _validate_common_reference(common):
+    from uk_budget_data.budget_policy import (
+        policy_record,
+        pre_budget_policy_changes,
+    )
+
+    api, _ = receipt_api()
+    if (
+        not isinstance(common, dict)
+        or set(common)
+        != {
+            "schema",
+            "parameter_changes",
+            "identity",
+            "policy_record",
+            "policy_record_sha256",
+        }
+        or common["schema"] != COMMON_POLICY_SCHEMA
+    ):
+        raise ValueError("invalid common-policy reference")
+    if (
+        api.content_sha256(common["policy_record"])
+        != common["policy_record_sha256"]
+    ):
+        raise ValueError(
+            "the common policy source record has a different digest"
+        )
+    if common["policy_record"] != policy_record():
+        raise ValueError(
+            "the common policy source record differs from the running definitions"
+        )
+    if common["parameter_changes"] != _encoded_parameters(
+        pre_budget_policy_changes()
+    ):
+        raise ValueError(
+            "the common policy parameters differ from their source record"
+        )
+    reference = scenario_identity(
+        _resolved_scenario(common, None),
+        name="common pre-Budget policy",
+        revision=DEFINITION_REVISION,
+    )
+    api.ReformIdentity.model_validate(common["identity"])
+    if _identity_core(common["identity"]) != _identity_core(
+        reference.model_dump(mode="json")
+    ):
+        raise ValueError(
+            "the common policy reference identity does not bind its parameters"
+        )
+
+
+def _comparison_metadata_problems(document):
+    """Validate a single's effective identities against its recorded recipe."""
+    dashboard = document.get("dashboard") or {}
+    comparison = dashboard.get("policy_comparison")
+    if dashboard.get("members"):
+        if comparison is not None:
+            return [
+                "a combined run must use its common-policy composition, not a single recipe"
+            ]
+        return (
+            composition_problems(document)
+            if _requires_common_policy_reference(document)
+            else []
+        )
+    if comparison is None:
+        if _requires_common_policy_reference(document):
+            return [
+                "its native execution model requires an explicit common-policy comparison"
+            ]
+        return []  # Historical receipts did not use a shared policy reference.
+    api, _ = receipt_api()
+    try:
+        if (
+            not isinstance(comparison, dict)
+            or set(comparison)
+            != {
+                "schema",
+                "common_policy_reference",
+                "baseline_delta",
+                "reform_delta",
+            }
+            or comparison["schema"]
+            != "uk-budget-dashboard/policy-comparison/v1"
+        ):
+            raise ValueError("invalid single-policy comparison recipe")
+        common = comparison["common_policy_reference"]
+        _validate_common_reference(common)
+        problems = []
+        for side in ("baseline", "reform"):
+            delta = _delta_scenario(comparison[f"{side}_delta"])
+            identity = scenario_identity(
+                _resolved_scenario(common, delta.parameter_changes),
+                name=side,
+                revision=DEFINITION_REVISION,
+            )
+            if _identity_core(
+                document["execution_receipt"].get(side)
+            ) != _identity_core(identity.model_dump(mode="json")):
+                problems.append(
+                    f"its {side} identity does not bind its common reference and policy delta"
+                )
+        return problems
+    except (api.ReceiptError, ValueError, KeyError, TypeError) as error:
+        return [
+            f"its single-policy comparison cannot be reconstructed: {error}"
+        ]
 
 
 def dataset_years(sim) -> Optional[list[int]]:
@@ -656,6 +1061,9 @@ class ReceiptInputs:
     member_outputs: Optional[dict[str, str]] = None
     # Combined runs: each side's phase (see combined_identities).
     composition: Optional[dict] = None
+    # Single runs: an explicit shared reference and the two bare deltas.
+    # Combined runs carry that reference once inside composition instead.
+    policy_comparison: Optional[dict] = None
     generator_argv: list[str] = field(default_factory=lambda: list(sys.argv))
     # The data limits the measure touches (data_limits.limits_touched on
     # the two simulations), so it is published as not computable. Required,
@@ -767,6 +1175,8 @@ def build_receipt_document(
     }
     if inputs.personal is not None:
         dashboard["personal"] = inputs.personal
+    if inputs.policy_comparison is not None:
+        dashboard["policy_comparison"] = inputs.policy_comparison
     # Thin cells by table, year and group, never a figure: the gate and the
     # public data check refuse an artifact whose tables still hold one.
     if inputs.disclosure_floor is not None:
@@ -858,7 +1268,7 @@ def document_problems(document: dict) -> list[str]:
         != receipt.outputs_sha256
     ):
         problems.append("the listed files do not match outputs_sha256")
-    return problems
+    return problems + _comparison_metadata_problems(document)
 
 
 def artifact_sha256(document: dict) -> str:

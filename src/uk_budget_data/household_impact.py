@@ -1246,9 +1246,9 @@ def household_entities(
         people[0]["self_employment_income"] = (
             answers.self_employment_receipts - answers.self_employment_expenses
         )
-        people[0]["self_employment_gross_receipts"] = (
-            answers.self_employment_receipts
-        )
+        people[0][
+            "self_employment_gross_receipts"
+        ] = answers.self_employment_receipts
     if answers.is_carer:
         # Only for a carer, so a non-carer's household is exactly as before
         # (no care_hours: policyengine-uk's default, 0)

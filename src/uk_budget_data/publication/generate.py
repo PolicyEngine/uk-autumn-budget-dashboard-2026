@@ -73,11 +73,14 @@ from uk_budget_data.publication.receipt import (
     build_receipt_document,
     code_revision,
     combined_identities,
+    common_policy_reference,
+    comparison_identity,
+    comparison_metadata,
+    comparison_scenario,
     entry_receipt,
     is_code_defect,
     load_basis,
     measure_identities,
-    scenario_identity,
 )
 from uk_budget_data.publication.tables import (
     GAINERS_MIN_HOUSEHOLDS,
@@ -154,7 +157,7 @@ def _config_baseline_identity(config: DataConfig, revision: CodeRevision):
     """The configured baseline, bound exactly as a member that uses it binds
     its baseline (``receipt.measure_identities``), so the gate can tell a
     shared configured baseline from a member's own."""
-    return scenario_identity(
+    return comparison_identity(
         config.get_baseline_scenario(),
         name="configured baseline",
         revision=revision,
@@ -305,14 +308,15 @@ def _combined_run_identities(
     composition (``receipt.combined_identities``), each side bound with the
     phase its combined Scenario runs in and each member read from the
     manifest at the revision in ``member_revisions``."""
-    baseline = combined.baseline_scenario_for(config, uses_config)
+    baseline = comparison_scenario(
+        combined.baseline_scenario_for(config, uses_config)
+    )
+    reform = comparison_scenario(combined.to_scenario())
     return combined_identities(
         ordered,
         config,
         revision,
-        reform_applied_before_data_load=(
-            combined.to_scenario().applied_before_data_load
-        ),
+        reform_applied_before_data_load=(reform.applied_before_data_load),
         baseline_applied_before_data_load=(
             baseline.applied_before_data_load
             if baseline is not None
@@ -347,6 +351,7 @@ class ArtifactRun:
     process: Callable
     member_outputs: Optional[dict] = None
     composition: object = None
+    common_policy_reference: object = None
     uses_config_baseline: bool = False
     modifier_templates: object = None
     combine_members: Optional[list] = None
@@ -403,13 +408,22 @@ def _run_identities(
     these. A run whose identities differ from those it carries is refused:
     the measure changed between the two.
     """
+    if (
+        job.common_policy_reference is not None
+        and common_policy_reference(job.revision)
+        != job.common_policy_reference
+    ):
+        raise ReceiptUnavailable(
+            job.key,
+            "the common policy reference changed after the run was planned",
+        )
     if members is None:
         live = _scenarios(
             job.key,
             lambda: measure_identities(reform, job.config, job.revision),
         )
     else:
-        live = _scenarios(
+        resolved = _scenarios(
             job.key,
             lambda: _combined_run_identities(
                 reform,
@@ -419,7 +433,13 @@ def _run_identities(
                 job.uses_config_baseline,
                 member_revisions=job.member_revisions,
             ),
-        )[:2]
+        )
+        live = resolved[:2]
+        if job.composition != resolved[3] or job.members != resolved[2]:
+            raise ReceiptUnavailable(
+                job.key,
+                "the combined policy recipe changed after the run was planned",
+            )
     differing = [
         side
         for side, computed, carried in zip(
@@ -544,6 +564,16 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
             members=job.members,
             member_outputs=job.member_outputs,
             composition=job.composition,
+            policy_comparison=(
+                comparison_metadata(
+                    reform,
+                    config,
+                    job.revision,
+                    reference=job.common_policy_reference,
+                )
+                if job.members is None
+                else None
+            ),
             data_limits=limits,
             model_limits=held,
             name=reform.name,
@@ -862,6 +892,7 @@ def generate_artifacts(
         dataset_path=dataset_path,
         build=build,
         process=process,
+        common_policy_reference=common_policy_reference(revision),
         refuse_thin_deciles=disclosure_floor.refuses_thin_deciles(),
     )
     checked_commits: dict = {}
