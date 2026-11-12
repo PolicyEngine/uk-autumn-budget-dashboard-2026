@@ -2884,6 +2884,19 @@ def test_the_templates_read_no_limited_input_while_built(name):
     assert limits_touched(built(), reformed) == []
 
 
+def test_the_installed_model_formula_runner_remains_observable():
+    """UK's ISA-history wrapper still delegates to the watched Core runner.
+
+    Adoption of UK 2.165.1 otherwise made every ordinary template emit every
+    data limit before its formula ran. The real template cases above cover
+    their complete watched calculations, not just this identity gate.
+    """
+    sim = simulation()
+    assert data_limits._known_formula_runner(
+        sim, data_limits._engine_parts()["formula_runners"]
+    )
+
+
 def test_the_build_watch_leaves_the_engine_as_it_found_it():
     before = engine_methods()
     with pytest.raises(RuntimeError, match="boom"):

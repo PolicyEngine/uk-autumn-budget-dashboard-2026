@@ -2154,6 +2154,7 @@ def _engine_parts():
         )
         from policyengine_core.populations.population import Population
         from policyengine_core.simulations.simulation import Simulation
+        from policyengine_uk.simulation import Simulation as ModelSimulation
 
         _ENGINE.update(
             simulation=Simulation,
@@ -2161,6 +2162,14 @@ def _engine_parts():
             calculate=Simulation.__dict__["calculate"],
             get_holder=Population.__dict__["get_holder"],
             run_formula=Simulation.__dict__["_run_formula"].__code__,
+            # UK 2.165.1 wraps Core's runner to preserve legacy ISA-interest
+            # inputs. It still calls the Core runner that this watch observes.
+            # Keep exact function identities: a custom subclass runner must
+            # not acquire this trust just by inheriting from the UK class.
+            formula_runners=(
+                Simulation._run_formula,
+                ModelSimulation._run_formula,
+            ),
             at_instant_like=AtInstantLike,
             get_at_instant=AtInstantLike.__dict__["get_at_instant"],
             # Stored parameters, scales, brackets and nodes: their values
@@ -2195,6 +2204,23 @@ def _engine_parts():
             }
         )
     return _ENGINE
+
+
+def _known_formula_runner(sim, runners) -> bool:
+    """Whether this simulation uses an explicitly observed engine runner.
+
+    Model runners may delegate to Core while adding model bookkeeping. Accept
+    only the installed Core and UK methods recorded by ``_engine_parts``,
+    including an inherited method; keep custom or instance replacements
+    unobservable. Compare function identity, never a name, module or equality.
+    """
+    try:
+        runner = getattr(sim, "_run_formula", None)
+    except Exception:  # noqa: BLE001 - an unreadable runner stays unobservable
+        return False
+    if isinstance(runner, types.MethodType):
+        runner = runner.__func__
+    return any(runner is known for known in runners)
 
 
 def _run_alone(population, period, parameters_at, formula):
@@ -2853,11 +2879,7 @@ class Observation:
         for sim in self.sims:
             if getattr(sim, "macro_cache_read", False):
                 self._all_unobservable("values may come from a disk cache")
-            run_formula = getattr(type(sim), "_run_formula", None)
-            if (
-                getattr(run_formula, "__code__", None)
-                is not engine["run_formula"]
-            ):
+            if not _known_formula_runner(sim, engine["formula_runners"]):
                 self._all_unobservable("the engine runs formulas its own way")
             for each in (sim, *getattr(sim, "branches", {}).values()):
                 for name in self.changes.sides:
