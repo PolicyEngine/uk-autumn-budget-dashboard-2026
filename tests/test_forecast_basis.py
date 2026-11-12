@@ -244,7 +244,15 @@ def test_derived_series_follow_october_cpi():
         key = f"{year}-01-01.{year}-12-31"
         assert changes[OBR + "consumer_price_index_ahc"][key] == pytest.approx(
             by_period[f"{year}-01-01"], abs=5e-5
-        ), year
+        ), {
+            "year": year,
+            "stored_ahc": changes[OBR + "consumer_price_index_ahc"][key],
+            "derived_ahc": by_period[f"{year}-01-01"],
+            "stored_cpi": cpi[key],
+            "stored_rent": changes[OBR + "rent"][key],
+            "initial_weights": ahc.initial_weights,
+            "derived_components": derived.to_dict(orient="records"),
+        }
         if year == 2027:
             assert changes[OBR + "social_rent"][key] == 0.045
         elif year > 2027:
