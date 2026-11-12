@@ -195,5 +195,7 @@ describe("nounOf: a measure as a noun after 'the'", () => {
     });
     // Budget 2025's paper, on the rises this one adds to, also covered dividends
     expect(`${savings.source.label} ${savings.source.href}`).not.toMatch(/dividend/i);
+    // The same paper covers the property rates
+    expect(POLICY_DETAILS.find((entry) => entry.id === "property_income_rates_up").source).toEqual(savings.source);
   });
 });
