@@ -18,6 +18,7 @@ from uk_budget_data.policy_table import (
     OUTPUT_FILE,
     YEAR_WEIGHTS,
     _check_electricity_where,
+    _electricity_baseline_rate,
     build,
     constants,
     in_force_rate_change,
@@ -235,6 +236,41 @@ def test_electricity_says_where_and_what_it_is_scored_against(document):
     _check_electricity_where(values)
     with pytest.raises(ValueError, match="Great Britain"):
         _check_electricity_where({**values, "geography_2027": "GB"})
+
+
+def test_electricity_before_is_the_5_percent_its_pre_budget_side_holds(
+    document,
+):
+    """Current law has a rate of its own for domestic electricity from
+    policyengine-uk 2.153.5, zero in Great Britain from October 2026 to
+    March 2027, which is not what the measure is scored against. The
+    table's "before" is the 5% the measure's pre-Budget side holds, the
+    engine's reduced rate, and it is not written unless both sides hold
+    that one baseline."""
+    measure = registry.get_reform(registry.ELECTRICITY_VAT_ID)
+    values = constants(zero_vat_on_domestic_electricity)
+    assert _electricity_baseline_rate(measure, values) == 0.05
+    assert PARAMETERS.gov.hmrc.vat.reduced_rate("2026-04-06") == 0.05
+    for row in rows(document, "domestic_electricity_zero_vat").values():
+        assert {point["before"] for point in row["points"]} == {0.05}
+        assert row["source"]["before"] == {
+            "kind": "modifier_constant",
+            "where": (
+                "budget_measures/pre_budget_vat_on_domestic_electricity.py "
+                "pre_budget_vat_on_domestic_electricity(baseline_rate)"
+            ),
+        }
+    with pytest.raises(ValueError, match="does not apply its pre-Budget"):
+        _electricity_baseline_rate(
+            measure.model_copy(update={"baseline_simulation_modifier": None}),
+            values,
+        )
+    with pytest.raises(ValueError, match="differ on baseline_rate"):
+        _electricity_baseline_rate(measure, {**values, "baseline_rate": 0.08})
+    with pytest.raises(ValueError, match="its Budget side changes"):
+        _electricity_baseline_rate(
+            measure, {**values, "rate_change_2028": -0.01}
+        )
 
 
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
