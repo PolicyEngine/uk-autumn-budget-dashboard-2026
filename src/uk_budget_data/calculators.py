@@ -1292,6 +1292,180 @@ class AgeImpactCalculator(BaseCalculator):
         return rows
 
 
+# The measures whose artifact counts the people who gain and lose, and the
+# person-level engine variables whose change is each person's gain: a fall
+# in a tax or a rise in a benefit, signed as ``exchequer_signs`` signs them.
+# Each is the count an official source gives for the measure, so the page's
+# notes can set ours beside it:
+# - the trading allowance: HMRC's policy paper counts the people with "a
+#   reduction in their tax bill" (about 400,000, by about GBP 380 on
+#   average), so income tax and National Insurance;
+# - the Pension Tax Allowance: HMRC's policy paper counts the pensioners
+#   "benefitting from a tax reduction" (about 500,000 in 2027-28 and about
+#   1 million by 2029-30), so income tax;
+# - the Carer's Allowance taper: the Budget counts the carers it expects to
+#   benefit (about 48,000 in England and Wales), so Carer's Allowance, before
+#   the Universal Credit and income tax that take part of it back.
+# Code, not a file under data_inputs/, for the reason OFFICIAL_BASES is: the
+# gainers table is generated from these, so its receipt binds them.
+GAINER_BASES: dict[str, tuple[str, ...]] = {
+    "trading_allowance_raise": ("income_tax", "national_insurance"),
+    "state_pension_income_tax_protection": ("income_tax",),
+    "carers_allowance_earnings_taper": ("carers_allowance",),
+}
+# A row's lists of the households its gainers and losers live in. They
+# never reach a file: ``publication.tables.gainer_rows`` counts them and
+# leaves them out.
+GAINER_HOUSEHOLD_KEYS = ("gainer_household_ids", "loser_household_ids")
+
+
+@dataclass
+class GainersCalculator(BaseCalculator):
+    """The people who gain from a measure and the people who lose, in one
+    year, on the measure's own basis (``GAINER_BASES``).
+
+    A person's gain is the fall in their own taxes plus the rise in their
+    own benefits among the basis's variables, in GBP a year: the change in
+    each variable, signed against the Exchequer (``exchequer_signs``). A
+    person gains when it is DIRECT_EFFECT_MIN_GBP or more and loses when it
+    is minus that or less, the test AgeImpactCalculator uses for a person
+    directly affected; anyone between is neither. Everyone with a weight
+    counts, with or without an income decile, so the gains less the losses
+    add up to the change in the basis's variables (but for the changes of
+    under GBP 1).
+
+    One row: the weighted gainers, the records behind them, their mean gain,
+    and the same for losers (``mean_loss`` is the mean amount lost, a
+    positive number). A mean is None when its group is empty. The row also
+    lists the households the gainers and the losers live in
+    (GAINER_HOUSEHOLD_KEYS), so the artifact can count the survey households
+    behind each group and hold the row to a floor
+    (``publication.tables.gainer_rows``); the lists are never published.
+    No rows for a measure with no basis. A basis variable that does not
+    belong to a person is refused.
+    """
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        variables=(),
+    ) -> list[dict]:
+        if not variables:
+            return []
+        signs = exchequer_signs(variables)
+        # Read from a variable of a benefit unit or household, every member
+        # would count as a gainer. Stand-in simulations (tests) have no
+        # system to ask.
+        system = getattr(baseline, "tax_benefit_system", None)
+        for name in signs if system is not None else ():
+            entity = system.get_variable(name).entity.key
+            if entity != "person":
+                raise ValueError(
+                    f"{name} belongs to a {entity}, not a person, so its "
+                    "change does not count the people who gain"
+                )
+
+        gain = None
+        for name, sign in signs.items():
+            # Start from the baseline series to retain its aligned weights.
+            change = sign * (
+                baseline.calculate(name, period=year, map_to="person")
+                - reformed.calculate(name, period=year, map_to="person")
+            )
+            gain = change if gain is None else gain + change
+        # IDs are only for private disclosure support, never population
+        # arithmetic. Keep the weighted gain separate from these values.
+        household_id = baseline.calculate(
+            "household_id", period=year, map_to="person"
+        ).tolist()
+        return self.calculate_from_series(
+            reform_id, reform_name, year, ";".join(signs), gain, household_id
+        )
+
+    def calculate_from_arrays(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        variables: str,
+        gain: np.ndarray,
+        weight: np.ndarray,
+        household_id: np.ndarray,
+    ) -> list[dict]:
+        """Adapt synthetic arrays to the same weighted-series reductions.
+
+        Population calculations use ``calculate`` and retain their existing
+        MicroSeries; this adapter supplies weights for synthetic fixtures.
+        """
+        if not len(gain) == len(weight) == len(household_id):
+            raise ValueError(
+                f"{len(gain)} gains, {len(weight)} weights and "
+                f"{len(household_id)} household ids: one each per person"
+            )
+        return self.calculate_from_series(
+            reform_id,
+            reform_name,
+            year,
+            variables,
+            MicroSeries(gain, weights=weight, dtype=float),
+            household_id,
+        )
+
+    def calculate_from_series(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        variables: str,
+        gain: MicroSeries,
+        household_id,
+    ) -> list[dict]:
+        """Reduce weighted person gains; keep IDs only for private support."""
+        if not isinstance(gain, MicroSeries):
+            raise TypeError("person gains must retain their MicroSeries")
+        household_id = np.asarray(household_id)
+        if len(gain) != len(household_id):
+            raise ValueError(
+                f"{len(gain)} gains and {len(household_id)} household ids: "
+                "one each per person"
+            )
+        counted = gain.weights > 0
+        row = {
+            "reform_id": reform_id,
+            "reform_name": reform_name,
+            "year": year,
+            "variables": variables,
+        }
+        for group, mean, members, sign in (
+            (
+                "gainer",
+                "mean_gain",
+                (gain >= DIRECT_EFFECT_MIN_GBP) & counted,
+                1,
+            ),
+            (
+                "loser",
+                "mean_loss",
+                (gain <= -DIRECT_EFFECT_MIN_GBP) & counted,
+                -1,
+            ),
+        ):
+            selected = gain[members]
+            row[f"{group}s"] = float(members.sum())
+            row[f"{group}_records"] = len(selected)
+            row[mean] = (
+                float((sign * selected).mean()) if len(selected) else None
+            )
+            row[f"{group}_household_ids"] = np.unique(
+                household_id[members]
+            ).tolist()
+        return [row]
+
+
 # The income distribution: the percentiles published, and the floor on
 # the survey households behind each one.
 DISTRIBUTION_PERCENTILES = tuple(range(1, 100))

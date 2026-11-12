@@ -19,12 +19,14 @@ from rich.markup import escape
 
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
+    GAINER_BASES,
     OFFICIAL_BASES,
     AgeImpactCalculator,
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
     DemographicConstituencyCalculator,
     DistributionalImpactCalculator,
+    GainersCalculator,
     HouseholdScatterCalculator,
     IncomeCurveCalculator,
     IncomeDistributionCalculator,
@@ -128,6 +130,9 @@ class ReformProcessor:
         )
         # The variables its official costing covers, or none (#297)
         self.official_basis = OFFICIAL_BASES.get(reform.id, ())
+        self.gainers_calc = GainersCalculator()
+        # The variables whose change is a person's gain from it, or none
+        self.gainer_basis = GAINER_BASES.get(reform.id, ())
         self.distributional_calc = DistributionalImpactCalculator()
         self.winners_losers_calc = WinnersLosersCalculator()
         self.metrics_calc = MetricsCalculator()
@@ -184,6 +189,7 @@ class ReformProcessor:
         all_constituency = []
         all_demographic = []
         all_age = []
+        all_gainers = []
 
         scenario = self.reform.to_scenario()
 
@@ -227,6 +233,19 @@ class ReformProcessor:
                 )
             )
 
+            # The people who gain and lose on the measure's own basis,
+            # where it has one
+            all_gainers.extend(
+                self.gainers_calc.calculate(
+                    baseline,
+                    reformed,
+                    reform_id,
+                    reform_name,
+                    year,
+                    self.gainer_basis,
+                )
+            )
+
             # Household scatter (sampled to ~2k households per reform/year)
             household_scatter = self.household_scatter_calc.calculate(
                 baseline, reformed, reform_id, reform_name, year
@@ -261,6 +280,7 @@ class ReformProcessor:
             constituency=all_constituency,
             demographic_constituency=all_demographic,
             age_impact=all_age,
+            gainers=all_gainers,
         )
 
     def _calculate_constituency(

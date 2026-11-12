@@ -427,6 +427,90 @@ def test_official_basis_when_present_covers_every_year(world):
     ]
 
 
+def _gainers_row(year, **figures):
+    """A gainers row for "alpha": 5,000 gainers from 40 records and 12
+    survey households, nobody losing, unless ``figures`` says otherwise."""
+    return {
+        "reform_id": "alpha",
+        "reform_name": "Alpha",
+        "year": year,
+        "variables": "income_tax",
+        "gainers": 5000.0,
+        "gainer_records": 40,
+        "gainer_survey_households": 12,
+        "mean_gain": 300.0,
+        "losers": 0.0,
+        "loser_records": 0,
+        "loser_survey_households": 0,
+        "mean_loss": None,
+        **figures,
+    }
+
+
+def test_gainers_when_present_cover_every_year(world):
+    """The people who gain and lose are optional, one row a year, every
+    year when present."""
+    tables = read_tables(world.write("alpha", VALUES).path)
+    assert "gainers" not in tables
+    tables["gainers"] = [_gainers_row(2027)]
+    assert table_problems(tables, key="alpha", years=YEARS) == [
+        "gainers: missing 2028"
+    ]
+    tables["gainers"].append(_gainers_row(2028))
+    assert table_problems(tables, key="alpha", years=YEARS) == []
+
+
+def test_a_gainers_table_shown_under_its_floor_is_a_problem(world):
+    """The gate refuses a row that shows a group resting on fewer than ten
+    survey households, however it was made."""
+    tables = read_tables(world.write("alpha", VALUES).path)
+    tables["gainers"] = [
+        _gainers_row(2027),
+        _gainers_row(2028, gainer_survey_households=9),
+    ]
+    assert table_problems(tables, key="alpha", years=YEARS) == [
+        "gainers: 2028 shows gainers resting on fewer than 10 survey "
+        "households"
+    ]
+
+
+def test_an_artifact_may_carry_a_gainers_table(world):
+    """Written in canonical form beside the other tables, a withheld year
+    as blanks, and bound by the receipt like any other file."""
+    tables = make_tables("alpha", VALUES)
+    withheld = dict.fromkeys(
+        (
+            "gainers",
+            "gainer_records",
+            "gainer_survey_households",
+            "mean_gain",
+            "losers",
+            "loser_records",
+            "loser_survey_households",
+            "mean_loss",
+        )
+    )
+    tables["gainers"] = [_gainers_row(2027), _gainers_row(2028, **withheld)]
+    reference = world.write("alpha", VALUES, tables=tables)
+    assert (reference.path / "gainers.csv").read_bytes() == (
+        b"reform_id,reform_name,year,variables,gainers,gainer_records,"
+        b"gainer_survey_households,mean_gain,losers,loser_records,"
+        b"loser_survey_households,mean_loss\n"
+        b"alpha,Alpha,2027,income_tax,5000.0,40,12,300.0,0.0,0,0,\n"
+        b"alpha,Alpha,2028,income_tax,,,,,,,,\n"
+    )
+    document = read_receipt(reference.path)
+    assert "gainers.csv" in document["dashboard"]["files"]
+    assert file_problems(reference.path, document) == []
+    written = read_tables(reference.path)
+    assert written["gainers"] == tables["gainers"]
+    assert table_problems(written, key="alpha", years=YEARS) == []
+    # An artifact without the table keeps the files it always had
+    plain = world.write("beta", VALUES)
+    assert not (plain.path / "gainers.csv").exists()
+    assert "gainers.csv" not in read_receipt(plain.path)["dashboard"]["files"]
+
+
 def test_an_effect_before_the_start_year_is_a_problem(world):
     tables = read_tables(world.write("alpha", VALUES).path)
     problems = table_problems(
