@@ -1,6 +1,6 @@
 {
   "data_limits_active": true,
-  "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+  "data_limits_registry_sha256": "7a91cd8d34b178f1e000c1bef1bcace3ea0d52e971fc58c2bcf0260f6b3c1cb0",
   "deciles": [
     "1st",
     "2nd",
@@ -1010,7 +1010,7 @@
     "apply_age_conditioned_allowance",
     "apply_property_band_surcharge"
   ],
-  "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+  "model_limits_registry_sha256": "2c04b2f6e02bf1b182b8ef6fa2296ecd4fa4a501aa715f5fa19800a4c0fb3cfd",
   "name_casefold": {
     "A": "a",
     "B": "b",

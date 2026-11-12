@@ -1,9 +1,12 @@
 {
-  "measure_id": "delta",
-  "outputs_sha256": "c34d4a0a48e58e4b3fa9a9d8e29f08e6fd1df11e80787295792ced89e271470b",
+  "measure_id": "beta",
+  "outputs_sha256": "2b28cbb3df9dd143b6b25b00b72214923bc6e9f2b9b656147999e556684cf9e1",
   "policy": {
     "absolute_floor_bn": 0.05,
+    "behavioural_absolute_floor_bn": 0.05,
+    "behavioural_relative_tolerance": 0.25,
     "comparator_basis": "static_costing",
+    "includes_behaviour": [],
     "min_response_bn": 0.001,
     "min_response_share": 0.05,
     "relative_tolerance": 0.1,
@@ -13,9 +16,9 @@
     "rows": [
       {
         "expectation_from": "treasury",
-        "expected_direction": "positive",
-        "minimum_bn": 0.034999999999999996,
-        "pe_bn": 0.7,
+        "expected_direction": "negative",
+        "minimum_bn": 0.11000000000000001,
+        "pe_bn": -2.2,
         "status": "responsive",
         "year": 2032
       }
@@ -24,31 +27,31 @@
   },
   "rows": [
     {
-      "allowance_bn": 0.06999999999999999,
+      "allowance_bn": 0.22000000000000003,
       "comparator": {
         "basis": "static_costing",
         "rows": [
           {
             "fiscal_year": "2032-33",
-            "row_id": "delta",
+            "row_id": "beta",
             "scale": 1.0,
             "source_id": "S",
-            "value_bn": 0.7,
+            "value_bn": -2.2,
             "year_offset": 0
           }
         ],
-        "sha256": "6dff7a629bf51a8bb8bb6017576f1eb984bf86eed1b97b3f1115775b725e49fd",
-        "value_bn": 0.7
+        "sha256": "6b0db09b6159d8f25be0ee71718c5a85bccde8dcdbe7729a4d1c95f9a6b31b5b",
+        "value_bn": -2.2
       },
       "fiscal_year": "2032-33",
-      "pe_bn": 0.7,
+      "pe_bn": -2.2,
       "residual_bn": 0.0,
       "status": "pass",
       "year": 2032
     },
     {
       "fiscal_year": "2033-34",
-      "pe_bn": 0.8,
+      "pe_bn": -2.4,
       "reason": "Beyond the dataset's projected years",
       "status": "unsupported",
       "year": 2033

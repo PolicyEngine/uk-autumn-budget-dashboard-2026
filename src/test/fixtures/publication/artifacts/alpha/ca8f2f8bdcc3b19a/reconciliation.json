@@ -3,7 +3,10 @@
   "outputs_sha256": "debb4171d66468f2407e70f20199e93b2bf53bb9d752dba7c154e1ceb912e2a7",
   "policy": {
     "absolute_floor_bn": 0.05,
+    "behavioural_absolute_floor_bn": 0.05,
+    "behavioural_relative_tolerance": 0.25,
     "comparator_basis": "static_costing",
+    "includes_behaviour": [],
     "min_response_bn": 0.001,
     "min_response_share": 0.05,
     "relative_tolerance": 0.1,
