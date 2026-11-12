@@ -927,10 +927,10 @@ def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
     Pension Credit instead. Now the full new State Pension, and at most a
     sliver of Guarantee Credit.
 
-    From policyengine-uk 2.165.1 the standard minimum guarantee rises with
-    the previous May to July earnings growth (SSAA 1992 s. 150A; the
-    engine's changelog: "April 2027's single guarantee rises from £238 to
-    £247.282 before rounding, rather than £243.47"). In 2029-30 it is
+    The pinned policyengine-uk 2.165.1 model uprates the standard minimum
+    guarantee by the previous May to July earnings growth (SSAA 1992
+    s. 150A; the engine's changelog: "April 2027's single guarantee rises
+    from £238 to £247.282 before rounding, rather than £243.47"). In 2029-30 it is
     £260.807 a week, £13,561.94 a year, while the Pension Credit income
     the engine assesses is the State Pension (£13,817.30) less all income
     tax, £13,514.09: Guarantee Credit of £47.86. Savings interest and
