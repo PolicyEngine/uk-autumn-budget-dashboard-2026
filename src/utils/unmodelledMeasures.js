@@ -303,7 +303,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "More income tax on the same company car." },
       { label: "Who it reaches", text: "Employees with a company car." },
-      { label: "Why we leave it out", text: "Our costing falls well short of the Treasury's; we haven't found why." },
+      { label: "Why we leave it out", text: "Our costing falls well short of the Treasury's; we haven't established why." },
     ],
     costings: [{ row: 86, values: [0, 0, 0, 0, 310, 345] }],
     sources: [budget("paragraph 6.207")],

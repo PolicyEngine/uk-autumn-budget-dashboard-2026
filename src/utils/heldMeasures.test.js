@@ -31,7 +31,7 @@ const HELD = [
     measure: /company_car/,
     row: 86,
     values: [0, 0, 0, 0, 310, 345],
-    why: "Our costing falls well short of the Treasury's; we haven't found why.",
+    why: "Our costing falls well short of the Treasury's; we haven't established why.",
   },
 ];
 
