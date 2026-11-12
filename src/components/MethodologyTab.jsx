@@ -430,9 +430,9 @@ function MethodologyTab({ onShowTab }) {
               <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
                 Budget policies we do not model
               </ViewLink>
-              , on Policies, lists each with its reason. We do model two policies on that list,
-              company car tax and the rise in Machine Games Duty, but hold both back from the
-              national results while we finish and check our estimates.
+              , on Policies, lists each with its reason. For two policies on that list,
+              company car tax and the rise in Machine Games Duty, we hold back our national
+              estimates while we finish and check them.
             </p>
           </Topic>
         </MethodSection>

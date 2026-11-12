@@ -180,9 +180,9 @@ describe("MethodologyTab", () => {
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
     expect(card.querySelectorAll("li")).toHaveLength(0);
     expect(card).toHaveTextContent("cannot be costed household by household");
-    // The two we model but hold back while we check our estimates (heldMeasures.test.js)
+    // The two whose national estimates we hold back while we check them (heldMeasures.test.js)
     expect(card).toHaveTextContent(
-      "We do model two policies on that list, company car tax and the rise in Machine Games Duty, but hold both back from the national results while we finish and check our estimates.",
+      "For two policies on that list, company car tax and the rise in Machine Games Duty, we hold back our national estimates while we finish and check them.",
     );
     const link = within(card).getByRole("link", { name: "Budget policies we do not model", hidden: true });
     expect(link).toHaveAttribute("href", "?tab=policies#budget-measures-not-modelled");
