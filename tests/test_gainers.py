@@ -10,6 +10,7 @@ row's figures blank when a group rests on fewer than the floor.
 from types import SimpleNamespace
 
 import numpy as np
+from microdf import MicroSeries
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -43,11 +44,16 @@ class _Simulation:
     """One value per person for each variable, the same in every year."""
 
     def __init__(self, **person):
+        self.weights = person.pop("person_weight", [])
         self.person = person
+        self.calls = []
 
     def calculate(self, variable, period, map_to):
         assert map_to == "person"
-        return SimpleNamespace(values=np.asarray(self.person[variable]))
+        self.calls.append(variable)
+        if variable.endswith("_weight"):
+            raise AssertionError("calculate must not fetch weight variables")
+        return MicroSeries(self.person[variable], weights=self.weights)
 
 
 def _row(gain, weight=None, household_id=None, variables="income_tax"):
@@ -679,3 +685,90 @@ def test_no_published_group_rests_on_fewer_than_the_floor(population):
     data = canonical_csv("gainers", [row])
     assert parse_csv("gainers", data) == normalise("gainers", [row])
     assert canonical_csv("gainers", parse_csv("gainers", data)) == data
+
+
+# Runtime regressions use the actual weighted-series library, not .values
+# stand-ins. The existing array fixtures remain synthetic input adapters.
+def test_runtime_preserves_weighted_series_without_fetching_weights():
+    baseline = _Simulation(
+        person_weight=[2.0, 3.0, 5.0, 0.0, 7.0],
+        household_id=[10, 10, 12, 13, 14],
+        income_tax=[1000.0, 500.0, 0.0, 1000.0, 10.0],
+        national_insurance=[100.0, 50.0, 0.0, 0.0, 0.0],
+    )
+    reformed = _Simulation(
+        person_weight=[2.0, 3.0, 5.0, 0.0, 7.0],
+        household_id=[10, 10, 12, 13, 14],
+        income_tax=[600.0, 500.0, 500.0, 700.0, 9.5],
+        national_insurance=[100.0, 40.0, 0.0, 0.0, 0.0],
+    )
+    (row,) = GainersCalculator().calculate(
+        baseline,
+        reformed,
+        "m",
+        "M",
+        YEAR,
+        ("income_tax", "national_insurance"),
+    )
+    assert (row["gainers"], row["gainer_records"], row["mean_gain"]) == (
+        5.0,
+        2,
+        166.0,
+    )
+    assert row["gainer_household_ids"] == [10]
+    assert (row["losers"], row["loser_records"], row["mean_loss"]) == (
+        5.0,
+        1,
+        500.0,
+    )
+    assert row["loser_household_ids"] == [12]
+    assert not any(name.endswith("_weight") for name in baseline.calls)
+    assert not any(name.endswith("_weight") for name in reformed.calls)
+
+
+def test_runtime_empty_groups_keep_zero_counts_and_no_means():
+    baseline = _Simulation(
+        person_weight=[2.0, 0.0],
+        household_id=[10, 11],
+        income_tax=[500.0, 500.0],
+    )
+    reformed = _Simulation(
+        person_weight=[2.0, 0.0],
+        household_id=[10, 11],
+        income_tax=[500.0, 100.0],
+    )
+    (row,) = GainersCalculator().calculate(
+        baseline,
+        reformed,
+        "m",
+        "M",
+        YEAR,
+        ("income_tax",),
+    )
+    for count, prefix, mean in GAINER_GROUPS:
+        assert row[count] == 0.0
+        assert row[f"{prefix}_records"] == 0
+        assert row[mean] is None
+        assert row[f"{prefix}_household_ids"] == []
+
+
+@pytest.mark.parametrize("mean", ["mean_gain", "mean_loss"])
+@pytest.mark.parametrize(
+    "amount, allowed",
+    [
+        (DIRECT_EFFECT_MIN_GBP / 2, False),
+        (DIRECT_EFFECT_MIN_GBP - 1e-8, False),
+        (DIRECT_EFFECT_MIN_GBP - 5e-13, True),
+        (DIRECT_EFFECT_MIN_GBP, True),
+    ],
+)
+def test_group_means_respect_the_shared_minimum_change(mean, amount, allowed):
+    row = {**SHOWN, mean: amount}
+    if mean == "mean_loss":
+        row.update(losers=500.0, loser_records=20, loser_survey_households=10)
+    problems = _gainer_problems([row])
+    if allowed:
+        assert problems == []
+    else:
+        assert len(problems) == 1
+        assert f"{mean} below the" in problems[0]

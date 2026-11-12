@@ -12,10 +12,12 @@ which only some measures carry, is also held to its own rules
 """
 
 import json
+import math
 from collections import defaultdict
 from pathlib import Path
 from typing import Mapping, Optional
 
+from uk_budget_data.calculators import DIRECT_EFFECT_MIN_GBP
 from uk_budget_data.example_households import (
     CURVE_POINTS,
     HOUSEHOLD_IDS,
@@ -342,6 +344,17 @@ def _gainer_problems(rows: list[dict]) -> list[str]:
                 problems.append(
                     f"gainers: {year} has a {mean} of zero or less"
                 )
+            elif row[mean] is not None and row[mean] < DIRECT_EFFECT_MIN_GBP:
+                if not math.isclose(
+                    row[mean],
+                    DIRECT_EFFECT_MIN_GBP,
+                    rel_tol=1e-12,
+                    abs_tol=1e-12,
+                ):
+                    problems.append(
+                        f"gainers: {year} has a {mean} below the "
+                        f"{DIRECT_EFFECT_MIN_GBP:g} GBP minimum change"
+                    )
     return problems
 
 

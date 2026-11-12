@@ -1369,26 +1369,21 @@ class GainersCalculator(BaseCalculator):
                     "change does not count the people who gain"
                 )
 
-        def person(sim, variable):
-            return np.asarray(
-                sim.calculate(variable, period=year, map_to="person").values
-            )
-
-        weight = person(baseline, "person_weight").astype(float)
-        gain = np.zeros(len(weight))
+        gain = None
         for name, sign in signs.items():
-            gain -= sign * (
-                person(reformed, name).astype(float)
-                - person(baseline, name).astype(float)
+            # Start from the baseline series to retain its aligned weights.
+            change = sign * (
+                baseline.calculate(name, period=year, map_to="person")
+                - reformed.calculate(name, period=year, map_to="person")
             )
-        return self.calculate_from_arrays(
-            reform_id,
-            reform_name,
-            year,
-            ";".join(signs),
-            gain,
-            weight,
-            person(baseline, "household_id"),
+            gain = change if gain is None else gain + change
+        # IDs are only for private disclosure support, never population
+        # arithmetic. Keep the weighted gain separate from these values.
+        household_id = baseline.calculate(
+            "household_id", period=year, map_to="person"
+        ).tolist()
+        return self.calculate_from_series(
+            reform_id, reform_name, year, ";".join(signs), gain, household_id
         )
 
     def calculate_from_arrays(
@@ -1401,33 +1396,70 @@ class GainersCalculator(BaseCalculator):
         weight: np.ndarray,
         household_id: np.ndarray,
     ) -> list[dict]:
-        """The row from one value per person: ``gain`` (GBP a year, a loss
-        negative), ``weight`` and ``household_id`` (the household each
-        person lives in). ``variables`` names the basis, ";"-separated."""
-        gain = np.asarray(gain, dtype=float)
-        weight = np.asarray(weight, dtype=float)
-        household_id = np.asarray(household_id)
+        """Adapt synthetic arrays to the same weighted-series reductions.
+
+        Population calculations use ``calculate`` and retain their existing
+        MicroSeries; this adapter supplies weights for synthetic fixtures.
+        """
         if not len(gain) == len(weight) == len(household_id):
             raise ValueError(
                 f"{len(gain)} gains, {len(weight)} weights and "
                 f"{len(household_id)} household ids: one each per person"
             )
-        counted = weight > 0
+        return self.calculate_from_series(
+            reform_id,
+            reform_name,
+            year,
+            variables,
+            MicroSeries(gain, weights=weight, dtype=float),
+            household_id,
+        )
+
+    def calculate_from_series(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        variables: str,
+        gain: MicroSeries,
+        household_id,
+    ) -> list[dict]:
+        """Reduce weighted person gains; keep IDs only for private support."""
+        if not isinstance(gain, MicroSeries):
+            raise TypeError("person gains must retain their MicroSeries")
+        household_id = np.asarray(household_id)
+        if len(gain) != len(household_id):
+            raise ValueError(
+                f"{len(gain)} gains and {len(household_id)} household ids: "
+                "one each per person"
+            )
+        counted = gain.weights > 0
         row = {
             "reform_id": reform_id,
             "reform_name": reform_name,
             "year": year,
             "variables": variables,
         }
-        for group, mean, members in (
-            ("gainer", "mean_gain", counted & (gain >= DIRECT_EFFECT_MIN_GBP)),
-            ("loser", "mean_loss", counted & (gain <= -DIRECT_EFFECT_MIN_GBP)),
+        for group, mean, members, sign in (
+            (
+                "gainer",
+                "mean_gain",
+                (gain >= DIRECT_EFFECT_MIN_GBP) & counted,
+                1,
+            ),
+            (
+                "loser",
+                "mean_loss",
+                (gain <= -DIRECT_EFFECT_MIN_GBP) & counted,
+                -1,
+            ),
         ):
-            people = float(weight[members].sum())
-            amount = float((weight[members] * np.abs(gain[members])).sum())
-            row[f"{group}s"] = people
-            row[f"{group}_records"] = int(members.sum())
-            row[mean] = amount / people if people > 0 else None
+            selected = gain[members]
+            row[f"{group}s"] = float(members.sum())
+            row[f"{group}_records"] = len(selected)
+            row[mean] = (
+                float((sign * selected).mean()) if len(selected) else None
+            )
             row[f"{group}_household_ids"] = np.unique(
                 household_id[members]
             ).tolist()
