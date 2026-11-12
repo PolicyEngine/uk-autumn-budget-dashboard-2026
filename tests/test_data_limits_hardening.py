@@ -385,21 +385,32 @@ def test_every_template_stays_computable_without_purchase_inputs(name):
     )
 
 
-# Registered for the Household calculator only, never run nationally on
-# today's data: the limits each one touches, which a national run would
-# report as not computable (reforms.py, calculatorOnlyMeasures.js). The
-# Machine Games Duty rise raises the standard rate, whose takings the
-# certified data do not record (2 November 2026).
+# The Machine Games Duty rise remains registered for the Household
+# calculator only (reforms.py, calculatorOnlyMeasures.js). The selected
+# 0639b9c7 data carry standard-rate takings, so that missing-input limit
+# retired. Input presence does not establish the higher-stake incidence:
+# the separate national publication hold remains.
 CALCULATOR_ONLY_LIMITS = {
-    "machine_games_duty_rise": ["machine_games_standard_rate"],
+    "machine_games_duty_rise": [],
+}
+
+# The native non-cash ISA cash-interest charge applies from 2027 and reads
+# the basic savings rate. Its cash-interest input is missing, so the
+# savings-rate rise and the package containing it still record this limit.
+# Selecting a static costing does not waive the data-coverage hold.
+REGISTERED_MEASURE_LIMITS = {
+    **CALCULATOR_ONLY_LIMITS,
+    "savings_income_rates_up": ["non_cash_isa_cash_interest"],
+    "autumn_budget_2026_combined": ["non_cash_isa_cash_interest"],
 }
 
 
 def test_the_data_limit_exemptions_end_with_the_hold_back():
-    """A measure may touch a data limit only while it is registered and
-    held back from the package: once it joins the package, its exemption
-    must go, so the national run cannot carry a figure the data can't
-    cost (María, #377)."""
+    """Calculator-only measures stay registered and outside the package.
+
+    Retiring a missing-input limit does not release a separate national
+    publication hold; the Machine Games Duty rise still stays out.
+    """
     for measure_id in CALCULATOR_ONLY_LIMITS:
         assert get_reform(measure_id) is not None, measure_id
         assert (
@@ -431,4 +442,4 @@ def test_registered_measures_do_not_set_limited_inputs(reform):
             )
     assert [
         limit["key"] for limit in data_limits.limits_touched(*sides)
-    ] == CALCULATOR_ONLY_LIMITS.get(reform.id, [])
+    ] == REGISTERED_MEASURE_LIMITS.get(reform.id, [])

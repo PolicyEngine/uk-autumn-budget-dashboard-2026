@@ -15,6 +15,7 @@ The hand checks recompute the main changes from the parameters.
 
 import dataclasses
 import json
+from decimal import Decimal
 from pathlib import Path
 
 import policyengine as pe
@@ -1694,13 +1695,17 @@ def test_a_councils_council_tax_is_taken_off_net_income():
     # places it from the region
     assert glasgow["area"]["brma"] == average["area"]["brma"]
     assert glasgow["area"]["brma_source"] == "region default"
-    assert glasgow["net_income"]["baseline"] == pytest.approx(
-        average["net_income"]["baseline"]
-        - (
-            own - household_impact.estimated_council_tax("SCOTLAND", "D", YEAR)
-        ),
-        abs=0.01,
+    # All four displayed amounts are penny-rounded. Keep the exact one-penny
+    # allowance without binary float noise rejecting its boundary.
+    expected = Decimal(str(average["net_income"]["baseline"])) - (
+        Decimal(str(own))
+        - Decimal(
+            str(household_impact.estimated_council_tax("SCOTLAND", "D", YEAR))
+        )
     )
+    assert abs(
+        Decimal(str(glasgow["net_income"]["baseline"])) - expected
+    ) <= Decimal("0.01")
     _rows_add_up(glasgow)
 
 
