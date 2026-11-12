@@ -64,116 +64,6 @@ def variable_path(name: str) -> str:
     return f"{VARIABLE_PATH}{name}"
 
 
-# The benefit uprating index, which the minimum guarantee's check refuses as
-# an earnings rule.
-_BENEFIT_INDEX = "gov.benefit_uprating_cpi"
-
-
-_MINIMUM_GUARANTEE = (
-    "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
-)
-_EARNINGS_INPUT = (
-    "gov.economic_assumptions.statutory_uprating_inputs.awe_total_pay_may_july"
-)
-# Indices are stored to five decimal places.
-_INDEX_TOLERANCE = 1e-5
-
-
-def _unreformed(parameters):
-    """The tree as the model built it, before any reform: policyengine-core
-    keeps it as the ``baseline`` child of every built tree."""
-    children = getattr(parameters, "children", None)
-    baseline = children.get("baseline") if isinstance(children, dict) else None
-    return baseline if baseline is not None else parameters
-
-
-def _uprating_index(node):
-    """The index a parameter's uprating metadata names, or None."""
-    rule = (getattr(node, "metadata", None) or {}).get("uprating")
-    if isinstance(rule, dict):
-        rule = rule.get("parameter")
-    return rule if isinstance(rule, str) else None
-
-
-def _minimum_guarantee_earnings(system) -> bool:
-    """Whether the standard minimum guarantee is uprated with earnings.
-
-    Social Security Administration Act 1992 s. 150A(2) requires each
-    April's rise to be at least the May to July earnings growth before it.
-    The check reads the uprating rule, from the tree as the model built it,
-    not the amounts, so a measure that sets the guarantee can't make its
-    own simulation count as fixed, and 2027-28 rates typed in over a CPI
-    rule don't count either. Both rates must be uprated by an index other
-    than the benefit index, whose April 2026 to April 2027 step reaches the
-    May to July 2026 earnings growth. That figure is read from the raw
-    input, so a forecast can't count. The pension-age Housing Benefit
-    allowances and the savings credit threshold, which the same fix covers,
-    have no statutory floor to test, so the guarantee stands for them.
-
-    A modifier that reloads and reprocesses the parameters builds the tree
-    it is read from, so one that repoints the rule on both sides counts as
-    installing the fix: review it as a change to the model, not a measure.
-    """
-    if not hasattr(system, "parameters"):
-        return False
-    try:
-        raw = getattr(system, "_raw_parameters", None)
-        if raw is None:
-            from policyengine_uk.tax_benefit_system import statutory_parameters
-
-            raw = statutory_parameters()
-        earnings = raw.get_child(_EARNINGS_INPUT)("2026-07-01")
-        if earnings is None:
-            return False
-        tree = _unreformed(system.parameters)
-        guarantee = tree.get_child(_MINIMUM_GUARANTEE)
-        for name in ("SINGLE", "COUPLE"):
-            path = _uprating_index(guarantee.get_child(name))
-            if path is None or path == _BENEFIT_INDEX:
-                return False
-            index = tree.get_child(path)
-            step = index("2027-04-30") / index("2026-04-30")
-            if step < 1 + earnings - _INDEX_TOLERANCE:
-                return False
-        return True
-    except (
-        AttributeError,
-        KeyError,
-        TypeError,
-        ValueError,
-        ZeroDivisionError,
-    ):
-        return False
-
-
-def _installed_minimum_guarantee_earnings() -> bool:
-    """Read the installed engine with the same behavioural check."""
-    from policyengine_uk.system import system
-
-    return _minimum_guarantee_earnings(system)
-
-
-# What the UK hub's earnings fix for the guarantee covers (coordinator, 22
-# October): the guarantee, the pension-age Housing Benefit allowances and
-# the savings credit threshold. policyengine-uk after 2.132.6 splits each
-# pension-age allowance in two (aged, and aged_from_cutoff, six in all; at
-# 2.151.0 aged_from_cutoff equals the guarantee and rises by lagged CPI as
-# it does); test_pension_credit_model_limit.py fails until every one is
-# listed here. The earnings input is covered too: without the fix the
-# guarantee ignores it, so a change to it misses them.
-_PENSION_AGE_EARNINGS_PARAMETERS = (
-    _MINIMUM_GUARANTEE,
-    "gov.dwp.pension_credit.savings_credit.threshold",
-    "gov.dwp.housing_benefit.allowances.couple.aged",
-    "gov.dwp.housing_benefit.allowances.couple.aged_from_cutoff",
-    "gov.dwp.housing_benefit.allowances.lone_parent.aged",
-    "gov.dwp.housing_benefit.allowances.lone_parent.aged_from_cutoff",
-    "gov.dwp.housing_benefit.allowances.single.aged",
-    "gov.dwp.housing_benefit.allowances.single.aged_from_cutoff",
-    _EARNINGS_INPUT,
-)
-
-
 # Household casino incidence is not the statutory operator-band calculation.
 # This review hold survives retirement of the missing-losses data limit.
 # No native implementation has reviewed positive support evidence yet.
@@ -267,39 +157,12 @@ def _installed_casino_statutory_bands_reviewed() -> bool:
     return _casino_statutory_bands_reviewed(system)
 
 
-# policyengine-uk 2.151.0 (6.11.1's adoption, PR 238) has the fixes for
-# three limits, so they expired: the State Pension add-on and protected
-# payments rise by September CPI (#2336), benefits rise by the published
-# September outturn (#2533), and household VAT is grossed up by survey
-# coverage and the household share of receipts (#2187). Their checks for
-# the fix went with them; tests/model_limit_stand_ins.py keeps them as
-# stand-ins for the tests of the machinery. The VAT limit was the only one
-# covering variables: the field and its comparison stay for the next.
+# Four historical limits have retired: State Pension/September CPI/VAT at
+# policyengine-uk 2.151.0, and the minimum guarantee's earnings fix from
+# 2.151.2 (the adopted 2.165.1 pair). Tests retain their explicit stand-ins.
+# The casino statutory-band/incidence review hold remains active, including
+# its fail-closed checks, input-only comparison and real registry digest.
 MODEL_LIMITS = (
-    ModelLimit(
-        key="pc_minimum_guarantee_uprating",
-        parameters=_PENSION_AGE_EARNINGS_PARAMETERS,
-        fixed_by=(
-            "the UK hub's earnings uprating of the minimum guarantee, "
-            "stacked on policyengine-uk #2557"
-        ),
-        reason=(
-            "The installed model raises the Pension Credit standard minimum "
-            "guarantee by lagged calendar-year CPI, 2.3% in April 2027, but "
-            "the law requires at least the growth in earnings, 3.9% in May "
-            "to July 2026 (Social Security Administration Act 1992 s. "
-            "150A(2)). So the guarantee is too low from 2027, and so are "
-            "the pension-age Housing Benefit allowances and the savings "
-            "credit threshold, which the same fix covers; a change to the "
-            "earnings input misses them. policyengine-uk #2557, the fix for "
-            "#2533, keeps the guarantee on lagged CPI. Until a fix that "
-            "uprates it by earnings is in the model, measures touching these "
-            "from 2027 are held at provisional."
-        ),
-        fixed=_minimum_guarantee_earnings,
-        installed_fixed=_installed_minimum_guarantee_earnings,
-        from_year=2027,
-    ),
     ModelLimit(
         key="casino_statutory_gaming_bands",
         parameters=("gov.hmrc.gambling_duty.gaming",),

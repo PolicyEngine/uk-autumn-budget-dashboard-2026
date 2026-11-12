@@ -13,6 +13,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from tests import model_limit_stand_ins
 from tests.publication_support import World
 from uk_budget_data import geography as g
 from uk_budget_data import model_limits
@@ -46,7 +47,22 @@ NOTHING_APPROVED = "nothing the national page may publish yet"
 
 
 @pytest.fixture(scope="module")
-def publication():
+def stand_in_registry():
+    """The minimum guarantee limit has expired; this module isolates its
+    stand-in: the Pension Credit minimum guarantee's, the limit these
+    tests used while it was in force (tests/model_limit_stand_ins.py). It
+    alone is the registry, with its digest, for as long as this module's
+    publication lasts, so every receipt in it is written and gated against
+    the same registry."""
+    with pytest.MonkeyPatch.context() as patch:
+        model_limit_stand_ins.register(
+            patch, (model_limit_stand_ins.PC_MINIMUM_GUARANTEE,)
+        )
+        yield
+
+
+@pytest.fixture(scope="module")
+def publication(stand_in_registry):
     """A real manifest with approved, held and combined artifacts."""
     world = World()
     try:
@@ -80,11 +96,7 @@ def publication():
         )
         stage(manifest, limited.path, **args)
         model_limit = model_limits.record(
-            next(
-                limit
-                for limit in model_limits.MODEL_LIMITS
-                if limit.key == "pc_minimum_guarantee_uprating"
-            ),
+            model_limit_stand_ins.PC_MINIMUM_GUARANTEE,
             [
                 "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
                 ".SINGLE"

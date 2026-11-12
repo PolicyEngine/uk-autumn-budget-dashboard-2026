@@ -248,8 +248,10 @@ describe("binding a receipt to its manifest entry", () => {
   it.each([["theta", "pc_minimum_guarantee_uprating"]])(
     "shows %s's model-limited receipt as provisional, never as approved",
     async (key, limit) => {
-      // Real receipts for each registered limit bind as provisional;
-      // relabelled approved by hand, each is refused.
+      // A real receipt recording a model limit binds as provisional;
+      // relabelled approved by hand, it is refused. Theta records an expired
+      // PC stand-in under the real casino registry digest as an explicit
+      // synthetic exception (scripts/make_publication_fixture.py).
       const entry = structuredClone(entries[key]);
       const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
       expect(receipt.dashboard.model_limits).toHaveLength(1);

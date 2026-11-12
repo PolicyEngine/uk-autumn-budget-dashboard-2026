@@ -829,7 +829,11 @@ def test_with_sign_off_off_only_the_files_the_page_lists_are_published(repo):
     shutil.copytree(PUBLICATION_FIXTURE, repo / "public" / "data")
     # A stray generation of a listed measure, as a re-run leaves.
     stray = repo / "public/data/artifacts/alpha/aaaaaaaaaaaaaaaa"
-    shutil.copytree(stray.parent / "d68eb084c02699c1", stray)
+    fixture_manifest = json.loads(
+        (PUBLICATION_FIXTURE / "manifest.json").read_text()
+    )
+    alpha_artifact = fixture_manifest["measures"]["alpha"]["artifact"]
+    shutil.copytree(PUBLICATION_FIXTURE / alpha_artifact, stray)
     track(repo)
     unlisted = unlisted_in_fixture(repo, stray.name)
     assert run(repo, sign_off=False).problems == [

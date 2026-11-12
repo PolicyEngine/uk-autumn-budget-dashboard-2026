@@ -1,15 +1,18 @@
-"""Three expired model limits, kept as stand-ins for tests of the machinery.
+"""Four expired model limits, kept as stand-ins for tests of the machinery.
 
 policyengine-uk 2.151.0 (6.11.1's adoption, PR 238) has the fixes for three
 model limits: #2336 (the State Pension add-on and protected payments rise
 by September CPI), #2533 (benefits rise by September CPI, from the
 published outturn) and #2187 (VAT grossed up by survey coverage and the
-household share of receipts). Each limit's ``installed_fixed()`` reads true
-there, so they are out of ``MODEL_LIMITS``, with their checks for the fix.
-Only the Pension Credit minimum guarantee's limit is still in force.
+household share of receipts). policyengine-uk 2.151.2 and later
+(policyengine 6.16.2 adopts 2.165.1) have the fix for the fourth, #2576: the
+Pension Credit standard minimum guarantee rises with May to July earnings.
+Each limit's ``installed_fixed()`` read true on those models, so all four
+are out of ``MODEL_LIMITS``, with their checks for the fix. The active
+casino limit remains in the real registry.
 
 The tests of detection, recording and publication were written around
-those three: one covers parameters from any year, one only from 2027, and
+these four: one covers parameters from any year, two only from 2027, and
 the VAT one covers variables as well (the only limit that did). They
 register them as stand-ins on top of the registry, in its old order, with
 the ``stand_in_model_limits`` fixture (tests/conftest.py), which patches
@@ -310,11 +313,63 @@ VAT_CONSUMPTION_COVERAGE = ModelLimit(
 )
 
 
+_MINIMUM_GUARANTEE = (
+    "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
+)
+_EARNINGS_INPUT = (
+    "gov.economic_assumptions.statutory_uprating_inputs.awe_total_pay_may_july"
+)
+
+# What the earnings fix for the guarantee covered, as the registry listed
+# them when the limit expired: the guarantee, the savings credit threshold
+# and the pension-age Housing Benefit allowances of policyengine-uk 2.151.0
+# (``aged`` and ``aged_from_cutoff``). The earnings input was covered too:
+# without the fix the guarantee ignored it, so a change to it missed them.
+_PENSION_AGE_EARNINGS_PARAMETERS = (
+    _MINIMUM_GUARANTEE,
+    "gov.dwp.pension_credit.savings_credit.threshold",
+    "gov.dwp.housing_benefit.allowances.couple.aged",
+    "gov.dwp.housing_benefit.allowances.couple.aged_from_cutoff",
+    "gov.dwp.housing_benefit.allowances.lone_parent.aged",
+    "gov.dwp.housing_benefit.allowances.lone_parent.aged_from_cutoff",
+    "gov.dwp.housing_benefit.allowances.single.aged",
+    "gov.dwp.housing_benefit.allowances.single.aged_from_cutoff",
+    _EARNINGS_INPUT,
+)
+
+
+PC_MINIMUM_GUARANTEE = ModelLimit(
+    key="pc_minimum_guarantee_uprating",
+    parameters=_PENSION_AGE_EARNINGS_PARAMETERS,
+    fixed_by=(
+        "the UK hub's earnings uprating of the minimum guarantee, "
+        "stacked on policyengine-uk #2557"
+    ),
+    reason=(
+        "The installed model raises the Pension Credit standard minimum "
+        "guarantee by lagged calendar-year CPI, 2.3% in April 2027, but "
+        "the law requires at least the growth in earnings, 3.9% in May "
+        "to July 2026 (Social Security Administration Act 1992 s. "
+        "150A(2)). So the guarantee is too low from 2027, and so are "
+        "the pension-age Housing Benefit allowances and the savings "
+        "credit threshold, which the same fix covers; a change to the "
+        "earnings input misses them. policyengine-uk #2557, the fix for "
+        "#2533, keeps the guarantee on lagged CPI. Until a fix that "
+        "uprates it by earnings is in the model, measures touching these "
+        "from 2027 are held at provisional."
+    ),
+    fixed=fix_marker_check("pc_minimum_guarantee_uprating"),
+    installed_fixed=_never,
+    from_year=2027,
+)
+
+
 # The registry the tests of the machinery see, in the order it had: the
-# stand-ins around every limit still in force.
+# stand-ins, then the active real registry, then the VAT stand-in.
 STAND_IN_MODEL_LIMITS = (
     STATE_PENSION_ADD_ON,
     BENEFIT_SEPTEMBER_CPI,
+    PC_MINIMUM_GUARANTEE,
     *model_limits.MODEL_LIMITS,
     VAT_CONSUMPTION_COVERAGE,
 )

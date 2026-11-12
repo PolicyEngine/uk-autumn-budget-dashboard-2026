@@ -1,7 +1,8 @@
-"""The installed model has the fixes three model limits waited for.
+"""The installed model has the fixes four model limits waited for.
 
-policyengine-uk 2.151.0 (PR 238) has #2336, #2533 and #2187, so their
-limits were removed from ``MODEL_LIMITS`` (their stand-ins are in
+policyengine-uk 2.151.0 (PR 238) has #2336, #2533 and #2187, and 2.151.2
+and later have #2576 (policyengine 6.16.2 adopts 2.165.1), so their limits
+were removed from ``MODEL_LIMITS`` (their stand-ins are in
 tests/model_limit_stand_ins.py). A measure they held is now approved like
 any other, so the removal is safe only while the installed model behaves as
 each fix requires. These tests read that behaviour. A pair without one (an
@@ -20,6 +21,9 @@ from policyengine_uk.utils.scenario import Scenario
 NEW_PENSION = "gov.dwp.state_pension.new_state_pension.amount"
 BASIC_PENSION = "gov.dwp.state_pension.basic_state_pension.amount"
 CPI_INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
+EARNINGS_INPUT = (
+    "gov.economic_assumptions.statutory_uprating_inputs.awe_total_pay_may_july"
+)
 # Indices are stored to five decimal places.
 INDEX_TOLERANCE = 1e-5
 
@@ -119,3 +123,34 @@ def test_household_vat_is_grossed_by_coverage_and_household_share(variable):
     assert 0 < school_fees < 0.02
     ratio = sim.calculate(variable, year)[0] / raw
     assert math.isclose(ratio, (1 - school_fees) / (0.67 * 0.7), rel_tol=1e-6)
+
+
+def pensioners(year, count):
+    """One pension-age benefit unit: a single person or a couple."""
+    people = {f"p{i}": {"age": {year: 70}} for i in range(count)}
+    return {
+        "people": people,
+        "benunits": {"b": {"members": list(people)}},
+        "households": {"h": {"members": list(people)}},
+    }
+
+
+@pytest.mark.parametrize("count", [1, 2], ids=["single", "couple"])
+def test_the_minimum_guarantee_rises_by_at_least_earnings(count):
+    """#2576 (pc_minimum_guarantee_uprating): the Pension Credit standard
+    minimum guarantee a pensioner benefit unit gets, through the model's
+    formulas, rises in April 2027 by at least the published May to July
+    2026 earnings growth, read from the raw tree, as Social Security
+    Administration Act 1992 s. 150A(2) requires. Before #2576 it rose by
+    lagged calendar-year CPI, 2.3% against 3.9%."""
+    published = statutory_parameters().get_child(EARNINGS_INPUT)("2026-07-01")
+    assert published is not None and published > 0
+
+    def guarantee(year):
+        sim = Simulation(situation=pensioners(year, count))
+        return sim.calculate("standard_minimum_guarantee", year)[0]
+
+    before, after = guarantee(2026), guarantee(2027)
+    assert before > 0
+    # Annual amounts: 52 weeks of a 5p step.
+    assert after >= before * (1 + published) - 52 * 0.05

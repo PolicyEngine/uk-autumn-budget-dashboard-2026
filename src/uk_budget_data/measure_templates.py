@@ -36,7 +36,7 @@ A parameter the certified data cannot cost (``uk_budget_data.data_limits``,
 such as the SDLT higher rates) still builds, with a ``DataLimitedWarning``:
 the measure is published as not computable, never as a figure. A parameter
 the installed model mis-costs (``uk_budget_data.model_limits``, such as the
-Pension Credit minimum guarantee from 2027) builds with a
+casino statutory gaming bands) builds with a
 ``ModelLimitedWarning``: the measure is held at provisional, never approved.
 So does a runtime helper that changes a variable such a limit covers (the
 VAT base template was one, until policyengine-uk #2187).

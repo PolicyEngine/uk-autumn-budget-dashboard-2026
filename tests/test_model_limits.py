@@ -4,11 +4,12 @@ known fix lands is held at provisional, never approved.
 These tests were written around the State Pension add-on's limit, which
 expired with policyengine-uk #2336 at 2.151.0 (PR 238), and run on the
 stand-in registry (tests/model_limit_stand_ins.py): it keeps that limit,
-the September CPI limit (#2533) and the VAT limit (#2187) around the one
-in force, the Pension Credit minimum guarantee's. A stand-in's fix is a
-marker variable a test installs, so the machinery is tested on models with
-and without it; the checks of the installed model for the expired fixes
-went with their limits.
+the September CPI limit (#2533), the Pension Credit minimum guarantee's
+(#2576, expired with policyengine-uk 2.165.1) and the VAT limit (#2187).
+The real registry retains the casino limit. A stand-in's fix is a marker variable a test
+installs, so the machinery is tested on models with and without it; the
+checks of the installed model for the expired fixes went with their
+limits.
 """
 
 import copy
@@ -81,6 +82,20 @@ def simulation(changes=None, modifier=None):
             parameter_changes=changes, simulation_modifier=modifier
         )
     return Simulation(situation=household(), scenario=scenario)
+
+
+def keys_but_the_guarantee(touched):
+    """The limits a measure records, in order, leaving out the minimum
+    guarantee's stand-in. From policyengine-uk 2.151.2 the engine builds
+    the savings credit threshold and the pension-age Housing Benefit
+    allowances, which that stand-in covers, from September CPI as well as
+    the guarantee, so a measure on a CPI input or index can record it too.
+    The tests that use this are about the other limits."""
+    return [
+        item["key"]
+        for item in touched
+        if item["key"] != PENSION_CREDIT_LIMIT.key
+    ]
 
 
 # Install the State Pension stand-in's fix, as a model with #2336 had it.
@@ -167,12 +182,20 @@ def test_an_uprating_input_that_moves_the_full_rates_records_them(
     September CPI index, recorded too. Each input is also covered by
     other limits: from 2027 the triple lock index and the September CPI
     index are the September CPI limit's, and the earnings input is the
-    minimum guarantee's."""
-    touched = {
-        item["key"]: item
-        for item in limits_touched(simulation(), simulation(changes))
-    }
-    assert list(touched) == [LIMIT.key, *(limit.key for limit in also)]
+    minimum guarantee's. A CPI input may record the minimum guarantee's
+    limit as well (see ``keys_but_the_guarantee``)."""
+    records = limits_touched(simulation(), simulation(changes))
+    touched = {item["key"]: item for item in records}
+    assert keys_but_the_guarantee(records) == [
+        LIMIT.key,
+        *(
+            limit.key
+            for limit in also
+            if limit.key != PENSION_CREDIT_LIMIT.key
+        ),
+    ]
+    if PENSION_CREDIT_LIMIT in also:
+        assert PENSION_CREDIT_LIMIT.key in touched
     assert {BASIC_PENSION, NEW_PENSION} <= set(
         touched[LIMIT.key]["parameters"]
     )
@@ -677,7 +700,7 @@ def test_a_cpi_change_that_does_not_bind_the_full_rates_is_recorded():
     touched = limits_touched(
         simulation(), simulation({CPI_INPUT: {"2026": 0.030}})
     )
-    assert [item["key"] for item in touched] == [
+    assert keys_but_the_guarantee(touched) == [
         LIMIT.key,
         BENEFIT_LIMIT.key,
     ]

@@ -2049,8 +2049,8 @@ def test_a_computable_measure_still_writes_its_tables(monkeypatch, tmp_path):
     assert_public_area_output(out)
 
 
-# On the Pension Credit model limit, which holds this from 2027 until the
-# UK hub's earnings fix is in the model.
+# On the Pension Credit model limit, which held this from 2027 until the
+# earnings fix was in the model (policyengine-uk 2.151.2 and later).
 MINIMUM_GUARANTEE = (
     "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
 )
@@ -2062,7 +2062,14 @@ def test_a_measure_touching_a_model_limit_writes_no_tables(
     """Review of the VAT model limit: approval alone held the area view, so
     a measure approved before its model limit was registered, or on a model
     with the fix, still ran by area. The command now judges its own run, as
-    the generator does, and writes no table."""
+    the generator does, and writes no table. The minimum guarantee limit has expired;
+    this test isolates its stand-in in the test registry
+    (tests/model_limit_stand_ins.py)."""
+    from tests import model_limit_stand_ins
+
+    model_limit_stand_ins.register(
+        monkeypatch, (model_limit_stand_ins.PC_MINIMUM_GUARANTEE,)
+    )
     code, out, _ = run_cli(
         monkeypatch,
         tmp_path,
