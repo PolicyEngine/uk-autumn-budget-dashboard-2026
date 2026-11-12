@@ -33,4 +33,23 @@ describe("GeographyMethodology", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
+
+  it("says how constituency figures relate to the national ones", () => {
+    const { container } = render(<GeographyMethodology />);
+    const terms = [...container.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
+    // After the calibration the figures rest on, before the note on later years
+    expect(terms.slice(-3)).toEqual(["Local calibration", "National figures", "Later years"]);
+    const fact = [...container.querySelectorAll(".method-fact")].find(
+      (item) => item.querySelector("dt").textContent === "National figures",
+    );
+    const points = [...fact.querySelectorAll("li")].map((point) => point.textContent);
+    expect(points).toEqual([
+      "We estimate constituency figures on the local-area file's own weights and do not scale them to the national figures, so a policy's constituency figures, taken together, need not match its national figure.",
+      "The local-area file matches HMRC's totals of property, dividend and private pension income by income band less closely than the national file does, so maps for policies that act on those incomes rest on a looser fit.",
+      "Use a constituency figure as an estimate of a policy's effect on households there; its 90% interval does not cover the gap between the two files. For a policy's total, use the national figures.",
+    ]);
+    // No size for the gap: no published file gives the local-area file's
+    // national total, so the note states none
+    expect(fact.textContent).not.toMatch(/\d(\.\d+)?% (above|below|higher|lower|more|less)|£\d/);
+  });
 });
