@@ -150,7 +150,7 @@ def test_fuel_duty_averages_are_the_engine_and_the_measure(document):
 
 def test_the_pension_tax_allowance_is_the_largest_reduction(document):
     """Budget 2026: up to £94 in 2027-28, rising with the full new State
-    Pension (OBR October 2026 forecast: £182, £250), to 2029-30."""
+    Pension, to 2029-30."""
     row = by_key(
         rows(document, "state_pension_income_tax_protection")[
             "Pension Tax Allowance, the largest tax reduction"
@@ -161,7 +161,10 @@ def test_the_pension_tax_allowance_is_the_largest_reduction(document):
     weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount
     for year in (2028, 2029):
         full = round(
-            math.floor(weekly(f"{year}-04-06") / 0.05 + 1e-9) * 0.05 * 52, 2
+            math.floor(round(weekly(f"{year}-04-06") / 0.05, 6) + 0.5)
+            * 0.05
+            * 52,
+            2,
         )
         assert row[str(year)] == (
             0,

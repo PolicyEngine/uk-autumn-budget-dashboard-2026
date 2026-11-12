@@ -459,7 +459,8 @@ def _pension_tax_allowance(reform) -> list[dict]:
         if not values["first_year"] <= year <= values["last_year"]:
             return 0
         weekly = (
-            math.floor(engine_value(weekly_path, year) / step + 1e-9) * step
+            math.floor(round(engine_value(weekly_path, year) / step, 6) + 0.5)
+            * step
         )
         full = round(weekly * 52, 2)
         return math.ceil(
@@ -483,8 +484,8 @@ def _pension_tax_allowance(reform) -> list[dict]:
                 {
                     "kind": "modifier_constant",
                     "where": "20% of the full new State Pension "
-                    f"(policyengine-uk {weekly_path} x 52, rounded down to "
-                    f"5p a week) above the personal allowance "
+                    f"(policyengine-uk {weekly_path} x 52, rounded to the "
+                    f"nearest 5p a week) above the personal allowance "
                     f"({allowance_path}), rounded up; "
                     + _modifier_source(
                         pension_tax_allowance, "first_year, last_year"
