@@ -1,0 +1,21 @@
+{
+  "repository": "PolicyEngine/policyengine.py",
+  "base_commit": "6c5590394d7435461cb72f9afb7270dc12be0c73",
+  "status": "unreleased source checkpoint; no package release or installed bundle claim",
+  "runtime_source_sha256": "a61894bd1da849593f8fd804eb5c996fb393bc68f65c6a7a2731d7a32d102e1e",
+  "source_manifest_sha256": "78727d6b2ee90c3370b89275f3620ed88e5adaf83d67b91ceab0d322a767b133",
+  "files": [
+    {
+      "path": "execution_receipt.v1.schema.json",
+      "sha256": "6f40926cb8b86ec14fc8d9fbf487cae692189a806d9227b9b489ab08a5fc092a"
+    },
+    {
+      "path": "ordered_scenario_plan.v1.schema.json",
+      "sha256": "17202db73d38dbff04fe3f2c22388d4d899cdfb31479d1fd8de114435d92e180"
+    },
+    {
+      "path": "ordered_scenario_plan.v1.vectors.json",
+      "sha256": "e299b5761eb781677eb0d049f162f452a96bbc164c20d4d6d5957bb0f5324947"
+    }
+  ]
+}
