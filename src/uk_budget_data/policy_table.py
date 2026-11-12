@@ -158,6 +158,11 @@ def _fiscal_year_of(day: date) -> int:
     return day.year if day.month >= 4 else day.year - 1
 
 
+def _tax_year_of(day: date) -> int:
+    """The native model's 6 April to 5 April year."""
+    return day.year if (day.month, day.day) >= (4, 6) else day.year - 1
+
+
 def _clean(value: Optional[float]) -> Optional[float]:
     """Round off float noise (0.15000000000000002) without losing pence."""
     return None if value is None else round(float(value), 6)
@@ -1358,8 +1363,8 @@ def _native_rows(measure_id: str) -> list[dict]:
     record = policy_record()
     measure = record["measures"][measure_id]
     raw = _parameters().baseline
-    first = f"{POLICY_YEARS[0]}-04-01"
-    last = f"{POLICY_YEARS[-1] + 1}-03-31"
+    first = f"{POLICY_YEARS[0]}-04-06"
+    last = f"{POLICY_YEARS[-1] + 1}-04-05"
     rows = []
     labels = {
         registry.FUEL_DUTY: "Fuel duty",
@@ -1426,7 +1431,7 @@ def _native_rows(measure_id: str) -> list[dict]:
             point = _point(
                 instant,
                 _day_label(date.fromisoformat(instant)),
-                _fiscal_year_of(date.fromisoformat(instant)),
+                _tax_year_of(date.fromisoformat(instant)),
                 *safe,
             )
             for side, value in zip(("before", "after"), values):
@@ -1443,6 +1448,8 @@ def _native_rows(measure_id: str) -> list[dict]:
             unit_words = "£ a household, once"
         elif path == registry.TRADING_ALLOWANCE:
             unit_words = "£ of trading receipts a year"
+        elif path == "gov.dft.bus.fares.cap":
+            unit_words = "£ a single fare"
         if has_uncapped:
             note = (note + " An unbounded value means no cap.").strip()
         source = _native_sources(measure_id, path)

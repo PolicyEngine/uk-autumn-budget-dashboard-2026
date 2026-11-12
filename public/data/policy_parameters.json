@@ -25,13 +25,6 @@
           "primary": true,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
-              "year": 2026,
-              "before": 52.95,
-              "after": 52.95
-            },
-            {
               "key": "2026-04-06",
               "label": "6 April 2026",
               "year": 2026,
@@ -55,7 +48,7 @@
             {
               "key": "2027-04-01",
               "label": "1 April 2027",
-              "year": 2027,
+              "year": 2026,
               "before": 60.03,
               "after": 52.95
             },
@@ -69,30 +62,37 @@
             {
               "key": "2028-04-01",
               "label": "1 April 2028",
-              "year": 2028,
+              "year": 2027,
               "before": 62.62,
               "after": 63.21
             },
             {
               "key": "2029-04-01",
               "label": "1 April 2029",
-              "year": 2029,
+              "year": 2028,
               "before": 64.52,
               "after": 65.13
             },
             {
               "key": "2030-04-01",
               "label": "1 April 2030",
-              "year": 2030,
+              "year": 2029,
               "before": 66.44,
               "after": 67.07
             },
             {
               "key": "2031-04-01",
               "label": "1 April 2031",
-              "year": 2031,
+              "year": 2030,
               "before": 67.96,
               "after": 68.61
+            },
+            {
+              "key": "2032-04-01",
+              "label": "1 April 2032",
+              "year": 2031,
+              "before": 69.44,
+              "after": 70.11
             }
           ],
           "source": {
@@ -124,13 +124,6 @@
           "primary": false,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
-              "year": 2026,
-              "before": 28.88,
-              "after": 28.88
-            },
-            {
               "key": "2026-04-06",
               "label": "6 April 2026",
               "year": 2026,
@@ -161,30 +154,37 @@
             {
               "key": "2028-04-01",
               "label": "1 April 2028",
-              "year": 2028,
+              "year": 2027,
               "before": 31.61,
               "after": 34.48
             },
             {
               "key": "2029-04-01",
               "label": "1 April 2029",
-              "year": 2029,
+              "year": 2028,
               "before": 31.61,
               "after": 35.52
             },
             {
               "key": "2030-04-01",
               "label": "1 April 2030",
-              "year": 2030,
+              "year": 2029,
               "before": 31.61,
               "after": 36.58
             },
             {
               "key": "2031-04-01",
               "label": "1 April 2031",
-              "year": 2031,
+              "year": 2030,
               "before": 31.61,
               "after": 37.42
+            },
+            {
+              "key": "2032-04-01",
+              "label": "1 April 2032",
+              "year": 2031,
+              "before": 31.61,
+              "after": 38.24
             }
           ],
           "source": {
@@ -216,13 +216,6 @@
           "primary": false,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
-              "year": 2026,
-              "before": 22.57,
-              "after": 22.57
-            },
-            {
               "key": "2026-04-06",
               "label": "6 April 2026",
               "year": 2026,
@@ -253,30 +246,37 @@
             {
               "key": "2028-04-01",
               "label": "1 April 2028",
-              "year": 2028,
+              "year": 2027,
               "before": 24.7,
               "after": 26.94
             },
             {
               "key": "2029-04-01",
               "label": "1 April 2029",
-              "year": 2029,
+              "year": 2028,
               "before": 24.7,
               "after": 27.76
             },
             {
               "key": "2030-04-01",
               "label": "1 April 2030",
-              "year": 2030,
+              "year": 2029,
               "before": 24.7,
               "after": 28.59
             },
             {
               "key": "2031-04-01",
               "label": "1 April 2031",
-              "year": 2031,
+              "year": 2030,
               "before": 24.7,
               "after": 29.24
+            },
+            {
+              "key": "2032-04-01",
+              "label": "1 April 2032",
+              "year": 2031,
+              "before": 24.7,
+              "after": 29.88
             }
           ],
           "source": {
@@ -388,8 +388,8 @@
           "primary": true,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.05,
               "after": 0.05
@@ -404,7 +404,7 @@
             {
               "key": "2027-04-01",
               "label": "1 April 2027",
-              "year": 2027,
+              "year": 2026,
               "before": 0.05,
               "after": 0.0
             },
@@ -444,8 +444,8 @@
           "primary": false,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.05,
               "after": 0.05
@@ -453,7 +453,7 @@
             {
               "key": "2027-04-01",
               "label": "1 April 2027",
-              "year": 2027,
+              "year": 2026,
               "before": 0.05,
               "after": 0.0
             },
@@ -499,8 +499,8 @@
           "primary": true,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.2,
               "after": 0.2
@@ -539,8 +539,8 @@
           "primary": false,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.4,
               "after": 0.4
@@ -579,8 +579,8 @@
           "primary": false,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.45,
               "after": 0.45
@@ -625,8 +625,8 @@
           "primary": true,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.2,
               "after": 0.2
@@ -665,8 +665,8 @@
           "primary": false,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.4,
               "after": 0.4
@@ -705,8 +705,8 @@
           "primary": false,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.45,
               "after": 0.45
@@ -741,7 +741,7 @@
       ]
     },
     "carers_allowance_earnings_taper": {
-      "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The native model uses a provisional start of 6 October 2030 until DWP confirms the date within 2030-31. Carers at or below the limit and Scotland's Carer Support Payment are unchanged. The native model applies the couple election, overlapping-benefit rules, taxation and Universal Credit interactions; take-up follows the data.",
+      "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The native model uses a provisional start of 6 October 2030 until DWP confirms the date within 2030-31. Carers at or below the limit and Scotland's Carer Support Payment are unchanged. The native model applies the couple election, overlapping-benefit rules, income tax and Universal Credit interactions; take-up follows the data.",
       "display": "schedule",
       "rows": [
         {
@@ -751,8 +751,8 @@
           "primary": true,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 0.0,
               "after": 0.0
@@ -797,13 +797,6 @@
           "unit_words": "£ a household, once",
           "primary": true,
           "points": [
-            {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
-              "year": 2026,
-              "before": 0.0,
-              "after": 0.0
-            },
             {
               "key": "2026-04-06",
               "label": "6 April 2026",
@@ -852,8 +845,8 @@
           "primary": true,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 1000.0,
               "after": 1000.0
@@ -888,18 +881,18 @@
       ]
     },
     "bus_fare_cap_2027": {
-      "description": "Single bus fares on participating services in England outside London are capped at £2 from 1 January to 31 December 2027. This was announced in July 2026, before the Autumn Budget, so the actual pre-Budget and current-law scenarios both retain it. Its incremental Budget effect is zero on this reference. The former dashboard allocated the Treasury costing instead. London is outside the national cap.",
+      "description": "Single bus fares on participating services in England outside London are capped at £2 from 1 January to 31 December 2027. DfT announced this cap in July 2026, before the Autumn Budget, so the actual pre-Budget and current-law scenarios both retain it. Its incremental Budget effect is zero on this reference. London is outside the national cap.",
       "display": "before-after",
       "rows": [
         {
           "label": "Single bus fare cap",
           "unit": "gbp",
-          "unit_words": "£ a year",
+          "unit_words": "£ a single fare",
           "primary": true,
           "points": [
             {
-              "key": "2026-04-01",
-              "label": "1 April 2026",
+              "key": "2026-04-06",
+              "label": "6 April 2026",
               "year": 2026,
               "before": 3.0,
               "after": 3.0

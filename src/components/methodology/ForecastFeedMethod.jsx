@@ -77,7 +77,7 @@ export default function ForecastFeedMethod() {
           {!recordedNativeBasis && <> A matching pre-Budget policy and forecast basis is not recorded.</>}
           {" "}Loading this readback does not update those projections.</>
         ) : (
-          <>The pre-measures forecast uses the <SourceLink id={source} /> together with PolicyEngine&apos;s derived
+          <>The pre-measures forecast uses the <SourceLink id={source} />{" "}together with PolicyEngine&apos;s derived
           and carried series to project wages, benefits, prices and rents.</>
         )}
       </p>

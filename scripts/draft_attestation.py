@@ -20,20 +20,30 @@ from pathlib import Path
 from uk_budget_data.budget_measures import (
     state_pension_only_income_tax_allowance as _sp_threshold,
 )
+from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
 from uk_budget_data.publication.attestations import (
     ATTESTATIONS_ROOT,
     receipt_document_sha256,
 )
+from uk_budget_data.publication.receipt import (
+    CodeRevision,
+    ReceiptUnavailable,
+    composition_problems,
+    receipt_api,
+    scenario_identity,
+)
+from uk_budget_data.publication.release_index import identity_core
 from uk_budget_data.reforms import (
     STATE_PENSION_ALLOWANCE_ID,
     STATE_PENSION_PROTECTION_DESIGN,
+    get_reform,
 )
 
 # Factual reasons only: what was checked, never survey-level values.
-# property_income_rates_up, savings_income_rates_up and
-# unearned_income_rates_up are parameter changes only, with no modifier, so
-# none needs a reason.
+# These are historical helper reasons, not descriptions of the native
+# parameter-only factories. A measure id alone must never select one:
+# the actual bound side must match the running definition and helper below.
 # The employer NI relief for under-25s is withdrawn (27 October 2026) and
 # unregistered, so it has no reason: nothing drafts it. The Carer's
 # Allowance earnings taper, withdrawn that day, was registered again on
@@ -116,10 +126,39 @@ REASONS = {
     ),
 }
 
+_PREFIX = "uk_budget_data.budget_measures."
+REASON_MODIFIERS = {
+    "household_energy_payment_2026": {
+        _PREFIX + "household_energy_payment_2026:household_energy_payment_2026"
+    },
+    "bus_fare_cap_2027": {_PREFIX + "bus_fare_cap_2027:bus_fare_cap_2027"},
+    "carers_allowance_earnings_taper": {
+        _PREFIX
+        + "carers_allowance_earnings_taper:carers_allowance_earnings_taper"
+    },
+    "fuel_duty_rise_deferral": {
+        _PREFIX
+        + "pump_vat_on_fuel_duty_deferral:pump_vat_on_fuel_duty_deferral"
+    },
+    "domestic_electricity_zero_vat": {
+        _PREFIX
+        + "zero_vat_on_domestic_electricity:zero_vat_on_domestic_electricity",
+        _PREFIX
+        + "pre_budget_vat_on_domestic_electricity:pre_budget_vat_on_domestic_electricity",
+    },
+    "plan_2_threshold_unfreeze": {
+        _PREFIX
+        + "connect_student_loan_repayments:connect_student_loan_repayments"
+    },
+}
+
 # The State Pension allowance is hand-written in its total-income design
 # (state_pension_only_income_tax_allowance); the tapered design is a
 # registered template and is not held.
 if STATE_PENSION_PROTECTION_DESIGN == "tax_reduction":
+    REASON_MODIFIERS[STATE_PENSION_ALLOWANCE_ID] = {
+        _PREFIX + "pension_tax_allowance:pension_tax_allowance"
+    }
     REASONS[STATE_PENSION_ALLOWANCE_ID] = (
         "Checked budget_measures.pension_tax_allowance: from 2027-28 to "
         "2029-30 it reduces the income tax before the Winter Fuel Payment "
@@ -141,6 +180,10 @@ if STATE_PENSION_PROTECTION_DESIGN == "tax_reduction":
         "tests/test_pension_tax_allowance.py."
     )
 elif STATE_PENSION_PROTECTION_DESIGN == "total_income":
+    REASON_MODIFIERS[STATE_PENSION_ALLOWANCE_ID] = {
+        _PREFIX
+        + "state_pension_only_income_tax_allowance:state_pension_only_income_tax_allowance"
+    }
     REASONS[STATE_PENSION_ALLOWANCE_ID] = (
         "Checked budget_measures.state_pension_only_income_tax_allowance: "
         "from April 2027 it raises personal_allowance to the full new State "
@@ -160,26 +203,120 @@ elif STATE_PENSION_PROTECTION_DESIGN == "total_income":
     )
 
 
+def _member_reason(key, identities, config, revision):
+    """A known reason only for the exact live, code-bound scenario side."""
+    api, _ = receipt_api()
+    try:
+        sides = {
+            side: api.ReformIdentity.model_validate(identity)
+            for side, identity in identities.items()
+        }
+    except ValueError as error:
+        raise SystemExit(f"{key}: invalid bound scenario identity") from error
+    code_sides = {
+        side: identity
+        for side, identity in sides.items()
+        if identity.binding == "code_revision"
+    }
+    if not code_sides:
+        return None
+    if key not in REASONS or key not in REASON_MODIFIERS:
+        raise SystemExit(f"no drafted reason for {key}; unknown modifier")
+    measure = get_reform(key)
+    if measure is None:
+        raise SystemExit(f"{key}: no registered definition for this modifier")
+    for side, identity in code_sides.items():
+        scenario = (
+            measure.baseline_scenario_for(config)
+            if side == "baseline"
+            else measure.to_scenario()
+        )
+        modifier = getattr(scenario, "simulation_modifier", None)
+        helper = (
+            f"{modifier.__module__}:{modifier.__qualname__}"
+            if modifier is not None
+            else None
+        )
+        if helper not in REASON_MODIFIERS[key]:
+            raise SystemExit(f"{key}: no drafted reason for this modifier")
+        try:
+            expected = scenario_identity(scenario, name=key, revision=revision)
+        except ReceiptUnavailable as error:
+            raise SystemExit(
+                f"{key}: cannot bind this modifier: {error.reason}"
+            ) from error
+        if identity_core(identity.model_dump()) != identity_core(
+            expected.model_dump()
+        ):
+            raise SystemExit(
+                f"{key}: modifier identity differs from the receipt"
+            )
+    return REASONS[key]
+
+
+def draft_reason(document):
+    """Inspect actual identities; neither a policy label nor a proof is enough."""
+    dashboard = document["dashboard"]
+    execution = document["execution_receipt"]
+    key = dashboard["key"]
+    config = DataConfig(years=execution["years"])
+    revision = CodeRevision(dashboard["git_sha"], tree_clean=False)
+    members = dashboard.get("members") or []
+    if members:
+        ids = [member["id"] for member in members]
+        if len(set(ids)) != len(ids) or sorted(ids) != sorted(
+            dashboard["measure_ids"]
+        ):
+            raise SystemExit(
+                "the receipt's member identities do not match its measures"
+            )
+        problems = composition_problems(document)
+        if problems:
+            raise SystemExit(
+                "cannot draft for an invalid member composition: "
+                + "; ".join(problems)
+            )
+        held = []
+        for member in members:
+            sides = {"reform": member["reform"]}
+            if member.get("baseline_bound") is True:
+                sides["baseline"] = member["baseline"]
+            if _member_reason(member["id"], sides, config, revision):
+                held.append(member["id"])
+        if not held:
+            raise SystemExit(f"{key}: no hand-written modifier is bound")
+        return (
+            "Checked that this combined run composes its members as "
+            "published, with no change to any member's modifier: it holds "
+            "the hand-written "
+            + " and ".join(sorted(held))
+            + ", each released "
+            "by its own attestation for its own receipt."
+        )
+    if dashboard["measure_ids"] != [key] or key.startswith("combined--"):
+        raise SystemExit(
+            "the receipt does not record its individual member identities"
+        )
+    reason = _member_reason(
+        key,
+        {side: execution[side] for side in ("baseline", "reform")},
+        config,
+        revision,
+    )
+    if reason is None:
+        raise SystemExit(f"{key}: no hand-written modifier is bound")
+    return reason
+
+
 def main(artifact_dir: str) -> None:
     receipt = Path(artifact_dir) / RECEIPT_FILE
     document = json.loads(receipt.read_bytes())
     key = document["dashboard"]["key"]
-    if key.startswith("combined--"):
-        # A package holding a hand-written modifier is held too: its
-        # reason names the members' own reviews, which must come first.
-        held = sorted(set(document["dashboard"]["measure_ids"]) & set(REASONS))
-        REASONS[key] = (
-            "Checked that this combined run composes its members as "
-            "published, with no change to any member's modifier: it holds "
-            "the hand-written " + " and ".join(held) + ", each released "
-            "by its own attestation for its own receipt."
-        )
-    if key not in REASONS:
-        raise SystemExit(f"no drafted reason for {key}; write one first")
+    reason = draft_reason(document)
     record = {
         "measure_id": key,
         "receipt_sha256": receipt_document_sha256(document),
-        "reason": REASONS[key],
+        "reason": reason,
         "checker": "",
         "second": "",
         "released_at": "",

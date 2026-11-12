@@ -12,9 +12,10 @@
 export const POLICY_PARAMETERS_FILE = "policy_parameters.json";
 export const POLICY_PARAMETERS_SCHEMA = "uk-budget-dashboard/policy-parameters/v1";
 
-// The page's timeline: April 2026 to March 2032, in months
+// The page's six model tax years: 6 April 2026 to 5 April 2032.
 export const FIRST_YEAR = 2026;
 export const MONTHS = 72;
+const APRIL_START = 5 / 30;
 
 const MINUS = "−";
 const MONTH_NAMES = [
@@ -77,11 +78,11 @@ export const mainRow = (entry) => entry?.rows?.find((row) => row.primary) ?? nul
 
 // --- Time ------------------------------------------------------------------
 
-/** "2027-01-01" as months since 1 April 2026, with days as a fraction. */
+/** Months since 6 April 2026, with days as a fraction of their month. */
 export function monthOf(isoDate) {
   const [year, month, day] = isoDate.split("-").map(Number);
   const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return (year - FIRST_YEAR) * 12 + (month - 4) + (day - 1) / days;
+  return (year - FIRST_YEAR) * 12 + (month - 4) + (day - 1) / days - APRIL_START;
 }
 
 const clamp = (month) => Math.min(Math.max(month, 0), MONTHS);
@@ -95,7 +96,7 @@ const nextDay = (isoDate) => {
   return day.toISOString().slice(0, 10);
 };
 const yearOfMonth = (month) => {
-  const bounded = Math.min(Math.max(month, 0), MONTHS - 1e-6);
+  const bounded = Math.min(Math.max(month, 0), MONTHS - 1e-6) + APRIL_START;
   const whole = Math.floor(bounded);
   const year = FIRST_YEAR + Math.floor((whole + 3) / 12);
   const calendarMonth = ((whole + 3) % 12) + 1;

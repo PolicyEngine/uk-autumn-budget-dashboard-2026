@@ -1,10 +1,10 @@
 """The Carer's Allowance earnings taper (``carers_allowance_earnings_taper``).
 
-Hand-computed cases in 2026-27, the last year whose rate and limit are in
-law rather than projected: the allowance is £86.45 a week and the
-earnings limit £204. The measure starts in 2030-31 by default, so each
-case passes ``start_year=2026``; one case checks the default leaves
-2027-28 alone.
+Retained forward-helper cases use 2026-27's £86.45 weekly allowance and
+£204 earnings limit, with an explicit ``start_year=2026``. They test the
+archived helper separately from the active parameter-only factory. Native
+factory cases use the shared pre-Budget rollback and the provisional
+6 October 2030 start, with its actual fiscal-year day fraction.
 
 Earnings for the limit are pay less PAYE on the pay alone and primary
 Class 1 NI (policyengine-uk's ``carers_allowance_earnings``). Below the
@@ -13,13 +13,17 @@ gross pay; above, 20% income tax and 8% NI come off the excess.
 """
 
 import math
+from datetime import date
 
 import pytest
 from policyengine_uk import Simulation
+from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
+from uk_budget_data.budget_policy import native_policy_changes
+from uk_budget_data.forecast import forecast_parameters, with_forecast
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
     AUTUMN_BUDGET_2026_COMBINED_ID,
@@ -207,14 +211,14 @@ def _uc_family(pay):
     }
 
 
-def test_universal_credit_takes_it_all_back_and_tax_leaves_a_loss():
+def test_archived_helper_uc_deduction_and_tax_leave_a_loss():
     # £10,660: the taper pays £4,443.40, which Universal Credit counts in
     # full as unearned income, so UC falls by £4,443.40. The carer element
     # (£2,512.08) is paid on the hours either way. The allowance is
     # taxable: 10,660 + 4,443.40 - 12,570 = £2,533.40 at 20% = £506.68,
-    # which the engine does not take off UC's earned income (in practice
-    # PAYE would collect it from the pay, and UC would return 55% of it),
-    # so the household is £506.68 a year worse off.
+    # which this archived forward helper does not take off UC's earned
+    # income, leaving a £506.68 loss under that design. This is not the
+    # registered native taper's income-tax/UC interaction.
     situation = _uc_family(10_660)
     uc_before, uc_after = _both(situation, "universal_credit")
     assert uc_before - uc_after == pytest.approx(4_443.40, abs=0.01)
@@ -233,49 +237,114 @@ def test_registered_on_budget_day():
     measure = get_reform(CARERS_ALLOWANCE_TAPER_ID)
     assert CARERS_ALLOWANCE_TAPER_ID in list_reform_ids()
     assert CARERS_ALLOWANCE_TAPER_ID in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
-    assert measure.simulation_modifier is carers_allowance_earnings_taper
+    assert measure.simulation_modifier is None
+    assert measure.parameter_changes == native_policy_changes(
+        CARERS_ALLOWANCE_TAPER_ID
+    )
     assert not measure.description.startswith("Candidate measure.")
     combined = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
     assert measure.name in combined.description
 
 
-def test_the_budget_limit_is_16_hours_at_the_national_living_wage():
-    """Budget 2026: the Weekly Earnings Limit is 16 x the National Living
-    Wage, £211.36 at £13.21 in 2027-28, moved on with average earnings.
-    In 2030-31 (half a year by default) a carer just over that limit gets
-    half of (the weekly rate less the excess) x 52, against nothing
-    today."""
-    from policyengine_uk.system import system
-
-    year = 2030
-    index = system.parameters.gov.economic_assumptions.indices.obr
-    # Rounded up to the next pound (EM to SI 2025/352, para. 5.6)
-    limit = math.ceil(
-        round(
-            211.36
-            * index.average_earnings(f"{year}-04-06")
-            / index.average_earnings("2027-04-06"),
-            6,
-        )
-    )
-    rate = system.parameters.gov.dwp.carers_allowance.rate(f"{year}-04-06")
-    situation = _carer(round((limit + 20) * 52, 2))
+def _native_pair(year, weekly_pay, wage_by_year=None):
+    """The registered factory on the common reference, with optional wage
+    inputs shared by both sides to test the native earnings-limit projector."""
+    situation = _carer(round(weekly_pay * 52, 2))
     for person in situation["people"].values():
-        for key in person:
-            person[key] = {year: list(person[key].values())[0]}
+        for key, value in person.items():
+            person[key] = {year: next(iter(value.values()))}
     situation["households"]["h"]["region"] = {year: "LONDON"}
-    baseline = Simulation(situation=situation)
-    reformed = Simulation(situation=situation)
-    # The average earnings route, without the OBR's wages
-    carers_allowance_earnings_taper(reformed, national_living_wage_by_april=())
-    before = baseline.calculate("carers_allowance", year)[0]
-    after = reformed.calculate("carers_allowance", year)[0]
-    # Earnings for the limit are net of PAYE and NI on the pay
-    weekly = reformed.calculate("carers_allowance_earnings", year)[0] / 52
-    excess = weekly - limit
+    changes = {}
+    if wage_by_year:
+        bracket = (
+            len(
+                forecast_parameters().baseline.gov.hmrc.minimum_wage.non_apprentice.brackets
+            )
+            - 1
+        )
+        changes[f"gov.hmrc.minimum_wage.non_apprentice[{bracket}].amount"] = {
+            str(y): value for y, value in wage_by_year
+        }
+    common = Scenario(parameter_changes=changes)
+    selected = get_reform(CARERS_ALLOWANCE_TAPER_ID).to_scenario()
+    return (
+        Simulation(situation=situation, scenario=with_forecast(common)),
+        Simulation(
+            situation=situation, scenario=with_forecast(common + selected)
+        ),
+    )
+
+
+def _native_weekly_awards_in(year, weekly_pays, wage_by_year=None):
+    results = []
+    for weekly_pay in weekly_pays:
+        baseline, reformed = _native_pair(year, weekly_pay, wage_by_year)
+        p = reformed.tax_benefit_system.parameters
+        wage = p.gov.hmrc.minimum_wage.non_apprentice(f"{year}-01-01").amounts[
+            -1
+        ]
+        hours = p.gov.dwp.carers_allowance.earnings_limit_national_living_wage_hours(
+            f"{year}-01-01"
+        )
+        limit = math.ceil(round(hours * wage, 6))
+        assert (
+            p.gov.dwp.carers_allowance.earnings_limit(f"{year}-01-01") == limit
+        )
+        weekly = (
+            float(reformed.calculate("carers_allowance_earnings", year)[0])
+            / 52
+        )
+        excess = max(0, math.floor(weekly * 100 + 1e-6) / 100 - limit)
+        rate = p.gov.dwp.carers_allowance.rate(f"{year}-01-01")
+        results.append(
+            (
+                float(baseline.calculate("carers_allowance", year)[0]) / 52,
+                float(reformed.calculate("carers_allowance", year)[0]) / 52,
+                weekly,
+                excess,
+                rate,
+                limit,
+            )
+        )
+    return results
+
+
+def test_the_budget_limit_is_16_hours_at_the_national_living_wage():
+    """The native provisional 6 October 2030 start pays 182/365 of the
+    annual taper amount; the actual pre-Budget side retains the cliff."""
+    year = 2030
+    p = forecast_parameters()
+    limit = p.gov.dwp.carers_allowance.earnings_limit(f"{year}-01-01")
+    ((before, after, _, excess, rate, actual_limit),) = (
+        _native_weekly_awards_in(year, [limit + 20])
+    )
+    start, end = date(year, 4, 6), date(year + 1, 4, 6)
+    taper_start = date(2030, 10, 6)
+    share = (end - taper_start).days / (end - start).days
+    assert ((end - taper_start).days, (end - start).days) == (182, 365)
     assert 0 < excess < rate
+    assert actual_limit == limit
     assert before == 0
-    assert after == pytest.approx(0.5 * (rate - excess) * 52, abs=1)
+    assert after == pytest.approx(share * (rate - excess), abs=0.001)
+    baseline, reformed = _native_pair(year, limit + 20)
+    assert (
+        baseline.tax_benefit_system.parameters.gov.dwp.carers_allowance.earnings_taper.applies(
+            "2030-01-01"
+        )
+        == 0
+    )
+    assert reformed.tax_benefit_system.parameters.gov.dwp.carers_allowance.earnings_taper.applies(
+        "2030-01-01"
+    ) == pytest.approx(
+        share
+    )
+    path = "gov.dwp.carers_allowance.earnings_taper.applies"
+    assert any(
+        interval.startswith("2030-10-06.") and value == 1
+        for interval, value in native_policy_changes(
+            CARERS_ALLOWANCE_TAPER_ID
+        )[path].items()
+    )
 
 
 def test_northern_ireland_keeps_the_cliff():
@@ -286,8 +355,9 @@ def test_northern_ireland_keeps_the_cliff():
     assert after == 0
 
 
-def _weekly_awards_in(year, weekly_pays, **arguments):
-    """For carers in London on each weekly pay (below the personal
+def _archived_weekly_awards_in(year, weekly_pays, **arguments):
+    """Retained forward-helper cases, separate from the active factory.
+    For carers in London on each weekly pay (below the personal
     allowance), the Carer's Allowance a week before and after the taper in
     ``year``, and their weekly earnings for the limit (the engine moves
     the pay on a little in later years, so these are read, not assumed).
@@ -314,25 +384,24 @@ def _weekly_awards_in(year, weekly_pays, **arguments):
 
 
 def test_the_limit_rounds_up_to_the_next_pound():
-    # 16 x £13.21 = £211.36, set at £212 (EM to SI 2025/352, para. 5.6).
-    # 2031-32 is a full year of the taper. Earnings between £211.36 and
-    # £212 are under the limit: the native amount (nothing, over the
-    # engine's £204) stands. Over £212 the excess is from £212.
-    (full, _, _), below, over = _weekly_awards_in(
+    # Native projection rule: 16 x £13.21 = £211.36, rounded to £212.
+    below, over = _native_weekly_awards_in(
         2031,
-        (150, 211.90, 213.50),
-        national_living_wage_by_april=((2031, 13.21),),
+        (211.90, 213.50),
+        wage_by_year=((2031, 13.21),),
     )
     assert 211.36 < below[2] <= 212
-    assert below[:2] == (0, 0)
-    assert 212 < over[2] < 212 + full
+    assert below[5] == over[5] == 212
+    assert below[0] == pytest.approx(below[4], abs=0.001)
+    assert below[1] == pytest.approx(below[0], abs=0.001)
+    assert 212 < over[2] < 212 + over[4]
     assert over[0] == 0
-    assert over[1] == pytest.approx(full - (over[2] - 212), abs=0.01)
+    assert over[1] == pytest.approx(over[4] - over[3], abs=0.001)
 
 
-def test_an_exact_pound_limit_is_not_rounded_up():
+def test_archived_helper_exact_pound_limit_is_not_rounded_up():
     # 16 x £12.75 = £204.00 exactly, which stays £204, not £205.
-    (full, _, _), over = _weekly_awards_in(
+    (full, _, _), over = _archived_weekly_awards_in(
         2031,
         (150, 204.80),
         national_living_wage_by_april=((2031, 12.75),),
@@ -344,20 +413,26 @@ def test_an_exact_pound_limit_is_not_rounded_up():
 def test_the_obr_wage_sets_the_limit_for_its_year():
     # £14.00 in April 2031 gives £224: about £220 is under it, about £230
     # over it.
-    (full, _, _), under, over = _weekly_awards_in(
+    under, over = _native_weekly_awards_in(
         2031,
-        (150, 220, 230),
-        national_living_wage_by_april=((2030, 13.00), (2031, 14.00)),
+        (220, 230),
+        wage_by_year=((2030, 13.00), (2031, 14.00)),
     )
     assert under[2] < 224 < over[2]
-    assert under[:2] == (0, 0)
-    assert over[1] == pytest.approx(full - (over[2] - 224), abs=0.01)
+    assert under[5] == over[5] == 224
+    assert under[0] == pytest.approx(under[4], abs=0.001)
+    assert under[1] == pytest.approx(under[0], abs=0.001)
+    assert over[0] == 0
+    assert over[1] == pytest.approx(over[4] - over[3], abs=0.001)
 
 
 def test_the_default_limit_is_the_obr_wage_rounded_up():
-    # OBR October 2026 Table 1.13: £14.617 in April 2031, x 16 = £233.87,
+    # Native rounded OBR wage £14.62 in April 2031, x 16 = £233.92,
     # so £234 in 2031-32, a full year of the taper.
-    (full, _, _), under, over = _weekly_awards_in(2031, (150, 233.50, 237))
+    under, over = _native_weekly_awards_in(2031, (233.50, 237))
     assert under[2] < 234 < over[2]
-    assert under[:2] == (0, 0)
-    assert over[1] == pytest.approx(full - (over[2] - 234), abs=0.01)
+    assert under[5] == over[5] == 234
+    assert under[0] == pytest.approx(under[4], abs=0.001)
+    assert under[1] == pytest.approx(under[0], abs=0.001)
+    assert over[0] == 0
+    assert over[1] == pytest.approx(over[4] - over[3], abs=0.001)

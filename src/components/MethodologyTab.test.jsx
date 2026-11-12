@@ -242,7 +242,7 @@ describe("MethodologyTab", () => {
   it("includes the native energy payment in poverty income and retains the local-area certification limit", () => {
     const { container } = renderTab();
     expect(container.textContent).toContain(
-      "We count the £100 Household Energy Payment in HBAI income. The £2 bus cap already applies on both sides, so selecting it adds no change.",
+      "We include the one-off cash payment in HBAI income. The fare cap already applies on both sides, so selecting it adds no change.",
     );
     expect(container.textContent).not.toContain("certified together");
     expect(container.textContent).toContain("which that certificate does not cover");

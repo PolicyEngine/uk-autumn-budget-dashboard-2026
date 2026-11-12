@@ -34,16 +34,25 @@ describe("policy_parameters.json, as the page reads it", () => {
     const segments = segmentsFor(rowsOf("fuel_duty_rise_deferral")["Fuel duty"]);
     expect(segments[0]).toMatchObject({ start: 0, before: 52.95, after: 52.95 });
     const january = segments.find((s) => s.label === "From 1 January 2027");
-    expect(january.start).toBeCloseTo(9);
-    expect(january.end).toBeCloseTo(11);
+    expect(january.start).toBeCloseTo(9 - 5 / 30);
+    expect(january.end).toBeCloseTo(11 - 5 / 30);
     expect(january).toMatchObject({ from: 2026, to: 2026 });
     expect(segments[segments.length - 1].end).toBe(72);
+    expect(segments[segments.length - 1]).toMatchObject({
+      label: "From 1 April 2032", from: 2031, to: 2031,
+    });
+    expect(segments[segments.length - 1].end - segments[segments.length - 1].start).toBeCloseTo(5 / 30);
   });
 
   it("draws a VAT window as current law either side of it", () => {
-    // October 2026 to June 2027: months 6 to 15 of the 72 from April 2026
+    // Calendar-month boundaries retain their exact positions relative to 6 April.
     const segments = segmentsFor(rowsOf("domestic_electricity_zero_vat")["VAT rate on domestic electricity, Great Britain"]);
-    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([[0, 6, 0.05], [6, 12, 0], [12, 15, 0], [15, 72, 0.05]]);
+    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([
+      [0, 6 - 5 / 30, 0.05],
+      [6 - 5 / 30, 12 - 5 / 30, 0],
+      [12 - 5 / 30, 15 - 5 / 30, 0],
+      [15 - 5 / 30, 72, 0.05],
+    ]);
     expect(segments[2]).toMatchObject({ from: 2026, to: 2027 });
     expect(segments[1]).toMatchObject({ before: 0, after: 0 });
   });
@@ -116,8 +125,10 @@ describe("words", () => {
   });
 
   it("puts a date on the timeline's months", () => {
-    expect(monthOf("2026-04-01")).toBe(0);
-    expect(monthOf("2027-01-01")).toBe(9);
+    expect(monthOf("2026-04-06")).toBe(0);
+    expect(monthOf("2026-04-01")).toBe(-5 / 30);
+    expect(monthOf("2027-01-01")).toBe(9 - 5 / 30);
+    expect(monthOf("2032-04-06")).toBe(72);
   });
 });
 

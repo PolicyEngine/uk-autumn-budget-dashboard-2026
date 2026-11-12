@@ -125,8 +125,8 @@ def test_fuel_duty_by_date(document):
     native = PARAMETERS.baseline.get_child(registry.FUEL_DUTY)
     assert dated["2028-04-01"][1] == pytest.approx(native("2028-04-01") * 100)
     assert dated["2028-04-01"][0] != dated["2028-04-01"][1]
-    assert dated["2026-04-01"] == (52.95, 52.95)
-    assert "2032-04-01" not in dated
+    assert dated["2026-04-06"] == (52.95, 52.95)
+    assert "2032-04-01" in dated
 
 
 def test_fuel_table_keeps_dated_statutory_rates_and_physical_units(document):

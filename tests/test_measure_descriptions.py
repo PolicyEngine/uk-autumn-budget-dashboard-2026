@@ -2,8 +2,10 @@
 
 A measure's name and description are public: the personal impact API
 returns them. Each registered measure declares here the taxes whose rules
-it changes, and its copy may name only those, so a new measure must
-declare its taxes too. Copy that names a tax this module doesn't know
+it changes, and its direct-tax claims may name only those. Explicit,
+source-proved second-round disclosures have a measure-specific allowance
+for the complete reviewed sentence. A new measure must declare its direct
+taxes too. Copy that names a tax this module doesn't know
 fails until the tax is added. An unnamed "tax" or "taxed" reads as income
 tax, an unnamed "duty" as a duty and an unnamed "levy" as a levy, so each
 fails in the copy of a measure that declares none. A salary sacrifice
@@ -174,6 +176,18 @@ DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(
     *(DECLARED[member] for member in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
 )
 
+# A source-proved downstream interaction does not change the tax's rules.
+# Keep the complete approved sentence scoped to this measure: merely adding
+# the word "interaction" must never permit an undeclared direct-tax claim.
+CARER_TAX_INTERACTION = (
+    "The native model applies the couple election, overlapping-benefit "
+    "rules, income tax and Universal Credit interactions; take-up follows "
+    "the data."
+)
+SECOND_ROUND_INTERACTIONS = {
+    "carers_allowance_earnings_taper": (CARER_TAX_INTERACTION,),
+}
+
 
 def names_in(text: str) -> list:
     """Each tax the text names by one of TAX_NAMES, with where."""
@@ -192,6 +206,12 @@ def taxes_named(text: str) -> set:
         if not any(a <= relief.start() < b for _, (a, b) in names):
             named.add("income tax")
     return named
+
+
+def direct_taxes_named(measure_id: str, text: str) -> set:
+    for sentence in SECOND_ROUND_INTERACTIONS.get(measure_id, ()):
+        text = text.replace(sentence, "")
+    return taxes_named(text)
 
 
 def known_spans(text: str) -> list:
@@ -272,10 +292,42 @@ def copy_of(measure_id) -> tuple:
 def test_each_measure_names_only_the_taxes_it_moves():
     wrong = {}
     for measure_id, declared in DECLARED.items():
-        named = set().union(*map(taxes_named, copy_of(measure_id)))
+        named = set().union(
+            *(
+                direct_taxes_named(measure_id, text)
+                for text in copy_of(measure_id)
+            )
+        )
         if named - declared:
             wrong[measure_id] = sorted(named - declared)
     assert not wrong, f"copy names taxes these measures don't move: {wrong}"
+
+
+def test_source_proved_carer_tax_interaction_is_not_a_direct_tax_rule_change():
+    measure_id = "carers_allowance_earnings_taper"
+    assert (
+        "carers_allowance"
+        in installed_system.variables["social_security_income"].adds
+    )
+    assert DECLARED[measure_id] == set()
+    assert CARER_TAX_INTERACTION in get_reform(measure_id).description
+    assert taxes_named(CARER_TAX_INTERACTION) == {"income tax"}
+    assert direct_taxes_named(measure_id, CARER_TAX_INTERACTION) == set()
+    assert direct_taxes_named("bus_fare_cap_2027", CARER_TAX_INTERACTION) == {
+        "income tax"
+    }
+
+
+def test_an_interaction_disclosure_does_not_excuse_an_undeclared_direct_tax_claim():
+    measure_id = "carers_allowance_earnings_taper"
+    text = "The income tax rate rises to 25%. " + CARER_TAX_INTERACTION
+    assert direct_taxes_named(measure_id, text) - DECLARED[measure_id] == {
+        "income tax"
+    }
+    unrelated = "The council tax rate rises. " + CARER_TAX_INTERACTION
+    assert direct_taxes_named(measure_id, unrelated) - DECLARED[
+        measure_id
+    ] == {"council tax"}
 
 
 def test_no_copy_names_a_tax_this_module_does_not_know():

@@ -359,7 +359,7 @@ export const POLICY_DETAILS = [
     sentence: "tapering Carer's Allowance above the earnings limit",
     name: "Carer's Allowance earnings taper",
     description: "Withdraw Carer's Allowance £1 for £1 above the earnings limit",
-    writtenFor: "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The native model uses a provisional start of 6 October 2030 until DWP confirms the date within 2030-31. Carers at or below the limit and Scotland's Carer Support Payment are unchanged. The native model applies the couple election, overlapping-benefit rules, taxation and Universal Credit interactions; take-up follows the data.",
+    writtenFor: "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The native model uses a provisional start of 6 October 2030 until DWP confirms the date within 2030-31. Carers at or below the limit and Scotland's Carer Support Payment are unchanged. The native model applies the couple election, overlapping-benefit rules, income tax and Universal Credit interactions; take-up follows the data.",
     summary: "Tapers Carer's Allowance away, £1 for each £1 earned above the earnings limit.",
     points: [
       { label: "Earnings limit", text: "16 hours at the National Living Wage, rounded up to the pound." },
@@ -598,7 +598,7 @@ export const POLICY_DETAILS = [
     sentence: "capping single bus fares at £2",
     name: "Single bus fares capped at £2",
     description: "Retain the £2 single bus fare cap outside London in 2027",
-    writtenFor: "Single bus fares on participating services in England outside London are capped at £2 from 1 January to 31 December 2027. This was announced in July 2026, before the Autumn Budget, so the actual pre-Budget and current-law scenarios both retain it. Its incremental Budget effect is zero on this reference. The former dashboard allocated the Treasury costing instead. London is outside the national cap.",
+    writtenFor: "Single bus fares on participating services in England outside London are capped at £2 from 1 January to 31 December 2027. DfT announced this cap in July 2026, before the Autumn Budget, so the actual pre-Budget and current-law scenarios both retain it. Its incremental Budget effect is zero on this reference. London is outside the national cap.",
     summary: "We retain the £2 cap on both sides of this comparison.",
     points: [
       {"label": "Budget effect", "text": "No additional change against the pre-Budget policy."},

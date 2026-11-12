@@ -1,4 +1,4 @@
-"""The £2 bus fare cap (``bus_fare_cap_2027``).
+"""Historical Treasury-allocation helper and the native £2-cap registration.
 
 The saving is the Treasury's costing (Table 6.1) shared out across
 households by their bus fare spending in England outside London: 10.0% of
@@ -6,7 +6,9 @@ spending at £3 fares for the days the cap runs, grossed up from current
 law's spending (already at £2): ``spending × step / (1 − step)`` with
 ``step = 0.10 × share``. Each case sets bus fare spending directly and
 checks the credit to household net income against that formula; one case
-checks that no data limit is touched.
+checks that no data limit is touched. These allocation cases exercise the
+archived helper explicitly; the active registration below uses the native
+parameter and has no incremental change against actual pre-Budget policy.
 """
 
 import inspect
@@ -19,6 +21,8 @@ from uk_budget_data import data_limits
 from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
     bus_fare_cap_2027,
 )
+from uk_budget_data.budget_policy import native_policy_changes
+from uk_budget_data.forecast import with_forecast
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
     BUS_FARE_CAP_ID,
@@ -165,7 +169,16 @@ def test_the_limit_check_would_see_a_change_to_the_fare_cap():
 
 def test_it_is_registered_in_the_package():
     measure = get_reform(BUS_FARE_CAP_ID)
-    assert measure.simulation_modifier is bus_fare_cap_2027
-    assert not measure.parameter_changes
+    assert measure.simulation_modifier is None
+    assert measure.parameter_changes == native_policy_changes(BUS_FARE_CAP_ID)
     assert not measure.has_custom_baseline()
     assert BUS_FARE_CAP_ID in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+    # Already announced in July: the native cap is retained on both sides.
+    before = with_forecast(None)
+    after = with_forecast(measure.to_scenario())
+    assert (
+        before.applied_before_data_load
+        is after.applied_before_data_load
+        is True
+    )
+    assert before.parameter_changes == after.parameter_changes

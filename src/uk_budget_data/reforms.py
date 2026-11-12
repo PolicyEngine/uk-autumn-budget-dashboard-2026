@@ -747,7 +747,7 @@ def _create_carers_allowance_earnings_taper() -> Reform:
             "6 October 2030 until DWP confirms the date within 2030-31. "
             "Carers at or below the limit and Scotland's Carer Support "
             "Payment are unchanged. The native model applies the couple "
-            "election, overlapping-benefit rules, taxation and Universal "
+            "election, overlapping-benefit rules, income tax and Universal "
             "Credit interactions; take-up follows the data."
         ),
         parameter_changes=native_policy_changes(CARERS_ALLOWANCE_TAPER_ID),
@@ -1016,11 +1016,10 @@ def _create_bus_fare_cap_2027() -> Reform:
         description=(
             "Single bus fares on participating services in England outside "
             "London are capped at £2 from 1 January to "
-            "31 December 2027. This was announced in July 2026, before "
+            "31 December 2027. DfT announced this cap in July 2026, before "
             "the Autumn Budget, so the actual pre-Budget and current-law "
             "scenarios both retain it. Its incremental Budget effect is "
-            "zero on this reference. The former dashboard allocated the "
-            "Treasury costing instead. London is outside the national cap."
+            "zero on this reference. London is outside the national cap."
         ),
         parameter_changes=native_policy_changes(BUS_FARE_CAP_ID),
     )

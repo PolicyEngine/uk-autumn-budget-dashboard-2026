@@ -87,6 +87,7 @@ def test_bus_table_keeps_the_previously_announced_january_cap_on_both_sides(
     assert (january["before"], january["after"]) == (2, 2)
     assert not any(policy_table._differs(point) for point in row["points"])
     assert row["null_label"] == "no cap"
+    assert row["unit_words"] == "£ a single fare"
     assert _on(row, "2026-12-31")["before"] == 3
     assert _on(row, "2028-01-01")["after"] is None
 
@@ -113,6 +114,15 @@ def test_fuel_table_preserves_actual_reference_and_physical_units(document):
     april = _on(petrol, "2027-04-01")
     assert (april["before"], april["after"]) == (60.03, 52.95)
     assert petrol["unit_words"] == "pence a litre"
+    # A 1 April change contributes the last five days of the preceding
+    # model tax year, including the terminal scored year.
+    terminal = _on(petrol, "2032-04-01")
+    assert terminal["key"] == "2032-04-01"
+    assert terminal["year"] == 2031
+    assert petrol["points"][0]["key"] == "2026-04-06"
+    assert all(
+        "2026-04-06" <= p["key"] <= "2032-04-05" for p in petrol["points"]
+    )
     for fuel in ("lpg", "natural_gas"):
         row = _row(
             document,

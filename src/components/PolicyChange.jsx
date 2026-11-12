@@ -49,7 +49,7 @@ const YEAR_LABELS = Array.from({ length: MONTHS / 12 }, (_, i) => {
 
 /**
  * Pre-Budget (grey, dashed) and the measure (its colour) as steps across
- * April 2026 to March 2032, on a true time axis, with the gap between them
+ * 6 April 2026 to 5 April 2032, on a true time axis, with the gap between them
  * shaded in the gain or loss colour and labelled where it is largest and
  * where it ends. Hover, or the arrow keys, pick a step: a guide, a line in
  * words, and its years marked on the card's timeline.
