@@ -219,9 +219,12 @@ def drafted(tmp_path, monkeypatch):
 
 
 def test_a_package_reason_names_every_hand_written_member(drafted):
+    from uk_budget_data.publication.combine import combined_key
+
+    members = [*HAND_WRITTEN, "badr_lifetime_limit_cut"]
     record = drafted(
-        "combined--example",
-        [*HAND_WRITTEN, "badr_lifetime_limit_cut"],
+        combined_key(members),
+        members,
         historical=True,
     )
     for measure_id in HAND_WRITTEN:
@@ -329,15 +332,73 @@ def test_a_claimed_handwritten_proof_cannot_turn_parameters_into_a_modifier(
 
 
 def test_a_package_cannot_draft_for_tampered_member_identities(drafted):
+    from uk_budget_data.publication.combine import combined_key
+
     def tamper(document):
         document["dashboard"]["members"][0]["reform"]["reform_sha256"] = (
             "b" * 64
         )
 
     with pytest.raises(SystemExit, match="invalid member composition"):
+        members = [reforms.BUS_FARE_CAP_ID, "badr_lifetime_limit_cut"]
         drafted(
-            "combined--historical-example",
-            [reforms.BUS_FARE_CAP_ID, "badr_lifetime_limit_cut"],
+            combined_key(members),
+            members,
             historical=True,
             tamper=tamper,
         )
+
+
+@pytest.mark.parametrize("side", ["baseline", "reform"])
+def test_a_content_bound_opposite_side_cannot_borrow_a_helper_reason(
+    side, monkeypatch
+):
+    from uk_budget_data.budget_measures.pre_budget_vat_on_domestic_electricity import (
+        pre_budget_vat_on_domestic_electricity,
+    )
+    from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+        zero_vat_on_domestic_electricity,
+    )
+
+    script = _load_script()
+    measure = reforms.get_reform(reforms.ELECTRICITY_VAT_ID).model_copy(
+        update={
+            "parameter_changes": None,
+            "baseline_parameter_changes": None,
+            "simulation_modifier": zero_vat_on_domestic_electricity,
+            "baseline_simulation_modifier": pre_budget_vat_on_domestic_electricity,
+        }
+    )
+    monkeypatch.setattr(script, "get_reform", lambda _: measure)
+    config = DataConfig(years=[2027])
+    revision = receipt_module.CodeRevision("a" * 40, True)
+    identities = {
+        name: receipt_module.scenario_identity(
+            scenario, name=name, revision=revision
+        ).model_dump(mode="json")
+        for name, scenario in (
+            ("baseline", measure.baseline_scenario_for(config)),
+            ("reform", measure.to_scenario()),
+        )
+    }
+    identities[side].update(binding="content", reform_sha256="b" * 64)
+    with pytest.raises(SystemExit, match="modifier identity differs"):
+        script._member_reason(measure.id, identities, config, revision)
+
+
+@pytest.mark.parametrize(
+    "wrong_key", [reforms.BUS_FARE_CAP_ID, "combined--unrelated"]
+)
+def test_a_package_cannot_draft_under_another_key(
+    drafted, tmp_path, wrong_key
+):
+    from uk_budget_data.publication.combine import combined_key
+
+    members = [reforms.PLAN_2_ID, "badr_lifetime_limit_cut"]
+
+    def tamper(document):
+        document["dashboard"]["key"] = wrong_key
+
+    with pytest.raises(SystemExit, match="key does not match its members"):
+        drafted(combined_key(members), members, historical=True, tamper=tamper)
+    assert not (tmp_path / "attestations").exists()

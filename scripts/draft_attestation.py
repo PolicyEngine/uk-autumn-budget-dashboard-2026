@@ -26,6 +26,7 @@ from uk_budget_data.publication.attestations import (
     ATTESTATIONS_ROOT,
     receipt_document_sha256,
 )
+from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.receipt import (
     CodeRevision,
     ReceiptUnavailable,
@@ -225,7 +226,7 @@ def _member_reason(key, identities, config, revision):
     measure = get_reform(key)
     if measure is None:
         raise SystemExit(f"{key}: no registered definition for this modifier")
-    for side, identity in code_sides.items():
+    for side, identity in sides.items():
         scenario = (
             measure.baseline_scenario_for(config)
             if side == "baseline"
@@ -237,7 +238,10 @@ def _member_reason(key, identities, config, revision):
             if modifier is not None
             else None
         )
-        if helper not in REASON_MODIFIERS[key]:
+        if (
+            identity.binding == "code_revision"
+            and helper not in REASON_MODIFIERS[key]
+        ):
             raise SystemExit(f"{key}: no drafted reason for this modifier")
         try:
             expected = scenario_identity(scenario, name=key, revision=revision)
@@ -270,6 +274,8 @@ def draft_reason(document):
             raise SystemExit(
                 "the receipt's member identities do not match its measures"
             )
+        if key != combined_key(ids):
+            raise SystemExit("the receipt's key does not match its members")
         problems = composition_problems(document)
         if problems:
             raise SystemExit(
