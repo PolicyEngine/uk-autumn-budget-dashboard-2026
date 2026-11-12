@@ -12,6 +12,12 @@
  * and none is drawn from survey data of ours. Paragraph numbers are the
  * Budget document's own: they are printed in its PDF, not in the HTML
  * version.
+ *
+ * Two cards are measures we hold back, not measures we cannot model:
+ * company car tax and the Machine Games Duty rise (HELD_FOR_CHECKS). The
+ * national data hold company cars and machine takings from policyengine
+ * 6.16.2, so each card's "Why we leave it out" point says where our own
+ * work stands, in words and with no figure of ours.
  */
 
 import { SOURCES } from "./sources";
@@ -69,8 +75,23 @@ export const UNMODELLED_REASONS = [
     label: "Outside a household model",
     why: "Taxes on firms, reliefs on business premises, a change in who collects a tax and loans don't change household incomes the way this dashboard measures them.",
   },
-  { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules that still await publication." },
+  // Also the two cards we hold back while we check our own estimates
+  // (HELD_FOR_CHECKS): they keep their places, so the list's order stays
+  {
+    id: "data",
+    label: "Not in our data yet",
+    why: "These need something our data or engine lacks, rules that still await publication, or checks of our own estimate that we have yet to finish.",
+  },
 ];
+
+/**
+ * The cards for measures we model but hold back from the national results
+ * while we check our own estimates (11 November 2026). Each stays a card
+ * here, and out of the publication manifest, until we publish its figures:
+ * then it leaves this list and UNMODELLED_MEASURES together
+ * (heldMeasures.test.js and tests/test_held_measures.py pin both).
+ */
+export const HELD_FOR_CHECKS = ["machine-games-duty", "company-car-tax"];
 
 /** The labels of every card's points, in order. */
 export const UNMODELLED_POINT_LABELS = ["For a household", "Who it reaches", "Why we leave it out"];
@@ -175,7 +196,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "Businesses pay; any household effect comes via stakes, prizes, owners or staff." },
       { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
-      { label: "Why we leave it out", text: "Household calculator only: our data hold no gambling or machine types." },
+      { label: "Why we leave it out", text: "Household calculator only: we haven't yet finished and checked a national estimate." },
     ],
     costings: [
       {
@@ -267,7 +288,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "More income tax on the same company car." },
       { label: "Who it reaches", text: "Employees with a company car." },
-      { label: "Why we leave it out", text: "The model has no company cars." },
+      { label: "Why we leave it out", text: "Our costing falls well short of the Treasury's; we haven't established why." },
     ],
     costings: [{ row: 86, values: [0, 0, 0, 0, 310, 345] }],
     sources: [budget("paragraph 6.207")],

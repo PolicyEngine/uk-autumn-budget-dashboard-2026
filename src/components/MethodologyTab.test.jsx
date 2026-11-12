@@ -181,9 +181,12 @@ describe("MethodologyTab", () => {
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
     expect(card.querySelectorAll("li")).toHaveLength(0);
     expect(card).toHaveTextContent("cannot be costed household by household");
-    // The savings income tax rise is published (11 November 2026): no
-    // longer said to be held back here
-    expect(card.textContent).not.toMatch(/held back|savings income/i);
+    // Savings is included in the static package; the two separate held
+    // national estimates remain disclosed (heldMeasures.test.js).
+    expect(card.textContent).not.toMatch(/savings income/i);
+    expect(card).toHaveTextContent(
+      "For two policies on that list, company car tax and the rise in Machine Games Duty, we hold back our national estimates while we finish and check them.",
+    );
     const link = within(card).getByRole("link", { name: "Budget policies we do not model", hidden: true });
     expect(link).toHaveAttribute("href", "?tab=policies#budget-measures-not-modelled");
     fireEvent.click(link);
