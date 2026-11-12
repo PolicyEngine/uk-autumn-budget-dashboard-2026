@@ -249,8 +249,8 @@
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.vat.reduced_rate, at 6 April of each year"
+              "kind": "modifier_constant",
+              "where": "budget_measures/pre_budget_vat_on_domestic_electricity.py pre_budget_vat_on_domestic_electricity(baseline_rate)"
             },
             "after": {
               "kind": "modifier_constant",
@@ -309,8 +309,8 @@
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.vat.reduced_rate, at 6 April of each year"
+              "kind": "modifier_constant",
+              "where": "budget_measures/pre_budget_vat_on_domestic_electricity.py pre_budget_vat_on_domestic_electricity(baseline_rate)"
             },
             "after": {
               "kind": "modifier_constant",

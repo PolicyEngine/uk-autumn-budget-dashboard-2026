@@ -246,9 +246,16 @@ def test_the_combined_package_merges_every_members_changes():
         ).items():
             assert combined.parameter_changes[path] == values, path
     assert combined.simulation_modifier is not None
-    # The Plan 2 measure, which counted modelled repayments on both sides,
-    # is withdrawn: no baseline modifier
-    assert combined.baseline_simulation_modifier is None
+    # The electricity measure is scored against 5% VAT in every month, so
+    # it brings a pre-Budget side and the package's baseline runs it
+    # (tests/test_electricity_vat_baseline.py). No other member has one.
+    assert combined.baseline_simulation_modifier is not None
+    assert [
+        measure_id
+        for measure_id in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+        if get_reform(measure_id).has_custom_baseline()
+    ] == ["domestic_electricity_zero_vat"]
+    assert combined.baseline_parameter_changes is None
 
 
 # --- Receipts ---------------------------------------------------------------
@@ -274,6 +281,8 @@ def test_the_template_modifiers_are_proved_pure_and_three_are_hand_written():
         ],
         "warm_home_discount_top_up": ["apply_benefit_receipt_payment"],
         "zero_vat_on_domestic_electricity": ["apply_vat_base_change"],
+        # Its pre-Budget side: no attestation needed either
+        "pre_budget_vat_on_domestic_electricity": ["apply_vat_base_change"],
         "road_fuel_vat_cut": ["apply_vat_base_change"],
     }
     for name, templates in pure.items():

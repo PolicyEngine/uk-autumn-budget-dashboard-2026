@@ -49,6 +49,9 @@ from uk_budget_data.budget_measures.pension_tax_allowance import (
 from uk_budget_data.budget_measures.planned_cash_isa_limit import (
     planned_cash_isa_limit,
 )
+from uk_budget_data.budget_measures.pre_budget_vat_on_domestic_electricity import (
+    pre_budget_vat_on_domestic_electricity,
+)
 from uk_budget_data.budget_measures.pump_vat_on_fuel_duty_deferral import (
     pump_vat_on_fuel_duty_deferral,
 )
@@ -566,12 +569,20 @@ def _electricity_vat_description() -> str:
     )
 
 
+# The measure is scored against 5% in every month, as Table 6.1 scores it.
+# Current law zero-rates Great Britain's domestic electricity from
+# 1 October 2026 to 31 March 2027 (SI 2026/987), and policyengine-uk
+# 2.153.5 and later charge it so. So the measure has a pre-Budget side,
+# which holds electricity at 5% for the years the measure changes
+# (budget_measures/pre_budget_vat_on_domestic_electricity.py); the Budget
+# side holds the same 5% and takes the zero-rated months off it.
 def _create_domestic_electricity_zero_vat() -> Reform:
     return Reform(
         id=ELECTRICITY_VAT_ID,
         name="Zero VAT on domestic electricity",
         description=_electricity_vat_description(),
         simulation_modifier=zero_vat_on_domestic_electricity,
+        baseline_simulation_modifier=pre_budget_vat_on_domestic_electricity,
     )
 
 
@@ -1293,8 +1304,8 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
     Built by ``publication.combine.combine_measures``, as a combined run
     is: the members' merged parameter changes (it refuses two members
     changing one parameter) and each member's modifier, in order of measure
-    id. The Plan 2 measure brings its baseline modifier, so the combined
-    baseline counts modelled student loan repayments too.
+    id. The electricity measure brings its pre-Budget side, so the combined
+    baseline charges 5% VAT on domestic electricity in every month too.
     """
     from uk_budget_data.models import DataConfig
     from uk_budget_data.publication.combine import combine_measures
