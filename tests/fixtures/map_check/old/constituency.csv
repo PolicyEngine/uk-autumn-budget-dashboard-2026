@@ -1,0 +1,25 @@
+level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,tier,reason,support_band,noise,estimator
+constituency,T14000001,Seat A,alpha_rates_up,2029,average_change,-14.0,-22.0,-7.0,loss,approximate,thin_support,10–29,False,direct
+constituency,T14000001,Seat A,alpha_rates_up,2029,relative_change,-0.0004,-0.0006,-0.0002,loss,approximate,thin_support,10–29,False,direct
+constituency,T14000001,Seat A,alpha_rates_up,2030,average_change,-15.0,-23.0,-8.0,loss,approximate,thin_support,10–29,False,direct
+constituency,T14000001,Seat A,beta_payment,2029,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+constituency,T14000002,Seat B,alpha_rates_up,2029,average_change,-9.0,-12.0,-6.0,loss,reported,,30+,False,direct
+constituency,T14000002,Seat B,alpha_rates_up,2029,relative_change,-0.0009,-0.0012,-0.0006,loss,reported,,30+,False,direct
+constituency,T14000002,Seat B,alpha_rates_up,2030,average_change,-10.0,-13.0,-7.0,loss,reported,,30+,False,direct
+constituency,T14000002,Seat B,beta_payment,2029,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+constituency,T14000003,Seat C,alpha_rates_up,2029,average_change,-20.0,-25.0,-15.0,loss,reported,,30+,False,direct
+constituency,T14000003,Seat C,alpha_rates_up,2029,relative_change,-0.002,-0.0025,-0.0015,loss,reported,,30+,False,direct
+constituency,T14000003,Seat C,alpha_rates_up,2030,average_change,-21.0,-26.0,-16.0,loss,reported,,30+,False,direct
+constituency,T14000003,Seat C,beta_payment,2029,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+constituency,T14000004,Seat D,alpha_rates_up,2029,average_change,,,,,withheld,disclosure_control,,False,direct
+constituency,T14000004,Seat D,alpha_rates_up,2029,relative_change,,,,,withheld,disclosure_control,,False,direct
+constituency,T14000004,Seat D,alpha_rates_up,2030,average_change,,,,,withheld,disclosure_control,,False,direct
+constituency,T14000004,Seat D,beta_payment,2029,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+constituency,T14000005,Seat E,alpha_rates_up,2029,average_change,-40.0,-60.0,-20.0,loss,approximate,thin_support,10–29,False,direct
+constituency,T14000005,Seat E,alpha_rates_up,2029,relative_change,-0.004,-0.006,-0.002,loss,approximate,thin_support,10–29,False,direct
+constituency,T14000005,Seat E,alpha_rates_up,2030,average_change,-41.0,-61.0,-21.0,loss,approximate,thin_support,10–29,False,direct
+constituency,T14000005,Seat E,beta_payment,2029,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+constituency,T14000006,Seat F,alpha_rates_up,2029,average_change,5.0,-120.0,130.0,too_close_to_call,approximate,thin_support,10–29,False,direct
+constituency,T14000006,Seat F,alpha_rates_up,2029,relative_change,0.0005,-0.012,0.013,too_close_to_call,approximate,thin_support,10–29,False,direct
+constituency,T14000006,Seat F,alpha_rates_up,2030,average_change,6.0,-120.0,130.0,too_close_to_call,approximate,thin_support,10–29,False,direct
+constituency,T14000006,Seat F,beta_payment,2029,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct

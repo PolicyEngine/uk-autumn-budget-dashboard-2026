@@ -1,0 +1,33 @@
+{
+  "note": "Synthetic rows and the map category each must get. The page's rule (src/utils/geography/classify.js) and the map check's port of it (scripts/map_check.py) both answer these cases, so the two cannot drift apart. expected is a category, \"too_uncertain\", or null for a row with no category.",
+  "cases": [
+    {"outcome": "average_change", "value": "0", "lo": "0", "hi": "0", "tier": "reported", "expected": "little_change"},
+    {"outcome": "average_change", "value": "9.9", "lo": "9.9", "hi": "9.9", "tier": "reported", "expected": "little_change"},
+    {"outcome": "average_change", "value": "-9.9", "lo": "-9.9", "hi": "-9.9", "tier": "reported", "expected": "little_change"},
+    {"outcome": "average_change", "value": "10.0", "lo": "10.0", "hi": "10.0", "tier": "reported", "expected": "small_gain"},
+    {"outcome": "average_change", "value": "-10", "lo": "-10", "hi": "-10", "tier": "reported", "expected": "small_loss"},
+    {"outcome": "average_change", "value": "99.9", "lo": "99.9", "hi": "99.9", "tier": "reported", "expected": "small_gain"},
+    {"outcome": "average_change", "value": "100", "lo": "100", "hi": "100", "tier": "reported", "expected": "large_gain"},
+    {"outcome": "average_change", "value": "-100", "lo": "-100", "hi": "-100", "tier": "reported", "expected": "large_loss"},
+    {"outcome": "average_change", "value": "-14", "lo": "-22", "hi": "-7", "tier": "approximate", "expected": "small_loss"},
+    {"outcome": "average_change", "value": "-9", "lo": "-12", "hi": "-6", "tier": "reported", "expected": "little_change"},
+    {"outcome": "average_change", "value": "-11", "lo": "-14", "hi": "-8", "tier": "reported", "expected": "small_loss"},
+    {"outcome": "average_change", "value": "6", "lo": "-4", "hi": "16", "tier": "reported", "expected": "little_change"},
+    {"outcome": "average_change", "value": "20", "lo": "-10", "hi": "50", "tier": "reported", "expected": "too_uncertain"},
+    {"outcome": "average_change", "value": "5", "lo": "-120", "hi": "130", "tier": "approximate", "expected": "too_uncertain"},
+    {"outcome": "average_change", "value": "-12", "lo": "-30", "hi": "4", "tier": "approximate", "expected": "small_loss"},
+    {"outcome": "average_change", "value": "120", "lo": "20", "hi": "220", "tier": "reported", "expected": "large_gain"},
+    {"outcome": "average_change", "value": "", "lo": "", "hi": "", "tier": "withheld", "expected": null},
+    {"outcome": "relative_change", "value": "0.000999", "lo": "0.000999", "hi": "0.000999", "tier": "reported", "expected": "little_change"},
+    {"outcome": "relative_change", "value": "0.001", "lo": "0.001", "hi": "0.001", "tier": "reported", "expected": "small_gain"},
+    {"outcome": "relative_change", "value": "-0.001", "lo": "-0.001", "hi": "-0.001", "tier": "reported", "expected": "small_loss"},
+    {"outcome": "relative_change", "value": "0.0099", "lo": "0.0099", "hi": "0.0099", "tier": "reported", "expected": "small_gain"},
+    {"outcome": "relative_change", "value": "0.01", "lo": "0.01", "hi": "0.01", "tier": "reported", "expected": "large_gain"},
+    {"outcome": "relative_change", "value": "-0.01", "lo": "-0.01", "hi": "-0.01", "tier": "reported", "expected": "large_loss"},
+    {"outcome": "relative_change", "value": "0.004", "lo": "0.002", "hi": "0.006", "tier": "reported", "expected": "small_gain"},
+    {"outcome": "relative_change", "value": "0.0123", "lo": "0.008", "hi": "0.016", "tier": "reported", "expected": "large_gain"},
+    {"outcome": "relative_change", "value": "0.004", "lo": "-0.009", "hi": "0.017", "tier": "reported", "expected": "too_uncertain"},
+    {"outcome": "relative_change", "value": "1.2e-05", "lo": "-0.0002", "hi": "0.0003", "tier": "approximate", "expected": "little_change"},
+    {"outcome": "relative_change", "value": "", "lo": "", "hi": "", "tier": "withheld", "expected": null}
+  ]
+}
