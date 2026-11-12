@@ -2806,6 +2806,74 @@
       ],
       "required": true
     },
+    "gainers": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "variables",
+          "str"
+        ],
+        [
+          "gainers",
+          "float"
+        ],
+        [
+          "gainer_records",
+          "int"
+        ],
+        [
+          "gainer_survey_households",
+          "int"
+        ],
+        [
+          "mean_gain",
+          "float"
+        ],
+        [
+          "losers",
+          "float"
+        ],
+        [
+          "loser_records",
+          "int"
+        ],
+        [
+          "loser_survey_households",
+          "int"
+        ],
+        [
+          "mean_loss",
+          "float"
+        ]
+      ],
+      "file": "gainers.csv",
+      "key": [
+        "reform_id",
+        "year"
+      ],
+      "nullable": [
+        "gainers",
+        "gainer_records",
+        "gainer_survey_households",
+        "mean_gain",
+        "losers",
+        "loser_records",
+        "loser_survey_households",
+        "mean_loss"
+      ],
+      "required": false
+    },
     "household_scatter": {
       "columns": [
         [

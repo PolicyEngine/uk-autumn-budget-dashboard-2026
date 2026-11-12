@@ -6,7 +6,9 @@ every required year is covered, each table has exactly the rows it should
 for each year, the decile sets are exact, and a measure shows no effect
 before the year it starts, and the household scatter samples the same
 households in every year, as the validator requires. Types, finiteness and
-duplicate keys are already enforced when a table is read.
+duplicate keys are already enforced when a table is read. A gainers table,
+which only some measures carry, is also held to its own rules
+(``_gainer_problems``).
 """
 
 import json
@@ -20,6 +22,8 @@ from uk_budget_data.example_households import (
     X_VARIABLES,
 )
 from uk_budget_data.publication.tables import (
+    GAINER_GROUPS,
+    GAINERS_MIN_HOUSEHOLDS,
     SCATTER_BINS,
     SCATTER_SAMPLE_SIZE,
     TABLES,
@@ -34,11 +38,14 @@ ROWS_PER_YEAR = {
     "metrics": 1,
     "poverty_inequality": 1,
     "official_basis": 1,
+    "gainers": 1,
     # Every example household, at each point on its income grid
     "income_curve": CURVE_POINTS * len(HOUSEHOLD_IDS),
 }
 # Optional tables that, when an artifact has them, cover every year.
-COMPLETE_WHEN_PRESENT = frozenset({"poverty_inequality", "official_basis"})
+COMPLETE_WHEN_PRESENT = frozenset(
+    {"poverty_inequality", "official_basis", "gainers"}
+)
 DECILES = frozenset(
     f"{n}{'st' if n == 1 else 'nd' if n == 2 else 'rd' if n == 3 else 'th'}"
     for n in range(1, 11)
@@ -276,6 +283,68 @@ def _income_curve_problems(
     return problems
 
 
+def _gainer_problems(rows: list[dict]) -> list[str]:
+    """Ways a gainers table's rows break its own rules
+    (``tables.gainer_rows``): a row's figures are all blank (withheld) or
+    all given, but for the mean of a group with nobody in it; a group's
+    people, records and survey households are none together or some
+    together, with no more survey households than records; and no group
+    shown rests on fewer than GAINERS_MIN_HOUSEHOLDS survey households."""
+    problems = []
+    for row in rows:
+        year = row["year"]
+        counts = [
+            row[name]
+            for count, prefix, _ in GAINER_GROUPS
+            for name in (
+                count,
+                f"{prefix}_records",
+                f"{prefix}_survey_households",
+            )
+        ]
+        means = [row[mean] for _, _, mean in GAINER_GROUPS]
+        if all(value is None for value in counts):
+            if any(value is not None for value in means):
+                problems.append(
+                    f"gainers: {year} gives a mean in a withheld row"
+                )
+            continue
+        if any(value is None for value in counts):
+            problems.append(f"gainers: {year} is blank in part")
+            continue
+        for count, prefix, mean in GAINER_GROUPS:
+            people = row[count]
+            records = row[f"{prefix}_records"]
+            households = row[f"{prefix}_survey_households"]
+            if people < 0 or records < 0 or households < 0:
+                problems.append(f"gainers: {year} has a negative {count}")
+            elif len({people > 0, records > 0, households > 0}) > 1:
+                problems.append(
+                    f"gainers: {year} counts {count} without the records "
+                    "and survey households behind them, or the reverse"
+                )
+            elif households > records:
+                problems.append(
+                    f"gainers: {year} has more survey households than "
+                    f"records behind its {count}"
+                )
+            elif 0 < households < GAINERS_MIN_HOUSEHOLDS:
+                problems.append(
+                    f"gainers: {year} shows {count} resting on fewer than "
+                    f"{GAINERS_MIN_HOUSEHOLDS} survey households"
+                )
+            if (row[mean] is None) != (people == 0):
+                problems.append(
+                    f"gainers: {year} gives a {mean} for nobody, or none "
+                    f"for its {count}"
+                )
+            elif row[mean] is not None and row[mean] <= 0:
+                problems.append(
+                    f"gainers: {year} has a {mean} of zero or less"
+                )
+    return problems
+
+
 def table_problems(
     tables: Mapping[str, list[dict]],
     *,
@@ -345,6 +414,8 @@ def table_problems(
                     f"{name}: an effect in {year}, before the measure "
                     f"starts in {effective_from_year}"
                 )
+
+    problems.extend(_gainer_problems(tables.get("gainers") or []))
 
     binned = tables.get("household_scatter_binned") or []
     unknown = {

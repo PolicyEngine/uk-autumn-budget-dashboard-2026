@@ -25,6 +25,11 @@ run also withholds its members' withheld cells. When "all" itself is thin,
 the run keeps the warning and publication refusal; under
 ``UK_BUDGET_THIN_DECILES=refuse`` it is refused before anything is written.
 The age table's thin cells are withheld under its existing rule.
+
+Three measures also write a gainers table (``calculators.GAINER_BASES``):
+the people who gain and lose on the measure's own basis, by year, with the
+records and survey households behind them and the mean gain. It changes no
+other table.
 """
 
 import atexit
@@ -74,7 +79,12 @@ from uk_budget_data.publication.receipt import (
     measure_identities,
     scenario_identity,
 )
-from uk_budget_data.publication.tables import TABLES, bin_scatter
+from uk_budget_data.publication.tables import (
+    GAINERS_MIN_HOUSEHOLDS,
+    TABLES,
+    bin_scatter,
+    gainer_rows,
+)
 from uk_budget_data.publication.template_proof import (
     combined_templates_proof,
     measure_templates_proof,
@@ -134,6 +144,9 @@ def result_tables(
         "income_curve": result.income_curve,
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "age_impact": result.age_impact,
+        # Only where calculators.GAINER_BASES names a basis; counted and
+        # held to its floor here, its lists of households left out
+        "gainers": gainer_rows(getattr(result, "gainers", None) or []),
     }
 
 
@@ -701,7 +714,35 @@ def _apply_disclosure_floor(
     result.household_scatter = disclosure_floor.survey_scatter_rows(
         result.household_scatter, household_ids, survey
     )
+    warnings.extend(_name_gainer_households(result, household_ids, survey))
     return warnings, disclosure_floor.floor_record(found, withheld=withheld)
+
+
+def _name_gainer_households(result, household_ids, survey) -> list[str]:
+    """Make the gainers table count survey households rather than records
+    (``disclosure_floor.survey_gainer_rows``), for a run that has one, and
+    return a warning for the years whose figures the table then leaves
+    blank (``tables.gainer_rows``). The artifact is written all the same:
+    the row says its figures are withheld."""
+    rows = getattr(result, "gainers", None)
+    if not rows:
+        return []
+    result.gainers = disclosure_floor.survey_gainer_rows(
+        rows, household_ids, survey
+    )
+    blank = sorted(
+        row["year"]
+        for row in gainer_rows(result.gainers)
+        if row["gainers"] is None
+    )
+    if not blank:
+        return []
+    return [
+        "gainers: no figures for "
+        + ", ".join(str(year) for year in blank)
+        + ", where the gainers or the losers rest on fewer than "
+        f"{GAINERS_MIN_HOUSEHOLDS} survey households"
+    ]
 
 
 def _refuse_wealth_tax_base(

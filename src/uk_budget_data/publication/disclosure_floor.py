@@ -16,6 +16,13 @@ from one survey household, so the floor counts the survey households behind
 the changed records (``pipeline.scatter_survey_households``), as the binned
 scatter and the results by area do.
 
+The gainers table (``calculators.GainersCalculator``) counts the people who
+gain and lose on a measure's own basis. It keeps 10 too
+(``tables.GAINERS_MIN_HOUSEHOLDS``) and holds itself to it, as the binned
+scatter does: ``survey_gainer_rows`` names the survey households behind each
+group, and ``tables.gainer_rows`` leaves a row's figures blank when either
+group rests on fewer.
+
 The age table may leave rows out, so its thin cells are withheld with
 whatever would give them back by difference (``withheld_age_labels``): a
 thin single year of age takes the other single ages of its band with it,
@@ -43,6 +50,7 @@ import pandas as pd
 from uk_budget_data.calculators import (
     AGE_BAND_ALL,
     AGE_BANDS,
+    GAINER_HOUSEHOLD_KEYS,
     SINGLE_AGE_MIN_RECORDS,
     age_band_of,
     single_age_of,
@@ -512,5 +520,38 @@ def survey_scatter_rows(rows: list[dict], household_ids, survey) -> list[dict]:
     by_household = dict(zip(np.asarray(household_ids).tolist(), survey))
     return [
         {**row, "survey_household": by_household[row["household_id"]]}
+        for row in rows
+    ]
+
+
+def survey_gainer_rows(rows: list[dict], household_ids, survey) -> list[dict]:
+    """The gainers table's rows, each group's households replaced by the
+    survey households behind them, so that ``tables.gainer_rows`` counts
+    survey households rather than Microcosm's records. ``household_ids``
+    and ``survey`` are in the engine's household order."""
+    households = np.asarray(household_ids).tolist()
+    sources = np.asarray(survey).tolist()
+    if len(sources) != len(households):
+        raise ValueError(
+            f"{len(sources)} survey households for {len(households)} "
+            "households"
+        )
+    by_household = dict(zip(households, sources))
+    if len(by_household) != len(households):
+        raise ValueError("two households share an id")
+
+    def behind(listed):
+        unknown = sum(household not in by_household for household in listed)
+        if unknown:
+            raise ValueError(
+                f"{unknown} of a group's households are not among the "
+                "households"
+            )
+        return list(
+            dict.fromkeys(by_household[household] for household in listed)
+        )
+
+    return [
+        {**row, **{key: behind(row[key]) for key in GAINER_HOUSEHOLD_KEYS}}
         for row in rows
     ]
