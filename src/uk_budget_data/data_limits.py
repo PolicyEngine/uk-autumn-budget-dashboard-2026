@@ -2211,16 +2211,17 @@ def _known_formula_runner(sim, runners) -> bool:
 
     Model runners may delegate to Core while adding model bookkeeping. Accept
     only the installed Core and UK methods recorded by ``_engine_parts``,
-    including an inherited method; keep custom or instance replacements
-    unobservable. Compare function identity, never a name, module or equality.
+    bound to this simulation, including an inherited method. Keep custom,
+    unbound or foreign-receiver replacements unobservable. Compare function
+    identity, never a name, module or equality.
     """
     try:
         runner = getattr(sim, "_run_formula", None)
     except Exception:  # noqa: BLE001 - an unreadable runner stays unobservable
         return False
-    if isinstance(runner, types.MethodType):
-        runner = runner.__func__
-    return any(runner is known for known in runners)
+    if not isinstance(runner, types.MethodType) or runner.__self__ is not sim:
+        return False
+    return any(runner.__func__ is known for known in runners)
 
 
 def _run_alone(population, period, parameters_at, formula):

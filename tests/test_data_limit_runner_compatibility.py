@@ -76,6 +76,19 @@ class RunnerCompatibilityTests(unittest.TestCase):
         simulation._run_formula = lambda *args: None
         self.assertFalse(self.accepts(simulation, self.known))
 
+    def test_known_method_bound_to_another_simulation_is_not_trusted(self):
+        simulation = ModelRunner()
+        other = ModelRunner()
+        simulation._run_formula = types.MethodType(
+            ModelRunner._run_formula, other
+        )
+        self.assertFalse(self.accepts(simulation, self.known))
+
+    def test_unbound_known_function_on_an_instance_is_not_trusted(self):
+        simulation = ModelRunner()
+        simulation._run_formula = ModelRunner._run_formula
+        self.assertFalse(self.accepts(simulation, self.known))
+
     def test_copied_code_does_not_acquire_trust(self):
         simulation = ModelRunner()
         copied = types.FunctionType(
