@@ -9,7 +9,7 @@ measure and year by year, and writes a short Markdown report:
 - how far each constituency's figure moves, and whether the new figure
   falls outside the old 90% interval;
 - which constituencies change colour on the map (the page's own rule,
-  src/utils/geography/classify.js, ported below);
+  src/utils/geography/parse.js and classify.js, ported below);
 - the constituencies that move most;
 - the map against the national figure: the mean of the constituency
   figures beside the national average change per household, before and
@@ -22,8 +22,8 @@ area provenance (to find each measure's national tables) and those tables'
 ``git show``. It needs the standard library only, so plain ``python3``
 runs it.
 
-Every figure in the report comes from a row of those public files. The
-script refuses a table that carries a private-audit column.
+The report uses figures from those public files and summaries derived
+from them. The script refuses a table that carries a private-audit column.
 
 One thing it cannot give from public files: the local-area file's own
 national total. The public table has no household counts and leaves out
@@ -53,7 +53,7 @@ import subprocess
 import sys
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Optional
@@ -580,6 +580,30 @@ class Comparison:
         return all(r.value == 0 for r in rows)
 
 
+def _page_rows(rows: Mapping[str, Row]) -> Mapping[str, Row]:
+    """Match parse.js hideUninformativeZeros within one map group.
+
+    Withhold all-zero published cells only when this group also has a
+    withheld cell and no nonzero estimate or interval endpoint.
+    """
+    if not any(row.tier == WITHHELD for row in rows.values()):
+        return rows
+    if any(
+        row.published
+        and any(value != 0 for value in (row.value, row.lo, row.hi))
+        for row in rows.values()
+    ):
+        return rows
+    return {
+        code: (
+            replace(row, tier=WITHHELD, value=None, lo=None, hi=None)
+            if row.published
+            else row
+        )
+        for code, row in rows.items()
+    }
+
+
 def compare(
     old: Mapping[Group, Mapping[str, Row]],
     new: Mapping[Group, Mapping[str, Row]],
@@ -589,7 +613,8 @@ def compare(
     """Compare two tables group by group, over the areas of either."""
     comparisons = []
     for group in sorted(set(old) | set(new)):
-        before, after = old.get(group, {}), new.get(group, {})
+        before = _page_rows(old.get(group, {}))
+        after = _page_rows(new.get(group, {}))
         moves = []
         for code in sorted(set(before) | set(after)):
             o, n = before.get(code), after.get(code)
@@ -1126,8 +1151,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             load_households(parsed.households) if parsed.households else None
         )
         comparisons = compare(*tables, weights=weights)
-        if not comparisons:
-            raise MapCheckError("no rows match --reforms and --years")
+        if not any(c.outcome == parsed.outcome for c in comparisons):
+            raise MapCheckError(
+                "no rows match --reforms, --years and "
+                f"--outcome {parsed.outcome}"
+            )
         national_old = load_national(old_source)
         national_new = load_national(new_source)
         report = render_report(

@@ -119,6 +119,49 @@ def test_it_reports_each_colour_change_on_the_map():
     assert one(compared(), ALPHA, 2030).colour_changes == 0
 
 
+@pytest.mark.parametrize("outcome", [AVERAGE, RELATIVE])
+def test_grouped_zeros_follow_the_pages_withholding_on_both_sides(outcome):
+    def table(values):
+        rows = {
+            code: map_check.Row(
+                "constituency",
+                code,
+                code,
+                ALPHA,
+                2029,
+                outcome,
+                "withheld" if value is None else "reported",
+                value,
+                value,
+                value,
+            )
+            for code, value in values.items()
+        }
+        return {("constituency", ALPHA, 2029, outcome): rows}
+
+    old = table({"A": Decimal(0), "B": None})
+    new = table({"A": Decimal(0), "B": Decimal(10)})
+    (forward,) = map_check.compare(old, new)
+    assert (forward.published_old, forward.published_new) == (0, 2)
+    assert forward.colour_changes == 2
+    assert forward.moves[0].shown_old == "not_published"
+    assert forward.moves[0].shown_new == "little_change"
+    (reverse,) = map_check.compare(new, old)
+    assert (reverse.published_old, reverse.published_new) == (2, 0)
+    assert reverse.colour_changes == 2
+    # A fully zero group without withheld cells remains visible.
+    (zeros,) = map_check.compare(
+        table({"A": Decimal(0), "B": Decimal(0)}), old
+    )
+    assert (zeros.published_old, zeros.published_new) == (2, 0)
+    # An interval endpoint is enough to retain the group's zero estimates.
+    group = next(iter(old))
+    old[group]["A"] = map_check.replace(old[group]["A"], hi=Decimal(1))
+    (with_interval,) = map_check.compare(old, old)
+    assert with_interval.published_old == 1
+    assert with_interval.colour_changes == 0
+
+
 def test_a_measure_only_in_the_new_table_has_no_old_rows():
     c = one(compared(), GAMMA, 2029)
     assert (c.published_old, c.published_new) == (0, 6)
@@ -145,6 +188,34 @@ def test_the_relative_change_rows_compare_in_their_own_units():
         "small_loss",
     )
     assert map_check.figure(RELATIVE, moves["B"].new.value, 4) == "-0.11%"
+
+
+def test_unchanged_pounds_can_hide_a_share_of_income_colour_change():
+    def table(share):
+        return {
+            ("constituency", ALPHA, 2029, outcome): {
+                "A": map_check.Row(
+                    "constituency",
+                    "A",
+                    "A",
+                    ALPHA,
+                    2029,
+                    outcome,
+                    "reported",
+                    value,
+                    value,
+                    value,
+                )
+            }
+            for outcome, value in [
+                (AVERAGE, Decimal("-9")),
+                (RELATIVE, Decimal(share)),
+            ]
+        }
+
+    comparisons = map_check.compare(table("-0.0009"), table("-0.0011"))
+    assert one(comparisons, ALPHA, 2029, AVERAGE).colour_changes == 0
+    assert one(comparisons, ALPHA, 2029, RELATIVE).colour_changes == 1
 
 
 # -- the map against the national figure --------------------------------------
@@ -419,6 +490,36 @@ def test_filters_keep_the_named_measures_and_years(capsys):
     assert "2029-30" not in text
     assert map_check.main([*arguments, "--reforms", "no_such_measure"]) == 2
     assert "no rows match" in capsys.readouterr().err
+
+
+def test_a_missing_requested_outcome_stops_before_writing_files(
+    tmp_path, capsys
+):
+    report, details = tmp_path / "report.md", tmp_path / "details.csv"
+    arguments = [
+        "--old-dir",
+        str(OLD),
+        "--new-dir",
+        str(NEW),
+        "--years",
+        "2030",
+        "--outcome",
+        RELATIVE,
+        "--report",
+        str(report),
+        "--details",
+        str(details),
+    ]
+    assert map_check.main(arguments) == 2
+    captured = capsys.readouterr()
+    assert "no rows match" in captured.err
+    assert "--outcome relative_change" in captured.err
+    assert captured.out == ""
+    assert not report.exists() and not details.exists()
+    # The same year has pounds rows: genuine unchanged rows still succeed.
+    arguments[arguments.index(RELATIVE)] = AVERAGE
+    assert map_check.main(arguments) == 0
+    assert report.exists() and details.exists()
 
 
 def test_the_relative_change_report_has_no_national_section(capsys):
