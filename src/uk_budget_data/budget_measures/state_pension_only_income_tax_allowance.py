@@ -18,9 +18,12 @@ from uk_budget_data.measure_templates import _call_formula, _replace_formula
 # gives the thresholds, write them into the tuple instead.
 ROUND_DOWN = False
 # The engine's full new State Pension x 52 for 2027-28 to 2031-32
-# (policyengine-uk 2.151.0), rounded up and rounded down.
-ROUNDED_UP = (13037, 13363, 13697, 14040, 14391)
-ROUNDED_DOWN = (13036, 13362, 13696, 14039, 14390)
+# (policyengine-uk 2.165.1, which carries the OBR October 2026 forecast),
+# rounded up and rounded down. On 2.151.0 (March 2026 forecast) these were
+# (13037, 13363, 13697, 14040, 14391) and (13036, 13362, 13696, 14039,
+# 14390).
+ROUNDED_UP = (13037, 13481, 13818, 14163, 14517)
+ROUNDED_DOWN = (13036, 13480, 13817, 14162, 14516)
 
 
 def state_pension_only_income_tax_allowance(
