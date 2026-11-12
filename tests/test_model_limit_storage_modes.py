@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import numpy
 import pytest
+from hypothesis import given, settings, strategies as st
 
 from uk_budget_data import model_limits
 
@@ -105,3 +106,58 @@ def test_option_is_explicit_default_false_and_bound_in_registry_digest():
         for limit in model_limits.MODEL_LIMITS
         if limit.key != casino.key
     )
+
+
+@st.composite
+def storage_arrays(draw):
+    size = draw(st.integers(min_value=1, max_value=4))
+    values = st.lists(
+        st.integers(min_value=-1000, max_value=1000),
+        min_size=size,
+        max_size=size,
+    )
+    return draw(values), draw(values), draw(values)
+
+
+def simulation_with_distinct_slots(inputs, derived):
+    arrays = {"2026": numpy.asarray(inputs), "2027": numpy.asarray(derived)}
+    holder = SimpleNamespace(
+        get_known_branch_periods=lambda: [
+            ("default", year) for year in arrays
+        ],
+        get_array=lambda period, branch: arrays[str(period)],
+    )
+    return SimpleNamespace(
+        tax_benefit_system=SYSTEM,
+        get_holder=lambda name: holder,
+        _user_input_keys={("gaming_duty", "default", "2026")},
+    )
+
+
+@settings(max_examples=25, deadline=None)
+@given(arrays=storage_arrays())
+def test_only_opt_in_ignores_arbitrary_derived_values(arrays):
+    """Identical explicit inputs permit derived differences only in opt-in mode."""
+    inputs, before, after = arrays
+    base = simulation_with_distinct_slots(inputs, before)
+    reform = simulation_with_distinct_slots(inputs, after)
+    expected = [] if before == after else ["variable:gaming_duty"]
+    for pair in ((base, reform), (reform, base)):
+        assert differing(*pair, inputs_only=True) == []
+        assert differing(*pair) == expected
+
+
+@settings(max_examples=25, deadline=None)
+@given(
+    arrays=storage_arrays(),
+    increment=st.integers(min_value=1, max_value=10),
+)
+def test_changed_explicit_inputs_hold_in_both_storage_modes(arrays, increment):
+    """Changing an explicit 2026 input holds regardless of 2027 derived values."""
+    inputs, before, after = arrays
+    changed = [inputs[0] + increment, *inputs[1:]]
+    base = simulation_with_distinct_slots(inputs, before)
+    reform = simulation_with_distinct_slots(changed, after)
+    for pair in ((base, reform), (reform, base)):
+        assert differing(*pair) == ["variable:gaming_duty"]
+        assert differing(*pair, inputs_only=True) == ["variable:gaming_duty"]

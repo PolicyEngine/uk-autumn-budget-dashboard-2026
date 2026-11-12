@@ -6,6 +6,7 @@ from pathlib import Path
 from types import CodeType, SimpleNamespace
 
 import pytest
+from hypothesis import given, settings, strategies as st
 
 from uk_budget_data import data_limits, measure_templates
 
@@ -138,3 +139,27 @@ def test_native_actual_gdp_tree_changes_still_hold_isa_dividends(side):
         x for x in data_limits.limits_touched(*pair) if x["key"] == INPUT
     )
     assert any(data_limits._under(path, GDP) for path in record["parameters"])
+
+
+@settings(max_examples=25, deadline=None)
+@given(
+    upstream=st.sets(st.sampled_from((*GDP.split("."), GDP))),
+    noise=st.sets(
+        st.text(alphabet="xyz_", min_size=1, max_size=8).map(
+            lambda value: "unrelated_" + value
+        ),
+        max_size=4,
+    ),
+)
+def test_upstream_name_subsets_preserve_direct_reader_holds(upstream, noise):
+    """Shared GDP names never imply ISA reads; actual reader roots still hold."""
+    names = upstream | noise
+    assert not data_limits._reads(ISA, names)
+    for reader in (
+        INPUT,
+        data_limits.ANY_NAME,
+        *(path for path in ISA.parameters if path != GDP),
+    ):
+        assert data_limits._reads(ISA, names | {reader})
+    legacy = replace(ISA, parameter_change_only=())
+    assert data_limits._reads(legacy, names | set(GDP.split(".")))
