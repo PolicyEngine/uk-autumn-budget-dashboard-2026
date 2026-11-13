@@ -23,6 +23,7 @@ import { CHART_COLOURS, fiscalYearTick, shortFiscalYearTick } from "../utils/cha
 export const directionColour = (value) => (value < 0 ? CHART_COLOURS.gain : CHART_COLOURS.loss);
 import { useDisplayYears } from "../utils/displayYears";
 import { noPovertyEffectReason } from "../utils/legendMembership";
+import { POVERTY_FIGURES_SHOWN } from "../utils/povertyFigures";
 import "./MeasureEffectsView.css";
 
 export const EFFECT_VIEWS = [
@@ -64,8 +65,13 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
   const { rows, none } = view === "years" ? yearsEffects(byMeasure, selectedYear) : yearEffects(byMeasure, selectedYear);
   // Why a measure changes nothing this year, in the metric's terms
   const fallback = metric.choices === "inequality" ? "no change in inequality" : "no one crosses the poverty line";
-  const reasonOf = (m) =>
-    noPovertyEffectReason(byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name }, selectedYear, fallback);
+  const reasonOf = (m) => {
+    const reason = noPovertyEffectReason(byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name }, selectedYear, fallback);
+    // While the poverty figures are withheld (povertyFigures.js), the
+    // inequality chart's reasons never mention poverty ("not counted in
+    // poverty income")
+    return metric.choices === "inequality" && !POVERTY_FIGURES_SHOWN && /poverty/i.test(reason) ? fallback : reason;
+  };
   const max = Math.max(
     1e-12,
     ...rows.flatMap((m) => (view === "years" ? m.points.map((p) => Math.abs(p.value ?? 0)) : [Math.abs(m.value)])),

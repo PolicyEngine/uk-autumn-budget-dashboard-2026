@@ -7,6 +7,7 @@
 
 import contract from "./contract.json";
 import { DISPLAYABLE, MANIFEST_FILE, RECEIPT_FILE } from "./manifest";
+import { POVERTY_FIGURES_SHOWN } from "../povertyFigures";
 
 // The files every view's first chart reads (load.js CATALOGUE_TABLES; the
 // script requests each only if the receipt lists it)
@@ -23,8 +24,11 @@ export const PRESETS_URL_FILE = "household_presets.json";
 export const BOUNDARIES_URL_FILE = "uk_constituencies_2024.topo.json";
 // A link to the Pre-measures forecast, or to Population impact's Living
 // standards or Poverty (their twins' lines): the outlook (livingStandards/outlook.js
-// OUTLOOK_PATH), unverified, read as before
+// OUTLOOK_PATH), unverified, read as before. While the poverty figures are
+// hidden (povertyFigures.js), ?sub=poverty opens Public finances, which
+// does not read the outlook, so it is not requested for that link.
 export const OUTLOOK_URL_FILE = "living_standards_outlook.json";
+const OUTLOOK_SUBS = POVERTY_FIGURES_SHOWN ? ["living", "poverty"] : ["living"];
 
 const GLOBAL = "__ab26EarlyManifest";
 const RECEIPTS = "__ab26EarlyReceipts";
@@ -60,7 +64,7 @@ export function earlyManifestScript(basePath, { artifacts = true } = {}) {
     `p.catch(function(){});window.${GLOBAL}={url:${url},response:p};` +
     `var r=window.${RECEIPTS}={},q=new URLSearchParams(location.search);` +
     `if(q.get("tab")==="household"){var h=${data}+${JSON.stringify(PRESETS_URL_FILE)};r[h]=fetch(h);r[h].catch(function(){});}` +
-    `if(q.get("tab")==="outlook"||q.get("tab")==="living"||((!q.get("tab")||q.get("tab")==="dashboard")&&(q.get("sub")==="living"||q.get("sub")==="poverty"))){var o=${data}+${JSON.stringify(OUTLOOK_URL_FILE)};r[o]=fetch(o);r[o].catch(function(){});}` +
+    `if(q.get("tab")==="outlook"||q.get("tab")==="living"||((!q.get("tab")||q.get("tab")==="dashboard")&&${JSON.stringify(OUTLOOK_SUBS)}.indexOf(q.get("sub"))>=0)){var o=${data}+${JSON.stringify(OUTLOOK_URL_FILE)};r[o]=fetch(o);r[o].catch(function(){});}` +
     `if((!q.get("tab")||q.get("tab")==="dashboard")&&q.get("sub")==="all"){var g=${data}+${JSON.stringify(BOUNDARIES_URL_FILE)};r[g]=fetch(g);r[g].catch(function(){});}` +
     `p.then(function(x){return x.ok?x.clone().json():null}).then(function(m){` +
     `var age=${JSON.stringify(AGE_VIEWS)}.indexOf(q.get("sub"))>=0;if(!m||!(${artifacts ? "true" : "age"}))return;` +

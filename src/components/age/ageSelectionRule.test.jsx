@@ -6,6 +6,7 @@ import { singleAgeSelection } from "../../utils/ageImpact";
 import { singleAgeBars } from "../youngPeople/youngPeopleData";
 import { agesText, windowTicks } from "./SingleAgeCard";
 import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
+import { POVERTY_FIGURES_SHOWN } from "../../utils/povertyFigures";
 
 // By age's selection rule, on a publication where one single (BETA)
 // withholds its age bands (too few survey records), keeping all ages, as
@@ -497,6 +498,12 @@ describe("Winners and losers when the package withholds every single age", () =>
     window.history.replaceState(null, "", `/?age=${age}`);
     const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA, BETA]);
     const card = container.querySelector(selector);
+    // Withheld for now (povertyFigures.js): no Winners and losers card, in
+    // its fallback too; PovertyFiguresShown.test.jsx checks it comes back
+    if (!POVERTY_FIGURES_SHOWN) {
+      expect(card).toBeNull();
+      return;
+    }
     expect(card).not.toBeNull();
     const { band, single } = viewRadios(card);
     expect(band).toHaveAttribute("aria-checked", "true");
@@ -514,6 +521,10 @@ describe("Winners and losers when the package withholds every single age", () =>
     window.history.replaceState(null, "", "/?age=all");
     const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
     const card = container.querySelector(".young-people-shares");
+    if (!POVERTY_FIGURES_SHOWN) {
+      expect(card).toBeNull();
+      return;
+    }
     const { single } = viewRadios(card);
     expect(single).not.toBeDisabled();
     fireEvent.click(single);
