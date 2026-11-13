@@ -68,7 +68,7 @@ def comparison():
 
 def test_reviewed_bundle_contains_native_october_forecast():
     """A bundle upgrade must review its native forecast and policy record."""
-    assert version("policyengine") == "6.18.0"
+    assert version("policyengine") == "6.19.0"
     assert version("policyengine-uk") == "2.174.1"
     assert version("policyengine-core") == "3.33.3"
     source = (

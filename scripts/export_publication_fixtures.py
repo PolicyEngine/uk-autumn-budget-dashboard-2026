@@ -24,7 +24,7 @@ SOURCE_PATHS = (
     ".github/workflows/ci.yml",
 )
 VERSIONS = {
-    "policyengine": "6.18.0",
+    "policyengine": "6.19.0",
     "policyengine-uk": "2.174.1",
     "policyengine-core": "3.33.3",
 }
