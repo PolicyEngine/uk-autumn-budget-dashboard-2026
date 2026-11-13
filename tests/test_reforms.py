@@ -1,8 +1,8 @@
-"""The candidate Autumn Budget 2026 measures: registry, parameters, receipt
+"""The Autumn Budget 2026 comparison: registry, parameters, receipt
 binding, and one hand-checked household for each measure.
 
 Each household value is worked out by hand in its test, from the rates
-and thresholds of the installed policyengine-uk (2.132.6), and the model
+and thresholds of the pinned native policyengine-uk, and the model
 must agree to the penny (it computes in float32).
 """
 
@@ -15,6 +15,10 @@ import pytest
 from policyengine_uk import Simulation
 
 from uk_budget_data import reforms
+from uk_budget_data.budget_policy import (
+    native_policy_changes,
+    pre_budget_policy_timeline,
+)
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.forecast import forecast_parameters, with_forecast
 from uk_budget_data.household_impact import (
@@ -265,7 +269,6 @@ def test_only_unannounced_measures_say_they_are_candidates():
         assert description.startswith("Candidate measure.") == (
             measure_id not in ANNOUNCED
         ), measure_id
-        assert "pre-Budget" not in description, measure_id
 
 
 def test_get_reform_returns_none_for_an_unknown_id():
@@ -283,16 +286,13 @@ def test_the_combined_package_merges_every_members_changes():
             get_reform(measure_id).parameter_changes or {}
         ).items():
             assert combined.parameter_changes[path] == values, path
-    assert combined.simulation_modifier is not None
-    # The electricity measure is scored against 5% VAT in every month, so
-    # it brings a pre-Budget side and the package's baseline runs it
-    # (tests/test_electricity_vat_baseline.py). No other member has one.
-    assert combined.baseline_simulation_modifier is not None
+    assert combined.simulation_modifier is None
+    assert combined.baseline_simulation_modifier is None
     assert [
         measure_id
         for measure_id in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
         if get_reform(measure_id).has_custom_baseline()
-    ] == ["domestic_electricity_zero_vat"]
+    ] == []
     assert combined.baseline_parameter_changes is None
 
 
@@ -338,30 +338,32 @@ def test_the_template_modifiers_are_proved_pure_and_three_are_hand_written():
 # --- 1. Fuel duty -----------------------------------------------------------
 
 
-def test_current_law_fuel_duty_blends_as_the_engine_does():
-    """The schedule the deferral is measured against is the engine's own:
-    blended from 6 April, it gives the engine's annual rates."""
+def test_the_legacy_fuel_schedule_keeps_the_actual_pre_budget_april_rate():
+    """The unused legacy helper reads actual pre-Budget policy, including
+    the 60.03p April rate, rather than the native 60.59p July rate."""
+    assert dict(FUEL_DUTY_CURRENT_LAW)["2027-04-01"] == 0.6003
     blended = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
-    for year in POLICY_YEARS:
-        engine = PARAMETERS.get_child(FUEL_DUTY)(f"{year}-04-30")
-        assert blended[str(year)] == pytest.approx(engine, abs=1e-6), year
+    assert blended["2026"] == pytest.approx(
+        (270 * 0.5295 + 59 * 0.5595 + 31 * 0.5795 + 5 * 0.6003) / 365,
+        abs=1e-6,
+    )
 
 
 def test_the_fuel_duty_path_by_hand():
-    """Budget 2026: the 5p cut extended to 1 July 2027. 52.95p to
-    30 June 2027, then current law's 60.59p (FUEL_DUTY_FROZEN_UNTIL)."""
+    """The archived helper freezes to July, then returns to its actual
+    pre-Budget schedule. The registered factory restores native law."""
     rates = fuel_duty_deferral_rates()
     # 2026-27: 52.95p all year
     assert rates["2026"] == 0.5295
     # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to 30 June
-    # (86 days), then 60.59p (the OBR's July 2027 rate, EFO October 2026
-    # paragraph 3.19) to 31 March 2028 (275), then 63.21p (x 1.0432, October
-    # RPI for 2027) from 1 April 2028 (5)
+    # (86 days), then pre-Budget 60.03p to 31 March 2028 (275), then
+    # the pre-Budget RPI step from 1 April 2028 (5).
+    april_2028 = dict(FUEL_DUTY_CURRENT_LAW)["2028-04-01"]
     assert rates["2027"] == pytest.approx(
-        (86 * 0.5295 + 275 * 0.6059 + 5 * 0.6321) / 366, abs=1e-6
+        (86 * 0.5295 + 275 * 0.6003 + 5 * april_2028) / 366, abs=1e-6
     )
-    # Later years are current law's own, written for every scored year
-    # (the parameter is uprated: policyengine-uk #2430)
+    # This retained helper explicitly reads the installed engine after the
+    # extension; it is not the active factory's dated native restoration.
     assert set(rates) == {str(year) for year in POLICY_YEARS}
     for year in POLICY_YEARS:
         if year > 2027:
@@ -370,22 +372,47 @@ def test_the_fuel_duty_path_by_hand():
             )
 
 
-def test_after_the_extension_fuel_duty_is_current_laws():
-    """From 1 August 2027 the measure follows current law, so it costs
-    nothing after 2027-28; the description says so."""
+def test_the_legacy_fuel_helper_and_registered_native_policy_are_distinct():
+    """The archived helper returns to pre-Budget law; the native Budget
+    rate is 60.59p from July and keeps a different later RPI base."""
     schedule = dict(reforms.fuel_duty_deferral_schedule())
-    assert schedule["2027-07-01"] == 0.6059
+    assert schedule["2027-07-01"] == 0.6003
     for day, rate in reforms.FUEL_DUTY_CURRENT_LAW:
         if day > "2027-07-01":
             assert schedule[day] == rate
-    description = get_reform("fuel_duty_rise_deferral").description
-    assert "52.95p a litre to 30 June 2027" in description
-    assert "never made up" not in description
+    selected = get_reform("fuel_duty_rise_deferral").parameter_changes
+    assert selected == native_policy_changes("fuel_duty_rise_deferral")
+    assert (
+        next(
+            value
+            for period, value in selected[FUEL_DUTY].items()
+            if period.startswith("2027-07-01.")
+        )
+        == 0.6059
+    )
+    assert pre_budget_policy_timeline(FUEL_DUTY)["2027-04-01"] == 0.6003
 
 
-def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
-    rates = fuel_duty_deferral_rates()
-    current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
+def test_the_archived_pump_vat_defaults_retain_the_former_costing_reference():
+    """The retired literals use the former 60.59p April reference, never
+    the adopted actual pre-Budget 60.03p reference. VAT is 20% of duty;
+    translating it to a VAT-inclusive spending rate multiplies by 1.2."""
+    current = fiscal_year_means(
+        (
+            ("2026-03-23", 0.5295),
+            ("2027-01-01", 0.5595),
+            ("2027-03-01", 0.5795),
+            ("2027-04-01", 0.6059),
+            ("2028-04-01", 0.6321),
+        )
+    )
+    rates = fiscal_year_means(
+        (
+            ("2026-03-23", 0.5295),
+            ("2027-07-01", 0.6059),
+            ("2028-04-01", 0.6321),
+        )
+    )
     defaults = modifier("pump_vat_on_fuel_duty_deferral").__defaults__
     names = modifier("pump_vat_on_fuel_duty_deferral").__code__.co_varnames[
         1 : 1 + len(defaults)
@@ -401,13 +428,14 @@ def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
         )
         duty_change = rates[year] - current[year]
         assert value == pytest.approx(0.24 * duty_change / price, rel=1e-6)
+    assert get_reform("fuel_duty_rise_deferral").simulation_modifier is None
 
 
 def test_a_driver_buying_1000_litres_of_petrol():
     """£1,508.14 of petrol at the model's £1.508 a litre is 1,000 litres.
-    2026-27: duty 53.96p (current law, blended, with 60.59p from 1 April
-    2027) -> 52.95p, so £539.64 -> £529.50, and VAT falls by 20% of the
-    £10.14, £2.03."""
+    The actual pre-Budget schedule includes 60.03p from April 2027; the
+    native Budget side holds 52.95p through that fiscal year's end. VAT
+    falls by 20% of the day-weighted duty difference on those litres."""
     year = 2026
     sit = situation(
         {"driver": {"age": {year: 40}, "employment_income": {year: 30_000}}},
@@ -416,10 +444,18 @@ def test_a_driver_buying_1000_litres_of_petrol():
     baseline, reformed = change(
         "fuel_duty_rise_deferral", sit, "fuel_duty", year
     )
-    assert baseline == pytest.approx(539.64, abs=PENNY)
-    assert reformed == pytest.approx(529.50, abs=PENNY)
+    litres = 1_508.14483 / PARAMETERS.household.consumption.fuel.prices.petrol(
+        "2026-04-30"
+    )
+    before_rate = fiscal_year_means(
+        tuple(pre_budget_policy_timeline(FUEL_DUTY).items())
+    )[str(year)]
+    assert baseline == pytest.approx(before_rate * litres, abs=PENNY)
+    assert reformed == pytest.approx(0.5295 * litres, abs=PENNY)
     vat_before, vat_after = change("fuel_duty_rise_deferral", sit, "vat", year)
-    assert vat_after - vat_before == pytest.approx(-2.03, abs=PENNY)
+    assert vat_after - vat_before == pytest.approx(
+        0.2 * (0.5295 - before_rate) * litres, abs=PENNY
+    )
 
 
 # --- 2. State Pension income tax protection ---------------------------------
@@ -430,7 +466,9 @@ def nsp(year: int) -> float:
     return weekly(f"{year}-04-30") * 52
 
 
-def test_the_allowances_are_the_full_new_state_pension_rounded_up_to_10():
+def test_the_unregistered_tapered_design_retains_its_archived_literal_defaults():
+    """These 2.165.1-era alternative-design literals are not the registered
+    native Pension Tax Allowance. Its policy is tested independently."""
     defaults = dict(
         zip(
             modifier(
@@ -439,35 +477,46 @@ def test_the_allowances_are_the_full_new_state_pension_rounded_up_to_10():
             modifier("state_pension_income_tax_allowance").__defaults__,
         )
     )
-    for year in range(2027, 2032):
-        expected = math.ceil(nsp(year) / 10) * 10
+    for year, expected in {
+        2027: 13040,
+        2028: 13490,
+        2029: 13820,
+        2030: 14170,
+        2031: 14520,
+    }.items():
         assert defaults[f"allowance_{year}"] == {str(year): expected}
         assert defaults[f"threshold_{year}"] == expected
+    assert (
+        get_reform("state_pension_income_tax_protection").simulation_modifier
+        is None
+    )
 
 
 @pytest.mark.parametrize("year", [2027, 2029])
 def test_a_pensioner_on_the_full_new_state_pension_alone_pays_none(year):
-    """2027-28: £13,036.97 - £12,570 = £466.97 taxed at 20%, £93.39.
-    2029-30 (the allowance's last year, OBR October 2026 forecast):
-    £13,817.30 - £12,570 = £1,247.30 at 20%, £249.46."""
+    """The native weekly pension includes its own statutory rounding.
+    Before the Budget, the excess over the personal allowance is taxed
+    at 20%; the selected Pension Tax Allowance removes that tax."""
     sit = situation(
         {"pensioner": {"age": {year: 70}, "state_pension": {year: nsp(year)}}}
     )
     baseline, reformed = change(
         "state_pension_income_tax_protection", sit, "income_tax", year
     )
-    expected = {2027: 93.39, 2029: 249.46}[year]
+    allowance = (
+        PARAMETERS.gov.hmrc.income_tax.allowances.personal_allowance.amount(
+            f"{year}-04-30"
+        )
+    )
+    expected = 0.2 * (nsp(year) - allowance)
     assert baseline == pytest.approx(expected, abs=PENNY)
     assert reformed == pytest.approx(0, abs=PENNY)
 
 
 def test_the_tapered_design_withdraws_the_allowance_against_other_income():
-    """The tapered design (the switch's alternative). 2031-32 (OBR October
-    2026 forecast), State Pension £14,516.81 and £1,000 private pension:
-    income £15,516.81 is £996.81 over the £14,520 allowance, which falls to
-    £13,523.19, rounded up to £13,524. Tax: 20% of £1,992.81, £398.56,
-    against 20% of £2,686.81 (over the £12,830 personal allowance),
-    £537.36."""
+    """The unregistered tapered design starts at the full native pension
+    rounded up to £10, withdraws £1 per £1 above that threshold, then
+    rounds the remaining allowance up to a pound. The basic rate is 20%."""
     year = 2031
     sit = situation(
         {
@@ -485,17 +534,27 @@ def test_the_tapered_design_withdraws_the_allowance_against_other_income():
         year,
         measure=reforms._create_state_pension_income_tax_protection("tapered"),
     )
-    assert baseline == pytest.approx(537.36, abs=PENNY)
-    assert reformed == pytest.approx(398.56, abs=PENNY)
+    income = nsp(year) + 1_000
+    personal_allowance = (
+        PARAMETERS.gov.hmrc.income_tax.allowances.personal_allowance.amount(
+            f"{year}-04-30"
+        )
+    )
+    maximum = math.ceil(nsp(year) / 10) * 10
+    tapered = max(
+        personal_allowance, math.ceil(maximum - max(0, income - maximum))
+    )
+    assert baseline == pytest.approx(
+        0.2 * (income - personal_allowance), abs=PENNY
+    )
+    assert reformed == pytest.approx(0.2 * (income - tapered), abs=PENNY)
 
 
 def test_the_tapered_design_deducts_gift_aid_once():
-    """2027-28, State Pension £13,036.97, £1,000 private pension and £400
-    of Gift Aid (£500 grossed up). Adjusted net income £14,036.97 - £500 =
-    £13,536.97 is £496.97 over £13,040, which leaves £12,543.03, below the
-    standard £12,570, so the allowance is £12,570 and the tax 20% of
-    £1,466.97, £293.39, as now. Deducting Gift Aid twice gave £13,040 and
-    £199.39."""
+    """£1,000 of other pension and £400 Gift Aid (£500 grossed up) leave
+    the alternative tapered allowance below the native personal allowance.
+    Its floor applies and basic-rate tax is unchanged; deducting the gross
+    Gift Aid twice would incorrectly leave a larger allowance."""
     year = 2027
     sit = situation(
         {
@@ -514,15 +573,23 @@ def test_the_tapered_design_deducts_gift_aid_once():
         year,
         measure=reforms._create_state_pension_income_tax_protection("tapered"),
     )
-    assert baseline == pytest.approx(293.39, abs=PENNY)
-    assert reformed == pytest.approx(293.39, abs=PENNY)
+    personal_allowance = (
+        PARAMETERS.gov.hmrc.income_tax.allowances.personal_allowance.amount(
+            f"{year}-04-30"
+        )
+    )
+    maximum = math.ceil(nsp(year) / 10) * 10
+    adjusted_income = nsp(year) + 1_000 - 400 / (1 - 0.2)
+    assert maximum - max(0, adjusted_income - maximum) < personal_allowance
+    expected = 0.2 * (nsp(year) + 1_000 - personal_allowance)
+    assert baseline == pytest.approx(expected, abs=PENNY)
+    assert reformed == pytest.approx(expected, abs=PENNY)
 
 
 def test_the_total_income_design_takes_the_allowance_away_above_it():
-    """The default design. 2031-32 (OBR October 2026 forecast), State
-    Pension £14,516.81 and £1,000 private pension, £15,516.81 in all, above
-    the full new State Pension: no allowance, so 20% of £2,686.81 (over the
-    £12,830 personal allowance), £537.36, as now."""
+    """The unregistered total-income design gives no additional allowance
+    when £1,000 of other pension takes income above the native full State
+    Pension. Both sides therefore pay 20% above the personal allowance."""
     year = 2031
     sit = situation(
         {
@@ -534,10 +601,22 @@ def test_the_total_income_design_takes_the_allowance_away_above_it():
         }
     )
     baseline, reformed = change(
-        "state_pension_income_tax_protection", sit, "income_tax", year
+        "state_pension_income_tax_protection",
+        sit,
+        "income_tax",
+        year,
+        measure=reforms._create_state_pension_income_tax_protection(
+            "total_income"
+        ),
     )
-    assert baseline == pytest.approx(537.36, abs=PENNY)
-    assert reformed == pytest.approx(537.36, abs=PENNY)
+    allowance = (
+        PARAMETERS.gov.hmrc.income_tax.allowances.personal_allowance.amount(
+            f"{year}-04-30"
+        )
+    )
+    expected = 0.2 * (nsp(year) + 1_000 - allowance)
+    assert baseline == pytest.approx(expected, abs=PENNY)
+    assert reformed == pytest.approx(expected, abs=PENNY)
 
 
 # --- 3. Warm Home Discount --------------------------------------------------
@@ -734,11 +813,9 @@ def test_electricity_defaults_follow_its_constants():
 
 @pytest.mark.parametrize(
     "year, saving",
-    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: the
-    # October to March share of a year's use (WINTER_SHARE), £28.34;
-    # 2027-28: the April to June share of use (SPRING_SHARE), £11.15;
-    # 2028-29: none.
-    [(2026, 28.34), (2027, 11.15), (2028, 0.0)],
+    # £1,050 including 5% VAT holds £50 of VAT. The incremental extension
+    # covers five days of FY2026 and 86 days of FY2027, not seasonal shares.
+    [(2026, 50 * 5 / 365), (2027, 50 * 86 / 366), (2028, 0.0)],
 )
 def test_electricity_vat_on_1050_pounds_a_year(year, saving):
     sit = situation(
@@ -753,10 +830,9 @@ def test_electricity_vat_on_1050_pounds_a_year(year, saving):
 
 @pytest.mark.parametrize(
     "year, saving",
-    # Northern Ireland: no zero rate before April 2027 (Great Britain only),
-    # then the same April to June share of use as Great Britain, £11.15;
-    # none after.
-    [(2026, 0.0), (2027, 11.15), (2028, 0.0)],
+    # Northern Ireland's April-June extension spans the same two fiscal
+    # years: April 1-5 is part of FY2026, then April 6-June 30 is FY2027.
+    [(2026, 50 * 5 / 365), (2027, 50 * 86 / 366), (2028, 0.0)],
 )
 def test_electricity_vat_in_northern_ireland_from_april_2027(year, saving):
     sit = situation(
@@ -1330,8 +1406,8 @@ FIRST_YEARS = {
         {"employment_income": 20_000},
         {"country": "ENGLAND", "council_tax_band": "B"},
     ),
-    # 300 bus trips a year in the North West: 10.0% of its bus fare
-    # spending, grossed up, for 1 January to 5 April 2027
+    # 300 bus trips a year in the North West. The January 2027 cap was
+    # already announced before the Budget: this selected policy is a no-op.
     "bus_fare_cap_2027": (
         2026,
         "household_net_income",
@@ -1356,25 +1432,33 @@ FIRST_YEARS = {
         },
         {},
     ),
-    # £1,000 a year of standard-rate machine takings: 5 points more duty,
-    # £50, from 2027-28
+    # £1,000 of standard-rate takings, all higher-stake: five points more
+    # duty from April 1, 2027, including five days of fiscal 2026-27.
     "machine_games_duty_rise": (
-        2027,
+        2026,
         "household_net_income",
         {"employment_income": 30_000},
-        {"machine_games_standard_rate_net_takings": 1_000},
+        {
+            "machine_games_standard_rate_net_takings": 1_000,
+            "machine_games_standard_rate_higher_stake_net_takings": 1_000,
+        },
     ),
 }
 
 
-def test_machine_games_duty_rise_is_five_points_on_the_standard_rate():
-    """The standard rate (the higher-stake machines' in the Household
-    calculator) is 25% from 2027-28, and the lower and higher rates are as
-    they were: £1,000 of standard-rate takings pay £250 of duty, not £200."""
+def test_machine_games_duty_moves_only_the_higher_stake_part_to_25_percent():
+    """£1,000 of standard-rate takings, all from higher-stake machines,
+    moves from 20% to the existing 25% higher rate. Other standard-rate
+    takings retain 20%; the registry restores the native subset switch."""
     year = 2029
     sit = situation(
         {"p": _person(year, employment_income=30_000)},
-        {"machine_games_standard_rate_net_takings": {year: 1_000}},
+        {
+            "machine_games_standard_rate_net_takings": {year: 1_000},
+            "machine_games_standard_rate_higher_stake_net_takings": {
+                year: 1_000
+            },
+        },
     )
     before, after = change(
         "machine_games_duty_rise", sit, "machine_games_duty", year
@@ -1382,10 +1466,8 @@ def test_machine_games_duty_rise_is_five_points_on_the_standard_rate():
     assert before == pytest.approx(200, abs=PENNY)
     assert after == pytest.approx(250, abs=PENNY)
     changes = get_reform("machine_games_duty_rise").parameter_changes
-    assert list(changes) == [reforms.MACHINE_GAMES_STANDARD_RATE]
-    assert changes[reforms.MACHINE_GAMES_STANDARD_RATE] == {
-        str(y): 0.25 for y in POLICY_YEARS if y >= 2027
-    }
+    assert changes == native_policy_changes("machine_games_duty_rise")
+    assert reforms.MACHINE_GAMES_STANDARD_RATE not in changes
 
 
 def test_every_measure_has_a_first_year_check():
@@ -1395,14 +1477,19 @@ def test_every_measure_has_a_first_year_check():
 @pytest.mark.parametrize("measure_id", CANDIDATES)
 def test_each_measure_moves_from_its_first_year_and_not_before(measure_id):
     first, variable, person, household = FIRST_YEARS[measure_id]
-    for year, moves in ((first - 1, False), (first, True)):
+    # The bus cap was already announced before the Budget, so selecting
+    # it restores the same £2 timeline and has no incremental Budget effect.
+    for year, moves in (
+        (first - 1, False),
+        (first, measure_id != "bus_fare_cap_2027"),
+    ):
         sit = situation(
             {"p": _person(year, **person)},
             {key: {year: value} for key, value in household.items()},
         )
         baseline, reformed = change(measure_id, sit, variable, year)
         if moves:
-            assert abs(reformed - baseline) > 1, (measure_id, year)
+            assert abs(reformed - baseline) > 0.01, (measure_id, year)
         else:
             assert reformed == pytest.approx(baseline, abs=PENNY), (
                 measure_id,

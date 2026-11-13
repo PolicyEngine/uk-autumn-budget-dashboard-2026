@@ -86,9 +86,9 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(await findLoadedCard()).toBeTruthy();
     expect(document.querySelector(".chart-description").textContent).toMatch(/^With the selected policies, real incomes .+ \(second tenth: \S+% a year; top tenth: \S+%\)\.$/);
     expect(document.body.textContent).not.toMatch(/lowest tenth:/);
-    expect(document.querySelector(".chart-description").textContent).not.toMatch(/^Under current law/);
+    expect(document.querySelector(".chart-description").textContent).not.toMatch(/^Under pre-Budget policy/);
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText("The effect of the policies is growth with them less growth under current law.")).toBeTruthy();
+    expect(screen.getByText("The effect of the policies is growth with them less growth under pre-Budget policy.")).toBeTruthy();
   });
 
   it("explains the two Show options behind an info icon, on hover, keyboard focus and a tap", async () => {
@@ -97,7 +97,7 @@ describe("Growth across the distribution, with the selected measures", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     const info = screen.getByRole("button", { name: "What the Show options mean" });
     const effect = /^Effect \(pp\): How much the selected policies change each group's real income growth, in percentage points\.$/;
-    const growth = /^Growth with the policies \(%\): Each group's real income growth with the selected policies in place: the current-law forecast plus the policies' effect\.$/;
+    const growth = /^Growth with the policies \(%\): Each group's real income growth with the selected policies in place: the pre-Budget forecast plus the policies' effect\.$/;
     const lines = () => [...screen.getByRole("tooltip").querySelectorAll(".control-bar-tip-line")].map((n) => n.textContent);
     // Hover
     fireEvent.mouseEnter(info);

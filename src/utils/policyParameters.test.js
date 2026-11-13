@@ -34,36 +34,46 @@ describe("policy_parameters.json, as the page reads it", () => {
     const segments = segmentsFor(rowsOf("fuel_duty_rise_deferral")["Fuel duty"]);
     expect(segments[0]).toMatchObject({ start: 0, before: 52.95, after: 52.95 });
     const january = segments.find((s) => s.label === "From 1 January 2027");
-    expect(january.start).toBeCloseTo(9);
-    expect(january.end).toBeCloseTo(11);
+    expect(january.start).toBeCloseTo(9 - 5 / 30);
+    expect(january.end).toBeCloseTo(11 - 5 / 30);
     expect(january).toMatchObject({ from: 2026, to: 2026 });
     expect(segments[segments.length - 1].end).toBe(72);
+    expect(segments[segments.length - 1]).toMatchObject({
+      label: "From 1 April 2032", from: 2031, to: 2031,
+    });
+    expect(segments[segments.length - 1].end - segments[segments.length - 1].start).toBeCloseTo(5 / 30);
   });
 
   it("draws a VAT window as current law either side of it", () => {
-    // October 2026 to June 2027: months 6 to 15 of the 72 from April 2026
-    const segments = segmentsFor(rowsOf("domestic_electricity_zero_vat")["VAT on domestic electricity"]);
-    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([[0, 6, 0.05], [6, 15, 0], [15, 72, 0.05]]);
-    expect(segments[1]).toMatchObject({ from: 2026, to: 2027 });
+    // Calendar-month boundaries retain their exact positions relative to 6 April.
+    const segments = segmentsFor(rowsOf("domestic_electricity_zero_vat")["VAT rate on domestic electricity, Great Britain"]);
+    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([
+      [0, 6 - 5 / 30, 0.05],
+      [6 - 5 / 30, 12 - 5 / 30, 0],
+      [12 - 5 / 30, 15 - 5 / 30, 0],
+      [15 - 5 / 30, 72, 0.05],
+    ]);
+    expect(segments[2]).toMatchObject({ from: 2026, to: 2027 });
+    expect(segments[1]).toMatchObject({ before: 0, after: 0 });
   });
 
   it("writes fuel duty's schedule as the periods each rate is in force, with current law either side (PR 290, Anthony, 19:37)", () => {
     const periods = schedulePeriods(rowsOf("fuel_duty_rise_deferral")["Fuel duty"]);
-    expect(periods.map((p) => [p.label, p.before, p.after])).toEqual([
+    expect(periods.slice(0, 5).map((p) => [p.label, p.before, p.after])).toEqual([
       ["To 31 December 2026", 52.95, 52.95],
       ["1 January to 28 February 2027", 55.95, 52.95],
       ["1 to 31 March 2027", 57.95, 52.95],
-      ["1 April to 30 June 2027", 60.59, 52.95],
-      ["1 July 2027 to 31 March 2028", 60.59, 60.59],
+      ["1 April to 30 June 2027", 60.03, 52.95],
+      ["1 July 2027 to 31 March 2028", 60.03, 60.59],
     ]);
   });
 
   it("says a change the same in every year once, over its years (PR 290, Anthony, 19:36)", () => {
     const lines = changeLines(file.measures.property_income_rates_up.rows);
     expect(lines.map((line) => [line.label, line.period, line.before, line.after])).toEqual([
-      ["Property basic rate", "2027-28 to 2031-32", 0.22, 0.24],
-      ["Property higher rate", "2027-28 to 2031-32", 0.42, 0.44],
-      ["Property additional rate", "2027-28 to 2031-32", 0.47, 0.49],
+      ["Property basic rate", "6 April 2027", 0.22, 0.24],
+      ["Property higher rate", "6 April 2027", 0.42, 0.44],
+      ["Property additional rate", "6 April 2027", 0.47, 0.49],
     ]);
     // A change that varies, or skips a year, keeps a line a year
     const point = (year, after) => ({ key: String(year), label: `${year}`, year, before: 1, after });
@@ -76,6 +86,17 @@ describe("policy_parameters.json, as the page reads it", () => {
 });
 
 describe("periods", () => {
+  it("ignores repeated dated values without hiding a policy change", () => {
+    const points = [
+      { key: "2026-04-01", label: "1 April 2026", before: 1, after: 1 },
+      { key: "2027-01-01", label: "1 January 2027", before: 2, after: 1 },
+      { key: "2027-07-01", label: "1 July 2027", before: 2, after: 2 },
+    ];
+    const repeated = { key: "2026-04-06", label: "6 April 2026", before: 1, after: 1 };
+    expect(schedulePeriods({ points: [points[0], repeated, ...points.slice(1)] })).toEqual(schedulePeriods({ points }));
+    expect(schedulePeriods({ points })[1]).toMatchObject({ label: "1 January to 30 June 2027", before: 2, after: 1 });
+  });
+
   it("names a period from its first day to its last", () => {
     expect(periodLabel("2027-01-01", "2027-02-28")).toBe("1 January to 28 February 2027");
     expect(periodLabel("2027-03-01", "2027-03-31")).toBe("1 to 31 March 2027");
@@ -100,12 +121,14 @@ describe("words", () => {
 
   it("says a step for the tooltip", () => {
     expect(describeSegment({ label: "2029-30", before: 12570, after: 13700 }, "gbp")).toBe("2029-30: £12,570 → £13,700 (+£1,130)");
-    expect(describeSegment({ label: "2026-27", before: 12570, after: 12570 }, "gbp")).toBe("2026-27: £12,570, as under current law");
+    expect(describeSegment({ label: "2026-27", before: 12570, after: 12570 }, "gbp")).toBe("2026-27: £12,570, as before the Budget");
   });
 
   it("puts a date on the timeline's months", () => {
-    expect(monthOf("2026-04-01")).toBe(0);
-    expect(monthOf("2027-01-01")).toBe(9);
+    expect(monthOf("2026-04-06")).toBe(0);
+    expect(monthOf("2026-04-01")).toBe(-5 / 30);
+    expect(monthOf("2027-01-01")).toBe(9 - 5 / 30);
+    expect(monthOf("2032-04-06")).toBe(72);
   });
 });
 
@@ -144,9 +167,10 @@ describe("each measure's scored years", () => {
     expect(windows.carers_allowance_earnings_taper).toEqual({ first: 2030, last: 2031 });
     expect(windows.household_energy_payment_2026).toEqual({ first: 2026, last: 2026 });
     expect(windows.state_pension_income_tax_protection).toEqual({ first: 2027, last: 2029 });
-    // A dated span counts in every fiscal year it touches: January to
-    // December 2027 is in 2026-27 and 2027-28
-    expect(windows.bus_fare_cap_2027).toEqual({ first: 2026, last: 2027 });
+    // The already-announced bus cap changes no year. The April-to-June
+    // electricity extension spans both sides of the 6 April fiscal boundary.
+    expect(windows.bus_fare_cap_2027).toBeUndefined();
+    expect(windows.domestic_electricity_zero_vat).toEqual({ first: 2026, last: 2027 });
     expect(measureWindows(null)).toEqual({});
   });
 

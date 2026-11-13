@@ -1,24 +1,20 @@
-"""What each candidate measure changes, before and after, from the model.
+"""What each measure changes from pre-Budget policy to native current law.
 
 Writes ``public/data/policy_parameters.json``, which the Policies tab reads
 for each card's "What changes" table: for each measure, the policy
-parameters it changes, current law beside the measure, by year (or by date,
-or for the period it is in force). Nothing here is typed by hand for the
-page: every value is read from
-
-- the engine's parameters (``engine_parameter``: policyengine-uk's value at
-  the start of the fiscal year, 6 April, the instant ``reforms.py`` reads);
-- a measure's own parameter changes in ``reforms.py``
-  (``measure_parameter_change``), or a dated schedule there
-  (``measure_schedule``);
-- a modifier's documented constants, its default arguments in
-  ``budget_measures`` (``modifier_constant``), read by ``inspect``, never
-  by editing the module (receipts bind its bytes); or
-- for the few figures in neither, the measure's published description
-  (``documented``), said so in the row's source.
+parameters it changes, actual pre-Budget policy beside native current law,
+by year or statutory date. The native package reads its before values
+from ``budget_policy.json`` and its after values from the unannualised
+native parameter tree, at every dated boundary. Derived amounts name their
+native formula and parameter sources.
 
 Only parameter lookups: no dataset and no microsimulation, so it runs in
 seconds on any machine.
+
+Earlier candidate builders remain for historical fixtures. They read
+engine parameters, the old forward parameter changes and schedules, or
+documented modifier defaults and descriptions, with each source labelled.
+They do not supply the native package's tables.
 
 Each measure carries the description it was built from. The page shows a
 measure's table only while the published measure has that description,
@@ -82,6 +78,11 @@ from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     SPRING_SHARE,
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
+)
+from uk_budget_data.budget_policy import (
+    native_policy_changes,
+    policy_record,
+    pre_budget_policy_timeline,
 )
 from uk_budget_data.budget_years import POLICY_YEARS
 
@@ -155,6 +156,11 @@ def _month_label(day: date) -> str:
 def _fiscal_year_of(day: date) -> int:
     """The year of the page's timeline (April to March) a date falls in."""
     return day.year if day.month >= 4 else day.year - 1
+
+
+def _tax_year_of(day: date) -> int:
+    """The native model's 6 April to 5 April year."""
+    return day.year if (day.month, day.day) >= (4, 6) else day.year - 1
 
 
 def _clean(value: Optional[float]) -> Optional[float]:
@@ -397,8 +403,9 @@ def _fuel_duty(reform) -> list[dict]:
         return [rate for start, rate in schedule if start <= day][-1]
 
     # The dates on the page's timeline, April 2026 to March 2032
-    first, last = date(POLICY_YEARS[0], 4, 1), date(
-        POLICY_YEARS[-1] + 1, 3, 31
+    first, last = (
+        date(POLICY_YEARS[0], 4, 1),
+        date(POLICY_YEARS[-1] + 1, 3, 31),
     )
     # The rates in force on the timeline's first day, then each change
     days = sorted(
@@ -1036,8 +1043,7 @@ def _household_energy_payment(reform) -> list[dict]:
                 _modifier_source(household_energy_payment_2026, "amount"),
             ),
             unit_words="£ a household, once",
-            note=f"Paid to households in {where} in council tax bands "
-            f"{bands}",
+            note=f"Paid to households in {where} in council tax bands {bands}",
         )
     ]
 
@@ -1215,6 +1221,8 @@ def display_for(rows: list[dict]) -> str:
     """The display a measure's rows call for (see above)."""
     main = next(row for row in rows if row["primary"])
     points = main["points"]
+    if not any(_differs(point) for row in rows for point in row["points"]):
+        return BEFORE_AFTER
     if len(points) == 1:
         return SWITCH
     if all(re.fullmatch(r"\d{4}-\d{2}-\d{2}", p["key"]) for p in points):
@@ -1286,13 +1294,201 @@ def current_law() -> dict:
     }
 
 
+def _native_sources(measure_id: str, path: str) -> dict:
+    record = policy_record()
+    return _source(
+        {
+            "kind": "pre_budget_parameter",
+            "where": f"budget_policy.json measures.{measure_id}.paths.{path}",
+            "path": path,
+            "model_commit": record["pre_budget_model_commit"],
+            "references": record["measures"][measure_id]["references"],
+        },
+        {
+            "kind": "engine_parameter",
+            "where": (
+                f"policyengine-uk {record['native_model_version']} {path}, "
+                "on statutory dates before fiscal-year conversion"
+            ),
+            "path": path,
+            "model_commit": record["native_model_commit"],
+        },
+    )
+
+
+def _native_pension_tax_allowance() -> list[dict]:
+    """The native formula's maximum, before its income taper and tax cap."""
+    from policyengine_uk.model_api import WEEKS_IN_YEAR
+
+    root = _parameters()
+    pta = root.gov.hmrc.income_tax.reliefs.pension_tax_allowance
+    state_pension = root.gov.dwp.state_pension.new_state_pension.amount
+    allowance = root.gov.hmrc.income_tax.allowances.personal_allowance.amount
+    path = "gov.hmrc.income_tax.reliefs.pension_tax_allowance.in_effect"
+
+    def largest(year):
+        instant = f"{year}-04-06"
+        full = pta.rate(instant) * max(
+            0, WEEKS_IN_YEAR * state_pension(instant) - allowance(instant)
+        )
+        return pta.in_effect(instant) * math.ceil(round(full, 6))
+
+    source = _native_sources(registry.STATE_PENSION_ALLOWANCE_ID, path)
+    source["after"].update(
+        kind="native_formula",
+        where=(
+            "policyengine_uk.variables.gov.hmrc.income_tax.reliefs."
+            "pension_tax_allowance: ceil(round(rate * max(0, "
+            "WEEKS_IN_YEAR * new_state_pension.amount - personal_allowance.amount), 6)), "
+            "while in_effect; values from the native parameter tree"
+        ),
+    )
+    return [
+        _row(
+            "Pension Tax Allowance, the largest tax reduction",
+            POUNDS,
+            _yearly(lambda year: 0, largest),
+            source,
+            unit_words="£ of income tax a year",
+            note="Before the native income taper and the cap at tax remaining; "
+            "eligibility follows State Pension age.",
+        )
+    ]
+
+
+def _native_rows(measure_id: str) -> list[dict]:
+    """Read both policy timelines, retaining changes within fiscal years."""
+    if measure_id == registry.STATE_PENSION_ALLOWANCE_ID:
+        return _native_pension_tax_allowance()
+    record = policy_record()
+    measure = record["measures"][measure_id]
+    raw = _parameters().baseline
+    first = f"{POLICY_YEARS[0]}-04-06"
+    last = f"{POLICY_YEARS[-1] + 1}-04-05"
+    rows = []
+    labels = {
+        registry.FUEL_DUTY: "Fuel duty",
+        "gov.hmrc.fuel_duty.lpg": "Fuel duty on LPG",
+        "gov.hmrc.fuel_duty.natural_gas": "Fuel duty on natural gas",
+        "gov.treasury.household_energy_payment.amount": "Household energy payment",
+        "gov.dft.bus.fares.cap": "Single bus fare cap",
+        registry.TRADING_ALLOWANCE: "Trading allowance",
+        "gov.dwp.carers_allowance.earnings_taper.applies": "Earnings taper in force",
+    }
+    labels.update(
+        {
+            f"{registry.INCOME_TAX_RATES}.{suffix}": label
+            for suffix, label in _RATE_LABELS.items()
+        }
+    )
+    for path, spec in measure["paths"].items():
+        node = raw.get_child(path)
+        before_values = pre_budget_policy_timeline(path)
+        end = (
+            date.fromisoformat(spec["stop"]) + timedelta(days=1)
+        ).isoformat()
+        days = {
+            first,
+            spec["start"],
+            end,
+            *before_values,
+            *(item.instant_str for item in node.values_list),
+        }
+        metadata = node.metadata
+        native_unit = metadata.get("unit")
+        unit_words = None
+        factor = 1
+        if path.startswith("gov.hmrc.fuel_duty."):
+            factor = 100
+            if path == registry.FUEL_DUTY:
+                unit, unit_words = PENCE_A_LITRE, "pence a litre"
+            else:
+                unit, unit_words = "pence", "pence a kilogram"
+        elif native_unit == "/1":
+            unit = PERCENT
+        elif native_unit == "currency-GBP":
+            unit = POUNDS
+        else:
+            raise ValueError(
+                f"No policy-table presentation for {path} ({native_unit})"
+            )
+
+        def before(instant):
+            if spec["start"] <= instant <= spec["stop"]:
+                return before_values[
+                    max(day for day in before_values if day <= instant)
+                ]
+            return node(instant)
+
+        points = []
+        has_uncapped = False
+        for instant in sorted(day for day in days if first <= day <= last):
+            values = [before(instant), node(instant)]
+            safe = [
+                None if math.isinf(value) else value * factor
+                for value in values
+            ]
+            point = _point(
+                instant,
+                _day_label(date.fromisoformat(instant)),
+                _tax_year_of(date.fromisoformat(instant)),
+                *safe,
+            )
+            for side, value in zip(("before", "after"), values):
+                if math.isinf(value):
+                    point[f"{side}_label"] = "no cap"
+                    has_uncapped = True
+            points.append(point)
+        note = measure.get("note", "")
+        if measure_id == registry.HOUSEHOLD_ENERGY_PAYMENT_ID:
+            eligibility = raw.gov.treasury.household_energy_payment
+            bands = ", ".join(eligibility.bands(spec["start"]))
+            countries = ", ".join(eligibility.countries(spec["start"]))
+            note = f"Paid once to households in {countries.title()} in council tax bands {bands}."
+            unit_words = "£ a household, once"
+        elif path == registry.TRADING_ALLOWANCE:
+            unit_words = "£ of trading receipts a year"
+        elif path == "gov.dft.bus.fares.cap":
+            unit_words = "£ a single fare"
+        if has_uncapped:
+            note = (note + " An unbounded value means no cap.").strip()
+        source = _native_sources(measure_id, path)
+        source["after"]["parameter_unit"] = native_unit
+        row = _row(
+            labels.get(path, metadata.get("label", path)),
+            unit,
+            points,
+            source,
+            primary=not rows,
+            note=note or None,
+            unit_words=unit_words,
+        )
+        if has_uncapped:
+            row["null_label"] = "no cap"
+        rows.append(row)
+    return rows
+
+
+def _uses_native_policy(reform) -> bool:
+    """Historical fixtures still exercise their original forward builders."""
+    return (
+        reform.id in policy_record()["measures"]
+        and reform.simulation_modifier is None
+        and reform.parameter_changes == native_policy_changes(reform.id)
+    )
+
+
 def build() -> dict:
     """Every candidate measure's table, in the registry's order, and the
     current-law thresholds (``current_law``)."""
     measures = {}
     for measure_id in registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS:
         reform = registry.get_reform(measure_id)
-        rows = BUILDERS[measure_id](reform)
+        rows = (
+            _native_rows(measure_id)
+            if _uses_native_policy(reform)
+            else BUILDERS[measure_id](reform)
+        )
         measures[measure_id] = {
             "description": reform.description,
             "display": (

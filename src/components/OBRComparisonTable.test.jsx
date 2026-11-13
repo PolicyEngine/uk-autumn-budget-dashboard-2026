@@ -17,7 +17,7 @@ import { geographyFetch } from "../test/geographyFixture";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
 import { ALPHA, BETA, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
-import { OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT } from "../utils/obrDeviationNotes";
+import { OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, OBR_NOTES_WRITTEN_FOR } from "../utils/obrDeviationNotes";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { downloadFile } from "../utils/downloadFile";
 
@@ -237,7 +237,7 @@ describe("why our estimates differ from the official costings", () => {
   // November 2026). Invented figures: ours above the note's income tax
   // line (£443m, £475m and £510m from 2029-30) by £57m, £65m and £90m
   it("fills the published note's own figures from the estimates beside it", async () => {
-    renderNoted({ notes: OBR_DEVIATION_NOTES, ours: { 2027: 0.4, 2028: 0.45, 2029: 0.5, 2030: 0.54, 2031: 0.6 } });
+    renderNoted({ description: OBR_NOTES_WRITTEN_FOR[ID], notes: OBR_DEVIATION_NOTES, ours: { 2027: 0.4, 2028: 0.45, 2029: 0.5, 2030: 0.54, 2031: 0.6 } });
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
     const anchor = within(tableRow()).getAllByRole("cell")[4].querySelector(".difference-note-anchor");
@@ -252,7 +252,7 @@ describe("why our estimates differ from the official costings", () => {
   it("leaves those passages out while the estimates do not bear them out", async () => {
     // One year only, as the other tests here: no figure for 2027-28, and
     // none for every year from 2029-30
-    renderNoted({ notes: OBR_DEVIATION_NOTES });
+    renderNoted({ description: OBR_NOTES_WRITTEN_FOR[ID], notes: OBR_DEVIATION_NOTES });
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
     const anchor = within(tableRow()).getAllByRole("cell")[4].querySelector(".difference-note-anchor");
@@ -503,7 +503,7 @@ describe("the comparison sentence", () => {
     // The noun, not the short name: "The fuel duty cut", never "Fuel duty cut extended"
     const fuel = POLICY_DETAILS.find((entry) => entry.id === "fuel_duty_rise_deferral");
     const fuelRow = { ...off("Fuel duty cut extended", "Ended 2027-28"), id: fuel.id, measure: { id: fuel.id, name: fuel.name, description: fuel.writtenFor } };
-    expect(comparisonSentence([fuelRow], "static")).toBe("The fuel duty cut is not in force this year.");
+    expect(comparisonSentence([fuelRow], "static")).toBe("The fuel duty change is not in force this year.");
     expect(comparisonSentence([off("A", "Starts 2030-31"), off("B", "2026-27 only")], "static")).toBe("None of the selected policies is in force this year.");
   });
 });

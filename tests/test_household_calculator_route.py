@@ -28,7 +28,7 @@ from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data import personal_impact
-from uk_budget_data.forecast import forecast_scenario, with_forecast
+from uk_budget_data.forecast import with_forecast
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
 # A year each candidate measure the calculator shows is in force.
@@ -49,6 +49,8 @@ MEASURE_YEARS = {
 # household has.
 NO_HOUSEHOLD_EFFECT: set[str] = {
     "trading_allowance_raise",
+    # The £2 cap was already announced before the Budget.
+    "bus_fare_cap_2027",
 }
 HOUSEHOLDS = {
     "employee_30k": personal_impact.HouseholdInput(employment_income=30_000),
@@ -240,10 +242,9 @@ def test_every_measure_the_calculator_shows_has_a_year():
 
 
 @pytest.mark.parametrize("year", [2026, 2027])
-def test_the_bus_fare_cap_credits_bus_fares_outside_london_only(year):
-    """£500 a year of bus fares: about £13 in 2026-27 and £40 in 2027-28
-    in the North West (the policy card's example), £0 in London, by both
-    routes; every probe household without bus fares gets £0."""
+def test_the_already_announced_bus_cap_has_no_incremental_budget_effect(year):
+    """The pre-Budget and current-law caps are already £2 from January
+    2027, so both routes return zero for passengers in every region."""
     reform = next(
         reform
         for reform in get_autumn_budget_2026_reforms()
@@ -252,18 +253,7 @@ def test_the_bus_fare_cap_credits_bus_fares_outside_london_only(year):
     names = list(situation(year)["households"])
     household = dict(zip(names, household_route(reform, year)))
     national = dict(zip(names, national_route(reform, year)))
-    share = {2026: 95 / 365, 2027: 270 / 366}[year]
-    step = 0.10 * share
-    assert household["bus_rider"] == pytest.approx(
-        500 * step / (1 - step), abs=0.01
-    )
-    assert round(household["bus_rider"]) == {2026: 13, 2027: 40}[year]
-    assert household["london_bus_rider"] == 0
-    assert all(
-        change == 0
-        for name, change in household.items()
-        if name != "bus_rider"
-    )
+    assert all(change == 0 for change in household.values())
     assert same(list(household.values()), list(national.values()))
 
 
@@ -467,10 +457,11 @@ def test_a_duty_kept_on_its_statutory_dates_reaches_households():
     assert duty == pytest.approx(150, abs=0.01)
 
 
-def test_no_change_builds_the_plain_simulation():
-    """No change: the forecast alone, as current law is built nationally."""
+def test_no_change_builds_the_shared_pre_budget_reference():
+    """An empty selection still builds the shared pre-Budget policy on
+    native economic assumptions, as the national route does."""
     probe = situation(2027)
-    plain = Simulation(situation=probe, scenario=forecast_scenario())
+    plain = Simulation(situation=probe, scenario=with_forecast(None))
     built = personal_impact.create_simulation(probe, 2027)
     assert _net(built, 2027) == _net(plain, 2027)
 
@@ -739,10 +730,8 @@ def test_an_empty_scenario_computes_what_none_does(probe):
 
 
 def test_household_simulations_build_without_an_empty_scenario(monkeypatch):
-    """Most registered measures keep current law on the reform side as
-    parameter_changes={}: that side is built on the forecast alone, the
-    other on the forecast with its own changes. That an empty scenario
-    computes what none does is checked above."""
+    """An empty delta still retains the shared pre-Budget policy, while
+    an explicit allowance overrides that reference on its own side."""
     from uk_budget_data.models import DataConfig, Reform
 
     seen = []
@@ -762,18 +751,18 @@ def test_household_simulations_build_without_an_empty_scenario(monkeypatch):
     baseline, reformed = personal_impact.household_simulations(
         PENSIONER, reform, DataConfig()
     )
-    forecast = forecast_scenario().parameter_changes
-    assert seen[0].parameter_changes != forecast
-    assert seen[1].parameter_changes == forecast
+    reference = with_forecast(None).parameter_changes
+    assert reference
+    assert seen[0].parameter_changes != reference
+    assert seen[1].parameter_changes == reference
     # Current law on the reform side; the pre-Budget allowance on the other.
     assert float(reformed.calculate("income_tax", 2027)[0]) == 3_486
     assert float(baseline.calculate("income_tax", 2027)[0]) == 2_000
 
 
 def test_an_empty_baseline_is_built_without_a_scenario(monkeypatch):
-    """The baseline side drops an empty scenario too: an explicit empty
-    baseline (its own, so the configured one is not used) is current law,
-    on the forecast alone."""
+    """An explicit empty baseline ignores the configured allowance but
+    retains the shared pre-Budget policy on native assumptions."""
     from uk_budget_data.models import DataConfig, Reform
 
     seen = []
@@ -795,8 +784,9 @@ def test_an_empty_baseline_is_built_without_a_scenario(monkeypatch):
         reform,
         DataConfig(baseline_parameter_changes=_allowance(15_000)),
     )
-    forecast = forecast_scenario().parameter_changes
-    assert seen[0].parameter_changes == forecast
-    assert seen[1].parameter_changes != forecast
+    reference = with_forecast(None).parameter_changes
+    assert reference
+    assert seen[0].parameter_changes == reference
+    assert seen[1].parameter_changes != reference
     assert float(baseline.calculate("income_tax", 2027)[0]) == 3_486
     assert float(reformed.calculate("income_tax", 2027)[0]) == 2_000

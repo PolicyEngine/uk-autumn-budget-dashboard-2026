@@ -122,17 +122,17 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
       // to £41,500") says the level once, with the change
       summary = verb && poundsFull(a) === poundsFull(b) ? (
         <>
-          Under current law, {who} <strong>{verb}</strong> from {fyDash(first.year)} to {fyDash(last.year)}, staying at about{" "}
+          Under pre-Budget policy, {who} <strong>{verb}</strong> from {fyDash(first.year)} to {fyDash(last.year)}, staying at about{" "}
           {poundsFull(a)} a year.
         </>
       ) : verb ? (
         <>
-          Under current law, {who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
+          Under pre-Budget policy, {who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
           {poundsFull(b)} in {fyDash(last.year)}.
         </>
       ) : (
         <>
-          Under current law, {who} <strong>stays at about {poundsFull(a)}</strong> a year from {fyDash(first.year)} to{" "}
+          Under pre-Budget policy, {who} <strong>stays at about {poundsFull(a)}</strong> a year from {fyDash(first.year)} to{" "}
           {fyDash(last.year)}.
         </>
       );
@@ -145,7 +145,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
 
   const csv = () =>
     seriesCsv({
-      title: `Household income: ${label}`,
+      title: `Household income: ${label}${effectiveView === "outturn" ? "" : ", pre-Budget projection"}`,
       units: yLabel,
       source: CSV_SOURCES.hbai,
       rows: chartData,

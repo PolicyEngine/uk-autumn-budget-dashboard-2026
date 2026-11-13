@@ -12,9 +12,10 @@
 export const POLICY_PARAMETERS_FILE = "policy_parameters.json";
 export const POLICY_PARAMETERS_SCHEMA = "uk-budget-dashboard/policy-parameters/v1";
 
-// The page's timeline: April 2026 to March 2032, in months
+// The page's six model tax years: 6 April 2026 to 5 April 2032.
 export const FIRST_YEAR = 2026;
 export const MONTHS = 72;
+const APRIL_START = 5 / 30;
 
 const MINUS = "−";
 const MONTH_NAMES = [
@@ -77,11 +78,11 @@ export const mainRow = (entry) => entry?.rows?.find((row) => row.primary) ?? nul
 
 // --- Time ------------------------------------------------------------------
 
-/** "2027-01-01" as months since 1 April 2026, with days as a fraction. */
+/** Months since 6 April 2026, with days as a fraction of their month. */
 export function monthOf(isoDate) {
   const [year, month, day] = isoDate.split("-").map(Number);
   const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return (year - FIRST_YEAR) * 12 + (month - 4) + (day - 1) / days;
+  return (year - FIRST_YEAR) * 12 + (month - 4) + (day - 1) / days - APRIL_START;
 }
 
 const clamp = (month) => Math.min(Math.max(month, 0), MONTHS);
@@ -94,7 +95,16 @@ const nextDay = (isoDate) => {
   day.setUTCDate(day.getUTCDate() + 1);
   return day.toISOString().slice(0, 10);
 };
-const yearOfMonth = (month) => FIRST_YEAR + Math.floor(Math.min(month, MONTHS - 1e-6) / 12);
+const yearOfMonth = (month) => {
+  const bounded = Math.min(Math.max(month, 0), MONTHS - 1e-6) + APRIL_START;
+  const whole = Math.floor(bounded);
+  const year = FIRST_YEAR + Math.floor((whole + 3) / 12);
+  const calendarMonth = ((whole + 3) % 12) + 1;
+  const days = new Date(Date.UTC(year, calendarMonth, 0)).getUTCDate();
+  const day = Math.floor((bounded - whole) * days + 1e-6) + 1;
+  const date = `${year}-${String(calendarMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return Math.max(FIRST_YEAR, fiscalYearOf(date));
+};
 
 const isYearly = (point) => /^\d{4}$/.test(point.key);
 const isDated = (point) => /^\d{4}-\d{2}-\d{2}$/.test(point.key);
@@ -135,11 +145,13 @@ export function segmentsFor(row) {
       before: point.before,
       after: point.after,
       label: point.label,
+      from: point.year,
+      to: point.year,
     }));
   }
   return segments
     .filter((segment) => segment.end > segment.start)
-    .map((segment) => ({ ...segment, from: yearOfMonth(segment.start), to: yearOfMonth(segment.end - 1e-6) }));
+    .map((segment) => ({ ...segment, from: segment.from ?? yearOfMonth(segment.start), to: segment.to ?? yearOfMonth(segment.end - 1e-6) }));
 }
 
 // --- Periods ---------------------------------------------------------------
@@ -178,7 +190,8 @@ export function periodLabel(first, last) {
  * force, never averages.
  */
 export function schedulePeriods(row) {
-  const points = [...(row?.points ?? [])].filter(isDated).sort((a, b) => a.key.localeCompare(b.key));
+  const dated = [...(row?.points ?? [])].filter(isDated).sort((a, b) => a.key.localeCompare(b.key));
+  const points = dated.filter((point, i) => i === 0 || !same(point.before, dated[i - 1].before) || !same(point.after, dated[i - 1].after));
   const changed = points.map(differs);
   const first = changed.indexOf(true);
   if (first < 0) return [];
@@ -220,7 +233,7 @@ export function changeLines(rows) {
 
 /** A step in words, for the plot's tooltip and its text alternative. */
 export function describeSegment(segment, unit) {
-  if (!differs(segment)) return `${segment.label}: ${formatValue(segment.before, unit)}, as under current law`;
+  if (!differs(segment)) return `${segment.label}: ${formatValue(segment.before, unit)}, as before the Budget`;
   if (unit === "percent") return `${segment.label}: ${formatChange(segment.before, segment.after, unit)}`;
   return `${segment.label}: ${formatValue(segment.before, unit)} → ${formatValue(segment.after, unit)} (${formatChange(segment.before, segment.after, unit)})`;
 }
@@ -260,15 +273,22 @@ function fiscalYearOf(date) {
 export function measureWindows(document) {
   const windows = {};
   for (const [id, entry] of Object.entries(document?.measures ?? {})) {
+    const lastYear = Math.max(...(document?.years ?? [FIRST_YEAR + MONTHS / 12 - 1]));
     const years = (entry?.rows ?? [])
-      .flatMap((row) => row?.points ?? [])
-      .filter((point) => differs(point))
-      .flatMap((point) => {
+      .flatMap((row) => {
+        const points = [...(row?.points ?? [])].sort((a, b) => String(a.key).localeCompare(String(b.key)));
+        return points.flatMap((point, i) => {
+          if (!differs(point)) return [];
+          if (isDated(point)) {
+            const stop = points[i + 1]?.key;
+            return [fiscalYearOf(point.key), stop && isDated(points[i + 1]) ? fiscalYearOf(previousDay(stop)) : lastYear];
+          }
         // A dated span ("2027-01-01/2027-12-31") counts in every fiscal
         // year it touches: the bus fare cap runs in 2026-27 and 2027-28
         const span = /^(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})$/.exec(String(point.key ?? ""));
         if (span) return [fiscalYearOf(span[1]), fiscalYearOf(span[2])];
         return [Number.isFinite(point.year) ? point.year : Number(String(point.key ?? "").slice(0, 4))];
+        });
       })
       .filter(Number.isFinite);
     if (years.length) windows[id] = { first: Math.min(...years), last: Math.max(...years) };

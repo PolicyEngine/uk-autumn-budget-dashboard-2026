@@ -23,6 +23,7 @@ Nothing here prints a value, a count or a support figure: only labels.
 
 import argparse
 import contextlib
+import copy
 import hashlib
 import json
 import math
@@ -2074,6 +2075,8 @@ class _Plan:
     provenance: Optional[dict] = None
     manifest: Optional[publication_manifest.Manifest] = None
     manifest_bytes: bytes = b""
+    # Private executable recipes; never fields of public area provenance.
+    execution_bindings: dict = field(default_factory=dict)
 
 
 def manifest_key(reform_id: str) -> str:
@@ -2099,13 +2102,31 @@ def _area_identities(reform_id: str, years, revision, member_revisions=None):
     )
     combined = combine.combine_measures(members, config)
     uses_config = any(not member.has_custom_baseline() for member in members)
-    baseline = combined.baseline_scenario_for(config, uses_config)
+    from uk_budget_data.publication import phase_recipe
+
+    if any(
+        phase_recipe.structural(scenario)
+        for member in members
+        for scenario in (
+            member.baseline_scenario_for(config),
+            member.to_scenario(),
+        )
+    ):
+        return publication_receipt.combined_identities(
+            members, config, revision, member_revisions=member_revisions
+        )[:2]
+    baseline = publication_receipt.comparison_scenario(
+        combined.baseline_scenario_for(config, uses_config)
+    )
+    effective_reform = publication_receipt.comparison_scenario(
+        combined.to_scenario()
+    )
     identities = publication_receipt.combined_identities(
         members,
         config,
         revision,
         reform_applied_before_data_load=(
-            combined.to_scenario().applied_before_data_load
+            effective_reform.applied_before_data_load
         ),
         baseline_applied_before_data_load=(
             baseline.applied_before_data_load
@@ -2249,6 +2270,7 @@ def area_provenance(
     *,
     data_root: Path,
     years: Sequence[int],
+    execution_bindings: Optional[dict] = None,
 ) -> dict:
     """Refuse a current definition that differs from the approved receipt.
 
@@ -2326,6 +2348,30 @@ def area_provenance(
             **identities,
             "definition": definition_digests(reform_id, sorted(set(years))),
         }
+        # The coordinator supplies actual approved revisions to workers;
+        # workers rebind trusted definitions without consulting Git or
+        # importing any callable named by an inert receipt plan.
+        if execution_bindings is not None and any(
+            identity.representation
+            == "policyengine-uk.phased_scenario_composition/v1"
+            for identity in actual
+        ):
+            own_members = (
+                combine.member_order(
+                    [get_reform(key) for key in PACKAGES[reform_id]]
+                )
+                if reform_id in PACKAGES
+                else None
+            )
+            execution_bindings[reform_id] = (
+                publication_receipt.execution_binding(
+                    get_reform(reform_id),
+                    DataConfig(years=list(years)),
+                    bound,
+                    members=own_members,
+                    member_revisions=members,
+                )
+            )
     return {
         "manifest_revision": manifest.revision,
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
@@ -2583,18 +2629,87 @@ def _reform_scenarios(reform: Reform, years, *, check_composition=False):
     )
 
 
-def simulate_reform(reform: Reform, dataset: Optional[str], years) -> tuple:
+def simulate_reform(
+    reform: Reform,
+    dataset: Optional[str],
+    years,
+    *,
+    execution_binding=None,
+    execution_checks=None,
+) -> tuple:
     """A reform's baseline and reformed microsimulations, built under the
     data-limit build watch (``data_limits.watched_build``), as the
     publication generator builds them."""
     baseline_scenario, reform_scenario = _reform_scenarios(
-        reform, years, check_composition=True
+        reform, years, check_composition=False
     )
+    from uk_budget_data.publication import phase_recipe
+
+    runtime = (baseline_scenario, reform_scenario)
+    if any(phase_recipe.structural(scenario) for scenario in runtime):
+        if execution_binding is None or execution_checks is None:
+            raise publication_receipt.ReceiptUnavailable(
+                reform.id,
+                "a structural area run requires its actual approved execution binding and live checks",
+            )
+        members = (
+            combine.member_order(
+                [get_reform(key) for key in PACKAGES[reform.id]]
+            )
+            if reform.id in PACKAGES
+            else None
+        )
+        executions = publication_receipt.rebind_execution(
+            reform,
+            DataConfig(years=list(years)),
+            execution_binding,
+            members=members,
+        )
+        runtime = tuple(execution.runtime for execution in executions)
+        execution_checks.extend(
+            execution.runtime.recheck for execution in executions
+        )
+        carried = copy.deepcopy(execution_binding)
+        execution_checks.append(
+            lambda: publication_receipt.rebind_execution(
+                reform, DataConfig(years=list(years)), carried, members=members
+            )
+        )
+    if reform.id in PACKAGES:
+        members = combine.member_order(
+            [get_reform(key) for key in PACKAGES[reform.id]]
+        )
+        combined = combine.combine_measures(
+            members, DataConfig(years=list(years))
+        )
+        checked_revisions = {}
+        if combine.has_early_modifiers(members):
+            # rebind_execution already validated every carried revision.
+            checked_revisions = {
+                "revision": publication_receipt.CodeRevision(
+                    execution_binding["revision"]["git_sha"], True
+                ),
+                "member_revisions": {
+                    key: publication_receipt.CodeRevision(
+                        value["git_sha"], True
+                    )
+                    for key, value in execution_binding[
+                        "member_revisions"
+                    ].items()
+                },
+            }
+        combine.check_consistency(
+            combined,
+            members,
+            DataConfig(years=list(years)),
+            list(years),
+            **checked_revisions,
+        )
     baseline = data_limits.watched_build(
-        build_microsimulation, dataset, baseline_scenario
+        build_microsimulation, dataset, runtime[0]
     )
     reformed = data_limits.watched_build(
-        build_microsimulation, dataset, reform_scenario
+        build_microsimulation, dataset, runtime[1]
     )
     return baseline, reformed
 
@@ -2694,6 +2809,7 @@ class GeographyUnit:
     # the collector from its baseline (the dataset's survey households,
     # regions and seats); None for the others.
     collector: Optional[dict] = None
+    execution_binding: Optional[dict] = None
 
 
 @dataclass
@@ -2716,7 +2832,18 @@ def simulate_area_unit(unit: GeographyUnit) -> GeographyOutcome:
     years = list(unit.years)
     outcome = GeographyOutcome(reform_id=reform.id)
     console.print(f"Simulating {reform.id}")
-    baseline, reformed = simulate_reform(reform, unit.dataset, years)
+    execution_checks = []
+    runtime = (
+        {
+            "execution_binding": unit.execution_binding,
+            "execution_checks": execution_checks,
+        }
+        if unit.execution_binding is not None
+        else {}
+    )
+    baseline, reformed = simulate_reform(
+        reform, unit.dataset, years, **runtime
+    )
     if unit.collector is not None:
         outcome.collector = GeographyCollector.from_simulation(
             baseline,
@@ -2759,6 +2886,8 @@ def simulate_area_unit(unit: GeographyUnit) -> GeographyOutcome:
     # still is: judge the area run's own simulations, as the generator
     # judges its run.
     outcome.held = reform_model_limits(reform, baseline, reformed, years)
+    for recheck in execution_checks:
+        recheck()
     # The observation holds both simulations: free it with them, so the
     # next pair is never built with this one still alive.
     del baseline, reformed, observed
@@ -2787,6 +2916,7 @@ def _run_geography(
             [reform.id for reform in plan.reforms],
             data_root=parsed.manifest.parent,
             years=plan.years,
+            execution_bindings=plan.execution_bindings,
         )
         plan.provenance["run"]["dataset"] = dataset_record(parsed)
     except (
@@ -2815,6 +2945,7 @@ def _run_geography(
                 years=tuple(plan.years),
                 kind=parsed.dataset_kind,
                 microcosm_export=plan.microcosm_export,
+                execution_binding=plan.execution_bindings.get(reform.id),
                 # The first measure's baseline also gives the collector.
                 collector=(
                     dict(

@@ -1550,6 +1550,9 @@ def publication_manifest(
                 git_sha=r.code_revision().git_sha,
                 baseline_identity=baseline_identity,
                 reform_identity=reform_identity,
+                parameter_changes=configured.parameter_changes or {},
+                baseline_parameter_changes=configured.baseline_parameter_changes,
+                reform_definition=configured,
                 modifier_templates=measure_templates_proof(
                     configured,
                     DataConfig(years=list(years)),
@@ -2148,7 +2151,11 @@ REFUSED = "Not computable on current data"
 def real_household_build(dataset, scenario=None):
     from policyengine_uk import Simulation
 
-    return Simulation(situation=household_situation(), scenario=scenario)
+    from uk_budget_data.forecast import with_forecast
+
+    return Simulation(
+        situation=household_situation(), scenario=with_forecast(scenario)
+    )
 
 
 @pytest.fixture

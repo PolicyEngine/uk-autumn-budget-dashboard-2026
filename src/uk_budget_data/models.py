@@ -47,6 +47,14 @@ class Reform(BaseModel):
         default=None,
         description="Function that modifies a simulation object",
     )
+    applied_before_data_load: bool = Field(
+        default=False,
+        description="Whether the reform modifier runs before data loading",
+    )
+    baseline_applied_before_data_load: bool = Field(
+        default=False,
+        description="Whether the custom baseline modifier runs before data loading",
+    )
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -60,13 +68,22 @@ class Reform(BaseModel):
             return Scenario(
                 simulation_modifier=self.simulation_modifier,
                 parameter_changes=self.parameter_changes,
+                applied_before_data_load=self.applied_before_data_load,
             )
         elif self.simulation_modifier is not None:
-            return Scenario(simulation_modifier=self.simulation_modifier)
+            return Scenario(
+                simulation_modifier=self.simulation_modifier,
+                applied_before_data_load=self.applied_before_data_load,
+            )
         elif self.parameter_changes is not None:
-            return Scenario(parameter_changes=self.parameter_changes)
+            return Scenario(
+                parameter_changes=self.parameter_changes,
+                applied_before_data_load=self.applied_before_data_load,
+            )
         else:
-            return Scenario()
+            return Scenario(
+                applied_before_data_load=self.applied_before_data_load
+            )
 
     def to_baseline_scenario(self) -> Optional[Scenario]:
         """Convert baseline parameter changes to a Scenario, if defined.
@@ -82,13 +99,18 @@ class Reform(BaseModel):
             return Scenario(
                 simulation_modifier=self.baseline_simulation_modifier,
                 parameter_changes=self.baseline_parameter_changes,
+                applied_before_data_load=self.baseline_applied_before_data_load,
             )
         elif self.baseline_simulation_modifier is not None:
             return Scenario(
-                simulation_modifier=self.baseline_simulation_modifier
+                simulation_modifier=self.baseline_simulation_modifier,
+                applied_before_data_load=self.baseline_applied_before_data_load,
             )
         elif self.baseline_parameter_changes is not None:
-            return Scenario(parameter_changes=self.baseline_parameter_changes)
+            return Scenario(
+                parameter_changes=self.baseline_parameter_changes,
+                applied_before_data_load=self.baseline_applied_before_data_load,
+            )
         return None
 
     def has_custom_baseline(self) -> bool:

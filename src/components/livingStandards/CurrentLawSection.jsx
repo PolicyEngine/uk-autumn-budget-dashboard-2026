@@ -1,4 +1,4 @@
-// Incomes and poverty under current law, before any Budget measure: the
+// Incomes and poverty under policy before the Autumn Budget changes: the
 // Pre-measures forecast's Living standards and Poverty sub-tabs, the twins
 // of Population impact's sub-tabs of the same names (which show the
 // measures' effect). Ported from PolicyEngine/uk-living-standards-outlook
@@ -23,18 +23,18 @@ import "./LivingStandards.css";
 // and links to the twin with them.
 const SECTIONS = {
   living: {
-    title: "Living standards under current law",
+    title: "Living standards under pre-Budget policy",
     icon: "wallet",
     // The forecast it is built on is named in the page intro
-    subtitle: "Current law, before any Budget policy.",
+    subtitle: "Pre-Budget policy, before the Autumn Budget changes.",
     // One card a row, so the twentieths chart has room for every year;
     // growth first
     rows: [[GrowthCard], [IncomesOverTimeCard], [InequalityOverTimeCard]],
   },
   poverty: {
-    title: "Poverty under current law",
+    title: "Poverty under pre-Budget policy",
     icon: "lifebuoy",
-    subtitle: "Current law, before any Budget policy.",
+    subtitle: "Pre-Budget policy, before the Autumn Budget changes.",
     // The age groups at a glance, then one card a row: both open on
     // absolute poverty before housing costs, and the bars need the width
     lead: PovertyTiles,
@@ -46,7 +46,7 @@ const SECTIONS = {
 const SECTION_IDS = { living: "current-law-incomes", poverty: "current-law-poverty" };
 
 /**
- * One current-law sub-tab, "living" or "poverty", from the outlook
+ * One pre-Budget sub-tab, "living" or "poverty", from the outlook
  * (useOutlook, read once by the view). Cards whose data block is missing are
  * skipped; a row with one card left renders it full width.
  *

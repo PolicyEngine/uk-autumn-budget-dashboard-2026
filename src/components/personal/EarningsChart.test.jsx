@@ -66,19 +66,19 @@ describe("EarningsChart", () => {
     expect(screen.getAllByRole("heading")).toHaveLength(1);
     expect(screen.getByRole("heading", { name: "Household net income, 2027-28" })).toBeInTheDocument();
     expect(container.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
-    expect(optionsLabel(container)).toBe("With the policies");
+    expect(optionsLabel(container)).toBe("With Budget policies");
     expect(document.querySelector("svg.earnings-svg").dataset.view).toBe("after");
   });
 
   it("without the parts: one side's line in the key and tooltip, and You marked", () => {
     render(<EarningsChart sweep={sweep} salary={35000} yearLabel="2027-28" />);
-    expect(screen.getByText("With the selected policies")).toBeInTheDocument();
+    expect(screen.getByText("With the selected Budget policies")).toBeInTheDocument();
     expect(document.querySelector(".earnings-layer")).toBeNull();
     expect(document.querySelector(".earnings-you")).toHaveTextContent("You");
-    expect(hover()).toMatch(/Net income with the policies/);
-    chooseOption(document.body, "Current law");
-    expect(screen.getByText("Under current law")).toBeInTheDocument();
-    expect(screen.queryByText("With the selected policies")).not.toBeInTheDocument();
+    expect(hover()).toMatch(/Net income with Budget policies/);
+    chooseOption(document.body, "Pre-Budget");
+    expect(screen.getByText("Under pre-Budget policy")).toBeInTheDocument();
+    expect(screen.queryByText("With the selected Budget policies")).not.toBeInTheDocument();
   });
 
   it("without the parts, change: the gain and loss key, the change alone in the tooltip", () => {
@@ -106,14 +106,14 @@ describe("EarningsChart", () => {
       "child_benefit_charge",
     ]);
     expect(document.querySelector(".earnings-total")).not.toBeNull();
-    expect(screen.getByText("Net income with the policies")).toBeInTheDocument();
+    expect(screen.getByText("Net income with Budget policies")).toBeInTheDocument();
     // Child Benefit and its charge: one key
     expect(screen.getByText("Child Benefit and its charge")).toBeInTheDocument();
     expect(screen.queryByText("Child Benefit charge")).not.toBeInTheDocument();
     const tip = hover();
     expect(tip).toMatch(/Income tax/);
     expect(tip).toMatch(/Council Tax/);
-    expect(tip).toMatch(/Net income with the policies/);
+    expect(tip).toMatch(/Net income with Budget policies/);
     expect(document.querySelector(".earnings-you")).toHaveTextContent("You");
   });
 

@@ -64,9 +64,9 @@ function waterfallRows(totals, steps) {
     return [...done, { ...step, from, to: from + step.rounded }];
   }, []);
   return [
-    { id: "before", name: "Current law", from: null, to: totals.before, total: true },
+    { id: "before", name: "Pre-Budget", from: null, to: totals.before, total: true },
     ...stepRows,
-    { id: "after", name: "With the policies", from: null, to: totals.after, total: true },
+    { id: "after", name: "With Budget policies", from: null, to: totals.after, total: true },
   ];
 }
 
@@ -155,7 +155,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
         <ol
           className="waterfall-rows"
           aria-describedby={sentenceId}
-          aria-label={`Net income under current law and with the selected policies, ${yearLabel}: ${rows
+          aria-label={`Net income under pre-Budget policy and with the selected Budget policies, ${yearLabel}: ${rows
             .map((row) => `${row.name} ${row.total ? money(row.to) : signedMoney(row.rounded)}`)
             .join("; ")}`}
         >

@@ -276,7 +276,7 @@ MEASURES = sorted(
 )
 
 
-def test_every_split_modifier_still_registered_is_exercised_below():
+def test_the_native_registry_does_not_reapply_archived_split_modifiers():
     covered = set().union(
         *(
             split_modifiers_of(reform)
@@ -284,7 +284,9 @@ def test_every_split_modifier_still_registered_is_exercised_below():
             if reform.id in MEASURES
         )
     )
-    assert covered
+    # Historical source/copy checks above remain meaningful, but native
+    # factories no longer apply these forward modifiers a second time.
+    assert covered == set()
     assert covered == set(registered_modifiers()) & set(SPLIT_NAMES)
 
 

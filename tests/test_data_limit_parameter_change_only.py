@@ -27,15 +27,30 @@ def nested(code, name):
     return None
 
 
-def test_only_isa_dividend_gdp_is_classified_parameter_change_only():
+def test_only_the_reviewed_shared_uprating_paths_are_parameter_change_only():
     assert ISA.parameter_change_only == (GDP,)
     assert GDP in ISA.parameters
     assert len(ISA.parameters) == 6
-    assert all(
-        not x.parameter_change_only
-        for x in data_limits.DATA_LIMITS
-        if x is not ISA
-    )
+    # The native trading and higher-stake MGD readers also have a shared
+    # upstream index: reading that index alone does not read their input.
+    assert {
+        limit.key: limit.parameter_change_only
+        for limit in data_limits.DATA_LIMITS
+        if limit.parameter_change_only
+    } == {
+        INPUT: (GDP,),
+        "income_not_otherwise_charged": (GDP,),
+        "machine_games_standard_rate_higher_stake_net_takings": (
+            "gov.economic_assumptions.indices.obr.per_capita.gambling_duty_bases.machine_games",
+        ),
+    }
+    for limit in data_limits.DATA_LIMITS:
+        for path in limit.parameter_change_only:
+            upstream = {path, *path.split(".")}
+            assert not data_limits._reads(limit, upstream)
+            assert data_limits._reads(limit, upstream | {limit.missing_input})
+            assert data_limits._reads(limit, {data_limits.ANY_NAME})
+            assert limit in data_limits.limits_for_paths([path])
 
 
 def test_default_keeps_legacy_structural_matching_and_digest_binds_mode():

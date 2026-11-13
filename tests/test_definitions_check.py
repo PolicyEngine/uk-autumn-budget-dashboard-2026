@@ -38,6 +38,7 @@ def _fresh_cache():
 
 def _receipt(measure_id, git_sha=COMMIT):
     definition = definitions.measure_definition(measure_id, git_sha)
+    assert "error" not in definition, (measure_id, definition)
     return {
         "execution_receipt": {
             "baseline": {**definition["baseline"], "name": "b"},

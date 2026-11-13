@@ -1,6 +1,6 @@
 {
   "data_limits_active": true,
-  "data_limits_registry_sha256": "7690f9cbe5fe0e5c62811bf6434ee90b94ab0cf01e9413560365655e3fde5796",
+  "data_limits_registry_sha256": "47ad2b557d1b9d792d4a79f278c4ee3c6c31763c6dbf99a4a1758fb5078acd61",
   "deciles": [
     "1st",
     "2nd",
@@ -2544,6 +2544,441 @@
     "\ud83a\udd21": "\ud83a\udd43"
   },
   "name_whitespace": "\t\n\u000b\f\r\u001c\u001d\u001e\u001f \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000",
+  "native_policy_comparison": {
+    "common_policy_reference": {
+      "identity": {
+        "binding": "content",
+        "kind": "reform",
+        "name": "common pre-Budget policy",
+        "reform_sha256": "0915abcc81b199e76839b636def46d63fbfbaa25ec29d35e66d1cb3bd88ea505",
+        "representation": "policyengine-uk.scenario/v1"
+      },
+      "parameter_changes": {
+        "gov.dft.bus.fares.cap": {
+          "2027-01-01.2027-12-31": 2
+        },
+        "gov.dwp.carers_allowance.earnings_taper.applies": {
+          "2030-10-06.2033-04-05": 0
+        },
+        "gov.hmrc.fuel_duty.lpg": {
+          "2026-04-06.2026-12-31": 0.2888,
+          "2027-01-01.2027-02-28": 0.3052,
+          "2027-03-01.2027-06-30": 0.3161,
+          "2027-07-01.2028-03-31": 0.3161,
+          "2028-04-01.2029-03-31": 0.3161,
+          "2029-04-01.2030-03-31": 0.3161,
+          "2030-04-01.2031-03-31": 0.3161,
+          "2031-04-01.2032-03-31": 0.3161,
+          "2032-04-01.2033-03-31": 0.3161,
+          "2033-04-01.2033-04-05": 0.3161
+        },
+        "gov.hmrc.fuel_duty.natural_gas": {
+          "2026-04-06.2026-12-31": 0.2257,
+          "2027-01-01.2027-02-28": 0.2385,
+          "2027-03-01.2027-06-30": 0.247,
+          "2027-07-01.2028-03-31": 0.247,
+          "2028-04-01.2029-03-31": 0.247,
+          "2029-04-01.2030-03-31": 0.247,
+          "2030-04-01.2031-03-31": 0.247,
+          "2031-04-01.2032-03-31": 0.247,
+          "2032-04-01.2033-03-31": 0.247,
+          "2033-04-01.2033-04-05": 0.247
+        },
+        "gov.hmrc.fuel_duty.petrol_and_diesel": {
+          "2026-04-06.2026-12-31": 0.5295,
+          "2027-01-01.2027-02-28": 0.5595,
+          "2027-03-01.2027-03-31": 0.5795,
+          "2027-04-01.2027-06-30": 0.6003,
+          "2027-07-01.2028-03-31": 0.6003,
+          "2028-04-01.2029-03-31": 0.6262,
+          "2029-04-01.2030-03-31": 0.6452,
+          "2030-04-01.2031-03-31": 0.6644,
+          "2031-04-01.2032-03-31": 0.6796,
+          "2032-04-01.2033-03-31": 0.6944,
+          "2033-04-01.2033-04-05": 0.7099
+        },
+        "gov.hmrc.gambling_duty.machine_games.higher_stake_machines_at_higher_rate": {
+          "2027-04-01.2033-04-05": false
+        },
+        "gov.hmrc.income_tax.allowances.trading_allowance": {
+          "2027-04-06.2033-04-05": 1000
+        },
+        "gov.hmrc.income_tax.rates.property.additional": {
+          "2027-04-06.2033-04-05": 0.47
+        },
+        "gov.hmrc.income_tax.rates.property.basic": {
+          "2027-04-06.2033-04-05": 0.22
+        },
+        "gov.hmrc.income_tax.rates.property.higher": {
+          "2027-04-06.2033-04-05": 0.42
+        },
+        "gov.hmrc.income_tax.rates.savings.additional": {
+          "2027-04-06.2033-04-05": 0.47
+        },
+        "gov.hmrc.income_tax.rates.savings.basic": {
+          "2027-04-06.2033-04-05": 0.22
+        },
+        "gov.hmrc.income_tax.rates.savings.higher": {
+          "2027-04-06.2033-04-05": 0.42
+        },
+        "gov.hmrc.income_tax.reliefs.pension_tax_allowance.in_effect": {
+          "2027-04-06.2030-04-05": false
+        },
+        "gov.hmrc.isa.cash.subscription_limit": {
+          "2027-04-06.2033-04-05": 12000
+        },
+        "gov.hmrc.vat.domestic_electricity_rate.great_britain": {
+          "2027-04-01.2027-06-30": 0.05
+        },
+        "gov.hmrc.vat.domestic_electricity_rate.northern_ireland": {
+          "2027-04-01.2027-06-30": 0.05
+        },
+        "gov.treasury.household_energy_payment.amount": {
+          "2026-04-06.2027-04-05": 0
+        }
+      },
+      "policy_record": {
+        "comparison": "Actual pre-Autumn-Budget policy versus selected native current-law measures, on the same native October 2026 forecast. This record changes policy parameters only.",
+        "measures": {
+          "bus_fare_cap_2027": {
+            "announced_on": "2026-07-22",
+            "note": "DfT announced the \u00a32 cap for January to December 2027 on 22 July 2026. It was already pre-Budget policy and is kept on both sides; this registered measure has no additional effect against actual pre-Budget policy.",
+            "paths": {
+              "gov.dft.bus.fares.cap": {
+                "native_values": {
+                  "2027-01-01": 2
+                },
+                "pre_budget_values": {
+                  "2027-01-01": 2
+                },
+                "start": "2027-01-01",
+                "stop": "2027-12-31"
+              }
+            },
+            "references": [
+              "https://www.gov.uk/guidance/3-national-bus-fare-cap",
+              "https://www.gov.uk/government/speeches/2-bus-fares-from-january-2027"
+            ]
+          },
+          "carers_allowance_earnings_taper": {
+            "note": "Native start 6 October 2030 is the model assumption until DWP confirms the date.",
+            "paths": {
+              "gov.dwp.carers_allowance.earnings_taper.applies": {
+                "native_values": {
+                  "2030-10-06": 1
+                },
+                "pre_budget_values": {
+                  "2030-10-06": 0
+                },
+                "start": "2030-10-06",
+                "stop": "2033-04-05"
+              }
+            },
+            "references": [
+              "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html"
+            ]
+          },
+          "cash_isa_limit_kept": {
+            "note": "Keep the model's \u00a320,000 overall ISA limit, age rule and separate cash-interest charge. Only undo the cancellation of the \u00a312,000 cash sub-limit.",
+            "paths": {
+              "gov.hmrc.isa.cash.subscription_limit": {
+                "native_values": {
+                  "2027-04-06": "infinity"
+                },
+                "pre_budget_values": {
+                  "2027-04-06": 12000
+                },
+                "start": "2027-04-06",
+                "stop": "2033-04-05"
+              }
+            },
+            "references": [
+              "https://www.legislation.gov.uk/uksi/2026/1018/regulation/6/made",
+              "https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/budget-2026-overview-of-tax-legislation-and-rates-ootlar"
+            ]
+          },
+          "domestic_electricity_zero_vat": {
+            "note": "Actual pre-Budget law: Great Britain already has 0% from October 2026 through March 2027; Northern Ireland has 5%. Only the April\u2013June extension is reversed.",
+            "paths": {
+              "gov.hmrc.vat.domestic_electricity_rate.great_britain": {
+                "native_values": {
+                  "2027-04-01": 0
+                },
+                "pre_budget_values": {
+                  "2027-04-01": 0.05
+                },
+                "start": "2027-04-01",
+                "stop": "2027-06-30"
+              },
+              "gov.hmrc.vat.domestic_electricity_rate.northern_ireland": {
+                "native_values": {
+                  "2027-04-01": 0
+                },
+                "pre_budget_values": {
+                  "2027-04-01": 0.05
+                },
+                "start": "2027-04-01",
+                "stop": "2027-06-30"
+              }
+            },
+            "references": [
+              "https://www.legislation.gov.uk/uksi/2026/987/contents/made",
+              "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html"
+            ]
+          },
+          "fuel_duty_rise_deferral": {
+            "note": "Pre-Budget snapshot da31e8698: statutory January/March 2027 steps, petrol/diesel 60.03p April 2027 then October RPI. Both sides state the unchanged rates from 6 April 2026 so the first scored fiscal year has complete coverage. LPG and natural gas preserve that snapshot's full rates after March; adding missing RPI to them is a separate reference change.",
+            "paths": {
+              "gov.hmrc.fuel_duty.lpg": {
+                "native_values": {
+                  "2026-04-06": 0.2888,
+                  "2027-01-01": 0.2888,
+                  "2027-07-01": 0.3305,
+                  "2028-04-01": 0.3448,
+                  "2029-04-01": 0.3552,
+                  "2030-04-01": 0.3658,
+                  "2031-04-01": 0.3742
+                },
+                "pre_budget_values": {
+                  "2026-04-06": 0.2888,
+                  "2027-01-01": 0.3052,
+                  "2027-03-01": 0.3161
+                },
+                "start": "2026-04-06",
+                "stop": "2033-04-05"
+              },
+              "gov.hmrc.fuel_duty.natural_gas": {
+                "native_values": {
+                  "2026-04-06": 0.2257,
+                  "2027-01-01": 0.2257,
+                  "2027-07-01": 0.2582,
+                  "2028-04-01": 0.2694,
+                  "2029-04-01": 0.2776,
+                  "2030-04-01": 0.2859,
+                  "2031-04-01": 0.2924
+                },
+                "pre_budget_values": {
+                  "2026-04-06": 0.2257,
+                  "2027-01-01": 0.2385,
+                  "2027-03-01": 0.247
+                },
+                "start": "2026-04-06",
+                "stop": "2033-04-05"
+              },
+              "gov.hmrc.fuel_duty.petrol_and_diesel": {
+                "extend_pre_budget_by_native_rpi": true,
+                "native_values": {
+                  "2026-04-06": 0.5295,
+                  "2027-01-01": 0.5295,
+                  "2027-07-01": 0.6059,
+                  "2028-04-01": 0.6321,
+                  "2029-04-01": 0.6513,
+                  "2030-04-01": 0.6707,
+                  "2031-04-01": 0.6861
+                },
+                "pre_budget_values": {
+                  "2026-04-06": 0.5295,
+                  "2027-01-01": 0.5595,
+                  "2027-03-01": 0.5795,
+                  "2027-04-01": 0.6003,
+                  "2028-04-01": 0.6262,
+                  "2029-04-01": 0.6452,
+                  "2030-04-01": 0.6644,
+                  "2031-04-01": 0.6796
+                },
+                "start": "2026-04-06",
+                "stop": "2033-04-05"
+              }
+            },
+            "references": [
+              "https://www.legislation.gov.uk/uksi/2026/164",
+              "https://www.legislation.gov.uk/uksi/2026/555/made",
+              "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
+            ]
+          },
+          "household_energy_payment_2026": {
+            "note": "",
+            "paths": {
+              "gov.treasury.household_energy_payment.amount": {
+                "native_values": {
+                  "2026-04-06": 100
+                },
+                "pre_budget_values": {
+                  "2026-04-06": 0
+                },
+                "start": "2026-04-06",
+                "stop": "2027-04-05"
+              }
+            },
+            "references": [
+              "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=117"
+            ]
+          },
+          "machine_games_duty_rise": {
+            "note": "Native threshold/classification switch; standard and higher statutory rates remain 20% and 25%.",
+            "paths": {
+              "gov.hmrc.gambling_duty.machine_games.higher_stake_machines_at_higher_rate": {
+                "native_values": {
+                  "2027-04-01": true
+                },
+                "pre_budget_values": {
+                  "2027-04-01": false
+                },
+                "start": "2027-04-01",
+                "stop": "2033-04-05"
+              }
+            },
+            "references": [
+              "https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/budget-2026-overview-of-tax-legislation-and-rates-ootlar"
+            ]
+          },
+          "property_income_rates_up": {
+            "note": "",
+            "paths": {
+              "gov.hmrc.income_tax.rates.property.additional": {
+                "native_values": {
+                  "2027-04-06": 0.49
+                },
+                "pre_budget_values": {
+                  "2027-04-06": 0.47
+                },
+                "start": "2027-04-06",
+                "stop": "2033-04-05"
+              },
+              "gov.hmrc.income_tax.rates.property.basic": {
+                "native_values": {
+                  "2027-04-06": 0.24
+                },
+                "pre_budget_values": {
+                  "2027-04-06": 0.22
+                },
+                "start": "2027-04-06",
+                "stop": "2033-04-05"
+              },
+              "gov.hmrc.income_tax.rates.property.higher": {
+                "native_values": {
+                  "2027-04-06": 0.44
+                },
+                "pre_budget_values": {
+                  "2027-04-06": 0.42
+                },
+                "start": "2027-04-06",
+                "stop": "2033-04-05"
+              }
+            },
+            "references": [
+              "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=142"
+            ]
+          },
+          "savings_income_rates_up": {
+            "note": "",
+            "paths": {
+              "gov.hmrc.income_tax.rates.savings.additional": {
+                "native_values": {
+                  "2027-04-06": 0.49
+                },
+                "pre_budget_values": {
+                  "2027-04-06": 0.47
+                },
+                "start": "2027-04-06",
+                "stop": "2033-04-05"
+              },
+              "gov.hmrc.income_tax.rates.savings.basic": {
+                "native_values": {
+                  "2027-04-06": 0.24
+                },
+                "pre_budget_values": {
+                  "2027-04-06": 0.22
+                },
+                "start": "2027-04-06",
+                "stop": "2033-04-05"
+              },
+              "gov.hmrc.income_tax.rates.savings.higher": {
+                "native_values": {
+                  "2027-04-06": 0.44
+                },
+                "pre_budget_values": {
+                  "2027-04-06": 0.42
+                },
+                "start": "2027-04-06",
+                "stop": "2033-04-05"
+              }
+            },
+            "references": [
+              "https://assets.publishing.service.gov.uk/media/6ae1ec57bdb574cf1c9b3f12/E03668986_HMT_Budget_2026_ELAY__2_.pdf#page=142"
+            ]
+          },
+          "state_pension_income_tax_protection": {
+            "note": "",
+            "paths": {
+              "gov.hmrc.income_tax.reliefs.pension_tax_allowance.in_effect": {
+                "native_values": {
+                  "2027-04-06": true
+                },
+                "pre_budget_values": {
+                  "2027-04-06": false
+                },
+                "start": "2027-04-06",
+                "stop": "2030-04-05"
+              }
+            },
+            "references": [
+              "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer"
+            ]
+          },
+          "trading_allowance_raise": {
+            "note": "",
+            "paths": {
+              "gov.hmrc.income_tax.allowances.trading_allowance": {
+                "native_values": {
+                  "2027-04-06": 3000
+                },
+                "pre_budget_values": {
+                  "2027-04-06": 1000
+                },
+                "start": "2027-04-06",
+                "stop": "2033-04-05"
+              }
+            },
+            "references": [
+              "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html"
+            ]
+          }
+        },
+        "native_model_commit": "aa2713ecab059d674a7b5045797a2f6349add540",
+        "native_model_version": "2.174.1",
+        "pre_budget_model_commit": "da31e8698f77b9a205c899e0755e5f268ebbe58a",
+        "pre_budget_model_version": "2.169.0",
+        "schema_version": 1,
+        "supported_fiscal_years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031,
+          2032
+        ]
+      },
+      "policy_record_sha256": "94cacf98f2055dadb25d2e01f75040f44c9b4b092986e9819b26a0460dbe5a65",
+      "schema": "uk-budget-dashboard/common-policy-reference/v1"
+    },
+    "composition_methods": [
+      "resolved_common_policy/v1",
+      "resolved_common_policy_phases/v1"
+    ],
+    "required_model_version_floor": "2.174.1",
+    "required_model_versions": [
+      "2.174.1"
+    ],
+    "shared_parameter_prefixes": [
+      "gov.simulation.capital_gains_responses."
+    ],
+    "single_schemas": [
+      "uk-budget-dashboard/policy-comparison/v1",
+      "uk-budget-dashboard/policy-comparison/v2"
+    ]
+  },
   "official_basis_variables": [
     "carers_allowance",
     "income_tax",

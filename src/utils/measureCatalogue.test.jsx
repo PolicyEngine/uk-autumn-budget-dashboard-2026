@@ -285,7 +285,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "utils/calculatorOnlyMeasures.js": [/export const CALCULATOR_ONLY_MEASURES = \{[\s\S]*?\n\};/],
     "utils/explainers.js": [/export const EXPLAINERS = \[[\s\S]*?\n\];/],
     "components/methodology/improvementsText.js": [/export const IMPROVEMENTS_NOTE = \{[\s\S]*?\n\};/],
-    "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/, /export const OBR_DIFFERENCE_POINTS = \{[\s\S]*?\n\};/, /export const OBR_PANEL_BASES = \{[\s\S]*?\n\};/, /export const NOT_COMPARABLE_SHORT = \{[\s\S]*?\n\};/, /export const OBR_NOTE_FIGURES = \{[\s\S]*?\n\};/],
+    "utils/obrDeviationNotes.js": [/export const OBR_NOTES_WRITTEN_FOR = \{[\s\S]*?\n\};/, /export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/, /export const OBR_DIFFERENCE_POINTS = \{[\s\S]*?\n\};/, /export const OBR_PANEL_BASES = \{[\s\S]*?\n\};/, /export const NOT_COMPARABLE_SHORT = \{[\s\S]*?\n\};/, /export const OBR_NOTE_FIGURES = \{[\s\S]*?\n\};/],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const outsideAllowed = (path, text) => (allowed[relative(root, path)] ?? []).reduce((rest, block) => rest.replace(block, ""), text);

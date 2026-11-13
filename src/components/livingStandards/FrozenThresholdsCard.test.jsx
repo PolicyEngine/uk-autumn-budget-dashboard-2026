@@ -93,7 +93,29 @@ describe("Frozen thresholds against pay: data", () => {
     expect(trading.values[2027]).toBe(3000);
     // Held in cash: the same level every year from then
     expect(new Set(Object.values(trading.values)).size).toBe(1);
+    expect(Object.keys(trading.values).map(Number)).toEqual([2027, 2028, 2029, 2030, 2031]);
+    expect(trading.values[2032]).toBeUndefined();
     expect(tradingAllowance({ ...PARAMETERS, measures: {} })).toBeNull();
+  });
+
+  it("reads dated steps at each fiscal-year start, including a later change", () => {
+    const points = [
+      { key: "2027-04-06", year: 2027, before: 1000, after: 3000 },
+      { key: "2029-07-01", year: 2029, before: 1000, after: 4000 },
+      { key: "2031-04-06", year: 2031, before: 1000, after: 1000 },
+    ];
+    const document = { years: [2027, 2028, 2029, 2030, 2031], measures: { fixture: { rows: [{ label: "Trading allowance", points }] } } };
+    expect(tradingAllowance(document)).toEqual({ start: 2027, values: { 2027: 3000, 2028: 3000, 2029: 3000, 2030: 4000, 2031: 1000 } });
+    expect(tradingAllowance({ ...document, years: undefined })).toBeNull();
+  });
+
+  it("keeps missing annual values missing instead of extending an annual point", () => {
+    const points = [
+      { key: "2027", year: 2027, before: 1000, after: 3000 },
+      { key: "2029", year: 2029, before: 1000, after: 4000 },
+    ];
+    const document = { years: [2027, 2028, 2029, 2030], measures: { fixture: { rows: [{ label: "Trading allowance", points }] } } };
+    expect(tradingAllowance(document)).toEqual({ start: 2027, values: { 2027: 3000, 2029: 4000 } });
   });
 
   it("puts the trading allowance relative to earnings from its first year = 100", () => {

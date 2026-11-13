@@ -73,12 +73,12 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     summary =
       a === b ? (
         <>
-          Under current law, the share of {who} in {kind} poverty <strong>stays at {formatPct(a)}</strong> from{" "}
+          Under pre-Budget policy, the share of {who} in {kind} poverty <strong>stays at {formatPct(a)}</strong> from{" "}
           {fyDash(first.year)} to {fyDash(last.year)}.
         </>
       ) : (
         <>
-          Under current law, the share of {who} in {kind} poverty <strong>{b > a ? "rises" : "falls"}</strong> from{" "}
+          Under pre-Budget policy, the share of {who} in {kind} poverty <strong>{b > a ? "rises" : "falls"}</strong> from{" "}
           {formatPct(a)} in {fyDash(first.year)} to {formatPct(b)} in {fyDash(last.year)}.
         </>
       );
@@ -130,7 +130,7 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
           legendItems: lineLegendItems(series),
           csv: () =>
             seriesCsv({
-              title: `Poverty rate: ${poverty.measures[measure]}, ${poverty.groups[group]}`,
+              title: `Poverty rate: ${poverty.measures[measure]}, ${poverty.groups[group]}${viewMode === "outturn" ? "" : ", pre-Budget projection"}`,
               units: "% of people",
               source: CSV_SOURCES.hbai,
               rows: chartData,

@@ -15,6 +15,7 @@
 import canonicalize from "canonicalize";
 import contract from "./contract.json";
 import { attestationProblems, personalSeriesProblems } from "./manifest";
+import { comparisonProblems, orderedModifierCounts } from "./comparison";
 
 function toBytes(input) {
   if (typeof input === "string") return new TextEncoder().encode(input);
@@ -120,6 +121,12 @@ export function modifierTemplatesProblems(receipt) {
     return ["the receipt does not record its modifier templates"];
   }
   const problems = [];
+  let orderedCounts;
+  try {
+    orderedCounts = orderedModifierCounts(receipt);
+  } catch {
+    return ["the receipt's ordered modifier plans are malformed"];
+  }
   for (const side of ["baseline", "reform"]) {
     if (!Array.isArray(proofs[side])) {
       problems.push(`the receipt's ${side} modifier templates are malformed`);
@@ -127,14 +134,14 @@ export function modifierTemplatesProblems(receipt) {
     }
     const members = receipt?.dashboard?.members;
     const bound = (identity) => identity?.binding === "code_revision";
-    const count =
+    const count = orderedCounts?.[side] ?? (
       Array.isArray(members) && members.length > 0
         ? members.filter(
             (member) =>
               (side !== "baseline" || member?.baseline_bound === true) &&
               bound(member?.[side]),
           ).length
-        : Number(bound(receipt?.execution_receipt?.[side]));
+        : Number(bound(receipt?.execution_receipt?.[side])));
     if (proofs[side].length !== count) {
       problems.push(
         `the receipt's ${side} modifier templates do not match its bound modifiers`,
@@ -188,6 +195,7 @@ function isHeld(receipt) {
  */
 export async function receiptProblems(receipt, key, entry) {
   const problems = [];
+  problems.push(...await comparisonProblems(receipt));
   const dashboard = receipt?.dashboard ?? {};
   if (dashboard.disclosure_floor?.thin_cells_in_tables) {
     problems.push("its tables hold cells under the floor of survey households");

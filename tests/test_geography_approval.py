@@ -14,7 +14,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tests import model_limit_stand_ins
-from tests.publication_support import World
+from tests.publication_support import RATE_PATH, World
 from uk_budget_data import geography as g
 from uk_budget_data import model_limits
 from uk_budget_data.cli import main, parse_args
@@ -73,7 +73,14 @@ def publication(stand_in_registry):
             ("beta", "alpha", "staged", "provisional", "withdrawn")
         ):
             references[key] = world.ready(
-                key, {2027: -1.0 - index}, rate=0.21 + index * 0.01
+                key,
+                {2027: -1.0 - index},
+                rate=0.21 + index * 0.01,
+                # The provenance and tamper controls below use this exact
+                # real parameter; retain it as an explicit fixture input.
+                parameter_changes=(
+                    {RATE_PATH: {"2027": 0.22}} if key == "alpha" else None
+                ),
             )
             stage(
                 manifest,

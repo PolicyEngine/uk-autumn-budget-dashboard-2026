@@ -154,7 +154,8 @@ describe("MethodologyTab", () => {
     const { container } = renderTab();
     const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
     const card = within(limitations).getByRole("button", { name: "Business fuel use" }).closest(".method-topic");
-    expect(card).toHaveTextContent("roughly half of fuel duty receipts");
+    expect(card).toHaveTextContent("households’ own fuel purchases".replace("’", "'"));
+    expect(card).toHaveTextContent("data also lack road-fuel quantities for LPG and natural gas");
   });
 
   // On policyengine-uk 2.165.1 the engine's own growth rates are the
@@ -166,36 +167,28 @@ describe("MethodologyTab", () => {
   // opposite for the earlier engine and data; those sentences must not
   // come back. The retained per-capita overlay still uses an older
   // population derivation, separately from native October population
-  it("distinguishes the retained per-capita overlay from the native October population path", () => {
+  it("uses native October assumptions on both sides and the actual pre-Budget fuel schedule", () => {
     const { container } = renderTab();
-    const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
-    const card = within(limitations).getByRole("button", { name: "Economic assumptions" }).closest(".method-topic");
-    expect(card).toHaveTextContent("The installed model's fuel volumes and population follow that forecast too, and 2025 is the outturn it publishes.");
-    const differences = [...card.querySelectorAll("ul.method-list li")].map((item) => item.textContent.replace(/\s+/g, " ").trim());
-    expect(differences).toEqual(expect.arrayContaining([
-      "Per-capita GDP, mixed income and non-labour income retain the dashboard overlay's rates, derived using an older population path. Household weights instead follow the installed model's October population path.",
-      "Mortgage interest keeps policyengine-uk's growth from 2030, where the OBR's table stops.",
-      "CPI after housing costs and social rents are PolicyEngine's own derivations from the October figures, not OBR series.",
-      "Calibration fits the weights to OBR receipts and spending totals for 2025. Most take 2024-25 from the March 2026 forecast's tables and 2025-26 from the October 2026 forecast's.",
-    ]));
-    expect(card).not.toHaveTextContent("Three things differ:");
-    const data = container.querySelector(`#${METHOD_SECTIONS.data}`);
-    expect(data).toHaveTextContent("receipts and spending totals from the OBR's March 2026 and October 2026 forecasts");
-    expect(data).toHaveTextContent("A few series are not that forecast's own");
-    // The earlier engine's and data's statements, anywhere in the view
-    const whole = container.querySelector(".method-body");
-    expect(whole).not.toHaveTextContent(/March 2026 rates|keeps? the March|stays at 5\.3%|earlier OBR forecasts|forecasts the OBR published before the October 2026 one|own assumptions \(the OBR's March 2026 forecast\)/);
-    expect(limitations.querySelector(".section-heading")).toHaveTextContent("a few growth rates are not the October 2026 forecast's own");
+    const card = screen.getByRole("button", { name: "Economic assumptions" }).closest(".method-topic");
+    expect(card).toHaveTextContent("native assumptions");
+    expect(card).toHaveTextContent("on both policy sides, including its population path");
+    expect(card).toHaveTextContent("60.03p a litre in April 2027");
+    expect(card).toHaveTextContent("60.59p from July");
+    expect(card).toHaveTextContent("The two schedules continue to differ after June");
+    expect(container).not.toHaveTextContent(/retained per-capita overlay|dashboard overlay|60\.59p a litre from April/);
+    expect(container).toHaveTextContent("Pre-Budget settings for this dashboard’s measures, compared with the selected Budget policies");
+    expect(container).toHaveTextContent("We keep unselected measures at their pre-Budget settings on both sides");
   });
 
   // From the national build 0639b9c7 the data store traders' receipts and
   // draw who already claims the £1,000 allowance, so the trading allowance
   // figures rest on that assumption
-  it("says under Survey coverage that the trading allowance rests on who we assume already claims it", () => {
-    const { container } = renderTab();
-    const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
-    const card = within(limitations).getByRole("button", { name: "Survey coverage" }).closest(".method-topic");
-    expect(card).toHaveTextContent("The surveys record traders' profits, not their receipts, so the trading allowance figures rest on our assumption of who already claims the £1,000 allowance.");
+  it("holds national trading estimates for missing native inputs", () => {
+    renderTab();
+    const card = screen.getByRole("button", { name: "Survey coverage" }).closest(".method-topic");
+    expect(card).toHaveTextContent("data lack trading-allowance claim status and eligible miscellaneous income");
+    expect(card).toHaveTextContent("cannot publish a national trading-allowance estimate");
+    expect(card).not.toHaveTextContent(/72%|14%|670,000/);
   });
 
   it("says under Policies added up that separate runs leave out interactions, and nothing on survey values no measure replaces", () => {
@@ -246,10 +239,10 @@ describe("MethodologyTab", () => {
     expect(container.querySelector("#method-business-fuel")).not.toBeNull();
   });
 
-  it("leaves the energy payment out of poverty, and calls the local-area file uncertified", () => {
+  it("includes the native energy payment in poverty income and retains the local-area certification limit", () => {
     const { container } = renderTab();
     expect(container.textContent).toContain(
-      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
+      "We include the one-off cash payment in HBAI income. The fare cap already applies on both sides, so selecting it adds no change.",
     );
     expect(container.textContent).not.toContain("certified together");
     expect(container.textContent).toContain("which that certificate does not cover");
@@ -462,7 +455,7 @@ describe("MethodologyTab", () => {
   it("says nothing tied to the Budget's date, so it stays true on and after Budget day", () => {
     const { container } = renderTab();
     expect(container.textContent).not.toMatch(
-      /pre-Budget|before the Budget|after the Budget|28 October|once the OBR|candidate|likely for the Budget/i,
+      /after the Budget|28 October|once the OBR|candidate|likely for the Budget/i,
     );
   });
 });

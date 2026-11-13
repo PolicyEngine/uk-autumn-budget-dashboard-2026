@@ -21,6 +21,7 @@ from tests.publication_support import (
     make_tables,
 )
 from uk_budget_data.cli import main
+from uk_budget_data.forecast import with_forecast
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import generate as generate_module
 from uk_budget_data.publication import manifest as m
@@ -33,6 +34,8 @@ from uk_budget_data.publication.publish import (
     stage,
     withdraw,
 )
+from uk_budget_data.publication.receipt import scenario_identity
+from uk_budget_data.publication.release_index import identity_core
 
 YEARS = [2027, 2028]
 
@@ -108,6 +111,9 @@ def test_each_measure_gets_its_own_receipted_artifact(world):
     )
     assert [r.key for r in report.written] == ["alpha", "beta"]
     assert report.refused == {}
+    definitions = {
+        item.id: item for item in (reform("alpha"), reform("beta", 0.22))
+    }
     for reference in report.written:
         tables = read_tables(reference.path)
         assert {row["reform_id"] for row in tables["budgetary_impact"]} == {
@@ -117,8 +123,30 @@ def test_each_measure_gets_its_own_receipted_artifact(world):
         assert document["dashboard"]["measure_ids"] == [reference.key]
         assert document["dashboard"]["publishable"] is True
         assert document["execution_receipt"]["reform"]["kind"] == "reform"
+        for side, scenario in (
+            (
+                "baseline",
+                definitions[reference.key].baseline_scenario_for(
+                    DataConfig(years=YEARS)
+                ),
+            ),
+            ("reform", definitions[reference.key].to_scenario()),
+        ):
+            effective = with_forecast(scenario)
+            assert effective.applied_before_data_load is True
+            expected = scenario_identity(
+                effective, name=side, revision=world.revision()
+            )
+            assert identity_core(
+                document["execution_receipt"][side]
+            ) == identity_core(expected.model_dump())
+        assert document["execution_receipt"]["baseline"]["kind"] == "reform"
+        common = document["dashboard"]["policy_comparison"][
+            "common_policy_reference"
+        ]
         assert (
-            document["execution_receipt"]["baseline"]["kind"] == "current_law"
+            common["identity"]["reform_sha256"]
+            == document["execution_receipt"]["baseline"]["reform_sha256"]
         )
         assert document["execution_receipt"]["years"] == YEARS
     alpha, beta = (read_receipt(r.path) for r in report.written)
@@ -257,13 +285,41 @@ def test_a_combined_set_is_one_artifact_bound_to_its_members(world):
     assert [r.key for r in report.written] == ["alpha", "beta", key]
     document = read_receipt(report.written[2].path)
     receipt = document["execution_receipt"]
-    assert receipt["reform"]["representation"] == (
-        "policyengine-uk.scenario_composition/v1"
-    )
-    assert receipt["baseline"]["kind"] == "current_law"
+    assert receipt["reform"]["representation"] == "policyengine-uk.scenario/v1"
+    assert receipt["baseline"]["kind"] == "reform"
+    composition = document["dashboard"]["composition"]
+    assert composition["method"] == "resolved_common_policy/v1"
+    assert composition["reform_applied_before_data_load"] is True
+    assert composition["baseline_applied_before_data_load"] is True
+    from policyengine_uk.utils.scenario import Scenario
+
+    # Match the runtime: one common reference, followed by the two bare
+    # member deltas. Reapplying an effective member would undo earlier ones.
+    for side, scenario in (
+        ("baseline", None),
+        (
+            "reform",
+            Scenario(
+                parameter_changes={
+                    **alpha.parameter_changes,
+                    **beta.parameter_changes,
+                }
+            ),
+        ),
+    ):
+        expected = scenario_identity(
+            with_forecast(scenario), name=side, revision=world.revision()
+        )
+        assert identity_core(receipt[side]) == identity_core(
+            expected.model_dump()
+        )
     assert document["dashboard"]["measure_ids"] == ["alpha", "beta"]
     members = document["dashboard"]["members"]
     assert [member["id"] for member in members] == ["alpha", "beta"]
+    for member, definition in zip(members, (alpha, beta)):
+        assert set(member["reform_delta"]["parameter_changes"]) == set(
+            definition.parameter_changes
+        )
     standalone = read_receipt(report.written[0].path)["execution_receipt"]
     assert members[0]["reform"]["reform_sha256"] == (
         standalone["reform"]["reform_sha256"]

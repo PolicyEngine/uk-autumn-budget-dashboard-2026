@@ -6,11 +6,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_native_budget_policy_table import _on as on_date
 from uk_budget_data import reforms as registry
-from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
-    SPRING_SHARE,
-    WINTER_SHARE,
+from uk_budget_data.budget_measures.pre_budget_vat_on_domestic_electricity import (
+    pre_budget_vat_on_domestic_electricity,
 )
+from uk_budget_data.budget_policy import policy_record
 from uk_budget_data.cli import main
 from uk_budget_data.forecast import forecast_parameters
 from uk_budget_data.policy_table import (
@@ -88,63 +89,58 @@ def test_the_command_writes_the_file(tmp_path, document):
 
 
 def test_every_candidate_has_a_table_with_its_published_description(document):
-    """The page shows a table only for the description it was built from."""
     measures = document["measures"]
     assert list(measures) == list(
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
+    record = policy_record()
     for measure_id, table in measures.items():
         assert (
             table["description"] == registry.get_reform(measure_id).description
         )
         assert table["rows"] and any(row["primary"] for row in table["rows"])
+        changed = any(
+            point["before"] != point["after"]
+            for row in table["rows"]
+            for point in row["points"]
+        )
+        assert changed is (measure_id != registry.BUS_FARE_CAP_ID)
         for row in table["rows"]:
-            assert (
-                row["source"]["before"]["kind"]
-                and row["source"]["after"]["kind"]
-            )
-            assert any(p["before"] != p["after"] for p in row["points"]), row[
-                "label"
-            ]
+            before, after = row["source"]["before"], row["source"]["after"]
+            assert before["kind"] == "pre_budget_parameter"
+            assert before["model_commit"] == record["pre_budget_model_commit"]
+            assert after["model_commit"] == record["native_model_commit"]
             assert "unit_words" in row
-            for point in row["points"]:
-                assert 2026 <= point["year"] <= 2031
+            assert all(
+                2026 <= point["year"] <= 2031 for point in row["points"]
+            )
 
 
 def test_fuel_duty_by_date(document):
-    dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty"])
-    # 52.95p held to 30 June 2027, then current law's 60.59p (the OBR's
-    # rate, EFO October 2026 paragraph 3.19) and its RPI
+    dated = by_key(rows(document, registry.FUEL_DUTY_DEFERRAL_ID)["Fuel duty"])
     assert dated["2027-01-01"] == (55.95, 52.95)
     assert dated["2027-03-01"] == (57.95, 52.95)
-    assert dated["2027-04-01"] == (60.59, 52.95)
-    assert dated["2027-07-01"] == (60.59, 60.59)
-    assert dated["2028-04-01"] == (63.21, 63.21)
-    assert "2032-04-01" not in dated  # after the timeline
-    assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
+    assert dated["2027-04-01"] == (60.03, 52.95)
+    assert dated["2027-07-01"] == (60.03, 60.59)
+    native = PARAMETERS.baseline.get_child(registry.FUEL_DUTY)
+    assert dated["2028-04-01"][1] == pytest.approx(native("2028-04-01") * 100)
+    assert dated["2028-04-01"][0] != dated["2028-04-01"][1]
+    assert dated["2026-04-06"] == (52.95, 52.95)
+    assert "2032-04-01" in dated
 
 
-def test_fuel_duty_averages_are_the_engine_and_the_measure(document):
-    yearly = by_key(
-        rows(document, "fuel_duty_rise_deferral")[
-            "Fuel duty, averaged over the year"
-        ]
-    )
-    rates = registry.fuel_duty_deferral_rates()
-    for year in range(2026, 2032):
-        before, after = yearly[str(year)]
-        engine = PARAMETERS.gov.hmrc.fuel_duty.petrol_and_diesel(
-            f"{year}-04-06"
-        )
-        assert before == pytest.approx(engine * 100, abs=1e-4)
-        assert after == pytest.approx(
-            rates.get(str(year), engine) * 100, abs=1e-4
-        )
-    # The dated current law is the engine's, day-weighted
-    means = registry.fiscal_year_means(registry.FUEL_DUTY_CURRENT_LAW)
-    for year in range(2026, 2032):
-        assert yearly[str(year)][0] == pytest.approx(
-            means[str(year)] * 100, abs=1e-3
+def test_fuel_table_keeps_dated_statutory_rates_and_physical_units(document):
+    table = rows(document, registry.FUEL_DUTY_DEFERRAL_ID)
+    assert set(table) == {
+        "Fuel duty",
+        "Fuel duty on LPG",
+        "Fuel duty on natural gas",
+    }
+    for label, row in table.items():
+        assert "averaged" not in label
+        assert all(len(point["key"]) == 10 for point in row["points"])
+        assert row["unit_words"] == (
+            "pence a litre" if label == "Fuel duty" else "pence a kilogram"
         )
 
 
@@ -180,16 +176,24 @@ def test_warm_home_discount(document):
 
 
 def test_vat_rates_while_in_force(document):
-    electricity = rows(document, "domestic_electricity_zero_vat")
-    (point,) = electricity["VAT on domestic electricity"]["points"]
-    assert (point["label"], point["before"], point["after"]) == (
-        "October 2026 to June 2027",
-        0.05,
-        0.0,
-    )
-    # The road fuel VAT cut is withdrawn, but its builder still reads it
-    fuel = withdrawn_rows(registry.FUEL_VAT_ID)
-    (point,) = fuel["VAT on petrol and diesel"]["points"]
+    table = rows(document, registry.ELECTRICITY_VAT_ID)
+    assert set(table) == {
+        "VAT rate on domestic electricity, Great Britain",
+        "VAT rate on domestic electricity, Northern Ireland",
+    }
+    for row in table.values():
+        assert (
+            on_date(row, "2027-04-01")["before"],
+            on_date(row, "2027-04-01")["after"],
+        ) == (0.05, 0)
+        assert (
+            on_date(row, "2027-07-01")["before"],
+            on_date(row, "2027-07-01")["after"],
+        ) == (0.05, 0.05)
+    # The withdrawn road-fuel VAT builder remains an archived helper.
+    (point,) = withdrawn_rows(registry.FUEL_VAT_ID)[
+        "VAT on petrol and diesel"
+    ]["points"]
     assert (point["label"], point["before"], point["after"]) == (
         "December 2026 to May 2027",
         0.2,
@@ -202,73 +206,43 @@ def test_in_force_dates_that_do_not_fit_the_constants_fail():
         in_force_rate_change(registry.FUEL_VAT_ID, {2026: -0.05, 2027: -0.05})
 
 
-def test_electricity_2026_carries_the_winter_share(document):
-    """Budget 2026 scores the whole zero rate, 1 October 2026 to 30 June
-    2027: 2026-27 weighted by the October to March share of a year's use,
-    2027-28 by the April to June share."""
-    yearly = rows(document, "domestic_electricity_zero_vat")[
-        "VAT on domestic electricity, averaged over the year"
-    ]
-    averages = by_key(yearly)
-    assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
-    assert averages["2027"] == (0.05, round(0.05 - 0.05 * SPRING_SHARE, 6))
-    assert "2026-27 by the October to March share" in yearly["note"]
-    (point,) = rows(document, "domestic_electricity_zero_vat")[
-        "VAT on domestic electricity"
-    ]["points"]
-    assert point["label"] == "October 2026 to June 2027"
+def test_electricity_table_preserves_pre_budget_winter_relief(document):
+    table = rows(document, registry.ELECTRICITY_VAT_ID)
+    for label, row in table.items():
+        winter = 0.05 if "Northern Ireland" in label else 0
+        point = on_date(row, "2026-10-01")
+        assert (point["before"], point["after"]) == (winter, winter)
+        assert "averaged" not in label
+        assert row["source"]["before"]["kind"] == "pre_budget_parameter"
 
 
-def test_electricity_says_where_and_what_it_is_scored_against(document):
-    """#290 (Max, 19:32): Great Britain from October 2026, Northern Ireland
-    from April 2027 only as the Budget expects; and current law's 5% for
-    October to March is the scoring baseline, the zero rate already being
-    law (SI 2026/987). The card's words are its points in
-    src/utils/policyDetails.js (Vahid, 29 Oct: bullets, not a note), so the
-    row carries no card_note, and the table is not written for a measure
-    applied anywhere else."""
-    row = rows(document, "domestic_electricity_zero_vat")[
-        "VAT on domestic electricity"
-    ]
-    assert "card_note" not in row
+def test_archived_electricity_geography_validation():
     values = constants(zero_vat_on_domestic_electricity)
     _check_electricity_where(values)
     with pytest.raises(ValueError, match="Great Britain"):
         _check_electricity_where({**values, "geography_2027": "GB"})
 
 
-def test_electricity_before_is_the_5_percent_its_pre_budget_side_holds(
-    document,
-):
-    """Current law has a rate of its own for domestic electricity from
-    policyengine-uk 2.153.5, zero in Great Britain from October 2026 to
-    March 2027, which is not what the measure is scored against. The
-    table's "before" is the 5% the measure's pre-Budget side holds, the
-    engine's reduced rate, and it is not written unless both sides hold
-    that one baseline."""
-    measure = registry.get_reform(registry.ELECTRICITY_VAT_ID)
-    values = constants(zero_vat_on_domestic_electricity)
-    assert _electricity_baseline_rate(measure, values) == 0.05
-    assert PARAMETERS.gov.hmrc.vat.reduced_rate("2026-04-06") == 0.05
-    for row in rows(document, "domestic_electricity_zero_vat").values():
-        assert {point["before"] for point in row["points"]} == {0.05}
-        assert row["source"]["before"] == {
-            "kind": "modifier_constant",
-            "where": (
-                "budget_measures/pre_budget_vat_on_domestic_electricity.py "
-                "pre_budget_vat_on_domestic_electricity(baseline_rate)"
-            ),
+def test_archived_electricity_builder_requires_its_historical_reference():
+    native = registry.get_reform(registry.ELECTRICITY_VAT_ID)
+    historical = native.model_copy(
+        update={
+            "simulation_modifier": zero_vat_on_domestic_electricity,
+            "baseline_simulation_modifier": pre_budget_vat_on_domestic_electricity,
+            "parameter_changes": None,
         }
+    )
+    values = constants(zero_vat_on_domestic_electricity)
+    assert _electricity_baseline_rate(historical, values) == 0.05
     with pytest.raises(ValueError, match="does not apply its pre-Budget"):
-        _electricity_baseline_rate(
-            measure.model_copy(update={"baseline_simulation_modifier": None}),
-            values,
-        )
+        _electricity_baseline_rate(native, values)
     with pytest.raises(ValueError, match="differ on baseline_rate"):
-        _electricity_baseline_rate(measure, {**values, "baseline_rate": 0.08})
+        _electricity_baseline_rate(
+            historical, {**values, "baseline_rate": 0.08}
+        )
     with pytest.raises(ValueError, match="its Budget side changes"):
         _electricity_baseline_rate(
-            measure, {**values, "rate_change_2028": -0.01}
+            historical, {**values, "rate_change_2028": -0.01}
         )
 
 
@@ -325,7 +299,9 @@ def test_plan_2(document):
         withdrawn_rows(registry.PLAN_2_ID)["Plan 2 repayment threshold"]
     )
     assert plan_2["2026"] == (29_385, 29_385)
-    assert plan_2["2027"] == (29_385, 30_654)
+    rpi = PARAMETERS.gov.economic_assumptions.indices.obr.rpi
+    expected = round(29_385 * rpi("2027-04-06") / rpi("2026-04-06"))
+    assert plan_2["2027"] == (29_385, expected)
     assert {
         year: after for year, (_, after) in plan_2.items() if year != "2026"
     } == {
@@ -334,24 +310,21 @@ def test_plan_2(document):
     }
 
 
-def test_each_measure_gets_the_display_its_shape_calls_for(document):
-    assert {
-        measure_id: table["display"]
-        for measure_id, table in document["measures"].items()
-    } == {
-        "fuel_duty_rise_deferral": "schedule",
-        "state_pension_income_tax_protection": "path",
-        "domestic_electricity_zero_vat": "switch",
-        "property_income_rates_up": "path",
-        "savings_income_rates_up": "path",
-        "carers_allowance_earnings_taper": "path",
-        "household_energy_payment_2026": "switch",
-        "trading_allowance_raise": "before-after",
-        "bus_fare_cap_2027": "switch",
-    }
+def test_each_measure_gets_the_display_its_native_shape_calls_for(document):
+    for measure_id, table in document["measures"].items():
+        expected = (
+            "path"
+            if measure_id == registry.STATE_PENSION_ALLOWANCE_ID
+            else (
+                "before-after"
+                if measure_id == registry.BUS_FARE_CAP_ID
+                else "schedule"
+            )
+        )
+        assert table["display"] == expected
 
 
-def test_bus_fare_cap():
+def test_archived_bus_allocation_builder_is_separate_from_native_policy():
     rows = {
         row["label"]: row
         for row in BUILDERS[registry.BUS_FARE_CAP_ID](
@@ -419,12 +392,7 @@ RATES_UP = {
     ],
 )
 def test_property_and_savings_income_rates(document, measure_id, income):
-    # Each measure shows its own income's three rates, and only those
-    table = (
-        rows(document, measure_id)
-        if measure_id in document["measures"]
-        else withdrawn_rows(measure_id)
-    )
+    table = rows(document, measure_id)
     expected = {
         label: values
         for label, values in RATES_UP.items()
@@ -432,18 +400,16 @@ def test_property_and_savings_income_rates(document, measure_id, income):
     }
     assert set(table) == set(expected)
     for label, values in expected.items():
-        row = by_key(table[label])
         for year in range(2027, 2032):
-            assert row[str(year)] == values, (label, year)
+            point = on_date(table[label], f"{year}-04-06")
+            assert (point["before"], point["after"]) == values, (label, year)
 
 
-def test_unearned_income_rates_withdrawn():
-    # Withdrawn (split in two), but its builder still reads it
+def test_withdrawn_unearned_builder_does_not_add_the_native_rise_again():
     table = withdrawn_rows(registry.UNEARNED_INCOME_RATES_ID)
-    for label, values in RATES_UP.items():
-        row = by_key(table[label])
+    for label, (_, native) in RATES_UP.items():
         for year in range(2027, 2032):
-            assert row[str(year)] == values, (label, year)
+            assert by_key(table[label])[str(year)] == (native, native)
 
 
 def test_the_display_follows_the_shape_not_the_measure():
@@ -490,45 +456,20 @@ def test_current_law_thresholds_are_the_engine_alone(document):
     )
 
 
-def test_carers_allowance_shows_the_cliff_it_removes(document):
-    """#290 (Anthony, 19:20): the measure does not move the earnings limit,
-    so the card shows the allowance £1 over it, nothing in current law and
-    the weekly rate less £1 with the taper, and the row's figures give the limit
-    (16 hours at the OBR's National Living Wage, rounded up to the pound,
-    as efcda9c5) and where the allowance runs out."""
-    from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
-        OBR_NATIONAL_LIVING_WAGE_BY_APRIL,
+def test_carers_allowance_table_shows_the_provisional_native_start(document):
+    (row,) = rows(document, registry.CARERS_ALLOWANCE_TAPER_ID).values()
+    assert row["label"] == "Earnings taper in force"
+    assert (
+        row["source"]["after"]["path"]
+        == "gov.dwp.carers_allowance.earnings_taper.applies"
     )
-    from uk_budget_data.policy_table import carers_allowance_limit
-
-    table = rows(document, registry.CARERS_ALLOWANCE_TAPER_ID)
-    assert list(table) == [
-        "Carer's Allowance at £1 a week over the earnings limit"
-    ]
-    row = table["Carer's Allowance at £1 a week over the earnings limit"]
-    assert row["primary"] and row["unit_words"] == "£ a week"
-    rate = PARAMETERS.gov.dwp.carers_allowance.rate
-    wages = dict(OBR_NATIONAL_LIVING_WAGE_BY_APRIL)
-    points = by_key(row)
-    for year in range(2026, 2030):
-        assert points[str(year)] == (0, 0)
-    for year in (2030, 2031):
-        weekly = rate(f"{year}-04-06")
-        assert points[str(year)] == (0, round(weekly - 1, 2))
-        limit = math.ceil(round(16 * wages[year], 6))
-        assert carers_allowance_limit(year) == limit
-    assert (carers_allowance_limit(2030), carers_allowance_limit(2031)) == (
-        228,
-        234,
-    )
-    # The visual draws the limit and where the allowance runs out
-    assert row["figures"] == {
-        "earnings_limit": {"2030-31": 228, "2031-32": 234},
-        "runs_out": {
-            "2030-31": round(228 + rate("2030-04-06")),
-            "2031-32": round(234 + rate("2031-04-06")),
-        },
-    }
-    # The card's words are its points (src/utils/policyDetails.js)
-    assert "card_note" not in row
-    assert "Earnings limit" not in row["label"]
+    assert (
+        on_date(row, "2030-10-05")["before"],
+        on_date(row, "2030-10-05")["after"],
+    ) == (0, 0)
+    assert (
+        on_date(row, "2030-10-06")["before"],
+        on_date(row, "2030-10-06")["after"],
+    ) == (0, 1)
+    assert "until DWP confirms the date" in row["note"]
+    assert "figures" not in row

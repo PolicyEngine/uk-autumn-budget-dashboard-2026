@@ -103,8 +103,8 @@ const LOADED = {
   age: (panel) => within(panel).findAllByText(/Results by age are not available/),
   // The Pre-measures forecast's sub-tabs (?tab=outlook&sub=): each heading
   // shows once the outlook is read. Living standards is the default.
-  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under current law" }),
-  outlookPoverty: (panel) => within(panel).findAllByRole("heading", { name: "Poverty under current law" }),
+  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under pre-Budget policy" }),
+  outlookPoverty: (panel) => within(panel).findAllByRole("heading", { name: "Poverty under pre-Budget policy" }),
   outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: /economic forecasts?$/ }),
   // Every published measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
@@ -286,8 +286,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
   // ?sub=poverty), without them on the Pre-measures forecast
   // (?tab=outlook&sub=…), each linking to its twin
   it.each([
-    ["living", "Living standards", /^Change in income inequality/, "Living standards under current law", ["Incomes over time", "Growth across the distribution", "Inequality over time \\(current law\\)"]],
-    ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Change in poverty by group"]],
+    ["living", "Living standards", /^Change in income inequality/, "Living standards under pre-Budget policy", ["Incomes over time", "Growth across the distribution", "Inequality over time \\(pre-Budget policy\\)"]],
+    ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under pre-Budget policy", ["Poverty over time", "Change in poverty by group"]],
   ])("?sub=%s shows the measures, its twin on the Pre-measures forecast current law", async (sub, label, measures, currentLaw, cards) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     render(<App />);
@@ -296,7 +296,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     expect(await within(panel).findAllByRole("heading", { name: measures }, { timeout: 5000 })).not.toHaveLength(0);
     expect(panel.textContent).toMatch(/With the selected policies[.:,]/);
     // (the growth card with the measures links to its twin as "Without the measures")
-    expect(panel.textContent).not.toMatch(/Without the policies \(current law\)|Without the policies:/);
+    expect(panel.textContent).not.toMatch(/Without the policies \(pre-Budget policy\)|Without the policies:/);
     expect(within(panel).queryByRole("heading", { name: currentLaw })).toBeNull();
     // The one link to its twin
     fireEvent.click(within(panel).getByRole("link", { name: "See without them →" }));
@@ -306,7 +306,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     for (const name of cards) {
       expect(await within(twin).findByRole("heading", { level: 3, name: new RegExp(`^${name}$`) })).toBeInTheDocument();
     }
-    expect(twin.textContent).toMatch(/Current law, before any Budget policy\./);
+    expect(twin.textContent).toMatch(/Pre-Budget policy, before the Autumn Budget changes\./);
     expect(twin.textContent).not.toMatch(/With the selected policies/);
     expect(within(twin).getByRole("link", { name: "See with the policies →" })).toBeInTheDocument();
     expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
@@ -404,7 +404,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     expect(screen.queryByRole("button", { name: "Compare with the official costings" })).toBeNull();
   });
 
-  it("says nothing that stops being true on Budget day, on any view but Methodology", async () => {
+  it("names the pre-Budget policy reference without stale pre-announcement labels", async () => {
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
@@ -418,7 +418,9 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     // and the official costings card's empty line, which names their date
     // until the file is published (Vahid, 27 October)
     const text = document.body.textContent.replaceAll(CANDIDATE_PROVISIONAL_LABEL, "").replaceAll(OBR_PENDING, "");
-    expect(text).not.toMatch(/pre-Budget/i);
+    expect(text).toContain("Living standards under pre-Budget policy");
+    expect(text).toContain("Pre-Budget policy, before the Autumn Budget changes.");
+    expect(text).not.toMatch(/pre-Budget (candidates|measures)/i);
     expect(text).not.toMatch(/28 October/);
     expect(text).not.toMatch(/candidate/i);
   });

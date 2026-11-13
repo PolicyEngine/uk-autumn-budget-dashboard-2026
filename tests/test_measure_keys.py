@@ -1,4 +1,4 @@
-"""Registered measures key their parameter changes by bare fiscal year.
+"""Registered measures use fiscal years or source-bounded statutory intervals.
 
 The national run and the household calculator both hand a measure's
 ``parameter_changes`` to policyengine-uk's ``Scenario`` (#32), so they read
@@ -7,26 +7,32 @@ interval, a lone date as that one day (``policyengine_uk.utils.
 dated_reforms``), and other scripts' digits as the year they spell (the
 differential below).
 
-A bare year in ASCII digits is still the one form a registered measure
-uses. A lone date changes one day, so it can leave the year it was meant
-for untouched; the templates build bare years only
-(``uk_budget_data.measure_templates``), so a registered measure reads like
-one built from them; and a key in other digits is not the year a reviewer
-reads. (``Reform`` already refuses a key that is not a string, and a value
-with no period.)
+Native Budget policies use dated intervals to retain changes within a fiscal
+year. Each interval must fit a tracked policy's source dates. Templates can
+still use bare ASCII years. Lone dates change only one day; other scripts'
+digits hide which year a reviewer reads. Neither belongs in the registry.
 """
 
 import re
+from datetime import date
 
 import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
+from uk_budget_data.budget_policy import policy_record
 from uk_budget_data.personal_impact import create_simulation
-from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+from uk_budget_data.reforms import (
+    AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
+    AUTUMN_BUDGET_2026_COMBINED_ID,
+    get_autumn_budget_2026_reforms,
+)
 
 # [0-9], not \d: \d also matches other scripts' digits (review r7).
 BARE_YEAR = re.compile(r"[1-9][0-9]{3}")
+DATED_INTERVAL = re.compile(
+    r"[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]{4}-[0-9]{2}-[0-9]{2}"
+)
 ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 YEARS = (2027, 2028)
 EARNER = {
@@ -58,10 +64,27 @@ def other_keys(reform) -> list[tuple]:
 @pytest.mark.parametrize(
     "reform", get_autumn_budget_2026_reforms(), ids=lambda reform: reform.id
 )
-def test_a_registered_measure_keys_every_change_by_a_bare_year(reform):
-    """One form for every measure (see the module docstring). List every
-    year the change applies: ``{"2027": x, "2028": x}``."""
-    assert other_keys(reform) == []
+def test_a_registered_measure_uses_reviewed_years_or_statutory_intervals(
+    reform,
+):
+    members = (
+        AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+        if reform.id == AUTUMN_BUDGET_2026_COMBINED_ID
+        else [reform.id]
+    )
+    measures = policy_record()["measures"]
+    paths = {
+        path: spec
+        for member in members
+        for path, spec in measures[member]["paths"].items()
+    }
+    for side, path, key in other_keys(reform):
+        assert DATED_INTERVAL.fullmatch(key), (side, path, key)
+        start, stop = map(date.fromisoformat, key.split("."))
+        assert start <= stop
+        source = paths[path]
+        assert date.fromisoformat(source["start"]) <= start
+        assert stop <= date.fromisoformat(source["stop"])
 
 
 def test_other_keys_names_every_key_that_is_not_a_bare_year():

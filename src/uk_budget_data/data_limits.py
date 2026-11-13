@@ -337,15 +337,6 @@ DATA_LIMITS = (
         reason="The certified data do not record whether a child has a non-consensual-conception exception. The model's default is False: no such exception applies. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
     ),
     DataLimit(
-        key="child_limit_non_parental_caring_exception",
-        parameters=(
-            "gov.dwp.universal_credit.elements.child",
-            "gov.dwp.tax_credits.child_tax_credit",
-        ),
-        missing_input="child_limit_non_parental_caring_exception",
-        reason="The certified data do not record whether a child has a non-parental-caring exception. The model's default is False: no non-parental-caring exception applies. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
-    ),
-    DataLimit(
         key="company_car_availability",
         parameters=(
             "gov.hmrc.income_tax.benefits_in_kind.company_car",
@@ -499,6 +490,70 @@ DATA_LIMITS = (
         missing_input="would_claim_wales_childcare_offer",
         reason="The certified data do not record whether each family would claim the Childcare Offer for Wales. The model's default is True: every family is treated as willing to claim rather than using recorded take-up. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
     ),
+    # The exact eeb6093e metadata audit adds four missing inputs. The last
+    # three limits cover older missing inputs whose native policy paths
+    # matter to this adoption; they are not newly missing from this cut.
+    # tests/fixtures/input_coverage_eeb6093e.json binds both sets to source.
+    DataLimit(
+        key="has_education_maintenance_funding",
+        parameters=(),
+        missing_input="has_education_maintenance_funding",
+        reason="The certified data do not identify maintenance funding for each student's course. The model's default is False: no maintenance loan or grant is established for the Universal Credit education condition. A measure replacing this input or changing its education-condition reader cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="income_not_otherwise_charged",
+        parameters=(
+            "gov.hmrc.income_tax.allowances.trading_allowance",
+            "gov.simulation.trading_allowance_claimant_expense_share",
+            "gov.economic_assumptions.indices.obr.per_capita.gdp",
+        ),
+        missing_input="income_not_otherwise_charged",
+        parameter_change_only=(
+            "gov.economic_assumptions.indices.obr.per_capita.gdp",
+        ),
+        reason="The certified data do not separate miscellaneous income eligible for the trading allowance from other miscellaneous income. The model's default is 0: no such income receives the allowance. A change to the allowance, its claimant expense assumption, or this input's uprating cannot be fully costed, nor can a measure replacing the input or its readers.",
+    ),
+    DataLimit(
+        key="machine_games_standard_rate_higher_stake_net_takings",
+        parameters=(
+            "gov.hmrc.gambling_duty.machine_games.rates.standard",
+            "gov.hmrc.gambling_duty.machine_games.rates.higher",
+            "gov.hmrc.gambling_duty.machine_games.higher_stake_machines_at_higher_rate",
+            "gov.economic_assumptions.indices.obr.per_capita.gambling_duty_bases.machine_games",
+        ),
+        missing_input="machine_games_standard_rate_higher_stake_net_takings",
+        parameter_change_only=(
+            "gov.economic_assumptions.indices.obr.per_capita.gambling_duty_bases.machine_games",
+        ),
+        reason="The certified data do not identify the higher-stake or higher-prize part of standard-rate machine games net takings. The model's default is 0: none of that base moves to the higher rate from April 2027. Changes to the standard or higher rate, that transition, or this input's uprating cannot be fully costed on these data. This does not lift the national MGD hold.",
+    ),
+    DataLimit(
+        key="trading_allowance_claim_status",
+        parameters=(
+            "gov.hmrc.income_tax.allowances.trading_allowance",
+            "gov.simulation.trading_allowance_claimant_expense_share",
+        ),
+        missing_input="trading_allowance_claim_status",
+        reason="The certified data do not identify who already claimed the trading allowance in the year their self-employment profit was measured. The model's default is UNKNOWN: it keeps its legacy treatment rather than distinguishing profits already net of the allowance from non-claimants' profits. A change to the allowance or its claimant expense assumption cannot be fully costed, nor can a measure replacing the input or its readers.",
+    ),
+    DataLimit(
+        key="lpg_kg",
+        parameters=("gov.hmrc.fuel_duty.lpg",),
+        missing_input="lpg_kg",
+        reason="The certified data do not record kilograms of LPG used as road fuel. The model's default is 0, so a change to the LPG fuel duty rate has no measured base. Missing fuel use must not be described as known zero use; a measure changing this rate or replacing the input or its reader cannot be fully costed on these data.",
+    ),
+    DataLimit(
+        key="natural_gas_kg",
+        parameters=("gov.hmrc.fuel_duty.natural_gas",),
+        missing_input="natural_gas_kg",
+        reason="The certified data do not record kilograms of natural gas used as road fuel. The model's default is 0, so a change to its fuel duty rate has no measured base. Missing fuel use must not be described as known zero use; a measure changing this rate or replacing the input or its reader cannot be fully costed on these data.",
+    ),
+    DataLimit(
+        key="armed_forces_independence_payment",
+        parameters=("gov.dwp.universal_credit.attendance_allowance_benefits",),
+        missing_input="armed_forces_independence_payment",
+        reason="The certified data do not record Armed Forces Independence Payment separately. The model's default is 0: no recipient qualifies through this payment for the Universal Credit attendance-allowance housing exemption. A measure changing the benefits counted for that exemption, or replacing the missing input or its readers, cannot be fully costed on these data.",
+    ),
 )
 
 
@@ -625,6 +680,15 @@ NEWLY_MISSING_INPUTS: dict[str, tuple[str, ...]] = {
         "severe_disability_premium_joint_occupier_exclusion_applies",
         "would_claim_wales_childcare_offer",
     ),
+    # Metadata-derived against the dashboard's adopted 0639b9c7 pair,
+    # not an upstream budget-inputs gate. The complete label/input audit,
+    # exact source bindings and limitations are in the matching fixture.
+    "microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e": (
+        "has_education_maintenance_funding",
+        "income_not_otherwise_charged",
+        "machine_games_standard_rate_higher_stake_net_takings",
+        "trading_allowance_claim_status",
+    ),
 }
 
 # The cut the dashboard ran when the record began (policyengine 6.10.x,
@@ -641,6 +705,7 @@ LISTED_AGAINST: dict[str, str] = {
     "microcosm-uk-2024-25-national-20261023T075039Z-a133f37a": RECORD_ROOT,
     "microcosm-uk-2024-25-national-20261025T091414Z-a6299504": RECORD_ROOT,
     "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+    "microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
 }
 
 # Inputs a cut listed above that are no longer missing, with why: the
@@ -671,6 +736,7 @@ NO_LONGER_MISSING: dict[str, str] = {
     "pool_betting_net_receipts": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
     "national_lottery_ticket_spending": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
     "land_based_casino_net_losses": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "child_limit_non_parental_caring_exception": "The eeb6093e exact column-label audit and SHA-verified release-cut export gate record this input; certified CI job 131371898349 at 1d74252f also records a populated holder. This is presence evidence, not a degeneracy or usability certificate.",
 }
 
 
@@ -1397,7 +1463,10 @@ class _Behaviour:
             )
             looked_up = tuple(
                 (name, self.of(value.__globals__[name]))
-                for name in sorted(_global_names(code))
+                # Attribute names are not global reads. In particular,
+                # helper.__name__ must not bind a fresh model module's
+                # generated __name__; an actual global __name__ load does.
+                for name in sorted(_loaded_globals(code))
                 if name in value.__globals__
             ) + tuple(
                 (f"{name}.{attribute}", self.of(found))
@@ -2245,6 +2314,7 @@ def _engine_parts():
         from policyengine_core.populations.population import Population
         from policyengine_core.simulations.simulation import Simulation
         from policyengine_uk.simulation import Simulation as ModelSimulation
+        from policyengine_uk.utils import measurement_branches
 
         _ENGINE.update(
             simulation=Simulation,
@@ -2292,6 +2362,85 @@ def _engine_parts():
                 id(ParameterNode.__dict__["_get_at_instant"].__code__),
                 id(ParameterNodeAtInstant.__dict__["__init__"].__code__),
             }
+        )
+        # UK 2.174.1 clears pending calculated values at the start of
+        # calculate(). The cleanup fetches holders only to drop caches;
+        # these metadata visits are not reads of every input's value.
+        # Capture code as well as callable identity so later replacement
+        # of a helper cannot acquire the same exemption.
+        cleanup = {
+            "calculate": ModelSimulation.__dict__["calculate"],
+            "get_holder": Simulation.__dict__["get_holder"],
+            "get_variable_population": Simulation.__dict__[
+                "get_variable_population"
+            ],
+            "drop_values": measurement_branches.drop_calculated_values,
+            "drop_years": measurement_branches.drop_calculated_years,
+            "retained_inputs": measurement_branches.retained_input_variables,
+            "_drop_computed": Holder.__dict__["_drop_computed"],
+            "_stores_user_input": Holder.__dict__["_stores_user_input"],
+        }
+        _ENGINE["cleanup_functions"] = cleanup
+        _ENGINE["cleanup_codes"] = {
+            name: function.__code__ for name, function in cleanup.items()
+        }
+        _ENGINE["cleanup_module"] = measurement_branches
+        _ENGINE["model_simulation"] = ModelSimulation
+        from policyengine_core.data_storage import (
+            InMemoryStorage,
+            OnDiskStorage,
+            store_history,
+        )
+        from policyengine_core.holders import helpers as holder_helpers
+
+        # The fetched holder delegates to these metadata-only methods.
+        # Bind their actual implementations too: a storage override could
+        # otherwise read raw arrays behind unchanged Holder methods.
+        metadata_methods = {
+            Holder: (
+                "_drop_computed",
+                "_stores_user_input",
+                "_storage_period",
+                "_seed_input_storage",
+            ),
+            InMemoryStorage: (
+                "has",
+                "is_derived",
+                "mark_derived_except",
+                "drop_computed",
+                "_unmark_input",
+                "_own_inputs",
+                "_release_inputs_if_empty",
+                "_stop_sharing",
+                "_release_if_empty",
+            ),
+            OnDiskStorage: (
+                "has",
+                "is_derived",
+                "mark_derived_except",
+                "drop_computed",
+            ),
+        }
+        _ENGINE["cleanup_metadata_methods"] = {
+            kind: {
+                name: (kind.__dict__[name], kind.__dict__[name].__code__)
+                for name in names
+            }
+            for kind, names in metadata_methods.items()
+        }
+        _ENGINE["cleanup_storage_types"] = (InMemoryStorage, OnDiskStorage)
+        _ENGINE["cleanup_metadata_helpers"] = tuple(
+            (
+                module,
+                name,
+                getattr(module, name),
+                getattr(module, name).__code__,
+            )
+            for module, name in (
+                (holder_helpers, "_is_input"),
+                (holder_helpers, "_period_from_storage_key"),
+                (store_history, "_period_from_storage_key"),
+            )
         )
     return _ENGINE
 
@@ -2418,7 +2567,9 @@ def _observed_get_holder(self, variable_name):
     entries = _THREAD.entries
     if entries and entries[-1].changed:
         frame = sys._getframe(1)
-        if not _engine_internal(frame, entries[-1].frame):
+        if not _engine_internal(
+            frame, entries[-1].frame
+        ) and not _native_cleanup_holder_fetch(self, variable_name, frame):
             entries[-1].observation._read(entries[-1], variable_name, frame)
     return _ENGINE["get_holder"](self, variable_name)
 
@@ -3247,8 +3398,165 @@ def _built_get_array(self, *args, **kwargs):
 
 
 def _built_get_holder(self, variable_name):
-    _built_read(variable_name, sys._getframe(1))
+    frame = sys._getframe(1)
+    if (
+        _BUILD.records
+        and variable_name in _MISSING_INPUTS
+        and not _native_cleanup_holder_fetch(self, variable_name, frame)
+    ):
+        _built_read(variable_name, frame)
     return _ENGINE["get_holder"](self, variable_name)
+
+
+def _native_cleanup_holder_fetch(population, variable_name, frame) -> bool:
+    """A holder metadata visit in native calculate's pending-cache cleanup.
+
+    Only the exact, unchanged native helper chain on this simulation is
+    excluded. A modifier fetching a holder itself, calling cleanup
+    explicitly, inserting a wrapper, or changing a helper stays watched.
+    Array reads are never excluded by this holder-only predicate.
+    """
+    try:
+        engine = _ENGINE
+        functions = engine["cleanup_functions"]
+        codes = engine["cleanup_codes"]
+        module = engine["cleanup_module"]
+        if any(
+            function.__code__ is not codes[name]
+            for name, function in functions.items()
+        ):
+            return False
+        if (
+            engine["model_simulation"].__dict__["calculate"]
+            is not functions["calculate"]
+            or engine["simulation"].__dict__["get_holder"]
+            is not functions["get_holder"]
+            or engine["simulation"].__dict__["get_variable_population"]
+            is not functions["get_variable_population"]
+            or engine["holder"].__dict__["_drop_computed"]
+            is not functions["_drop_computed"]
+            or engine["holder"].__dict__["_stores_user_input"]
+            is not functions["_stores_user_input"]
+            or module.drop_calculated_values is not functions["drop_values"]
+            or module.drop_calculated_years is not functions["drop_years"]
+            or module.retained_input_variables
+            is not functions["retained_inputs"]
+            or functions["calculate"].__globals__.get("drop_calculated_values")
+            is not functions["drop_values"]
+            or functions["drop_values"].__globals__.get(
+                "drop_calculated_years"
+            )
+            is not functions["drop_years"]
+            or functions["drop_values"].__globals__.get(
+                "retained_input_variables"
+            )
+            is not functions["retained_inputs"]
+        ):
+            return False
+        if frame.f_code is not codes["get_holder"]:
+            return False
+        simulation = frame.f_locals.get("self")
+        if (
+            simulation is not population.simulation
+            or frame.f_locals.get("variable_name") != variable_name
+        ):
+            return False
+        for name in ("calculate", "get_holder", "get_variable_population"):
+            method = getattr(simulation, name, None)
+            if (
+                not isinstance(method, types.MethodType)
+                or method.__self__ is not simulation
+                or method.__func__ is not functions[name]
+            ):
+                return False
+        if simulation.get_variable_population(variable_name) is not population:
+            return False
+        # These downstream methods make the native fetch metadata-only.
+        # A replacement can read raw storage without Holder.get_array, so
+        # preserve the holder-fetch fallback unless both are unchanged and
+        # bound to the exact holder the engine is about to return.
+        holder = population._holders.get(variable_name)
+        if (
+            holder is None
+            or holder.population is not population
+            or holder.simulation is not simulation
+            or not _native_cleanup_metadata_unchanged(holder)
+        ):
+            return False
+        for name in ("_drop_computed", "_stores_user_input"):
+            method = getattr(holder, name, None)
+            if (
+                not isinstance(method, types.MethodType)
+                or method.__self__ is not holder
+                or method.__func__ is not functions[name]
+            ):
+                return False
+        helper = frame.f_back
+        if helper is None or not any(
+            helper.f_code is codes[name]
+            for name in ("drop_years", "retained_inputs")
+        ):
+            return False
+        cleanup = helper.f_back
+        calculate = cleanup.f_back if cleanup is not None else None
+        return (
+            helper.f_locals.get("simulation") is simulation
+            and cleanup is not None
+            and cleanup.f_code is codes["drop_values"]
+            and cleanup.f_locals.get("simulation") is simulation
+            and calculate is not None
+            and calculate.f_code is codes["calculate"]
+            and calculate.f_locals.get("self") is simulation
+        )
+    except Exception:  # noqa: BLE001 - unknown metadata fetch stays watched
+        return False
+
+
+def _native_cleanup_metadata_unchanged(holder) -> bool:
+    """The audited holder/storage metadata callees, with their real receivers.
+
+    These checks inspect callables without calling them or reading arrays.
+    Unknown storage implementations and changed helper module aliases revoke
+    the holder-fetch exemption, just as a changed top-level cleanup does.
+    """
+    try:
+        engine = _ENGINE
+        methods = engine["cleanup_metadata_methods"]
+        for kind, bindings in methods.items():
+            for name, (function, code) in bindings.items():
+                if (
+                    kind.__dict__.get(name) is not function
+                    or function.__code__ is not code
+                ):
+                    return False
+        for module, name, function, code in engine["cleanup_metadata_helpers"]:
+            if (
+                sys.modules.get(module.__name__) is not module
+                or getattr(module, name, None) is not function
+                or function.__code__ is not code
+            ):
+                return False
+        memory_type, disk_type = engine["cleanup_storage_types"]
+        subjects = (
+            (holder, engine["holder"]),
+            (holder._memory_storage, memory_type),
+        )
+        if holder._disk_storage is not None:
+            subjects += ((holder._disk_storage, disk_type),)
+        for subject, kind in subjects:
+            if type(subject) is not kind:
+                return False
+            for name, (function, _) in methods[kind].items():
+                method = getattr(subject, name, None)
+                if (
+                    not isinstance(method, types.MethodType)
+                    or method.__self__ is not subject
+                    or method.__func__ is not function
+                ):
+                    return False
+        return True
+    except Exception:  # noqa: BLE001 - unknown metadata stays watched
+        return False
 
 
 def _model_constructors() -> frozenset:

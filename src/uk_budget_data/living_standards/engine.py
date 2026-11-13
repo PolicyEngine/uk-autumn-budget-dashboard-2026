@@ -38,6 +38,43 @@ def engine_versions() -> dict:
     }
 
 
+def projection_policy_basis(scenario=None) -> dict:
+    """The actual pre-Budget reference a saved projection must retain.
+
+    Package and dataset versions alone cannot distinguish a native-law
+    projection from one with this dashboard's rollback. Record the actual
+    before-data parameters as well as their source record and forecast
+    readback. This metadata does not certify a population result.
+    """
+    from uk_budget_data.budget_policy import policy_record
+    from uk_budget_data.forecast import forecast_record, with_forecast
+    from uk_budget_data.publication.receipt import (
+        _encoded_parameters,
+        receipt_api,
+    )
+
+    actual = with_forecast(None) if scenario is None else scenario
+    before, after = actual.parts_by_data_load()
+    if (
+        before is None
+        or after is not None
+        or before.simulation_modifier is not None
+        or before.dated_reforms
+    ):
+        raise ValueError(
+            "Outlook projections need the before-data policy reference."
+        )
+    api, _ = receipt_api()
+    basis = {
+        "schema": "uk-budget-dashboard/outlook-policy-basis/v1",
+        "parameter_changes": _encoded_parameters(before.parameter_changes),
+        "applied_before_data_load": True,
+        "policy_record": policy_record(),
+        "forecast": forecast_record(),
+    }
+    return {**basis, "sha256": api.content_sha256(basis)}
+
+
 def headline_end_year(policyengine_uk: str | None = None) -> int:
     """Last fiscal year (start) the series show.
 

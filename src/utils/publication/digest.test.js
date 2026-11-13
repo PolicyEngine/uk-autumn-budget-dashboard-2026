@@ -26,6 +26,8 @@ async function handwritten(key = "alpha", side = "reform") {
   receipt.dashboard.modifier_templates = { baseline: [], reform: [] };
   receipt.dashboard.modifier_templates[side] = [null];
   receipt.dashboard.generation_id = "a".repeat(32);
+  receipt.execution_receipt[side].kind = "reform";
+  receipt.execution_receipt[side].reform_sha256 ??= "1".repeat(64);
   receipt.execution_receipt[side].binding = "code_revision";
   receipt.execution_receipt[side].representation =
     "policyengine-uk.scenario/v1";

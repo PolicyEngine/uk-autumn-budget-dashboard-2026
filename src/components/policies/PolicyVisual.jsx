@@ -18,7 +18,7 @@ import {
 } from "../../utils/policyVisuals";
 
 /*
- * One visual per modelled measure on the Policies tab, each drawn from its
+ * Optional policy visuals on the Policies tab, each drawn from its
  * entry in policy_parameters.json and its card details (policyDetails.js
  * `visual`; the numbers: utils/policyVisuals.js). Each is one image with
  * a text alternative (role="img" and an aria-label that says what it
@@ -80,7 +80,7 @@ export function FuelDutyVisual({ entry, visual, name }) {
   const description =
     `${name}: fuel duty, pence a litre, ${shortMonth(view.window.from, true)} to ${shortMonth(view.window.to, true)}. ` +
     cuts.map((cut) => `${cut.months}: ${pence(cut.after)} instead of ${pence(cut.before)}, ${pounds(cut.fill)} less duty on a ${litres}-litre fill`).join("; ") +
-    ". From July 2027 the two rates are the same.";
+    ".";
   // Quarter ticks: the window's first month and every third after
   const quarters = [];
   for (let month = start; month <= end + 1e-9; month += 3) quarters.push(month);
@@ -94,7 +94,7 @@ export function FuelDutyVisual({ entry, visual, name }) {
     <figure className="pviz pviz-fuel">
       <div className="pviz-head">
         <p className="pviz-caption">Duty, pence a litre</p>
-        <Key items={[["before", "Current law"], ["after", "With the policy"]]} />
+        <Key items={[["before", "Pre-Budget"], ["after", "With Budget policy"]]} />
       </div>
       <Plot height={FUEL_HEIGHT} label={description} className="is-gain">
         {(width) => {
@@ -187,13 +187,13 @@ export function CarersTaperVisual({ entry, name }) {
   const xMax = runsOut + (runsOut - limit) * 0.45;
   const yMax = rate * 1.18;
   const description =
-    `${name}, ${year}: Carer's Allowance against weekly earnings. Current law pays ${pounds(rate)} a week up to the earnings limit of ${wholePounds(limit)} and nothing at £1 over it, a cliff edge. ` +
+    `${name}, ${year}: Carer's Allowance against weekly earnings. Pre-Budget pays ${pounds(rate)} a week up to the earnings limit of ${wholePounds(limit)} and nothing at £1 over it, a cliff edge. ` +
     `With the measure it falls by £1 for each £1 above the limit and runs out at ${wholePounds(runsOut)} a week.`;
   return (
     <figure className="pviz pviz-carers">
       <div className="pviz-head">
         <p className="pviz-caption">Carer's Allowance, £ a week, {year}</p>
-        <Key items={[["before", "Current law"], ["cliff", "Cliff edge"], ["after", "With the policy"]]} />
+        <Key items={[["before", "Pre-Budget"], ["cliff", "Cliff edge"], ["after", "With Budget policy"]]} />
       </div>
       <Plot height={CARER_HEIGHT} label={description} className="is-gain">
         {(width) => {
@@ -222,7 +222,7 @@ export function CarersTaperVisual({ entry, name }) {
               </text>
               {/* What the taper keeps that current law takes away */}
               <path className="pviz-gap" d={`M${x(limit)},${y(rate)}L${x(runsOut)},${base}L${x(limit)},${base}Z`} />
-              {/* Current law: the full rate, the cliff, then nothing */}
+              {/* Pre-Budget: the full rate, the cliff, then nothing */}
               <path className="pviz-before" d={`M${x(0)},${y(rate)}H${x(limit)}M${x(limit)},${base}H${x(xMax)}`} />
               <path className="pviz-after-casing" d={`M${x(0)},${y(rate)}H${x(limit)}L${x(runsOut)},${base}H${x(xMax)}`} />
               <path className="pviz-after" d={`M${x(0)},${y(rate)}H${x(limit)}L${x(runsOut)},${base}H${x(xMax)}`} />

@@ -17,6 +17,8 @@ import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
+from uk_budget_data.forecast import with_forecast
+from uk_budget_data.models import DataConfig
 from uk_budget_data.reforms import get_reform
 
 ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
@@ -98,24 +100,35 @@ def test_the_modifier_gives_exactly_the_tax_of_the_same_rates_as_changes():
     )
 
 
-def test_the_combined_package_keeps_its_parameter_changes_with_its_modifiers():
-    """The combined candidate package carries its members' parameter
-    changes and one modifier that runs theirs. On 2.125.1 the parameter
-    rebuild would have discarded a modifier's edits; on this engine both
-    hold: the trading allowance is £3,000 and the property basic rate 24%
-    in 2027-28 (the threshold freeze to 2031-32 this checked was withdrawn
-    on Budget day), and the State Pension allowance's wrapper still
-    runs."""
-    scenario = get_reform("autumn_budget_2026_combined").to_scenario()
-    assert scenario.parameter_changes and scenario.simulation_modifier
+def test_the_combined_native_package_restores_its_parameter_changes_once():
+    """Native paths restore the selected laws after the shared rollback.
+
+    The generic modifier-order cases above retain their explicit historical
+    helper; the active package uses native formulas with no forward wrapper.
+    """
+    package = get_reform("autumn_budget_2026_combined")
+    bare = package.to_scenario()
+    assert bare.parameter_changes and bare.simulation_modifier is None
+    scenario = with_forecast(bare)
+    baseline = with_forecast(package.baseline_scenario_for(DataConfig()))
+    assert (
+        scenario.applied_before_data_load
+        is baseline.applied_before_data_load
+        is True
+    )
+    assert scenario.parts_by_data_load()[1] is None
     sim = Simulation(situation=_situation(2027), scenario=scenario)
+    pre = Simulation(situation=_situation(2027), scenario=baseline)
     hmrc = sim.tax_benefit_system.parameters("2027-06-01").gov.hmrc
+    pre_hmrc = pre.tax_benefit_system.parameters("2027-06-01").gov.hmrc
+    assert pre_hmrc.income_tax.allowances.trading_allowance == pytest.approx(
+        1_000
+    )
+    assert pre_hmrc.income_tax.rates.property.basic == pytest.approx(0.22)
     assert hmrc.income_tax.allowances.trading_allowance == pytest.approx(3_000)
     assert hmrc.income_tax.rates.property.basic == pytest.approx(0.24)
-    # The State Pension allowance's modifier still acts: a pensioner on the
-    # full new State Pension alone pays no income tax in 2027-28. (The
-    # engine now builds each variable class in a module of its own, so the
-    # wrapper is checked by what it does, not by its __module__.)
+    # The native State Pension protection acts once, relative to the
+    # actual pre-Budget side, for the full native annual pension rate.
     pensioner = {
         "people": {
             "p": {"age": {2027: 70}, "state_pension": {2027: 13_036.4}}
@@ -123,8 +136,8 @@ def test_the_combined_package_keeps_its_parameter_changes_with_its_modifiers():
         "benunits": {"b": {"members": ["p"]}},
         "households": {"h": {"members": ["p"], "region": {2027: "LONDON"}}},
     }
-    current_law = Simulation(situation=pensioner)
-    assert current_law.calculate("income_tax", 2027)[0] > 0
+    pre_budget = Simulation(situation=pensioner, scenario=baseline)
+    assert pre_budget.calculate("income_tax", 2027)[0] > 0
     combined = Simulation(situation=pensioner, scenario=scenario)
     assert combined.calculate("income_tax", 2027)[0] == pytest.approx(0)
 

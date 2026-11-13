@@ -127,7 +127,7 @@ function ScatterMoreInfo({ basisLabel }) {
     <ChartMoreInfo
       info={{
         how: [
-          `Each dot is a group of households with similar ${basisLabel} incomes under current law (${pounds(SCATTER_BINS.income_band_width)} bands).`,
+          `Each dot is a group of households with similar ${basisLabel} incomes under pre-Budget policy (${pounds(SCATTER_BINS.income_band_width)} bands).`,
           "The groups and the change axis are the same in every year. Changes beyond the axis show as arrows at its edge.",
           "No change (under £1 either way) is an unfilled ring on £0.",
         ],
@@ -572,7 +572,7 @@ function HouseholdScatter({
   // Households keep their basis-year band in every year (the y axis does
   // not move with the year), so the title names no year; About this chart
   // and the tooltip give the basis year
-  const incomeTitle = "Household net income under current law (£k)";
+  const incomeTitle = "Household net income under pre-Budget policy (£k)";
   // The key: in the sentence, with the logo in the SVG as on the decile
   // card; with the reader's household, a key row under the plot and the
   // logo below it. A note instead of a plot keeps the logo row.

@@ -332,8 +332,8 @@ function WhereView({ width, narrow, curves, position, side, decile, shown = WHER
       <line x1={left} x2={left + plotW} y1={y(0)} y2={y(0)} stroke={CHART_COLOURS.axis} />
       <text x={left + plotW / 2} y={height - 4} textAnchor="middle" fill={AXIS_TITLE_STYLE.fill} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight}>
         {narrow
-          ? `Adjusted income, ${side === "after" ? "with the policies" : "current law"}`
-          : `Adjusted income ${side === "after" ? "with the policies" : "under current law"} (log scale)`}
+          ? `Adjusted income, ${side === "after" ? "with Budget policies" : "pre-Budget"}`
+          : `Adjusted income ${side === "after" ? "with Budget policies" : "under pre-Budget policy"} (log scale)`}
       </text>
 
       {on("you") && (
@@ -615,8 +615,8 @@ function RankView({ width, narrow, curves, position, side }) {
       <path d={path} fill="none" stroke={colour} strokeWidth={2.25} strokeDasharray={side === "after" ? undefined : BEFORE_DASH} />
       <text x={left + plotW / 2} y={height - 4} textAnchor="middle" fill={AXIS_TITLE_STYLE.fill} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight}>
         {narrow
-          ? `Adjusted income, ${side === "after" ? "with the policies" : "current law"}`
-          : `Adjusted income ${side === "after" ? "with the policies" : "under current law"} (log scale)`}
+          ? `Adjusted income, ${side === "after" ? "with Budget policies" : "pre-Budget"}`
+          : `Adjusted income ${side === "after" ? "with Budget policies" : "under pre-Budget policy"} (log scale)`}
       </text>
       {/* You: across to the axis, up to the curve */}
       <line x1={youX} x2={youX} y1={y(0)} y2={y(youP)} stroke={TEXT} strokeWidth={1.75} />
@@ -665,8 +665,8 @@ export function changeFromLine(steps) {
 /* ------------------------------------------------------------------ */
 
 const SIDES = [
-  { value: "before", label: "Current law" },
-  { value: "after", label: "With the policies" },
+  { value: "before", label: "Pre-Budget" },
+  { value: "after", label: "With Budget policies" },
 ];
 const SHOW_AS = [
   { value: "spread", label: "Spread" },
@@ -815,18 +815,18 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const placeMove = !placeMoved
     ? "No change from the selected policies"
     : side === "before"
-      ? `${upwards ? "Up" : "Down"} to ${shortPlace(position.after)} with the policies`
-      : `${upwards ? "Up" : "Down"} from ${shortPlace(position.before)} under current law`;
+      ? `${upwards ? "Up" : "Down"} to ${shortPlace(position.after)} with Budget policies`
+      : `${upwards ? "Up" : "Down"} from ${shortPlace(position.before)} under pre-Budget policy`;
 
   const whereCsv = () => {
     if (showAs === "rank") {
       return buildChartCsv({
-        title: `UK income distribution by percentile under current law and with the selected policies, ${yearLabel}`,
+        title: `UK income distribution by percentile under pre-Budget policy and with the selected Budget policies, ${yearLabel}`,
         units: "£ a year, income adjusted for household size (HBAI modified OECD scale)",
         columns: [
           { key: "percentile", label: "Percentile", decimals: 0 },
-          { key: "before", label: "Current law (£)", decimals: 0 },
-          { key: "after", label: "With the policies (£)", decimals: 0 },
+          { key: "before", label: "Pre-Budget (£)", decimals: 0 },
+          { key: "after", label: "With Budget policies (£)", decimals: 0 },
         ],
         rows: curves.before.map((point) => ({ percentile: point.percentile, before: point.income, after: incomeAt(curves.after, point.percentile) })),
       });
@@ -839,13 +839,13 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     const b = bandShares(curves.before, edges);
     const a = bandShares(curves.after, edges);
     return buildChartCsv({
-      title: `UK income distribution under current law and with the selected policies, ${yearLabel}`,
+      title: `UK income distribution under pre-Budget policy and with the selected Budget policies, ${yearLabel}`,
       units: "% of people in each income band; income in £ a year adjusted for household size (HBAI modified OECD scale)",
       columns: [
         { key: "from", label: "Income from (£)", decimals: 0 },
         { key: "to", label: "Income to (£)", decimals: 0 },
-        { key: "before", label: "Share of people, current law (%)", decimals: 2 },
-        { key: "after", label: "Share of people, with the policies (%)", decimals: 2 },
+        { key: "before", label: "Share of people, pre-Budget (%)", decimals: 2 },
+        { key: "after", label: "Share of people, with Budget policies (%)", decimals: 2 },
       ],
       rows: b.map((s, i) => ({ from: edges[i], to: edges[i + 1], before: s * 100, after: a[i] * 100 })),
       notes: [
@@ -883,8 +883,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const youPlace = side === "after" ? position.after : position.before;
   const whereAlt =
     showAs === "rank"
-      ? `The share of people with less income than each income ${side === "after" ? "with the selected policies" : "under current law"}, on a log scale: ${describePosition(youPlace)} for you.`
-      : `The UK income distribution ${side === "after" ? "with the selected policies" : "under current law"}, on a log scale, with you at ${describePosition(youPlace)} and in the ${tenthName(decile).toLowerCase()}.`;
+      ? `The share of people with less income than each income ${side === "after" ? "with the selected Budget policies" : "under pre-Budget policy"}, on a log scale: ${describePosition(youPlace)} for you.`
+      : `The UK income distribution ${side === "after" ? "with the selected Budget policies" : "under pre-Budget policy"}, on a log scale, with you at ${describePosition(youPlace)} and in the ${tenthName(decile).toLowerCase()}.`;
   const compareAlt =
     compareBy === "tenths"
       ? `Average change by tenth of people by income, ${unit === "pct" ? "% of net income" : "£ a year"}: ${Array.from({ length: 10 }, (_, i) => i + 1)
@@ -1012,10 +1012,10 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                 how: [
                   `We divide your household's net income by ${position.factor.toFixed(2)} for its size, and adjust everyone's the same way (the modified OECD scale, before housing costs).`,
                   "Spread shows how many people have each household income; Rank shows how many have a lower one than each. Both are the same distribution, on the same axis.",
-                  "Your percentile ranks your income against everyone's under the same policies: both under current law, or both with the policies.",
+                  "Your percentile ranks your income against everyone's under the same policies: both under pre-Budget policy, or both with Budget policies.",
                 ],
                 caveats: [
-                  "Where the changes are small next to incomes, the curve barely moves between Current law and With the policies.",
+                  "Where the changes are small next to incomes, the curve barely moves between Pre-Budget and With Budget policies.",
                 ],
                 method: { anchor: METHOD_ANCHORS.incomePosition, label: "How we work out your income percentile" },
               }}
@@ -1081,7 +1081,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               year={year}
               info={{
                 how: [
-                  "Tenths rank people by household income under current law, adjusted for household size. Each bar is the average change in that tenth.",
+                  "Tenths rank people by household income under pre-Budget policy, adjusted for household size. Each bar is the average change in that tenth.",
                 ],
                 caveats: ["The bars rank people by HBAI income, which leaves out fuel duty and VAT changes. Your tenth here counts them, so near a boundary the two can differ."],
                 method: { anchor: METHOD_ANCHORS.incomePosition, label: "How we work out your income percentile" },
@@ -1159,7 +1159,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
       value: shortPlace(position.after),
       caption: text.headline,
       note: text.moved
-        ? `${upwards ? "Up" : "Down"} from ${shortPlace(position.before)} under current law`
+        ? `${upwards ? "Up" : "Down"} from ${shortPlace(position.before)} under pre-Budget policy`
         : "No change from the selected policies",
       tip: [
         PERCENTILE_DEFINITION,
@@ -1180,7 +1180,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
 
   return (
     <div className="forecast-tiles position-tiles result-tiles">
-      <HeadlineTile icon={Wallet} name="Your change" value={changeValue} caption="a year, with the selected policies" trend={{ rows: [] }} meaning={changeNote} meaningKind="small" />
+      <HeadlineTile icon={Wallet} name="Your change" value={changeValue} caption="a year, with the selected Budget policies" trend={{ rows: [] }} meaning={changeNote} meaningKind="small" />
       <HeadlineTile
         icon={Percent}
         name="Share of your income"

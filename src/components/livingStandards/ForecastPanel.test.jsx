@@ -236,8 +236,8 @@ describe("Forecast changes once the Budget forecast is published", () => {
   it("keeps the independent baseline available beside the forecasts", async () => {
     await renderForecast(publishedOutlook());
     fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
-    expect(await screen.findByRole("heading", { name: "Living standards under current law" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Living standards under pre-Budget policy" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
-    expect(await screen.findByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Poverty under pre-Budget policy" })).toBeInTheDocument();
   });
 });

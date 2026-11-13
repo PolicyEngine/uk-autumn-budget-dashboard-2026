@@ -1,5 +1,11 @@
 """Area runs across the commits that follow an approval (#104 round 4).
 
+These compatibility fixtures explicitly recreate the archived single-phase
+comparison assembly with synthetic historical metadata. They run no old or
+native model calculations and claim no real certification. The active native
+parameter package and unsupported structural-national refusal have separate
+tests in test_native_budget_geography and test_native_budget_identities.
+
 A code-bound measure's identity includes the commit its receipt was made at,
 as well as its modifier's module source. Committing the measure's
 attestation, or the published artifacts, moves HEAD. So the area guard
@@ -130,7 +136,7 @@ def approved(tmp_path_factory):
         },
         "Generate",
     )
-    world = World()
+    world = World(historical=True, archived_pipeline=True)
     patch = pytest.MonkeyPatch()
     # The attestation commits are the commits after an approval that this
     # module is about, so sign-off is on, as on Budget day.
@@ -392,7 +398,7 @@ def documented(tmp_path_factory):
         },
         "Code the measures",
     )
-    world = World()
+    world = World(historical=True, archived_pipeline=True)
     patch = pytest.MonkeyPatch()
     # The attestation commits are the commits after an approval that this
     # module is about, so sign-off is on, as on Budget day.
@@ -507,6 +513,7 @@ def test_a_package_whose_member_is_bound_earlier_runs_in_worker_processes(
     package binds alpha as alpha's own receipt does, so staging's member
     check accepts it, and its artifact is a serial run's."""
     from tests import parallel_helpers
+    from tests.archived_publication import ArchivedRunner
     from tests.test_parallel import _artifacts, _worker_runner
     from uk_budget_data.parallel import SerialRunner
     from uk_budget_data.publication.publish import _members_problems
@@ -539,7 +546,7 @@ def test_a_package_whose_member_is_bound_earlier_runs_in_worker_processes(
     )
     workers, data_root = run(
         "workers",
-        _worker_runner(),
+        ArchivedRunner(world.root, _worker_runner()),
         functools.partial(parallel_helpers.world_sim, str(world.root)),
     )
     document = read_receipt(workers.written[0].path)

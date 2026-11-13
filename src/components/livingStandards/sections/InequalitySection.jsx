@@ -1,4 +1,4 @@
-// Inequality over time under current law (its own card, beside the
+// Inequality over time under pre-Budget policy (its own card, beside the
 // measures' effect on inequality on Population impact's Living standards
 // sub-tab). Gini and 90/10 ratio, named and ordered as that chart's pills
 // (SummaryMetricChart INEQUALITY_METRICS); BHC or AHC; HBAI outturn solid, projection dashed. Ported from
@@ -60,11 +60,11 @@ export default function useInequalityView(data, range = null, setRange = null) {
         : "the gap between top and bottom incomes (90:10 ratio)";
     summary = same ? (
       <>
-        Under current law, {what} <strong>stays at {fmt(a.value)}</strong> from {fyDash(a.year)} to {fyDash(b.year)}.
+        Under pre-Budget policy, {what} <strong>stays at {fmt(a.value)}</strong> from {fyDash(a.year)} to {fyDash(b.year)}.
       </>
     ) : (
       <>
-        Under current law, {what} <strong>{b.value > a.value ? "rises" : "falls"}</strong> from {fmt(a.value)} in{" "}
+        Under pre-Budget policy, {what} <strong>{b.value > a.value ? "rises" : "falls"}</strong> from {fmt(a.value)} in{" "}
         {fyDash(a.year)} to {fmt(b.value)} in {fyDash(b.year)}.
       </>
     );
@@ -74,7 +74,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     period: rowsPeriod(rows),
     summary,
     // What it shows; the two measures are defined once, under Definitions
-    about: "How unequal household incomes are each year under current law. We compare the shaded years.",
+    about: "How unequal household incomes are each year under pre-Budget policy. We compare the shaded years.",
     notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
@@ -99,7 +99,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
           legendItems: lineLegendItems(series),
           csv: () =>
             seriesCsv({
-              title: `Inequality: ${label(measure)} (${basis.toUpperCase()})`,
+              title: `Inequality: ${label(measure)} (${basis.toUpperCase()})${viewMode === "outturn" ? "" : ", pre-Budget projection"}`,
               units: label(measure),
               source: CSV_SOURCES.hbai,
               rows,

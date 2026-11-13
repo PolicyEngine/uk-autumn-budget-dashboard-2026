@@ -373,26 +373,24 @@ function MethodologyTab({ onShowTab }) {
                     PolicyEngine UK (<SourceLink id="policyengine_uk">policyengine-uk</SourceLink>), which we run
                     through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
                     the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. We write
-                    measures as parameter changes where possible, or build them from measure
-                    templates with their own tests. We write four of the policies here by hand.
+                    the selected Budget policies as parameter changes on a shared pre-Budget
+                    reference. The native model supplies their formulas and interactions.
                   </>,
                 ],
                 [
                   "Baseline",
                   {
-                    value: "Current law, with electricity VAT held at 5% for the comparison.",
+                    value: "Pre-Budget settings for this dashboard’s measures, compared with the selected Budget policies.",
                     more: [
-                      "Current law zero-rates domestic electricity in Great Britain from 1 October 2026 to 31 March 2027; Northern Ireland remains at 5%. We hold the baseline at 5% for those months so the comparison includes the existing winter relief, as Table 6.1 does. The measure covers Great Britain from October 2026 to June 2027, with Northern Ireland included from April 2027 as the Budget expects.",
+                      "We keep unselected measures at their pre-Budget settings on both sides.",
+                      "Both sides keep Great Britain's existing October 2026 to March 2027 electricity zero rate. Selecting the policy adds April to June 2027 and includes Northern Ireland for those months.",
+                      "Both sides keep the £2 bus fare cap for 2027, which DfT announced before the Budget.",
                       <>
-                        Fuel duty is 60.59p a litre from April 2027 (
-                        <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>).
+                        The pre-Budget main fuel duty rate reaches 60.03p in April 2027;
+                        the Budget sets 60.59p from July 2027. See{" "}
+                        <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>.
                       </>,
-                      "The model holds the National Living Wage at £12.71 an hour from April 2026. It sets Universal Credit's minimum income floor, the benefit cap's earnings exemption and the childcare earnings tests.",
-                      "It holds Carer's Allowance's own earnings limit at £204 a week, so a carer earning between £204 and the higher limit the Budget's Carer's Allowance change sets gets no Carer's Allowance in either run.",
-                      <>
-                        Benefit rates, including the Pension Credit guarantee, rise as we describe
-                        under <AnchorLink id={FORECAST_FEED_ANCHOR}>how the forecast feeds the baseline</AnchorLink>.
-                      </>,
+                      "Both sides use the installed model's native October 2026 economic assumptions and benefit projections.",
                     ],
                   },
                 ],
@@ -403,7 +401,7 @@ function MethodologyTab({ onShowTab }) {
                     estimate holds fixed.
                   </>,
                 ],
-                ["Years", "Fiscal years, April to March: 2027-28 runs from April 2027 to March 2028."],
+                ["Years", "Model tax years, 6 April to 5 April: 2027-28 runs from 6 April 2027 to 5 April 2028."],
                 [
                   "Prices",
                   <>
@@ -565,8 +563,8 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
-                      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
-                      "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
+                      "We include the one-off cash payment in HBAI income. The fare cap already applies on both sides, so selecting it adds no change.",
+                      "People moved out of or into poverty are the change in the rate times that year's population in the pre-Budget projection, to the nearest 1,000.",
                     ],
                   },
                 ],
@@ -857,7 +855,7 @@ function MethodologyTab({ onShowTab }) {
           title="Pre-measures forecast"
           summary={
             <>
-              Current-law incomes and poverty on{" "}
+              Pre-Budget incomes and poverty on{" "}
               <ViewLink tab="outlook" sub="living" onShowTab={onShowTab}>
                 Living standards
               </ViewLink>{" "}
@@ -912,55 +910,31 @@ function MethodologyTab({ onShowTab }) {
             preview="The October 2026 forecast · Series not from it · Weights · Fuel duty"
           >
             <p className="method-more">
-              The Budget figures grow prices, earnings, rents, mortgage interest and council tax at the
-              rates of the <SourceLink id="obr_efo_current" />, in the baseline and the reform alike.
-              The installed model&apos;s fuel volumes and population follow that forecast too, and 2025
-              is the outturn it publishes. Differences include:
+              We use the installed model&apos;s native assumptions from the{" "}
+              <SourceLink id="obr_efo_current" />{" "}on both policy sides, including its population path.
+              The model derives some series, including CPI after housing costs and social rents,
+              from those forecast figures and carries or projects others beyond the published tables.
             </p>
-            <ul className="method-list">
-              <li>
-                Per-capita GDP, mixed income and non-labour income retain the dashboard overlay&apos;s
-                rates, derived using an older population path. Household weights instead follow the
-                installed model&apos;s October population path.
-              </li>
-              <li>Mortgage interest keeps policyengine-uk&apos;s growth from 2030, where the OBR&apos;s table stops.</li>
-              <li>
-                CPI after housing costs and social rents are PolicyEngine&apos;s own derivations from
-                the October figures, not OBR series.
-              </li>
-              <li>
-                Calibration fits the weights to OBR receipts and spending totals for 2025. Most take
-                2024-25 from the March 2026 forecast&apos;s tables and 2025-26 from the October 2026
-                forecast&apos;s.
-              </li>
-            </ul>
             <p className="method-more">
-              Current law&apos;s fuel duty is 60.59p a litre from April 2027, then rises each April
-              with that forecast&apos;s RPI. The OBR gives 60.59p from 1 July 2027; HMRC has set no
-              April rate, so applying it from April is our assumption.
+              The pre-Budget main fuel duty rate follows the statutory January and March 2027
+              increases, reaching 60.03p a litre in April 2027. The government holds 52.95p through
+              June and sets 60.59p from July. The two schedules continue to differ after June;
+              both use the model&apos;s native RPI assumptions for later uprating.
             </p>
           </Topic>
           <Topic id="method-business-fuel" title="Business fuel use" preview="Fuel duty on households' own purchases only">
             <p className="method-more">
-              We model fuel duty on households' own petrol and diesel purchases. Duty on fuel
-              for vans, lorries and business use of cars, roughly half of fuel duty receipts, is
-              not in the model, so a change in fuel duty moves revenue by less here than in a
-              full costing.
+              We model households&apos; own fuel purchases. The model leaves out fuel for vans,
+              lorries and business use of cars. The data also lack road-fuel quantities for LPG
+              and natural gas, so we cannot publish a complete national estimate of the fuel policy.
             </p>
           </Topic>
-          <Topic id="method-bus-fare-income" title="Bus fare savings as income" preview="We count the £2 bus fare cap as income">
+          <Topic id="method-bus-fare-income" title="Bus fare cap comparison" preview="The £2 cap applies on both sides">
             <p className="method-more">
-              Payments for the £2 bus fare cap go to bus operators, but passengers gain from it through lower
-              fares. We count that saving as household income, as for a price subsidy. The saving is
-              the Treasury&apos;s costing (Table 6.1), which we share out across households by their bus fare
-              spending in England outside London, not our own estimate of the national cost: 10.0% of
-              each household&apos;s spending at £3 fares for the days the cap runs. We get that 10.0% by dividing £230m a
-              year by 0.9 for the share of operators taking part (
-              <SourceLink id="dft_two_pound_cap_evaluation">DfT&apos;s evaluation of the first £2 cap</SourceLink>),
-              then by £2,557m of bus fare spending at £3 fares. London residents get £0. This is a choice
-              of method: the household spends less on the same journeys, so its income buys more, but
-              no cash changes hands. Spending is held fixed. The saving counts in household net income,
-              not in the HBAI income poverty is measured on.
+              DfT announced the £2 cap for January to December 2027 on{" "}
+              <a href="https://www.gov.uk/government/speeches/2-bus-fares-from-january-2027" target="_blank" rel="noopener noreferrer">22 July 2026<span className="sr-only"> (opens in a new tab)</span></a>.
+              We keep it in the pre-Budget reference and with the selected Budget policy, so this
+              comparison adds no household fare saving or income for the bus measure.
             </p>
           </Topic>
           <Topic title="Survey coverage" preview="Where the survey data move a policy's figures">
@@ -969,14 +943,10 @@ function MethodologyTab({ onShowTab }) {
               on the policies here:
             </p>
             <ul className="method-list">
-              <li>
-                More pensioners gain from the tax reduction for pensioners in our data than in the
-                Treasury&apos;s costing: about 670,000 in 2027-28, against 500,000.
-              </li>
               <li>The data hold few small traders, the people the trading allowance reaches.</li>
               <li>
-                The surveys record traders&apos; profits, not their receipts, so the trading allowance
-                figures rest on our assumption of who already claims the £1,000 allowance.
+                The data lack trading-allowance claim status and eligible miscellaneous income,
+                so we cannot publish a national trading-allowance estimate.
               </li>
               <li>Electricity spending grows with CPI, not the energy price cap; the electricity VAT zero rate scales with it.</li>
             </ul>

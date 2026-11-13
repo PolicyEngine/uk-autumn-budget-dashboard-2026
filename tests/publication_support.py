@@ -3,7 +3,16 @@
 The receipts are built by policyengine's own receipt code. To get certified
 receipts without the private dataset, the bundle manifest policyengine reads
 is replaced by a copy that certifies a tiny dummy file, so certification is
-still decided by bytes and versions exactly as in production.
+still decided by bytes and versions exactly as in production. Default
+parameter fixtures bind the native shared pre-Budget reference and explicit
+per-key synthetic parameter deltas; no policy formula or dataset is run.
+
+``World(historical=True)`` is an explicit compatibility fixture for legacy
+composition and modifier attestations. It mocks the complete package and
+bundle metadata as 6.16.2 / UK 2.165.1 / core 3.33.3, the dashboard's former
+pins. It does not run those historical packages or claim real certification.
+Dedicated old area tests additionally select ``archived_pipeline=True`` to
+restore the archived comparison assembly consistently, including in workers.
 """
 
 import copy
@@ -13,8 +22,10 @@ import os
 import shutil
 import subprocess
 import tempfile
+from contextlib import ExitStack
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import policyengine.provenance.certification as certification
 import pytest
@@ -88,6 +99,11 @@ PROJECTION_END = projection_end_year()
 DATASET_YEARS = list(range(2024, PROJECTION_END + 1))
 YEARS = [2027, 2028]
 RATE_PATH = "gov.hmrc.income_tax.rates.uk[0].rate"
+HISTORICAL_VERSIONS = {
+    "policyengine": "6.16.2",
+    "policyengine-uk": "2.165.1",
+    "policyengine-core": "3.33.3",
+}
 SOURCE_HEADER = (
     "source_id,document,table,row_id,row_label,fiscal_year,value_bn,basis,"
     "sign_convention,head,notes\n"
@@ -182,7 +198,14 @@ def make_household_rows(
 class World:
     """Temporary data root, Treasury inputs and patched bundle."""
 
-    def __init__(self):
+    def __init__(self, *, historical=False, archived_pipeline=False):
+        if archived_pipeline and not historical:
+            raise ValueError(
+                "the archived pipeline requires explicit historical metadata"
+            )
+        self.historical = historical
+        self.archived_pipeline = archived_pipeline
+        self._owns_root = True
         self.root = Path(tempfile.mkdtemp(prefix="publication-"))
         self.data_root = self.root / "public" / "data"
         self.artifacts = self.data_root / "artifacts"
@@ -195,8 +218,18 @@ class World:
 
         self._dataset = self.root / f"{DATASET_NAME}.h5"
         self._dataset.write_bytes(b"dummy certified dataset")
-        self.bundle = self._bundle_for(self._dataset)
+        self.bundle = self._bundle_for(self._dataset, historical=historical)
         (self.root / "manifest.json").write_text(json.dumps(self.bundle))
+        (self.root / "world.json").write_text(
+            json.dumps(
+                {
+                    "historical": historical,
+                    "archived_pipeline": archived_pipeline,
+                }
+            )
+        )
+        self._recipes = {}
+        self._save_recipes()
         self._patch()
 
     @classmethod
@@ -206,6 +239,7 @@ class World:
         process's patches, so it builds its receipts against the same
         bundle and dataset this way. Only that process's exit undoes it."""
         instance = cls.__new__(cls)
+        instance._owns_root = False
         instance.root = Path(root)
         instance.data_root = instance.root / "public" / "data"
         instance.artifacts = instance.data_root / "artifacts"
@@ -213,6 +247,12 @@ class World:
         instance._dataset = instance.root / f"{DATASET_NAME}.h5"
         instance.bundle = json.loads(
             (instance.root / "manifest.json").read_text()
+        )
+        mode = json.loads((instance.root / "world.json").read_text())
+        instance.historical = mode["historical"]
+        instance.archived_pipeline = mode.get("archived_pipeline", False)
+        instance._recipes = json.loads(
+            (instance.root / "recipes.json").read_text()
         )
         instance._patch()
         return instance
@@ -229,6 +269,40 @@ class World:
         # supports; the dummy dataset is not a real one, so stand in with
         # the years World's simulations report.
         self._receipt_api, _ = receipt_module.receipt_api()
+        self._historical_patches = ExitStack()
+        if self.historical:
+            api = self._receipt_api
+            # All of these are synthetic test metadata, not installed code
+            # evidence. Keep package, loaded-code and bundle versions equal.
+            installed_version = receipt_module.metadata.version
+            self._historical_patches.enter_context(
+                patch.object(
+                    receipt_module,
+                    "metadata",
+                    SimpleNamespace(
+                        version=lambda name: HISTORICAL_VERSIONS.get(name)
+                        or installed_version(name)
+                    ),
+                )
+            )
+            self._historical_patches.enter_context(
+                patch.object(
+                    api,
+                    "installed_package_identity",
+                    lambda name, **kwargs: api.PackageIdentity(
+                        name=name, version=HISTORICAL_VERSIONS[name]
+                    ),
+                )
+            )
+            self._historical_patches.enter_context(
+                patch.object(
+                    api, "loaded_versions", lambda: dict(HISTORICAL_VERSIONS)
+                )
+            )
+        if self.archived_pipeline:
+            from tests.archived_publication import install
+
+            install(self._historical_patches)
         self._original_projection = getattr(
             self._receipt_api, "_projected_years", None
         )
@@ -238,11 +312,13 @@ class World:
             )
 
     def close(self):
+        self._historical_patches.close()
         if self._original_projection is not None:
             self._receipt_api._projected_years = self._original_projection
         certification.default_bundle_source_path = self._original_path
         receipt_module.load_bundle_manifest = self._original_loader
-        shutil.rmtree(self.root, ignore_errors=True)
+        if self._owns_root:
+            shutil.rmtree(self.root, ignore_errors=True)
 
     @staticmethod
     def commit_attestation(path: Path) -> None:
@@ -299,13 +375,68 @@ class World:
         )
 
     @staticmethod
-    def _bundle_for(dataset: Path) -> dict:
+    def _bundle_for(dataset: Path, *, historical=False) -> dict:
         digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
         bundle = copy.deepcopy(load_bundle_manifest())
         release = bundle["data_releases"]["uk"]
         release["certified_data_artifact"]["sha256"] = digest
         release["datasets"][DATASET_NAME]["sha256"] = digest
+        if historical:
+            bundle["policyengine_version"] = HISTORICAL_VERSIONS[
+                "policyengine"
+            ]
+            for name, version in HISTORICAL_VERSIONS.items():
+                bundle["packages"][name]["version"] = version
+                bundle["packages"][name][
+                    "install_requirement"
+                ] = f"{name}=={version}"
+            release["policyengine_version"] = HISTORICAL_VERSIONS[
+                "policyengine"
+            ]
+            release["bundle_id"] = "uk-synthetic-historical-fixture"
+            release["model_package"] = {
+                "name": "policyengine-uk",
+                "version": HISTORICAL_VERSIONS["policyengine-uk"],
+            }
+            release["certification"].update(
+                built_with_model_version=HISTORICAL_VERSIONS[
+                    "policyengine-uk"
+                ],
+                certified_for_model_version=HISTORICAL_VERSIONS[
+                    "policyengine-uk"
+                ],
+                certified_for_core_version=HISTORICAL_VERSIONS[
+                    "policyengine-core"
+                ],
+                certified_by="synthetic historical publication fixture; no model run",
+            )
         return bundle
+
+    def _save_recipes(self):
+        (self.root / "recipes.json").write_text(json.dumps(self._recipes))
+
+    @staticmethod
+    def _recipe_key(identity):
+        if not isinstance(identity, dict):
+            identity = identity.model_dump(mode="json")
+        return json.dumps(receipt_module._identity_core(identity))
+
+    def _remember_delta(self, identity, scenario):
+        self._recipes[self._recipe_key(identity)] = (
+            receipt_module._parameter_delta(scenario)
+        )
+        self._save_recipes()
+
+    def _delta_for(self, identity, *, member=None, side=None):
+        """Return a saved input; an opaque digest is never decoded into a policy.
+
+        Adversarial tests can corrupt an identity while retaining the original
+        member's explicitly saved inputs. The gate must reject that mismatch.
+        """
+        key = self._recipe_key(identity)
+        if key in self._recipes:
+            return copy.deepcopy(self._recipes[key])
+        return copy.deepcopy(self._recipes["members"][member][side])
 
     # --- simulations and receipts ------------------------------------
 
@@ -364,6 +495,9 @@ class World:
         modifier_templates=None,
         git_sha=None,
         before_the_floor=False,
+        parameter_changes=None,
+        baseline_parameter_changes=None,
+        reform_definition=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -383,18 +517,46 @@ class World:
         floor of survey households found no thin cell in its tables;
         ``before_the_floor=True`` records nothing, as for one generated
         before the floor (#208), which the gate refuses to show.
+
+        ``parameter_changes`` supplies explicit real or synthetic paths in
+        place of the per-key synthetic default; ``baseline_parameter_changes``
+        supplies an explicit custom baseline. Native combinations use only
+        these saved raw inputs, never parameters guessed from a digest.
         """
         revision = self.revision(clean, sha=git_sha or "a" * 40)
-        scenario = Scenario(
-            parameter_changes={
-                RATE_PATH: {str(y): rate for y in sorted(values)}
-            }
+        # Distinct invented paths let generic members compose disjointly.
+        # Tests needing a real model path pass parameter_changes explicitly.
+        path = (
+            RATE_PATH
+            if self.historical
+            else f"gov.synthetic.publication.{key}"
         )
-        baseline_identity = (
-            baseline_identity
-            or receipt_module.scenario_identity(
-                None, name=f"{key} baseline", revision=revision
+        scenario = Scenario(
+            parameter_changes=(
+                parameter_changes
+                if parameter_changes is not None
+                else {path: {str(y): rate for y in sorted(values)}}
             )
+        )
+        bind = (
+            receipt_module.scenario_identity
+            if self.historical
+            else receipt_module.comparison_identity
+        )
+        baseline_scenario = (
+            Scenario(parameter_changes=baseline_parameter_changes)
+            if baseline_parameter_changes is not None
+            else None
+        )
+        if reform_definition is not None:
+            from uk_budget_data.models import DataConfig
+
+            scenario = reform_definition.to_scenario()
+            baseline_scenario = reform_definition.baseline_scenario_for(
+                DataConfig(years=sorted(values))
+            )
+        baseline_identity = baseline_identity or bind(
+            baseline_scenario, name=f"{key} baseline", revision=revision
         )
         composition = None
         requested_config_baseline, config_baseline = config_baseline, None
@@ -405,15 +567,61 @@ class World:
             config_baseline = receipt_module.receipt_api()[
                 0
             ].ReformIdentity.model_validate(
-                requested_config_baseline or World.configured_baseline()
+                requested_config_baseline or self.configured_baseline()
             )
-        reform_identity = reform_identity or receipt_module.scenario_identity(
+        reform_identity = reform_identity or bind(
             scenario, name=key, revision=revision
         )
+        policy_comparison = None
+        if (
+            not self.historical
+            and not members
+            and reform_definition is not None
+        ):
+            from uk_budget_data.models import DataConfig
+
+            policy_comparison = receipt_module.comparison_metadata(
+                reform_definition, DataConfig(years=sorted(values)), revision
+            )
+            self._recipes[self._recipe_key(baseline_identity)] = (
+                policy_comparison["baseline_delta"]
+            )
+            self._recipes[self._recipe_key(reform_identity)] = (
+                policy_comparison["reform_delta"]
+            )
+            self._recipes.setdefault("members", {})[key] = {
+                side: policy_comparison[f"{side}_delta"]
+                for side in ("baseline", "reform")
+            }
+            self._save_recipes()
+        elif not self.historical and not members:
+            common = receipt_module.common_policy_reference(revision)
+            baseline_delta = receipt_module._parameter_delta(baseline_scenario)
+            # Preserve an explicitly supplied identity as an intentional test
+            # input. Its recipe must still independently validate at the gate.
+            if self._recipe_key(baseline_identity) in self._recipes:
+                baseline_delta = self._delta_for(baseline_identity)
+            self._remember_delta(reform_identity, scenario)
+            self._recipes[self._recipe_key(baseline_identity)] = baseline_delta
+            self._recipes.setdefault("members", {})[key] = {
+                "baseline": baseline_delta,
+                "reform": receipt_module._parameter_delta(scenario),
+            }
+            self._save_recipes()
+            policy_comparison = {
+                "schema": "uk-budget-dashboard/policy-comparison/v1",
+                "common_policy_reference": common,
+                "baseline_delta": baseline_delta,
+                "reform_delta": receipt_module._parameter_delta(scenario),
+            }
         if modifier_templates is None:
             counts = receipt_module.template_proof.modifier_counts(
                 {
-                    "dashboard": {"members": members},
+                    "dashboard": {
+                        "members": members,
+                        "composition": composition,
+                        "policy_comparison": policy_comparison,
+                    },
                     "execution_receipt": {
                         "baseline": json.loads(
                             baseline_identity.model_dump_json()
@@ -443,6 +651,7 @@ class World:
             model_limits=list(model_limits),
             modifier_templates=modifier_templates,
             generator_argv=["test"],
+            policy_comparison=policy_comparison,
         )
         if name is None:
             rows = (tables or {}).get("budgetary_impact") or []
@@ -495,27 +704,29 @@ class World:
             artifact_sha256=artifact_sha256(document),
         )
 
-    @staticmethod
-    def configured_baseline() -> dict:
-        """The configured baseline World's combined runs record: current
-        law, as generate records a config with no baseline changes."""
-        api, _ = receipt_module.receipt_api()
-        return json.loads(
-            api.reform_identity(
-                None, None, name="configured baseline"
-            ).model_dump_json()
+    def configured_baseline(self) -> dict:
+        """The shared comparison baseline, or legacy current law in historical mode."""
+        bind = (
+            receipt_module.scenario_identity
+            if self.historical
+            else receipt_module.comparison_identity
         )
+        identity = bind(
+            None, name="configured baseline", revision=self.revision()
+        )
+        if not self.historical:
+            self._remember_delta(identity, None)
+        return identity.model_dump(mode="json")
 
-    @staticmethod
-    def _compose(records):
+    def _compose(self, records):
         """Compose member records the way combined_identities does: every
         reform in order, and each distinct baseline once."""
         api, _ = receipt_module.receipt_api()
         records = [dict(record) for record in records]
         # As combined_identities: a member on the configured baseline
-        # (current law here) shares it, applied once; a member with its own
+        # shares it, applied once; a member with its own
         # baseline has it applied.
-        configured = World.configured_baseline()
+        configured = self.configured_baseline()
         configured_core = {k: v for k, v in configured.items() if k != "name"}
         configured_bound = False
         for record in records:
@@ -525,6 +736,78 @@ class World:
                 "baseline_bound", not shared or not configured_bound
             )
             configured_bound |= shared and record["baseline_bound"]
+        if not self.historical:
+            for record in records:
+                for side in ("baseline", "reform"):
+                    if f"{side}_delta" not in record:
+                        record[f"{side}_delta"] = self._delta_for(
+                            record[side], member=record["id"], side=side
+                        )
+            common = receipt_module.common_policy_reference(self.revision())
+            name = "+".join(record["id"] for record in records)
+            if any(
+                "application" in record[f"{side}_delta"]
+                for record in records
+                for side in ("baseline", "reform")
+            ):
+                from uk_budget_data.publication import phase_recipe
+
+                for record in records:
+                    for side in ("baseline", "reform"):
+                        key = f"{side}_delta"
+                        if "application" not in record[key]:
+                            record[key] = phase_recipe.bare_plan(
+                                receipt_module._delta_scenario(record[key]),
+                                self.revision(),
+                            )
+                plans = {
+                    side: phase_recipe.resolve_plan(
+                        common,
+                        [
+                            record[f"{side}_delta"]
+                            for record in records
+                            if side != "baseline" or record["baseline_bound"]
+                        ],
+                    )
+                    for side in ("baseline", "reform")
+                }
+                return (
+                    records,
+                    {
+                        "method": phase_recipe.METHOD,
+                        "common_policy_reference": common,
+                        **{
+                            f"{side}_plan": plan
+                            for side, plan in plans.items()
+                        },
+                    },
+                    tuple(
+                        phase_recipe.ordered_api().ordered_scenario_reform_identity(
+                            plan, name=f"{name} {side}"
+                        )
+                        for side, plan in plans.items()
+                    ),
+                )
+            composed = tuple(
+                receipt_module.scenario_identity(
+                    receipt_module._resolved_scenario(
+                        common, receipt_module._merged_deltas(records, side)
+                    ),
+                    name=f"{name} {side}",
+                    revision=self.revision(),
+                )
+                for side in ("baseline", "reform")
+            )
+            return (
+                records,
+                {
+                    "method": receipt_module.RESOLVED_COMMON_POLICY,
+                    "common_policy_reference": common,
+                    "reform_applied_before_data_load": True,
+                    "baseline_applied_before_data_load": True,
+                },
+                composed,
+            )
         composition = {
             "reform_applied_before_data_load": False,
             "baseline_applied_before_data_load": False,

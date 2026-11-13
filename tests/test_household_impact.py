@@ -25,6 +25,7 @@ from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.forecast import with_forecast
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
     CombineConflict,
@@ -213,17 +214,25 @@ def test_every_measure_is_included_and_none_is_not_modelled():
 
 
 def test_a_modifier_that_isnt_module_level_is_refused():
+    from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+        zero_vat_on_domestic_electricity,
+    )
+
     with pytest.raises(ValueError, match="module-level"):
         household_impact.modifier_name(lambda sim: sim)
-    name = household_impact.modifier_name(
-        get_reform("domestic_electricity_zero_vat").simulation_modifier
+    # The retained historical helper still has a resolvable module name;
+    # the registered native electricity restoration has no modifier.
+    assert (
+        get_reform("domestic_electricity_zero_vat").simulation_modifier is None
     )
+    name = household_impact.modifier_name(zero_vat_on_domestic_electricity)
     assert (
         name
         == "uk_budget_data.budget_measures.zero_vat_on_domestic_electricity:zero_vat_on_domestic_electricity"
     )
-    assert household_impact.resolve_modifier(name) is (
-        get_reform("domestic_electricity_zero_vat").simulation_modifier
+    assert (
+        household_impact.resolve_modifier(name)
+        is zero_vat_on_domestic_electricity
     )
 
 
@@ -241,7 +250,7 @@ def test_before_is_current_law_and_after_holds_the_budget_changes():
     assert sides.singles == {"threshold_freeze_2031_32": sides.after}
 
 
-def test_a_single_holds_every_other_measure_at_current_law():
+def test_a_single_holds_every_other_measure_at_pre_budget_settings():
     sides = household_impact.measure_sides(
         [
             "threshold_freeze_2031_32",
@@ -255,25 +264,37 @@ def test_a_single_holds_every_other_measure_at_current_law():
         plan_2.baseline_simulation_modifier
     )
     electricity = get_reform("domestic_electricity_zero_vat")
-    pre_budget_electricity = household_impact.modifier_name(
-        electricity.baseline_simulation_modifier
-    )
-    # Both other measures keep their own pre-Budget sides, in member order.
-    baseline_modifiers = [pre_budget_electricity, student_loans]
+    assert electricity.baseline_simulation_modifier is None
+    assert electricity.simulation_modifier is None
+    # The runtime's common parameter rollback supplies pre-Budget electricity;
+    # the retained Plan 2 design still has its own baseline modifier.
+    baseline_modifiers = [student_loans]
     assert sides.before["modifiers"] == baseline_modifiers
     assert sides.singles["threshold_freeze_2031_32"] == {
         "parameter_changes": freeze.parameter_changes,
         "modifiers": baseline_modifiers,
     }
-    # Modifiers in order of measure id: the electricity measure's
-    # (domestic_...) before the Plan 2 measure's student loans
     assert sides.singles["domestic_electricity_zero_vat"] == {
-        "parameter_changes": {},
-        "modifiers": [
-            "uk_budget_data.budget_measures.zero_vat_on_domestic_electricity:zero_vat_on_domestic_electricity",
-            student_loans,
-        ],
+        "parameter_changes": electricity.parameter_changes,
+        "modifiers": [student_loans],
     }
+    path = "gov.hmrc.vat.domestic_electricity_rate.great_britain"
+    before = with_forecast(household_impact.side_scenario(sides.before))
+    own = with_forecast(
+        household_impact.side_scenario(
+            sides.singles["domestic_electricity_zero_vat"]
+        )
+    )
+    assert before.parameter_changes[path] != own.parameter_changes[path]
+    assert own.parameter_changes[path] == electricity.parameter_changes[path]
+    assert (
+        before.parts_by_data_load()[1].simulation_modifier
+        is plan_2.baseline_simulation_modifier
+    )
+    assert (
+        own.parts_by_data_load()[1].simulation_modifier
+        is plan_2.baseline_simulation_modifier
+    )
 
 
 def test_a_single_refuses_a_budget_side_another_measure_reverts():
@@ -843,15 +864,16 @@ def test_a_pensioner_is_paid_the_full_rate_or_the_amount_entered_on_the_forecast
             ] == pytest.approx(paid, abs=0.01)
 
 
-def test_the_full_new_state_pension_in_2028_29_is_octobers():
-    """£259.24 a week in 2028-29 on the October 2026 forecast. The March
-    forecast policyengine-uk 2.151.0 shipped gave £256.98; from 2.164.1
-    (OBR October 2026 economic assumptions) the engine ships October's
-    rate itself, so the two agree."""
+def test_the_full_new_state_pension_in_2028_29_keeps_native_rounding():
+    """UK #2751 rounds each projected weekly rate to the nearest 5p.
+
+    October's 3.4% rise on £250.70 gives £259.20 after that rounding;
+    the former unrounded cumulative projection gave £259.24.
+    """
     weekly = household_impact.full_new_state_pension(2028) / 52
-    assert round(weekly, 2) == 259.24
+    assert round(weekly, 2) == 259.20
     native = PARAMETERS.get_child(NEW_STATE_PENSION)("2028-01-01")
-    assert round(float(native), 2) == 259.24
+    assert round(float(native), 2) == 259.20
 
 
 @pytest.mark.parametrize("year", POLICY_YEARS)
@@ -927,15 +949,10 @@ def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
     Pension Credit instead. Now the full new State Pension, and at most a
     sliver of Guarantee Credit.
 
-    The pinned policyengine-uk 2.165.1 model uprates the standard minimum
-    guarantee by the previous May to July earnings growth (SSAA 1992
-    s. 150A; the engine's changelog: "April 2027's single guarantee rises
-    from £238 to £247.282 before rounding, rather than £243.47"). In 2029-30 it is
-    £260.807 a week, £13,561.94 a year, while the Pension Credit income
-    the engine assesses is the State Pension (£13,817.30) less all income
-    tax, £13,514.09: Guarantee Credit of £47.86. Savings interest and
-    dividends are not Pension Credit income (no capital is entered), but
-    the engine deducts the tax on them."""
+    Native pension_credit_income deducts tax only on counted income.
+    Interest and dividends are capital income here; their tax cannot lower
+    assessed income. The State Pension less its own basic-rate tax exceeds
+    the single minimum guarantee, so Guarantee Credit is zero."""
     answers = Answers(
         age=72,
         employment_income=0,
@@ -949,9 +966,34 @@ def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
     assert programme(result, "state_pension")["baseline"] == pytest.approx(
         full, abs=0.01
     )
-    assert programme(result, "pension_credit")["baseline"] == pytest.approx(
-        47.86, abs=0.01
+    sim = Simulation(
+        situation=situation(answers, YEAR), scenario=with_forecast(None)
     )
+    p = sim.tax_benefit_system.parameters
+    instant = f"{YEAR}-01-01"
+    allowance = p.gov.hmrc.income_tax.allowances.personal_allowance.amount(
+        instant
+    )
+    basic_rate = p.gov.hmrc.income_tax.rates.uk(instant).rates[0]
+    counted_tax = max(0, full - allowance) * basic_rate
+    assessed_income = full - counted_tax
+    guarantee = (
+        p.gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE(
+            instant
+        )
+        * 52
+    )
+    expected_credit = max(0, guarantee - assessed_income)
+    assert assessed_income > guarantee
+    assert expected_credit == 0
+    assert float(
+        sim.calculate("legacy_means_test_deducted_income_tax", YEAR).sum()
+    ) == pytest.approx(counted_tax, abs=0.01)
+    assert float(
+        sim.calculate("pension_credit_income", YEAR)[0]
+    ) == pytest.approx(assessed_income, abs=0.01)
+    assert not bool(sim.calculate("is_savings_credit_eligible", YEAR)[0])
+    assert programme(result, "pension_credit")["baseline"] == expected_credit
     used = result["state_pension_used"]
     assert used["state_pension"] == pytest.approx(full, abs=0.01)
     assert used["partner_state_pension"] is None
@@ -1377,12 +1419,14 @@ def _rows_add_up(result):
 
 def test_a_private_pension_is_income_the_qa_pensioner_couple():
     """The QA's pensioner couple (70 and 68, the full new State Pension
-    each) with a £10,000 private pension: £10,000 less £2,000 basic-rate
-    tax on top of their £25,907.16, as an independent policyengine-uk
-    2.151.0 run gives: £33,907.16. (policyengine-uk 2.132.6 gave £33,907.11:
-    its expected_sdlt added the property sale rate, 0.045, to every
-    household's stamp duty as pounds. From 2.151.0 it is the household's
-    own stamp duty, nil here.)"""
+    each) with a £10,000 private pension. Rebuild the pre-Budget total
+    from the native rounded pension rate, basic-rate tax, two shared
+    Winter Fuel Payments, the TV licence and the electricity VAT surcharge
+    relative to native current law. No historical model output is a golden."""
+    from datetime import date
+
+    from uk_budget_data.forecast import forecast_parameters
+
     answers = household_impact.HouseholdAnswers(
         age=70,
         employment_income=0,
@@ -1397,7 +1441,52 @@ def test_a_private_pension_is_income_the_qa_pensioner_couple():
     result = household_impact.calculate_household_impact(
         answers, household_impact.measure_ids(), 2027, include=()
     )
-    assert result["net_income"]["baseline"] == pytest.approx(33_907.16)
+    p = forecast_parameters()
+    instant = "2027-01-01"
+    full = p.gov.dwp.state_pension.new_state_pension.amount(instant) * 52
+    allowance = p.gov.hmrc.income_tax.allowances.personal_allowance.amount(
+        instant
+    )
+    scale = p.gov.hmrc.income_tax.rates.uk(instant)
+    assert full + 10_000 - allowance < scale.thresholds[1]
+    expected_tax = scale.rates[0] * (
+        max(0, full + 10_000 - allowance) + max(0, full - allowance)
+    )
+    # Neither partner is 80 or on Pension Credit; each gets the shared rate.
+    winter_fuel = 2 * p.gov.dwp.winter_fuel_payment.amount.lower_shared(
+        instant
+    )
+    tv_licence = p.gov.dcms.bbc.tv_licence.colour(instant)
+    zero_days = (date(2027, 7, 1) - date(2027, 4, 6)).days
+    year_days = (date(2028, 4, 6) - date(2027, 4, 6)).days
+    priced_rate = p.gov.simulation.vat.energy_input_price_basis_rate(instant)
+    vat_surcharge = (
+        answers.electricity_spending
+        / (1 + priced_rate)
+        * (0.05 * zero_days / year_days)
+    )
+    expected = (
+        2 * full
+        + 10_000
+        + winter_fuel
+        - expected_tax
+        - tv_licence
+        - vat_surcharge
+    )
+    assert _programme(result, "state_pension")["baseline"] == pytest.approx(
+        2 * full, abs=0.01
+    )
+    assert _programme(result, "income_tax")["baseline"] == pytest.approx(
+        expected_tax, abs=0.01
+    )
+    assert _programme(result, "winter_fuel_payment")["baseline"] == winter_fuel
+    assert _programme(result, "tv_licence")["baseline"] == tv_licence
+    assert _programme(result, "vat_change")["baseline"] == pytest.approx(
+        vat_surcharge, abs=0.01
+    )
+    assert result["net_income"]["baseline"] == pytest.approx(
+        expected, abs=0.02
+    )
     assert _programme(result, "private_pension_income")["baseline"] == 10_000
     assert _programme(result, "other_income")["baseline"] == 0
     _rows_add_up(result)
@@ -2133,13 +2222,13 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             True,
         ),
         # The Machine Games Duty rise: losses on higher-stake machines,
-        # from 2027-28
+        # from 1 April 2027, the final five days of model year 2026-27
         ("machine_games_duty_rise", {}, 2027, True),
         (
             "machine_games_duty_rise",
             {"higher_stake_machine_losses": 1_000},
             2026,
-            True,
+            False,
         ),
         (
             "machine_games_duty_rise",
@@ -2235,20 +2324,17 @@ def test_bus_fares_are_set_only_when_entered():
     assert household["bus_fare_spending"] == 500
 
 
-@pytest.mark.parametrize(
-    "year, saving",
-    [
-        # 500 x step / (1 - step), step = 10.0% x 95/365
-        (2026, 500 * (0.1 * 95 / 365) / (1 - 0.1 * 95 / 365)),
-        # step = 10.0% x 270/366
-        (2027, 500 * (0.1 * 270 / 366) / (1 - 0.1 * 270 / 366)),
-    ],
-)
-def test_bus_fares_in_england_outside_london_by_hand(year, saving):
-    """£500 a year of bus fares in the North West: about £13 in 2026-27
-    and £40 in 2027-28, the policy card's example, as other benefits
-    (the credit is in epg_subsidy, so household_benefits). Skipped or
-    run, the same, and the national route's."""
+@pytest.mark.parametrize("year", [2026, 2027])
+def test_bus_fares_in_england_outside_london_by_hand(year):
+    """DfT announced the January–December 2027 £2 cap before the Budget.
+    Both sides retain that cap, so £500 of North West fares gets no
+    incremental payment or fare saving on the actual pre-Budget reference."""
+    path = "gov.dft.bus.fares.cap"
+    measure = get_reform("bus_fare_cap_2027")
+    before = with_forecast(None).parameter_changes[path]
+    after = with_forecast(measure.to_scenario()).parameter_changes[path]
+    assert before == after
+    assert before["2027-01-01.2027-12-31"] == 2
     answers = Answers(
         region="NORTH_WEST", bus_fare_spending=500, salary_year=year
     )
@@ -2256,12 +2342,9 @@ def test_bus_fares_in_england_outside_london_by_hand(year, saving):
         answers, ["bus_fare_cap_2027"], year, include=("by_policy",)
     )
     change = changes_by_measure(result)["bus_fare_cap_2027"]
-    assert change["change"] == pytest.approx(saving, abs=0.01)
-    assert change["status"] == "affected"
-    assert round(change["change"]) == {2026: 13, 2027: 40}[year]
-    assert programme(result, "other_benefits")["change"] == pytest.approx(
-        saving, abs=0.01
-    )
+    assert change["change"] == 0
+    assert change["status"] == "not_affected"
+    assert programme(result, "other_benefits")["change"] == 0
     before, after = national_route(answers, ["bus_fare_cap_2027"], year)
     assert result["net_income"]["change"] == pytest.approx(
         after - before, abs=0.01
@@ -2374,11 +2457,12 @@ def test_cash_isa_payments_reach_the_pre_budget_side_and_its_note():
     assert plain["net_income"]["change"] == pytest.approx(0, abs=0.01)
 
 
-def test_machine_games_losses_pay_the_higher_rate_from_2027_28():
+def test_machine_games_losses_pay_the_higher_rate_from_1_april_2027():
     """£1,000 a year lost on higher-stake machines is the household's
     standard-rate machine takings: 20% duty before the Budget and 25% from
     2027-28, so the household is £50 a year worse off, shown in the gambling
-    duty row and with the assumption's note; nothing in 2026-27."""
+    duty row and with the assumption's note. The final five days of model
+    year 2026-27 carry five days of the same duty change."""
     from uk_budget_data.reforms import MACHINE_GAMES_DUTY_ID
 
     answers = Answers(
@@ -2393,7 +2477,9 @@ def test_machine_games_losses_pay_the_higher_rate_from_2027_28():
     early = calculate(
         answers, [MACHINE_GAMES_DUTY_ID], 2026, skip_unaffected=False
     )
-    assert early["net_income"]["change"] == pytest.approx(0, abs=0.01)
+    assert early["net_income"]["change"] == pytest.approx(
+        -50 * 5 / 365, abs=0.01
+    )
     # Without the answer, nothing moves
     plain = calculate(
         dataclasses.replace(answers, higher_stake_machine_losses=0),

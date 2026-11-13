@@ -402,11 +402,11 @@ describe("the household calculation, from the fixture", () => {
     expect(card.querySelector(".result-value")).toBeNull();
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
-    expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, with the selected policies");
+    expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, with the selected Budget policies");
     // Its share, and the waterfall from net income before to after
     expect(tiles[1].querySelector(".forecast-tile-value")).toHaveTextContent("+5.76%");
     const ends = [...card.querySelectorAll(".waterfall-row.is-total")].map((row) => row.textContent);
-    expect(ends).toEqual(["Current law£65,371", "With the policies£69,136"]);
+    expect(ends).toEqual(["Pre-Budget£65,371", "With Budget policies£69,136"]);
     expect(panel.querySelectorAll(".result-card")).toHaveLength(1);
     // The change is said once: no sentence repeating it
     expect(panel).not.toHaveTextContent("The selected policies would");
@@ -505,7 +505,7 @@ describe("the household calculation, from the fixture", () => {
     expect(topNames).toEqual(["Market income", "Taxes", "Benefits", "Net income"]);
     // Open at first: the programmes show under their groups
     expect(rowNames()).toContain("Income tax");
-    for (const name of ["Current law", "With the policies", "Change"]) {
+    for (const name of ["Pre-Budget", "With Budget policies", "Change"]) {
       expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
     }
     // Net income: the bold total row, with its change (the rows add up to it)
@@ -574,9 +574,9 @@ describe("the household calculation, from the fixture", () => {
     expect(earnings.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
     expect(rate.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
     // After first, as the marginal rate card, marking you
-    expect(optionsLabel(earnings)).toBe("With the policies");
+    expect(optionsLabel(earnings)).toBe("With Budget policies");
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
-    expect(within(earnings).getByText("With the selected policies")).toBeInTheDocument();
+    expect(within(earnings).getByText("With the selected Budget policies")).toBeInTheDocument();
     // Change: the gain and loss key, still marking you
     chooseOption(earnings, "Change");
     expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
@@ -1579,8 +1579,8 @@ describe("the Across earnings cards together", () => {
     await waitFor(() => expect(container.querySelector(".single-year-chart-pair .earnings-svg")).not.toBeNull(), { timeout: 5000 });
     const pair = container.querySelector(".single-year-chart-pair");
     const [netCard, rateCard] = pair.querySelectorAll(".single-year-card");
-    chooseOption(netCard, "Current law");
-    expect(optionsLabel(rateCard)).toBe("Current law");
+    chooseOption(netCard, "Pre-Budget");
+    expect(optionsLabel(rateCard)).toBe("Pre-Budget");
     // Where both cards have their parts, a chip toggled on one is toggled
     // on the other, and both keys list the same components in order
     const rateChip = within(rateCard).queryByRole("button", { name: "Income tax" });

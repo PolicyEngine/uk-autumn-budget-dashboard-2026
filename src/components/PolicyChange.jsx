@@ -48,8 +48,8 @@ const YEAR_LABELS = Array.from({ length: MONTHS / 12 }, (_, i) => {
 });
 
 /**
- * Current law (grey, dashed) and the measure (its colour) as steps across
- * April 2026 to March 2032, on a true time axis, with the gap between them
+ * Pre-Budget (grey, dashed) and the measure (its colour) as steps across
+ * 6 April 2026 to 5 April 2032, on a true time axis, with the gap between them
  * shaded in the gain or loss colour and labelled where it is largest and
  * where it ends. Hover, or the arrow keys, pick a step: a guide, a line in
  * words, and its years marked on the card's timeline.
@@ -181,8 +181,8 @@ function ChangeTable({ lines, unit, tone, caption, first }) {
       <thead>
         <tr>
           <th scope="col">{first}</th>
-          <th scope="col">Current law</th>
-          <th scope="col">With the policy</th>
+          <th scope="col">Pre-Budget</th>
+          <th scope="col">With Budget policy</th>
           <th scope="col"><span className="policy-sr-only">Change</span></th>
         </tr>
       </thead>
@@ -207,8 +207,8 @@ const plotCaption = (row) => (row.unit_words ? `${row.label}, ${row.unit_words}`
 /** The plot's key: current law dashed grey, the measure in its colour. */
 const Key = () => (
   <p className="pchg-key" aria-hidden="true">
-    <span className="pchg-key-before">Current law</span>
-    <span className="pchg-key-after">With the policy</span>
+    <span className="pchg-key-before">Pre-Budget</span>
+    <span className="pchg-key-after">With Budget policy</span>
   </p>
 );
 
@@ -239,7 +239,7 @@ function Reveal({ show, hide, children }) {
  * What a measure's "What changes" block shows, or null when it shows
  * nothing: a plot where the value moves over the years, the years or a
  * schedule's periods behind a button, every changing parameter behind a
- * button where there are several, and the main row's card_note. No "Current law → With the
+ * button where there are several, and the main row's card_note. No "Pre-Budget → With the
  * policy" tiles (Vahid, 28 Oct, on #290): a single change of value is said
  * in the card's own words, so a block with nothing else is left out.
  * `figure`: whether the measure's own visual is drawn in the block, which
@@ -250,6 +250,7 @@ export function changeView(entry, lead, figure = false) {
   const first = main?.points?.find(differs);
   if (!main || !first) return null;
   const schedule = entry.display === "schedule";
+  const showPeriods = schedule && main.points.some((point) => /^\d{4}-\d{2}-\d{2}$/.test(point.key));
   const varies = variesByPeriod(main);
   // A plot only where the value moves over the years (fuel duty's dates,
   // the Pension Tax Allowance's path)
@@ -260,7 +261,7 @@ export function changeView(entry, lead, figure = false) {
   // no one pays (PR 290, Anthony, 19:25 and 19:37); the card's details say
   // how the years are weighted
   const byYear = main.points.every((point) => /^\d{4}-\d{2}$/.test(point.label));
-  const yearly = byYear ? null : entry.rows.find((row) => !row.primary && row.unit === main.unit) ?? null;
+  const yearly = byYear ? null : entry.rows.find((row) => !row.primary && row.unit === main.unit && row.points.every((point) => /^\d{4}$/.test(point.key))) ?? null;
   // Every changing line of every parameter, when the measure moves more
   // than one: a change the same in every period it applies, once
   const lines = changeLines(entry.rows.filter((row) => row !== yearly));
@@ -268,8 +269,8 @@ export function changeView(entry, lead, figure = false) {
   const periods = [...new Set(lines.map((line) => line.period))];
   const everyChange = others.length > 0;
   const note = main.card_note ?? null;
-  if (!lead && !note && !figure && !plotted && !varies && !everyChange) return null;
-  return { main, schedule, varies, segments, plotted, lines, others, everyChange, periods, note };
+  if (!lead && !note && !figure && !plotted && !varies && !showPeriods && !everyChange) return null;
+  return { main, schedule, showPeriods, varies, segments, plotted, lines, others, everyChange, periods, note };
 }
 
 /**
@@ -282,7 +283,7 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
   const tone = TONES[direction] ?? "neutral";
   const view = changeView(entry, lead, Boolean(figure));
   if (!view) return null;
-  const { main, schedule, varies, segments, plotted, lines, everyChange, periods, note } = view;
+  const { main, schedule, showPeriods, varies, segments, plotted, lines, everyChange, periods, note } = view;
   return (
     // Named with its measure: each card's section says "What changes", and
     // regions on one page need different names (axe landmark-unique)
@@ -312,9 +313,9 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
           />
         </>
       )}
-      {(varies || everyChange) && (
+      {(varies || showPeriods || everyChange) && (
         <div className="pchg-reveals">
-          {varies && (
+          {(varies || showPeriods) && (
             <Reveal show={schedule ? "Show the periods" : "Show the years"} hide={schedule ? "Hide the periods" : "Hide the years"}>
               <ChangeTable
                 lines={schedule ? schedulePeriods(main) : main.points.filter(differs)}

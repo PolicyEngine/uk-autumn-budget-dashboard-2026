@@ -144,14 +144,14 @@ export function revenueInfo(data) {
   return {
     how: fromPackage
       ? [
-          "Each bar is one policy on its own against current law; the net line is all the policies run together, so it captures the interactions between them.",
+          "Each bar is one policy on its own against the shared pre-Budget baseline; the net line is all the policies run together, so it captures the interactions between them.",
           gapM !== null &&
             (gapM < 1
               ? "Here the interactions come to under £1m a year: the net line and the bars added up agree within £1m."
               : `Here the interactions come to up to £${Math.round(gapM).toLocaleString("en-GB")}m a year: the gap between the net line and the bars added up.`),
         ].filter(Boolean)
       : [
-          "Each bar is one policy on its own against current law; the net line adds up the bars.",
+          "Each bar is one policy on its own against the shared pre-Budget baseline; the net line adds up the bars.",
           <>
             So it leaves out interactions between them.{" "}
             <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>{" "}explains this.

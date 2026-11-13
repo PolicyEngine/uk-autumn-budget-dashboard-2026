@@ -60,11 +60,23 @@ R3_DECLARATIONS = {
     entry["input"]: entry
     for entry in R3_EVIDENCE["input_declarations_and_scopes"]
 }
+NATIVE_EVIDENCE = json.loads(
+    (
+        Path(__file__).parent / "fixtures/input_coverage_eeb6093e.json"
+    ).read_text()
+)
+NATIVE_DECLARATIONS = {
+    entry["input"]: entry
+    for entry in NATIVE_EVIDENCE["input_declarations_and_scopes"]
+}
 R3_RELEASED_KEYS = {
     entry["key"] for entry in R3_EVIDENCE["released_missing_input_limits"]
 }
 # The recorded inputs the installed cut still lacks: each needs its limit.
-STILL_MISSING = [name for name in RECORDED if name not in NO_LONGER_MISSING]
+STILL_MISSING = sorted(
+    {name for name in RECORDED if name not in NO_LONGER_MISSING}
+    | {limit.missing_input for limit in DATA_LIMITS}
+)
 
 
 def installed_build() -> str:
@@ -301,13 +313,17 @@ DEFAULTS.update(
     {
         name: (
             (
-                system.variables[name].possible_values.NONE
+                getattr(
+                    system.variables[name].possible_values,
+                    entry["default"]["enum"],
+                )
                 if isinstance(entry["default"], dict)
                 else entry["default"]
             ),
             entry["default_words"],
         )
-        for name, entry in R3_DECLARATIONS.items()
+        for name, entry in (R3_DECLARATIONS | NATIVE_DECLARATIONS).items()
+        if name in STILL_MISSING
     }
 )
 
@@ -381,7 +397,8 @@ READERS = {
 READERS.update(
     {
         name: tuple(entry["direct_readers"] + entry["helper_readers"])
-        for name, entry in R3_DECLARATIONS.items()
+        for name, entry in (R3_DECLARATIONS | NATIVE_DECLARATIONS).items()
+        if name in STILL_MISSING
     }
 )
 
@@ -568,8 +585,20 @@ HELD = [
     (f"{BETTING}.other_spread", ["other_spread_betting"]),
     (f"{BETTING}.exchange_commission", ["betting_exchange_commission"]),
     (f"{MACHINE_GAMES}.lower", ["machine_games_lower_rate"]),
-    (f"{MACHINE_GAMES}.standard", ["machine_games_standard_rate"]),
-    (f"{MACHINE_GAMES}.higher", ["machine_games_higher_rate"]),
+    (
+        f"{MACHINE_GAMES}.standard",
+        [
+            "machine_games_standard_rate",
+            "machine_games_standard_rate_higher_stake_net_takings",
+        ],
+    ),
+    (
+        f"{MACHINE_GAMES}.higher",
+        [
+            "machine_games_higher_rate",
+            "machine_games_standard_rate_higher_stake_net_takings",
+        ],
+    ),
     (f"{GAMBLING_DUTY}.remote_gaming.rate", ["remote_gaming"]),
     (f"{GAMBLING_DUTY}.bingo.rate", ["bingo"]),
     (f"{GAMBLING_DUTY}.pool_betting.rate", ["pool_betting"]),
@@ -659,7 +688,7 @@ def test_only_missing_gambling_bases_and_unsupported_bands_are_held():
         for item in node.get_descendants()
         if isinstance(item, Parameter)
     ]
-    assert len(paths) == 22
+    assert len(paths) == 23
     for path in paths:
         expected = [
             key
@@ -669,6 +698,14 @@ def test_only_missing_gambling_bases_and_unsupported_bands_are_held():
             )
             if path == f"{BETTING}.{suffix}"
         ]
+        if path in {
+            f"{MACHINE_GAMES}.standard",
+            f"{MACHINE_GAMES}.higher",
+            f"{GAMBLING_DUTY}.machine_games.higher_stake_machines_at_higher_rate",
+        }:
+            expected.append(
+                "machine_games_standard_rate_higher_stake_net_takings"
+            )
         assert keys(limits_for_paths([path])) == expected
         casino = path.startswith(f"{GAMBLING_DUTY}.gaming.")
         assert [
@@ -1126,7 +1163,10 @@ def test_an_input_no_longer_missing_needs_no_limit(registry):
 
 def test_dropping_any_recorded_limit_fails_naming_its_input_and_cuts():
     for limit in DATA_LIMITS:
-        if limit.missing_input not in STILL_MISSING:
+        if (
+            limit.missing_input not in RECORDED
+            or limit.missing_input in NO_LONGER_MISSING
+        ):
             continue
         rest = tuple(other for other in DATA_LIMITS if other is not limit)
         with mock.patch.object(data_limits, "DATA_LIMITS", rest):

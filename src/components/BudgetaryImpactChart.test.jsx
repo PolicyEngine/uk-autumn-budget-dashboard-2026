@@ -163,7 +163,7 @@ describe("what the revenue chart's About says of its net line", () => {
   it("names the combined run when the net line is one, and how far it is from the bars", () => {
     const run = revenueInfo([{ year: 2027, netImpact: 0.6996, barsSum: 0.7, netFromPackage: true }]);
     expect(run.how).toEqual([
-      "Each bar is one policy on its own against current law; the net line is all the policies run together, so it captures the interactions between them.",
+      "Each bar is one policy on its own against the shared pre-Budget baseline; the net line is all the policies run together, so it captures the interactions between them.",
       "Here the interactions come to under £1m a year: the net line and the bars added up agree within £1m.",
     ]);
     const apart = revenueInfo([{ year: 2027, netImpact: 0.65, barsSum: 0.7, netFromPackage: true }]);
@@ -172,7 +172,7 @@ describe("what the revenue chart's About says of its net line", () => {
 
   it("says the net line adds up the bars without one", () => {
     expect(revenueInfo([{ year: 2027, netImpact: 0.7 }]).how[0]).toBe(
-      "Each bar is one policy on its own against current law; the net line adds up the bars.",
+      "Each bar is one policy on its own against the shared pre-Budget baseline; the net line adds up the bars.",
     );
   });
 });

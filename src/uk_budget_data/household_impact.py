@@ -789,16 +789,14 @@ def measure_ids() -> list[str]:
 # Workbook 1, Table A1, line 4.4.1 (Electricity): £20.00 a week.
 # https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/datasets/familyspendingworkbook1detailedexpenditureandtrends
 # ``electricity_consumption`` is an input. policyengine-uk 2.153.5 and
-# later charge VAT on it, but household tax counts only the change in VAT
-# (``vat_change``), which is £0 before the Budget: the zero VAT on domestic
-# electricity holds its 5% baseline in ``vat`` and ``baseline_vat`` alike
-# (``measure_templates.apply_vat_base_change``). So it changes no
-# pre-Budget figure.
+# later charge VAT on it. Household tax counts ``vat_change`` relative to
+# the model's native current law. The pre-Budget rollback can therefore
+# carry a positive surcharge; restoring the native policy removes it.
+# Both sides use the same spending and the native dated VAT calculation.
 ELECTRICITY_SPENDING = round(20.00 * 52)
 # Domestic mains gas, from the same table: line 4.4.2 (Gas), £14.10 a week,
 # averaged over all households as electricity is. ``gas_consumption`` is an
-# input too, which the VAT base template would read for a measure that
-# changes the VAT on domestic gas, so it changes no pre-Budget figure.
+# input too. The tracked electricity policy leaves domestic gas unchanged.
 GAS_SPENDING = round(14.10 * 52)
 
 
@@ -1314,12 +1312,13 @@ def household_entities(
         # gives it back unchanged without journeys
         household["bus_fare_spending"] = answers.bus_fare_spending
     if answers.higher_stake_machine_losses:
-        # Only when answered, so every other household is exactly as
-        # before. policyengine-uk has no input for higher-stake machines
-        # (policyengine-uk#2731 adds one in 2.167.0): the measure raises the
-        # standard rate, and these are the household's only standard-rate
-        # takings, so its change is exact
+        # Higher-stake takings are a subset of standard-rate takings.
+        # The native Budget rule moves this subset to the higher rate;
+        # other standard-rate machines keep their existing rate.
         household["machine_games_standard_rate_net_takings"] = (
+            answers.higher_stake_machine_losses
+        )
+        household["machine_games_standard_rate_higher_stake_net_takings"] = (
             answers.higher_stake_machine_losses
         )
     if answers.brma is not None:
@@ -2108,8 +2107,7 @@ SKIP_REASONS = {
         "2027-28"
     ),
     "cash_isa_limit_kept": (
-        "no cash ISA payments over £12,000, aged 65 or over, or before "
-        "2027-28"
+        "no cash ISA payments over £12,000, aged 65 or over, or before 2027-28"
     ),
     "trading_allowance_raise": (
         "no self-employment receipts, or before 2027-28"
@@ -2119,7 +2117,7 @@ SKIP_REASONS = {
         "to 2027-28"
     ),
     "machine_games_duty_rise": (
-        "no losses on higher-stake gaming machines, or before 2027-28"
+        "no losses on higher-stake gaming machines, or before 2026-27"
     ),
 }
 
@@ -2213,7 +2211,8 @@ def provably_unaffected(
         )
     if measure_id == MACHINE_GAMES_DUTY_ID:
         # The duty reads the household's machine takings, which only its
-        # losses on higher-stake machines give.
+        # losses on higher-stake machines give. Its native 1 April 2027
+        # start affects the final five days of model tax year 2026-27.
         return (
             year < MACHINE_GAMES_DUTY_FROM
             or not answers.higher_stake_machine_losses

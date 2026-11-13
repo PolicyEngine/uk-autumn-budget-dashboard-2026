@@ -1,23 +1,32 @@
-"""The State Pension income tax protection for people over State Pension age
+"""The retained allowance candidate for people over State Pension age
 whose total income is at most the full new State Pension
 (``state_pension_only_income_tax_allowance``), and its sole-income
 alternative.
 
 Hand-computed cases, 2027-28, personal allowance £12,570 (frozen) and
-basic rate 20%. The full new State Pension is £13,036.40 a year from April
-2027 (£250.70 a week, as reported on 26 October 2026); each case gives it
-as an input, so the engine's own projection (£13,036.97) plays no part.
+basic rate 20%. Each case fixes the pension input. The candidate retains
+its archived threshold schedule; it is not the native Pension Tax Allowance.
+The shared rollback disables that native reduction before this alternative
+applies, so the test cannot stack the two designs.
 """
 
+import json
 import math
+from pathlib import Path
 
 import pytest
 from policyengine_uk import Simulation
-from policyengine_uk.system import system
 
 from uk_budget_data.budget_measures.state_pension_only_income_tax_allowance import (
     state_pension_only_income_tax_allowance,
 )
+from uk_budget_data.forecast import with_forecast
+
+ARCHIVED_PENSION = json.loads(
+    (
+        Path(__file__).parent / "fixtures/pre_native_state_pension.json"
+    ).read_text()
+)["years"]
 
 FULL_NEW_STATE_PENSION = 13_036.40
 YEAR = 2027
@@ -44,8 +53,8 @@ def _person(age, state_pension=0.0, **incomes):
 
 
 def _income_tax(situation, **arguments):
-    baseline = Simulation(situation=situation)
-    reformed = Simulation(situation=situation)
+    baseline = Simulation(situation=situation, scenario=with_forecast(None))
+    reformed = Simulation(situation=situation, scenario=with_forecast(None))
     state_pension_only_income_tax_allowance(reformed, **arguments)
     return (
         baseline.calculate("income_tax", YEAR)[0],
@@ -174,21 +183,23 @@ def test_no_change_before_april_2027():
 
 
 @pytest.mark.parametrize("year", [2027, 2028, 2029, 2030, 2031])
-def test_allowance_is_the_engine_full_new_state_pension_rounded(year):
-    """Rounded up, or down while the module's ``ROUND_DOWN`` is set."""
+def test_retained_allowance_uses_its_archived_pension_reference(year):
+    """Source: state_pension.json at stacked base 683dd8c2.
+
+    UK #2751 subsequently changed the native weekly projection. That
+    change must not redefine this unregistered historical candidate.
+    """
     from uk_budget_data.budget_measures import (
         state_pension_only_income_tax_allowance as module,
     )
 
-    weekly = system.parameters.gov.dwp.state_pension.new_state_pension.amount(
-        f"{year}-04-06"
-    )
+    annual = ARCHIVED_PENSION[str(year)]["full_new_state_pension"]
     defaults = state_pension_only_income_tax_allowance.__defaults__
     allowance = dict(zip(range(2027, 2032), defaults[:5]))[year]
     rounding = math.floor if module.ROUND_DOWN else math.ceil
-    assert allowance == rounding(weekly * 52)
-    assert module.ROUNDED_UP[year - 2027] == math.ceil(weekly * 52)
-    assert module.ROUNDED_DOWN[year - 2027] == math.floor(weekly * 52)
+    assert allowance == rounding(annual)
+    assert module.ROUNDED_UP[year - 2027] == math.ceil(annual)
+    assert module.ROUNDED_DOWN[year - 2027] == math.floor(annual)
 
 
 def test_the_measure_can_switch_to_the_allowance_designs():

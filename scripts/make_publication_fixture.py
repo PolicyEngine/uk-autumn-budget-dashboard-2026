@@ -8,7 +8,11 @@ Usage (from the repository root):
 The fixture is a real manifest and real artifacts, written by the same code
 that publishes, so the browser code is tested against bytes and digests the
 Python side actually produces. Its receipts are certified against a dummy
-dataset (see tests/publication_support.py), so it is test data only.
+dataset (see tests/publication_support.py), so it is test data only. This
+legacy modifier-attestation set also mocks all package/bundle metadata as
+the former 6.16.2 / UK 2.165.1 pins; no historical model or data run occurs.
+Default World and test_native_budget_publication_world.py separately exercise
+the native common-reference receipt contract.
 
 Theta is an explicit synthetic exception: it records the expired Pension
 Credit stand-in, not an active native PC limit. The real registry retains
@@ -41,7 +45,10 @@ out = Path(sys.argv[1])
 # A year the dataset covers and the year after it, which it does not, so
 # the browser code is tested on both sides of the projection horizon.
 IN, BEYOND = PROJECTION_END, PROJECTION_END + 1
-world = World()
+# This set covers the old, single-phase modifier-attestation contract. Keep
+# one consistent synthetic historical execution identity for all its entries;
+# native common-reference recipes have separate tests/fixtures.
+world = World(historical=True)
 original_attestations_root = attestations.ATTESTATIONS_ROOT
 original_attestation_repository = attestations.ATTESTATION_REPOSITORY
 attestations.ATTESTATIONS_ROOT = world.root / "attestations"

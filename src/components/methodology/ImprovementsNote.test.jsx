@@ -11,12 +11,7 @@ import { IMPROVEMENTS_NOTE } from "./improvementsText";
 // the upstream model already has the Budget measures from 2.170.0
 const APPROVED = `What we're improving
 
-A later update of these results will:
-- apply the trading allowance to miscellaneous income as well as trading income, which will raise our estimate of its cost;
-- correct how the Carer's Allowance taper interacts with overlapping benefits, such as the State Pension, in 2030-31;
-- extend the fuel duty cut to road fuel gases (LPG and natural gas), as the government's costing does.
-
-We are also working on:
+We are working on:
 - projecting household electricity spending with retail energy prices rather than general inflation.
 `;
 
@@ -29,7 +24,7 @@ const asText = ({ title, parts }) =>
 describe("What we're improving (ImprovementsNote)", () => {
   it("keeps the remaining work after the selected integrations", () => {
     expect(asText(IMPROVEMENTS_NOTE)).toBe(APPROVED);
-    expect(IMPROVEMENTS_NOTE.parts.map(({ items }) => items.length)).toEqual([3, 1]);
+    expect(IMPROVEMENTS_NOTE.parts.map(({ items }) => items.length)).toEqual([1]);
   });
 
   // PR 376 and E3 complete the PTA and savings source work in this
@@ -38,7 +33,7 @@ describe("What we're improving (ImprovementsNote)", () => {
   it("promises nothing for the next update, and lists no finished work", () => {
     for (const { lead, items } of IMPROVEMENTS_NOTE.parts) {
       expect(lead).not.toMatch(/next update/i);
-      for (const item of items) expect(item).not.toMatch(/adding the Budget's measures to PolicyEngine UK|add national figures for the savings income tax rise|give the Pension Tax Allowance/);
+      for (const item of items) expect(item).not.toMatch(/adding the Budget's measures to PolicyEngine UK|add national figures for the savings income tax rise|give the Pension Tax Allowance|trading allowance to miscellaneous income|overlapping benefits|road fuel gases/);
     }
     // Every item but the last of a list ends with a semicolon, the last with a full stop
     for (const { items } of IMPROVEMENTS_NOTE.parts) {

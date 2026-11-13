@@ -1,20 +1,20 @@
-"""Candidate measures for the UK Autumn Budget 2026 (28 October 2026).
+"""Autumn Budget 2026 measures against pre-Budget policy.
 
-These are candidates, modelled before the Budget from reporting and
-briefing up to 24 October 2026; none is announced policy. They replaced
-the nine Autumn Budget 2025 placeholder measures on 24 October, all of
-which are already in the policyengine-uk 2.132.6 baseline or had lapsed.
+The national package restores the installed model's post-Budget policy.
+``budget_policy.pre_budget_policy_changes`` supplies the common
+pre-Budget reference on both sides; each selected measure restores its
+native parameters through ``native_policy_changes``. This keeps an
+unselected measure at pre-Budget policy and applies selected measures
+once, including when they are combined. Both sides use the same native
+October economic assumptions.
 
-Every measure is compared against current law: the installed
-policyengine-uk (2.132.6, through policyengine 6.10.2), with no baseline
-changes of its own, except the Plan 2 measure, whose baseline also counts
-modelled student loan repayments. Every measure that moves capital gains
-tax holds capital gains realisations fixed (``static_capital_gains``), so
-its figure is static. A measure changes parameters
-(``parameter_changes``, bound by content) or applies a modifier from
-``budget_measures``, each in a module of its own (of fixed shape, which
-receipts can bind; this module fills caches at run time, so no modifier
-may live here).
+The former forward formula modifiers remain available for historical
+tests and withdrawn candidates, but the native package does not run them.
+Calculator-only measures retain their separate restrictions. Every
+measure that moves capital gains tax holds capital gains realisations
+fixed (``static_capital_gains``), so its figure is static. Parameter
+changes are bound by content; any retained structural modifier lives in
+its own ``budget_measures`` module for receipt binding.
 
 Year Y is fiscal year Y-(Y+1).
 """
@@ -28,32 +28,17 @@ from uk_budget_data.budget_measures import (
 from uk_budget_data.budget_measures import (
     zero_vat_on_domestic_electricity as _electricity,
 )
-from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
-    bus_fare_cap_2027,
-)
-from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
-    carers_allowance_earnings_taper,
-)
 from uk_budget_data.budget_measures.connect_student_loan_repayments import (
     connect_student_loan_repayments,
 )
 from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
     employer_ni_relief_ages_21_to_24,
 )
-from uk_budget_data.budget_measures.household_energy_payment_2026 import (
-    household_energy_payment_2026,
-)
 from uk_budget_data.budget_measures.pension_tax_allowance import (
     pension_tax_allowance,
 )
 from uk_budget_data.budget_measures.planned_cash_isa_limit import (
     planned_cash_isa_limit,
-)
-from uk_budget_data.budget_measures.pre_budget_vat_on_domestic_electricity import (
-    pre_budget_vat_on_domestic_electricity,
-)
-from uk_budget_data.budget_measures.pump_vat_on_fuel_duty_deferral import (
-    pump_vat_on_fuel_duty_deferral,
 )
 from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
 from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
@@ -65,9 +50,7 @@ from uk_budget_data.budget_measures.state_pension_only_income_tax_allowance impo
 from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
 )
-from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
-    zero_vat_on_domestic_electricity,
-)
+from uk_budget_data.budget_policy import native_policy_changes
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.forecast import (
     FUEL_DUTY_STATUTORY,
@@ -418,9 +401,14 @@ def _create_fuel_duty_rise_deferral() -> Reform:
     return Reform(
         id=FUEL_DUTY_DEFERRAL_ID,
         name="Fuel duty cut extended",
-        description=_fuel_duty_deferral_description(),
-        parameter_changes=rate_change(FUEL_DUTY, fuel_duty_deferral_rates()),
-        simulation_modifier=pump_vat_on_fuel_duty_deferral,
+        description=(
+            "The 5p cut in fuel duty continues to 30 June 2027. The main "
+            "rate rises to 60.59p a litre on 1 July 2027 and follows the "
+            "native RPI schedule after that. Compared with the actual "
+            "pre-Budget schedule, including the January and March 2027 "
+            "steps; the model applies its own fuel and VAT treatment."
+        ),
+        parameter_changes=native_policy_changes(FUEL_DUTY_DEFERRAL_ID),
     )
 
 
@@ -503,18 +491,19 @@ def _create_state_pension_income_tax_protection(
 ) -> Reform:
     design = design or STATE_PENSION_PROTECTION_DESIGN
     modifier, description = STATE_PENSION_PROTECTION_DESIGNS[design]
+    if design == "tax_reduction":
+        modifier = None
+        changes = native_policy_changes(STATE_PENSION_ALLOWANCE_ID)
+    else:
+        # The allowance designs move taxable income and the capital gains
+        # rate; the native tax reduction leaves both unchanged.
+        changes = static_capital_gains()
     return Reform(
         id=STATE_PENSION_ALLOWANCE_ID,
         name="Pension Tax Allowance",
         description=description,
         simulation_modifier=modifier,
-        # The PTA ("tax_reduction") lowers the liability and leaves taxable
-        # income, and so the capital gains rate, alone: no capital gains
-        # pin, which would only add noise in the years it is not in force.
-        # The allowance designs move taxable income, so they carry it.
-        parameter_changes=(
-            None if design == "tax_reduction" else static_capital_gains()
-        ),
+        parameter_changes=changes,
     )
 
 
@@ -569,20 +558,22 @@ def _electricity_vat_description() -> str:
     )
 
 
-# The measure is scored against 5% in every month, as Table 6.1 scores it.
-# Current law zero-rates Great Britain's domestic electricity from
-# 1 October 2026 to 31 March 2027 (SI 2026/987), and policyengine-uk
-# 2.153.5 and later charge it so. So the measure has a pre-Budget side,
-# which holds electricity at 5% for the years the measure changes
-# (budget_measures/pre_budget_vat_on_domestic_electricity.py); the Budget
-# side holds the same 5% and takes the zero-rated months off it.
+# The common pre-Budget reference retains SI 2026/987's GB zero rate
+# through March 2027. Selecting the measure restores the native extension,
+# using the model's dated schedule and day weighting on both sides.
 def _create_domestic_electricity_zero_vat() -> Reform:
     return Reform(
         id=ELECTRICITY_VAT_ID,
         name="Zero VAT on domestic electricity",
-        description=_electricity_vat_description(),
-        simulation_modifier=zero_vat_on_domestic_electricity,
-        baseline_simulation_modifier=pre_budget_vat_on_domestic_electricity,
+        description=(
+            "The existing zero rate of VAT on domestic electricity in "
+            "Great Britain is extended through 30 June 2027, with "
+            "Northern Ireland included from 1 April 2027. Compared with "
+            "the actual pre-Budget policy, which already zero-rated "
+            "Great Britain through March 2027. The model day-weights the "
+            "dated rates; gas is unchanged."
+        ),
+        parameter_changes=native_policy_changes(ELECTRICITY_VAT_ID),
     )
 
 
@@ -737,18 +728,10 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
 # a new IT system". The limit is 16 hours at the National Living Wage, £204
 # a week in 2026-27.
 #
-# Budget day, from the Budget document (6.13, 6.128) and the policy
-# costings (p. 16); each is a default argument of
-# budget_measures/carers_allowance_earnings_taper.py, and changing one
-# changes the module's receipt, so it needs a fresh two-person attestation:
-# - start: ``start_year=2030`` with ``first_year_share=0.5``, half of
-#   2030-31's effect, as the start date "within the 2030-31 financial year"
-#   is still to be confirmed.
-# - limit: 16 hours at the National Living Wage, rounded up to the pound:
-#   the OBR's wage for each April (EFO October 2026, Table 1.13), £212 at
-#   April 2027's £13.21, £228 in 2030-31 and £234 in 2031-32.
-# - rate: ``taper_rate=1.0`` (100%).
-# - Registered and in the package (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS).
+# Budget document paragraphs 6.13 and 6.128; policy costings p. 16.
+# Restore the native taper parameters rather than wrapping the native
+# award with the former forward modifier. The dated start and downstream
+# couple and overlapping-benefit rules then come from the same model.
 def _create_carers_allowance_earnings_taper() -> Reform:
     return Reform(
         id=CARERS_ALLOWANCE_TAPER_ID,
@@ -760,18 +743,14 @@ def _create_carers_allowance_earnings_taper() -> Reform:
             "rounded up to the pound): it is "
             "reduced by £1 for each £1 of earnings above the limit, a 100% "
             "taper, to nothing once earnings exceed the limit by the full "
-            "weekly rate. The taper starts within 2030-31, on a date still to "
-            "come, so the model counts half of that year. "
-            "Carers at or below the limit, and "
-            "Scotland's Carer Support Payment, are unchanged. Claims by "
-            "carers "
-            "the limit kept out follow the data's take-up draw (60%). For "
-            "a carer on Universal Credit the model counts the extra "
-            "allowance in full as unearned income but deducts none of the "
-            "PAYE on it from earnings, as DWP would, so such a carer can "
-            "lose overall."
+            "weekly rate. The native model uses a provisional start of "
+            "6 October 2030 until DWP confirms the date within 2030-31. "
+            "Carers at or below the limit and Scotland's Carer Support "
+            "Payment are unchanged. The native model applies the couple "
+            "election, overlapping-benefit rules, income tax and Universal "
+            "Credit interactions; take-up follows the data."
         ),
-        simulation_modifier=carers_allowance_earnings_taper,
+        parameter_changes=native_policy_changes(CARERS_ALLOWANCE_TAPER_ID),
     )
 
 
@@ -862,8 +841,12 @@ UNEARNED_INCOME_RATES_FROM = 2027
 
 
 def _rates_up(paths) -> dict[str, dict[str, float]]:
-    """Current law's rate plus 2 points at each path, every policy year
-    from 2027."""
+    """Native post-Budget rates at each path from 2027.
+
+    The model already contains the Budget's two-point rise. Reading the
+    native rate keeps the withdrawn combined savings/property candidate
+    on the same policy without adding the increase a second time.
+    """
     changes = {}
     for path in paths:
         node = forecast_parameters().get_child(path)
@@ -871,9 +854,7 @@ def _rates_up(paths) -> dict[str, dict[str, float]]:
             rate_change(
                 path,
                 {
-                    str(year): round(
-                        node(f"{year}-04-06") + UNEARNED_INCOME_RATE_RISE, 6
-                    )
+                    str(year): node(f"{year}-04-06")
                     for year in POLICY_YEARS
                     if year >= UNEARNED_INCOME_RATES_FROM
                 },
@@ -883,12 +864,12 @@ def _rates_up(paths) -> dict[str, dict[str, float]]:
 
 
 def property_income_rates_up() -> dict[str, dict[str, float]]:
-    """The property basic, higher and additional rates, 2 points up."""
+    """Native property rates after the Budget's two-point rise."""
     return _rates_up(PROPERTY_INCOME_RATE_PATHS)
 
 
 def savings_income_rates_up() -> dict[str, dict[str, float]]:
-    """The savings basic, higher and additional rates, 2 points up."""
+    """Native savings rates after the Budget's two-point rise."""
     return _rates_up(SAVINGS_INCOME_RATE_PATHS)
 
 
@@ -910,12 +891,12 @@ def _create_property_income_rates_up() -> Reform:
             "From 6 April 2027 the income tax rates on property income rise "
             "to 24%, 44% and 49% at the basic, higher and additional rates "
             "in England, Wales and Northern Ireland: 2 percentage points "
-            "above current law, which already includes Budget 2025's rises. "
+            "above pre-Budget policy, which includes Budget 2025's rises. "
             "Finance cost relief for landlords follows the property basic "
             "rate, so rises to 24%, Scottish landlords' included. Incomes "
             "are held fixed, with no behavioural response."
         ),
-        parameter_changes=property_income_rates_up(),
+        parameter_changes=native_policy_changes(PROPERTY_INCOME_RATES_ID),
     )
 
 
@@ -927,11 +908,11 @@ def _create_savings_income_rates_up() -> Reform:
         description=(
             "From 6 April 2027 the income tax rates on savings income rise "
             "to 24%, 44% and 49% at the basic, higher and additional rates "
-            "across the UK: 2 percentage points above current law, which "
+            "across the UK: 2 percentage points above pre-Budget policy, which "
             "already includes Budget 2025's rises. Dividend rates are "
             "unchanged. Incomes are held fixed, with no behavioural response."
         ),
-        parameter_changes=savings_income_rates_up(),
+        parameter_changes=native_policy_changes(SAVINGS_INCOME_RATES_ID),
     )
 
 
@@ -946,7 +927,7 @@ def _create_unearned_income_rates_up() -> Reform:
             "to 24%, 44% and 49% at the basic, higher and additional rates "
             "across the UK, and those on property income to the same rates "
             "in England, Wales and Northern Ireland: 2 percentage points "
-            "above current law, which already includes Budget 2025's rises. "
+            "above pre-Budget policy, which includes Budget 2025's rises. "
             "Finance cost relief for landlords follows the property basic "
             "rate, so rises to 24%. Dividend rates are unchanged. Incomes "
             "are held fixed, with no behavioural response."
@@ -959,13 +940,10 @@ def _create_unearned_income_rates_up() -> Reform:
 # HOUSEHOLD ENERGY PAYMENT: £100, BANDS A TO D, ENGLAND, WINTER 2026-27
 # =============================================================================
 
-# Announced in the speech (28 October 2026, 12:53). Budget day, from the
-# documents (each a default of the hand-written modifier in
-# budget_measures/household_energy_payment_2026.py; changing one needs a
-# fresh attestation): amount=100, year=2026 (winter 2026-27),
-# country="ENGLAND" (devolved governments get a Barnett share instead; "UK"
-# pays every country), bands=("A", "B", "C", "D"). In the package
-# (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS).
+# Announced in the speech (28 October 2026, 12:53). The native
+# household_energy_payment pays this separately from the 2022 rebate.
+# Restoring its parameters avoids adding it a second time through the
+# historical ebr_council_tax_rebate modifier.
 
 
 def _create_household_energy_payment_2026() -> Reform:
@@ -980,7 +958,7 @@ def _create_household_energy_payment_2026() -> Reform:
             "Wales and Northern Ireland receive a share of the funding "
             "instead, which is not modelled."
         ),
-        simulation_modifier=household_energy_payment_2026,
+        parameter_changes=native_policy_changes(HOUSEHOLD_ENERGY_PAYMENT_ID),
     )
 
 
@@ -994,16 +972,10 @@ def _create_household_energy_payment_2026() -> Reform:
 # limit. The parameter is not uprated, so writing every year from the
 # first is the whole change. The property allowance (£1,000) is unchanged.
 #
-# Who gains is set in the data, not here. From the national build 0639b9c7
-# (Microcosm's trading_allowance_receipts stage) the data store each
-# trader's gross receipts: a trader drawn as already claiming the £1,000
-# allowance has receipts of profit plus £1,000, any other trader profit
-# plus £3,000. The draw's shares are 72% for profits up to £4,500, 14% from
-# £4,500 to £9,000 and none above, set so that an earlier national gave
-# HMRC's estimate (about 400,000 people paying £380 less on average). The
-# engine then relieves a claimant by up to £3,000 less their stored £1,000
-# and no other trader. The description says so; the earlier data stored no
-# receipts, and the engine then relieved a profit up to £3,000 in full.
+# Native relief shares one allowance across trade and miscellaneous income,
+# using receipts, expenses and recorded claim status. The current certified
+# data lack claim status and miscellaneous income; the data-limit registry
+# holds the national estimate rather than carrying old claimant-band scores.
 TRADING_ALLOWANCE_RAISED = 3_000
 TRADING_ALLOWANCE_FROM = 2027
 
@@ -1013,21 +985,16 @@ def _create_trading_allowance_raise() -> Reform:
         id=TRADING_ALLOWANCE_ID,
         name="Trading allowance raised to £3,000",
         description=(
-            f"From 6 April {TRADING_ALLOWANCE_FROM} the "
-            "trading allowance, which relieves trading receipts in place "
-            "of actual expenses, rises from £1,000 to "
+            f"From 6 April {TRADING_ALLOWANCE_FROM} the government raises "
+            "the trading allowance from £1,000 to "
             f"£{TRADING_ALLOWANCE_RAISED:,}, for income tax and Class 4 "
-            "National Insurance. The surveys behind our data record "
-            "traders' profits, not their receipts, so we assume who already "
-            "claims the £1,000 allowance: 72% of traders with profits up to "
-            "£4,500, 14% of those with profits from £4,500 to £9,000 and "
-            "none above. Only those traders gain, and we count no one who "
-            "switches from actual expenses to the larger allowance."
+            "National Insurance. The native model shares the allowance "
+            "across trading receipts and eligible miscellaneous income, considers "
+            "actual expenses and uses recorded claim status. We cannot "
+            "estimate its national effect on the certified data, which "
+            "lack trading-allowance claim status and eligible miscellaneous income."
         ),
-        parameter_changes=threshold_change(
-            TRADING_ALLOWANCE,
-            _years_from(TRADING_ALLOWANCE_FROM, TRADING_ALLOWANCE_RAISED),
-        ),
+        parameter_changes=native_policy_changes(TRADING_ALLOWANCE_ID),
     )
 
 
@@ -1035,20 +1002,11 @@ def _create_trading_allowance_raise() -> Reform:
 # SINGLE BUS FARES CAPPED AT £2 OUTSIDE LONDON, CALENDAR 2027
 # =============================================================================
 
-# Budget 2026 (Table 6.1, "Single bus fares capped at £2 outside London"):
-# a £2 maximum single fare on participating services in England outside
-# London from 1 January to 31 December 2027, where most are capped at £3
-# until then. Left out on Budget day only because runs were in flight
-# (María, 29 October 2026); registered and in the package since. Vahid,
-# 29 October 2026 (issue #329, option 3): the Treasury's costing (Table
-# 6.1) shared out across households by their bus fare spending in England
-# outside London, not our own estimate of the national cost: 10.0% of
-# spending at £3 fares while the cap runs (£230m / 0.9 operator
-# participation / £2,557m), grossed up from current law's spending at £2.
-# It reads no gov.dft.bus parameter, so it does not reach the data limit
-# bus_uncapped_single_fares. Defaults of the hand-written modifier in
-# budget_measures/bus_fare_cap_2027.py: fall=0.10, capped_2026=95/365,
-# capped_2027=270/366, country="ENGLAND", excluded_region="LONDON".
+# Budget 2026, Table 6.1: £2 on participating services in England outside
+# London, January to December 2027. This native-policy comparison restores
+# gov.dft.bus.fares.cap. It replaces the earlier dashboard-only allocation
+# of the Treasury costing and therefore retains the native bus-input
+# coverage checks rather than bypassing them.
 
 
 def _create_bus_fare_cap_2027() -> Reform:
@@ -1057,19 +1015,13 @@ def _create_bus_fare_cap_2027() -> Reform:
         name="Single bus fares capped at £2",
         description=(
             "Single bus fares on participating services in England outside "
-            "London are capped at £2 instead of £3 from 1 January to "
-            "31 December 2027. The saving is the Treasury's costing "
-            "(Table 6.1) shared out across households by their bus fare "
-            "spending in England outside London: 10.0% of what that "
-            "spending would be at £3 fares (£230m, divided by 0.9 for "
-            "operator participation, over £2,557m of spending), for the "
-            "days the cap runs: 1 January to 5 April 2027 in 2026-27 and "
-            "6 April to 31 December 2027 in 2027-28. London residents get "
-            "£0. The saving is counted as household income, a "
-            "methodological choice: the official cost is a grant to bus "
-            "operators. Spending is held fixed, with no extra travel."
+            "London are capped at £2 from 1 January to "
+            "31 December 2027. DfT announced this cap in July 2026, before "
+            "the Autumn Budget, so the actual pre-Budget and current-law "
+            "scenarios both retain it. Its incremental Budget effect is "
+            "zero on this reference. London is outside the national cap."
         ),
-        simulation_modifier=bus_fare_cap_2027,
+        parameter_changes=native_policy_changes(BUS_FARE_CAP_ID),
     )
 
 
@@ -1080,10 +1032,10 @@ def _create_bus_fare_cap_2027() -> Reform:
 
 # Budget 2026 (2.52, 6.248; Table 6.1 row 11): the cut in the cash ISA limit
 # to £12,000 a year for under-65s from 6 April 2027 (SI 2026/1018 reg 6)
-# does not go ahead. policyengine-uk 2.151.0 has no ISA limits, so current
-# law is the Budget's and the pre-Budget side carries the cut
-# (budget_measures/planned_cash_isa_limit.py; its numbers are default
-# arguments there). Its effect rests on what a household pays into cash
+# does not go ahead. The selected side restores the native subscription
+# limit; the pre-Budget side also retains the approved excess-cash
+# interest assumption (budget_measures/planned_cash_isa_limit.py).
+# Its effect rests on what a household pays into cash
 # ISAs. The data the page was first published on held no such payments;
 # the national build 0639b9c7 imputes them from HMRC's ISA statistics
 # (PolicyEngine/microcosm#1415). A national figure would still rest on
@@ -1107,6 +1059,10 @@ def _create_cash_isa_limit_kept() -> Reform:
             "national figure would rest on where savers put what the "
             "planned limit left out, so we publish none."
         ),
+        parameter_changes=native_policy_changes(CASH_ISA_LIMIT_ID),
+        # The statutory cap alone does not create taxable interest on the
+        # counterfactual excess cash. Retain the separately approved
+        # household diversion assumption on the pre-Budget side.
         baseline_simulation_modifier=planned_cash_isa_limit,
     )
 
@@ -1122,23 +1078,14 @@ def _create_cash_isa_limit_kept() -> Reform:
 # machine suppliers from 1 April 2028 (+£20m, +£15m, +£15m, +£10m), which
 # changes who pays, not the rate, and is not modelled.
 #
-# policyengine-uk 2.151.0 and 2.164.2 split takings only by the duty's
-# existing bands (lower 5%, standard 20%, higher 25%), with no input for
-# the higher-stake part of the standard band (policyengine-uk#2731 adds
-# one in 2.167.0). So the measure raises the standard rate, from 2027-28:
-# - In the Household calculator this is exact: the form asks only for
-#   losses on higher-stake machines and sets them as the household's
-#   standard-rate takings.
-# - On survey data it reaches every standard-rate machine, pubs' Category C
-#   and D machines too, so it is an upper bound on the static cost (about
-#   1 / 0.757 of it on the Gambling Commission's Category B share; María,
-#   policyengine.py#731, 2 November 2026). Held back from the national
-#   results (calculatorOnlyMeasures.js) until the engine and the data carry
-#   the split. The certified data the dashboard runs on today hold no
-#   gambling takings at all (data limit machine_games_standard_rate).
-# Annual keys: the engine applies the change from 6 April 2027, so
-# 2026-27, which the Treasury also scores at £0, has none of it.
-MACHINE_GAMES_DUTY_FROM = 2027
+# The adopted native model separates the higher-stake part of the
+# standard-rate base and switches only that part to the higher rate.
+# The household calculator must supply that subset as well as total
+# standard-rate takings. The national publication hold remains: adopting
+# the native formula does not establish coverage in the certified data.
+# First affected model tax year: the native 1 April 2027 start contributes
+# five days to 2026-27 (6 April 2026 to 5 April 2027).
+MACHINE_GAMES_DUTY_FROM = 2026
 MACHINE_GAMES_DUTY_HIGHER_STAKE_RATE = 0.25
 
 
@@ -1152,18 +1099,12 @@ def _create_machine_games_duty_rise() -> Reform:
             "takings from 1 April 2027; lower-stake machines stay at 20%. "
             "The duty is counted against the households whose gambling "
             "losses make up the takings, with no change in play. The model "
-            "has no separate input for higher-stake machines, so the "
-            "change raises its standard rate: exact for one household, "
-            "whose losses on higher-stake machines the form asks for, but "
-            "on survey data it also reaches lower-stake machines, so there "
-            "is no national figure yet."
+            "uses its separate higher-stake share of standard-rate "
+            "takings, leaving other standard-rate takings at 20%. It "
+            "remains available only for the household calculator; no "
+            "national estimate is published."
         ),
-        parameter_changes=rate_change(
-            MACHINE_GAMES_STANDARD_RATE,
-            _years_from(
-                MACHINE_GAMES_DUTY_FROM, MACHINE_GAMES_DUTY_HIGHER_STAKE_RATE
-            ),
-        ),
+        parameter_changes=native_policy_changes(MACHINE_GAMES_DUTY_ID),
     )
 
 
@@ -1323,13 +1264,13 @@ _NUMBER_WORDS = {
 
 
 def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
-    """One simulation of every candidate measure.
+    """One simulation restoring every selected native Budget measure.
 
     Built by ``publication.combine.combine_measures``, as a combined run
     is: the members' merged parameter changes (it refuses two members
     changing one parameter) and each member's modifier, in order of measure
-    id. The electricity measure brings its pre-Budget side, so the combined
-    baseline charges 5% VAT on domestic electricity in every month too.
+    id. The common pre-Budget rollback is applied to both sides before
+    these restores. No native policy's former forward modifier runs.
     """
     from uk_budget_data.models import DataConfig
     from uk_budget_data.publication.combine import combine_measures

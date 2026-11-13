@@ -1,5 +1,5 @@
 // The Pre-measures forecast view (?tab=outlook; ?tab=living before): the
-// outlook without the Budget measures, under current law, in three
+// outlook under pre-Budget policy, in three
 // sub-tabs. Living standards and Poverty (CurrentLawSection) mirror
 // Population impact's sub-tabs of the same names; Forecast changes is the OBR
 // economic forecast behind the baseline, as calendar-year growth. Ported
@@ -98,8 +98,8 @@ const SUB_TAB_VALUES = OUTLOOK_SUB_TABS.map((tab) => tab.value);
 const ID_PREFIX = "outlook";
 
 /**
- * The Pre-measures forecast view: what happens without the measures, under
- * current law, as pill sub-tabs under the view tabs. Living standards
+ * The Pre-measures forecast view: what happens under
+ * pre-Budget policy, as pill sub-tabs under the view tabs. Living standards
  * (incomes, growth across the distribution, inequality) and Poverty are the
  * twins of Population impact's sub-tabs of the same names, which show the
  * selected measures' effect; each links to the other. Forecast changes is the

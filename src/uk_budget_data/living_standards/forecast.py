@@ -11,16 +11,15 @@ PolicyEngine-derived series from it, and writes:
   ``post_published: true``, the post label and the source (file name,
   sha256, OBR page); nothing else in the file changes.
 
-The derived series:
+The derived series are separate from the eight OBR-published series:
 
-- CPI after housing costs: policyengine-uk's series is a PolicyEngine
-  derivation (ONS ad hoc 2863 definition) that cannot be rebuilt from the
-  EFO tables, so its post value is the pre-Budget value moved by the change
-  in OBR CPI for the same year. The series' source says so.
-- Social rent: the England rent cap, CPI + 1%, applied from April. Year Y
-  takes the OBR calendar-year CPI for Y-1 (rounded to 1 d.p.) + 1 point,
-  as policyengine-uk does; 2026 is set by September 2025 CPI outturn
-  (3.8%), so it keeps its pre-Budget value.
+- The exact October workbook and reviewed native model/source select actual
+  native CPI-AHC and social-rent inputs. Social rent uses statutory
+  September CPI, not calendar-year average CPI. The model-input readback
+  also records native per-capita GDP/non-labour income and their population
+  basis without deriving them from historical chart values.
+- A generic or future EFO gets explicitly labelled approximations for
+  derived series; it never silently inherits installed October inputs.
 
 This changes only the page's forecast series. The model's own uprating
 (the national results, and every projection on the Baseline outlook) uses
@@ -28,9 +27,11 @@ the OBR forecast in the policyengine-uk release the bundle pins, and
 changes only with a new policyengine-uk release.
 """
 
+import copy
 import json
 import re
 from datetime import datetime, timezone
+from importlib.metadata import version
 from pathlib import Path
 from typing import Optional
 
@@ -48,6 +49,13 @@ from .obr import (
 POST_FILE_NAME = "obr_forecast_post.json"
 DEFAULT_POST_LABEL = "OBR October 2026 (Autumn Budget)"
 OBR_FORECAST_URL = "https://obr.uk/efo/"
+NATIVE_OCTOBER_MODEL_VERSIONS = frozenset({"2.174.1"})
+NATIVE_OCTOBER_SOURCE_URL = (
+    "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
+)
+OCTOBER_ECONOMY_SHA256 = (
+    "96795d1747bb5a4978c7fb768689d5fd31f568e5223db8a94b1bd92ba7f6c118"
+)
 
 # meta.notes' line from the build while no later forecast is loaded
 STALE_POST_NOTE = (
@@ -76,6 +84,8 @@ def compute_post(
     absent: Optional[dict] = None,
     published_september_cpi: Optional[dict] = None,
     model_cpi_ahc: Optional[dict] = None,
+    model_social_rent: Optional[dict] = None,
+    model_source: Optional[str] = None,
 ) -> dict:
     """Post values (fractions by year) and source per series key.
 
@@ -86,16 +96,21 @@ def compute_post(
     beyond the gaps CARRIED_YEARS allows. ``published_september_cpi``
     (default PUBLISHED_SEPTEMBER_CPI) sets social rent where the September
     CPI behind it is published; the March check passes {}, since the March
-    forecast was made before it. ``model_cpi_ahc`` (default: the CPI after
-    housing costs the model runs on, uk_budget_data.forecast) gives that
-    series by year where it has a value, so the chart and the model state
-    one figure; the March check passes {}.
+    forecast was made before it. ``model_cpi_ahc`` and
+    ``model_social_rent`` are explicit native readbacks supplied only after
+    October workbook and model/source guards pass. A generic or future EFO
+    uses labelled approximations, never installed October derivations.
+    Historical March checks supply no native readbacks.
     """
     absent = absent or {}
     if published_september_cpi is None:
         published_september_cpi = PUBLISHED_SEPTEMBER_CPI
-    if model_cpi_ahc is None:
-        model_cpi_ahc = _model_cpi_ahc()
+    model_cpi_ahc = model_cpi_ahc or {}
+    model_social_rent = model_social_rent or {}
+    if (model_cpi_ahc or model_social_rent) and not model_source:
+        raise ForecastTableError(
+            "Native derived readbacks require model/source provenance"
+        )
     by_key = _series_by_key(forecast)
     missing_keys = [
         k for k in by_key if k not in parsed and k not in absent
@@ -144,11 +159,15 @@ def compute_post(
     cpi_post = out["cpi"]["values"]
     if "cpi_ahc" in by_key:
         pre = _pre(by_key["cpi_ahc"])
-        if model_cpi_ahc and all(y in model_cpi_ahc for y in pre):
+        if model_cpi_ahc:
+            missing = sorted(set(pre) - set(model_cpi_ahc))
+            if missing:
+                raise ForecastTableError(
+                    f"Native cpi_ahc readback lacks years: {missing}"
+                )
             values = {y: model_cpi_ahc[y] for y in pre}
             source = (
-                "PolicyEngine derivation, as the model runs on it "
-                "(uk_budget_data.forecast): policyengine-uk's "
+                f"Native {model_source}: "
                 "create_ahc_deflator on the OBR's CPI and actual rents "
                 "(Table 1.7) and Ofwat water bills (not an OBR series)"
             )
@@ -164,6 +183,24 @@ def compute_post(
         out["cpi_ahc"] = {"values": values, "source": source, "carried": []}
     if "social_rent" in by_key:
         pre = _pre(by_key["social_rent"])
+        if model_social_rent:
+            missing = sorted(set(pre) - set(model_social_rent))
+            if missing:
+                raise ForecastTableError(
+                    f"Native social_rent readback lacks years: {missing}"
+                )
+            out["social_rent"] = {
+                "values": {y: model_social_rent[y] for y in pre},
+                "source": (
+                    f"Native {model_source}: England social rent policy cap, "
+                    "previous September CPI + 1 percentage point. Published "
+                    "September outturns and native statutory September CPI "
+                    "forecasts from OBR receipts Table 4.19; not an "
+                    "OBR-published social rent series."
+                ),
+                "carried": [],
+            }
+            return out
         values = {}
         for y in pre:
             if y <= SOCIAL_RENT_FIXED_YEAR:
@@ -183,24 +220,60 @@ def compute_post(
         out["social_rent"] = {
             "values": values,
             "source": (
-                "England social rent policy cap: September CPI + 1%; 2026 "
+                "PolicyEngine approximation of England social rent policy cap: September CPI + 1%; 2026 "
                 "and 2027 set by the September 2025 and 2026 CPI outturns, "
                 "later years by OBR calendar-year CPI for the year before "
-                "(not an OBR forecast)"
+                "(annual CPI is a proxy for future September CPI, not a native model readback or OBR social-rent forecast)"
             ),
             "carried": [],
         }
     return out
 
 
-def _model_cpi_ahc() -> dict:
-    """CPI after housing costs by calendar year, as the model runs on it."""
-    from uk_budget_data.forecast import OBR, forecast_parameter_changes
+def native_model_forecast_inputs() -> dict:
+    """Read the supported native model, never a dashboard overlay.
 
-    series = forecast_parameter_changes().get(
-        OBR + "consumer_price_index_ahc", {}
-    )
-    return {int(key[:4]): value for key, value in series.items()}
+    Native per-capita GDP and non-labour-income paths retain the model's
+    population basis; they are not reconstructed from historical inputs.
+    """
+    from uk_budget_data.forecast import NATIVE_FORECAST_PATHS, forecast_record
+
+    installed = version("policyengine-uk")
+    if installed not in NATIVE_OCTOBER_MODEL_VERSIONS:
+        raise ForecastTableError(
+            f"Native October readback is not reviewed for policyengine-uk {installed}"
+        )
+    record = forecast_record()
+    expected_source = f"policyengine-uk {installed}: native OBR October 2026 inputs and the model's documented derived and carried series"
+    if (
+        record.get("model_version") != installed
+        or record.get("mode") != "native"
+        or record.get("vintage") != "OBR EFO October 2026"
+        or record.get("source_url") != NATIVE_OCTOBER_SOURCE_URL
+        or record.get("source") != expected_source
+        or set(record.get("parameter_changes", {}))
+        != set(NATIVE_FORECAST_PATHS)
+    ):
+        raise ForecastTableError(
+            "The native October forecast source does not match the installed model's readback"
+        )
+    return {
+        **record,
+        "readback_basis": (
+            "Point observations at 1 January of each calendar year, not "
+            "parameter changes or complete annual schedules. Inputs that "
+            "preserve calendar dates, including statutory forecast gaps, "
+            "can change later in the year."
+        ),
+    }
+
+
+def _native_series(record: dict, leaf: str) -> dict:
+    path = "gov.economic_assumptions.yoy_growth.obr." + leaf
+    return {
+        int(key[:4]): value
+        for key, value in record["parameter_changes"][path]["values"].items()
+    }
 
 
 def check_pre_is_march(forecast: dict, efo: Path) -> None:
@@ -263,6 +336,7 @@ def apply_post(outlook: dict, post: Optional[dict]) -> dict:
     if post is None:
         forecast["post_published"] = False
         forecast["post_source"] = None
+        forecast.pop("model_inputs", None)
         for s in by_key.values():
             s["post"] = [dict(p) for p in s["pre"]]
             s.pop("post_source", None)
@@ -274,6 +348,10 @@ def apply_post(outlook: dict, post: Optional[dict]) -> dict:
         outlook["meta"]["notes"] = [n for n in notes if n != STALE_POST_NOTE]
     forecast["post_label"] = post["label"]
     forecast["post_source"] = dict(post["source"])
+    if "model_inputs" in post:
+        forecast["model_inputs"] = copy.deepcopy(post["model_inputs"])
+    else:
+        forecast.pop("model_inputs", None)
     for key, s in by_key.items():
         series = post["series"][key]
         # A series the loaded forecast does not carry: no post line, and
@@ -302,8 +380,32 @@ def read_post_document(efo: Path, outlook: dict, label: str, url: str):
     )
     # Social rent for year Y needs CPI for Y-1.
     parsed = read_forecast(efo, [years[0] - 1, *years])
-    computed = compute_post(forecast, parsed)
     doc = load_post(efo, label, url)
+    native = (
+        native_model_forecast_inputs()
+        if doc["source"]["file_sha256"] == OCTOBER_ECONOMY_SHA256
+        else None
+    )
+    computed = compute_post(
+        forecast,
+        parsed,
+        model_cpi_ahc=(
+            _native_series(native, "consumer_price_index_ahc")
+            if native
+            else {}
+        ),
+        model_social_rent=(
+            _native_series(native, "social_rent") if native else {}
+        ),
+        model_source=(
+            f"policyengine-uk {native['model_version']}" if native else None
+        ),
+    )
+    if native:
+        doc["model_inputs"] = {
+            **native,
+            "source_workbook": dict(doc["source"]),
+        }
     doc["series"] = _doc_series(computed)
     return doc
 

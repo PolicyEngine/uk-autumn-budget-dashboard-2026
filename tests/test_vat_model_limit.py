@@ -403,7 +403,11 @@ def shopping(changes=None, modifier=None):
         scenario = Scenario(
             parameter_changes=changes, simulation_modifier=modifier
         )
-    return Simulation(situation=shopper(2027), scenario=scenario)
+    from uk_budget_data.forecast import with_forecast
+
+    return Simulation(
+        situation=shopper(2027), scenario=with_forecast(scenario)
+    )
 
 
 def figures(*sims, years=(2027,)):

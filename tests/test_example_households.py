@@ -1,6 +1,7 @@
 """The example households and the income-curve generator."""
 
 import re
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -137,19 +138,13 @@ def test_every_household_spends_the_average_on_electricity():
 
 @pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
 def test_zero_vat_on_electricity_reaches_every_household(household):
-    """The zero rate covers April to June of 2027-28 (from 1 July 2027 the
-    5% rate is back), so 2027-28 carries April to June's share of a year's
-    domestic electricity use (SPRING_SHARE, 22.30%): the module's
-    rate_change_2027, -0.05 x SPRING_SHARE. On £1,040 including VAT that is
-    £1,040 x 0.05 x 22.30% / 1.05 = £11.04, where the whole year's 5%
-    would be £1,040 x 5 / 105 = £49.52."""
-    import inspect
-
-    from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (  # noqa: E501
-        SPRING_SHARE,
-        zero_vat_on_domestic_electricity,
-    )
+    """Native annualisation counts 86 zero-rated days in the 366-day
+    2027 tax year (6 April to 5 April). The VAT-exclusive spending base
+    remains £1,040 / 1.05 on both sides, as domestic_energy_vat specifies.
+    Existing October–March relief lies before this test's tax year."""
+    from uk_budget_data.budget_policy import pre_budget_policy_timeline
     from uk_budget_data.calculators import IncomeCurveCalculator
+    from uk_budget_data.forecast import forecast_parameters
     from uk_budget_data.reforms import (
         ELECTRICITY_VAT_ID,
         get_autumn_budget_2026_reforms,
@@ -165,15 +160,23 @@ def test_zero_vat_on_electricity_reaches_every_household(household):
     reformed = calculator.simulate(household, reform.to_scenario(), [2027])[
         2027
     ]
-    rate_change = (
-        inspect.signature(zero_vat_on_domestic_electricity)
-        .parameters["rate_change_2027"]
-        .default
+    path = "gov.hmrc.vat.domestic_electricity_rate.great_britain"
+    days = (date(2028, 4, 6) - date(2027, 4, 6)).days
+    zero_days = (date(2027, 7, 1) - date(2027, 4, 6)).days
+    assert (zero_days, days) == (86, 366)
+    before_rate = pre_budget_policy_timeline(path)["2027-04-01"]
+    assert before_rate == 0.05
+    after_rate = 0.05 * (days - zero_days) / days
+    parameters = forecast_parameters()
+    assert parameters.get_child(path)("2027-01-01") == pytest.approx(
+        after_rate
     )
-    assert rate_change == pytest.approx(-0.05 * SPRING_SHARE)
-    assert reformed - baseline == pytest.approx(
-        [1_040 * -rate_change / 1.05] * 3, abs=0.01
+    priced_rate = parameters.gov.simulation.vat.energy_input_price_basis_rate(
+        "2027-01-01"
     )
+    assert priced_rate == 0.05
+    expected = 1_040 / (1 + priced_rate) * (before_rate - after_rate)
+    assert reformed - baseline == pytest.approx([expected] * 3, abs=0.01)
 
 
 class _Reform:
@@ -369,4 +372,41 @@ def test_each_households_measure_changes_its_net_income(household):
         household, reform.baseline_scenario_for(DataConfig()), [year]
     )[year]
     after = calculator.simulate(household, reform.to_scenario(), [year])[year]
+    if household.measure_id == "fuel_duty_rise_deferral":
+        from policyengine_uk import Simulation
+
+        from uk_budget_data.forecast import with_forecast
+
+        # Actual pre-Budget duty reaches 60.03p in April 2027; native law
+        # reaches 60.59p in July. The annual saving on this household's
+        # fuel is consequently less than £10, including VAT. Test the
+        # duty-and-VAT arithmetic rather than a historical chart floor.
+        situation = build_situation(household, [year], points=11)
+        pre = Simulation(
+            situation=situation,
+            scenario=with_forecast(reform.baseline_scenario_for(DataConfig())),
+        )
+        selected = Simulation(
+            situation=situation, scenario=with_forecast(reform.to_scenario())
+        )
+        instant = f"{year}-01-01"
+        pre_parameters = pre.tax_benefit_system.parameters(instant).gov.hmrc
+        selected_parameters = selected.tax_benefit_system.parameters(
+            instant
+        ).gov.hmrc
+        litres = pre.calculate("petrol_litres", year)
+        np.testing.assert_array_equal(
+            selected.calculate("petrol_litres", year), litres
+        )
+        expected = (
+            (
+                pre_parameters.fuel_duty.petrol_and_diesel
+                - selected_parameters.fuel_duty.petrol_and_diesel
+            )
+            * litres
+            * (1 + selected_parameters.vat.standard_rate)
+        )
+        assert np.all((expected > 0) & (expected < 10))
+        np.testing.assert_allclose(after - before, expected, atol=0.02, rtol=0)
+        return
     assert np.max(np.abs(after - before)) >= 10

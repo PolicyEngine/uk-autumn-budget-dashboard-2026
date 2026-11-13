@@ -24,7 +24,7 @@
       "representation": null
     },
     "data_limits": [],
-    "data_limits_registry_sha256": "7690f9cbe5fe0e5c62811bf6434ee90b94ab0cf01e9413560365655e3fde5796",
+    "data_limits_registry_sha256": "47ad2b557d1b9d792d4a79f278c4ee3c6c31763c6dbf99a4a1758fb5078acd61",
     "dataset_years": [
       2024,
       2025,
@@ -38,9 +38,9 @@
     ],
     "description": "",
     "digests": {
-      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
+      "execution_identity_sha256": "dacf85f7495ff28d555877e31564624b0c4ea7a2b50fab4c9b949385e5e3b33c",
       "outputs_sha256": "547f2ffc7d8bde18252b4cf59fad6ae17bba2d764345dcf93e2dd573adc63ef8",
-      "receipt_sha256": "90244cb995672d46f3367401f76e7839f7f607e06c8c836dd584d6027c2e0f03"
+      "receipt_sha256": "355ca52bcdf385eec43b37d935e3c607dbc01954eefd2e28f19bf7e2eb0a2a08"
     },
     "disclosure_floor": {
       "checked": true,
@@ -56,7 +56,7 @@
       "metrics.csv": "6bf8fd4ef06c38ff696e240d1b888c1fefcd4edaca3bd837eb1e800dfd0d1e68",
       "winners_losers.csv": "4e426166df46c20c67fdaccbd316304a9efb5862636a6a41128ac7484241b8f4"
     },
-    "generated_at": "2026-11-12T14:24:04.239428+00:00",
+    "generated_at": "2026-11-12T20:14:40.215508+00:00",
     "generator_argv": [
       "test"
     ],
@@ -127,9 +127,9 @@
     },
     "certificate": {
       "bundle_version": "6.16.2",
-      "certificate_sha256": "bd23285695ea5620a02417ee8945d826ffbd1cdc2050207481ab28d189315d04",
+      "certificate_sha256": "aef00e8b288294a8cd691114499afe3aab4a13d96457a2558a059929e4c02017",
       "certificate_source": "packaged",
-      "certified_by": "policyengine.py bundle certification",
+      "certified_by": "synthetic historical publication fixture; no model run",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
       "certified_for_core_version": "3.33.3",
       "certified_for_model_version": "2.165.1",
@@ -143,14 +143,14 @@
     },
     "country_id": "uk",
     "data": {
-      "build_id": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+      "build_id": "microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e",
       "build_model_version": "2.165.1",
       "data_package": "microcosm-data",
       "dataset": "microcosm_uk_2024_25",
-      "dataset_revision": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e",
       "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
-      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
-      "release_manifest_revision": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e",
       "release_version": "0.1.0"
     },
     "fiscal_year": {
@@ -173,8 +173,8 @@
       "representation": "policyengine-uk.scenario_composition/v1"
     },
     "runtime": {
-      "platform": "linux",
-      "python_version": "3.13.18"
+      "platform": "darwin",
+      "python_version": "3.13.13"
     },
     "schema_version": 1,
     "supported_years": [

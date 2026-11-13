@@ -1,7 +1,9 @@
 """Hand-written modifiers stay held until two people attest this receipt.
 
 Only while sign-off is on (``uk_budget_data.sign_off``), so ``world`` turns
-it on; the tests at the end turn it off.
+it on; the tests at the end turn it off. These compatibility tests use
+explicit synthetic historical execution metadata for the former single-phase
+modifier contract. Native comparison recipes have their own regression tests.
 """
 
 import json
@@ -34,7 +36,7 @@ VALUES = {2027: -1.0, 2028: -2.0}
 
 @pytest.fixture
 def world(monkeypatch, sign_off_required):
-    instance = World()
+    instance = World(historical=True)
     monkeypatch.setattr(a, "ATTESTATIONS_ROOT", instance.root / "attestations")
     monkeypatch.setattr(
         a, "ATTESTATION_REPOSITORY", instance.root / "attestations"

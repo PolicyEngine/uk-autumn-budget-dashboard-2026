@@ -1,13 +1,20 @@
 {
   "forecast": {
     "status": "updated",
+    "mode": "native",
     "source": "OBR EFO October 2026",
-    "vintage": "OBR Economic and fiscal outlook, October 2026, which policyengine-uk 2.165.1 ships as its own growth rates; src/uk_budget_data/forecast/obr_october_2026.json applies the dashboard's values from the same tables over them, and src/uk_budget_data/forecast sets current law's fuel duty path"
+    "vintage": "policyengine-uk 2.174.1 ships the native October 2026 economic assumptions, including its documented derived and carried series; both policy sides use that same native path"
+  },
+  "policy": {
+    "baseline": "actual_pre_autumn_budget_2026",
+    "reform": "selected_native_current_law_measures",
+    "source": "src/uk_budget_data/budget_policy.json",
+    "notes": "An explicit dated rollback removes all tracked Autumn Budget 2026 policy changes before data loading. Selecting a measure restores only its native current-law parameter timeline. Unselected measures remain at pre-Budget policy."
   },
   "calibration": {
-    "status": "pre_budget",
-    "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
-    "vintage": "as pinned by the installed bundle"
+    "status": "updated",
+    "source": "the certified Microcosm UK dataset pinned by policyengine 6.17.2",
+    "vintage": "Microcosm UK national cut eeb6093e, calibrated on 7 November 2026 and pinned by policyengine 6.17.2. Updated describes adoption of this certified cut; target vintages remain those in its certification, without a claim that every fiscal target reflects the Budget."
   },
-  "notes": "policyengine-uk 2.165.1 ships the OBR October 2026 forecast as its native growth rates. Every simulation, baseline and reform alike, retains src/uk_budget_data/forecast/obr_october_2026.json over those rates. The overlay sets the same values for CPI, RPI, CPIH, average earnings, rents, mortgage interest, non-labour income, council tax and the September CPI and May to July earnings gaps. Its per-capita GDP, mixed income and non-labour income rates subtract an older population path from aggregate growth. Household weights use the installed model's October population path. The overlay's per-capita incomes, house prices, social rents and CPI after housing costs differ from the engine's by up to 0.3 points a year. Series the overlay does not list keep what the installed model ships; the receipt records the exact model version."
+  "notes": "policyengine-uk 2.174.1 ships the native October 2026 economic assumptions. Baseline and reform share those assumptions without a dashboard growth-rate override. The former obr_october_2026.json overlay remains archived for attribution of old published estimates and is not applied to new simulations. The actual pre-Budget policy rollback is separate from the forecast and from the certified dataset. Changes from model, data, forecast and policy-reference adoption must be reconciled separately; adopting this basis does not certify unchanged old published estimates."
 }

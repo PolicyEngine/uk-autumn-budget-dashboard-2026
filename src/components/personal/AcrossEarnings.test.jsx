@@ -77,19 +77,19 @@ describe("the two Across earnings cards", () => {
     // Picked on the rate card, the net income card follows
     expect(net.querySelector("svg.earnings-svg").getAttribute("data-view")).toBe("both");
     expect(rate.querySelector(".mtr-plot").getAttribute("data-view")).toBe("both");
-    // Net income: current law dashed and with the policies solid, no layers or chips
+    // Net income: pre-Budget dashed and with Budget policies solid, no layers or chips
     expect(net.querySelectorAll(".earnings-total")).toHaveLength(2);
     expect(net.querySelector(".earnings-total-before").getAttribute("stroke-dasharray")).toBeTruthy();
     expect(net.querySelector(".earnings-layer")).toBeNull();
     for (const card of [net, rate]) {
       expect(card.querySelector(".series-toggle-chip")).toBeNull();
       const legend = card.querySelector(".single-year-legend");
-      expect(legend).toHaveTextContent("Under current law");
-      expect(legend).toHaveTextContent("With the selected policies");
+      expect(legend).toHaveTextContent("Under pre-Budget policy");
+      expect(legend).toHaveTextContent("With the selected Budget policies");
     }
     // "You" gives both values
     expect(net.querySelector(".earnings-you text").textContent).toMatch(/^You: £[\d,]+ → £[\d,]+$/);
-    expect(net.querySelector(".chart-description")).toHaveTextContent(/under current law and £[\d,]+ with the selected policies/);
+    expect(net.querySelector(".chart-description")).toHaveTextContent(/under pre-Budget policy and £[\d,]+ with the selected Budget policies/);
     // Back on the net income card, both switch again
     chooseOption(net, "Change");
     expect(rate.querySelector(".mtr-plot").getAttribute("data-view")).toBe("change");
@@ -128,12 +128,12 @@ describe("the two Across earnings cards", () => {
     const data = answer("pensioner-70");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
-    expect(net.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your household's net income is about £[\d,]+ a year with the selected policies\.$/);
+    expect(net.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your household's net income is about £[\d,]+ a year with the selected Budget policies\.$/);
     expect(rate.querySelector(".chart-description").textContent).toMatch(/^On your first £200 of earnings, your marginal tax rate falls from 20% to 0%, so you keep £200 instead of £\d+\.$/);
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
     // The allowance caveat flags a rate that rises at the start of earnings
-    // with the policies; here they lower it there (20% to 0%), so none
+    // with Budget policies; here they lower it there (20% to 0%), so none
     expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/at or below the full new State Pension/);
     expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/usual personal allowance applies again/);
   });

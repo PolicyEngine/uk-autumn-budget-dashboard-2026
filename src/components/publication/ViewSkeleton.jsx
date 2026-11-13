@@ -55,10 +55,10 @@ const LAYOUTS = {
     { icon: "users", title: "Choose a household", subtitle: "Enter your own household, or start from an example below.", cards: Array.from({ length: 8 }, () => ["example"]) },
   ],
   "outlook:living": [
-    { icon: "wallet", title: "Living standards under current law", subtitle: "Current law, before any Budget policy.", cards: [["lines", "wide"], ["lines"], ["lines"]] },
+    { icon: "wallet", title: "Living standards under pre-Budget policy", subtitle: "Pre-Budget policy, before the Autumn Budget changes.", cards: [["lines", "wide"], ["lines"], ["lines"]] },
   ],
   "outlook:poverty": [
-    { icon: "lifebuoy", title: "Poverty under current law", subtitle: "Current law, before any Budget policy.", cards: [["lines"], ["lines"]] },
+    { icon: "lifebuoy", title: "Poverty under pre-Budget policy", subtitle: "Pre-Budget policy, before the Autumn Budget changes.", cards: [["lines"], ["lines"]] },
   ],
   "outlook:forecast": [
     { icon: "trend", title: "Economic forecast", cards: [["lines", "wide"], ["lines"], ["lines"]] },

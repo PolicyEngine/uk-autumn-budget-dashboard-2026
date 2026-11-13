@@ -527,8 +527,12 @@ def built(world):
     the scenario, so generation compares them as it does on a real run."""
 
     def build(dataset, scenario=None):
+        from uk_budget_data.forecast import with_forecast
+
         sim = world.sim()
-        underlying = Simulation(situation=household(), scenario=scenario)
+        underlying = Simulation(
+            situation=household(), scenario=with_forecast(scenario)
+        )
         sim.tax_benefit_system = underlying.tax_benefit_system
         sim.get_holder = underlying.get_holder
         return sim

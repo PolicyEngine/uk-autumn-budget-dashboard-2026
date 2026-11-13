@@ -116,6 +116,12 @@ describe("each kind of picture", () => {
     expect(container.querySelector(".umv-fill.is-dashed")).not.toBeNull();
   });
 
+  it("labels the surplus-earnings counterfactual as pre-Budget policy", () => {
+    const { container } = renderVisual("universal-credit-surplus-earnings");
+    expect([...container.querySelectorAll(".umv-bar-row")].map((row) => row.querySelector(".umv-label").textContent)).toEqual(["Pre-Budget", "Until Mar 2028"]);
+    expect(screen.getByRole("img", { name: /£300 under pre-Budget policy/ })).toBeInTheDocument();
+  });
+
   it("triple lock: three rules into the highest of them, earnings growth struck through", () => {
     const { container } = renderVisual("adjusted-triple-lock");
     expect([...container.querySelectorAll(".umv-input")].map((li) => li.firstChild.textContent)).toEqual([

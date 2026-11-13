@@ -8,13 +8,16 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from policyengine_core.parameters import ParameterNode
 from policyengine_core.reforms import Reform as CoreReform
+from policyengine_uk import Simulation
 from policyengine_uk.model_api import Variable
 from policyengine_uk.system import system
 
 from tests import template_measures
 from tests.data_limit_stand_ins import STAND_IN_DATA_LIMITS
-from tests.test_data_limits import BY_KEY, simulation
+from tests.test_data_limits import BY_KEY, household, simulation
 from uk_budget_data import data_limits
+from uk_budget_data.forecast import with_forecast
+from uk_budget_data.models import DataConfig
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
     get_all_reforms,
@@ -391,17 +394,32 @@ def test_every_template_stays_computable_without_purchase_inputs(name):
 # retired. Input presence does not establish the higher-stake incidence:
 # the separate national publication hold remains.
 CALCULATOR_ONLY_LIMITS = {
-    "machine_games_duty_rise": [],
+    "machine_games_duty_rise": [
+        "machine_games_standard_rate_higher_stake_net_takings"
+    ],
 }
 
 # The native non-cash ISA cash-interest charge applies from 2027 and reads
 # the basic savings rate. Its cash-interest input is missing, so the
 # savings-rate rise and the package containing it still record this limit.
 # Selecting a static costing does not waive the data-coverage hold.
+# The actual fuel comparison also changes LPG/natural-gas rates. Trading
+# allowance restoration needs both claim status and eligible misc income.
 REGISTERED_MEASURE_LIMITS = {
     **CALCULATOR_ONLY_LIMITS,
+    "fuel_duty_rise_deferral": ["lpg_kg", "natural_gas_kg"],
     "savings_income_rates_up": ["non_cash_isa_cash_interest"],
-    "autumn_budget_2026_combined": ["non_cash_isa_cash_interest"],
+    "trading_allowance_raise": [
+        "income_not_otherwise_charged",
+        "trading_allowance_claim_status",
+    ],
+    "autumn_budget_2026_combined": [
+        "non_cash_isa_cash_interest",
+        "income_not_otherwise_charged",
+        "trading_allowance_claim_status",
+        "lpg_kg",
+        "natural_gas_kg",
+    ],
 }
 
 
@@ -422,15 +440,14 @@ def test_the_data_limit_exemptions_end_with_the_hold_back():
     "reform", get_all_reforms(), ids=lambda reform: reform.id
 )
 def test_registered_measures_do_not_set_limited_inputs(reform):
-    sides = (
-        simulation(
-            changes=reform.baseline_parameter_changes,
-            modifier=reform.baseline_simulation_modifier,
-        ),
-        simulation(
-            changes=reform.parameter_changes,
-            modifier=reform.simulation_modifier,
-        ),
+    # Match both real execution sides, including the common rollback.
+    # Bare native restores already equal current law and hide real holds.
+    sides = tuple(
+        Simulation(situation=household(), scenario=with_forecast(scenario))
+        for scenario in (
+            reform.baseline_scenario_for(DataConfig()),
+            reform.to_scenario(),
+        )
     )
     for built in sides:
         for limit in data_limits.DATA_LIMITS:

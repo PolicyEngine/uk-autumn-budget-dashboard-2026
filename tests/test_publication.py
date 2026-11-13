@@ -963,18 +963,18 @@ def test_combined_run_needs_its_members_in_the_manifest(world):
         data_root=world.data_root,
         inputs=world.inputs,
     )
-    records = [
-        {
-            "id": "alpha",
-            "reform": {"kind": "current_law"},
-            "baseline": {"kind": "current_law"},
-        },
-        {
-            "id": "ghost",
-            "reform": {"kind": "current_law"},
-            "baseline": {"kind": "current_law"},
-        },
-    ]
+    # Both members have valid native comparison recipes, but alpha's
+    # definition differs from its staged one and ghost was never staged.
+    records = []
+    for key in ("alpha", "ghost"):
+        unstaged = world.write(key, VALUES, rate=0.22)
+        execution = read_receipt(unstaged.path)["execution_receipt"]
+        records.append(
+            {
+                "id": key,
+                **{side: execution[side] for side in ("baseline", "reform")},
+            }
+        )
     combined = world.write(
         "combined--alpha+ghost",
         VALUES,

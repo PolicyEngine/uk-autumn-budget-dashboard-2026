@@ -16,11 +16,35 @@ import { policyDetailsFor } from "./policyDetails";
  * fillNote): the passages it marks show only with figures that bear them
  * out.
  *
- * Each is keyed by measure id and shows only while the measure's card
- * entry (policyDetails.js) still fits it: the publication describes the
- * measure exactly as the entry's `writtenFor`. A redescribed measure shows
- * the statement alone until they are rewritten.
+ * Each archived note carries its own exact description binding. A new
+ * policy-card description cannot enable an older costing explanation.
+ * Explicit custom texts retain the policy-card binding.
  */
+/**
+ * Exact descriptions for the archived costing notes below, captured from
+ * the pre-native dashboard base 683dd8c2. Updating a policy card does not
+ * update a costing explanation. Native comparisons show the shared
+ * statement until a new explanation is reconciled and bound explicitly.
+ */
+export const OBR_NOTES_WRITTEN_FOR = {
+  "bus_fare_cap_2027": "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at £3 fares (£230m, divided by 0.9 for operator participation, over £2,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get £0. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
+  // Its description stayed unchanged across the model/data transition;
+  // it cannot distinguish the archived numerical note from a native run.
+  "household_energy_payment_2026": null,
+  "domestic_electricity_zero_vat": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
+  "carers_allowance_earnings_taper": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+  // This description also spans both vintages, so it cannot bind the
+  // archived population figures or rounded pension projections.
+  "state_pension_income_tax_protection": null,
+  "trading_allowance_raise": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. The surveys behind our data record traders' profits, not their receipts, so we assume who already claims the £1,000 allowance: 72% of traders with profits up to £4,500, 14% of those with profits from £4,500 to £9,000 and none above. Only those traders gain, and we count no one who switches from actual expenses to the larger allowance.",
+  "fuel_duty_rise_deferral": "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
+  "property_income_rates_up": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
+  "savings_income_rates_up": "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK: 2 percentage points above current law, which already includes Budget 2025's rises. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response."
+};
+
+const fitsArchivedNotes = (measure) =>
+  typeof measure?.description === "string" && measure.description === OBR_NOTES_WRITTEN_FOR[measure.id];
+
 export const OBR_DEVIATION_STATEMENT =
   "Gaps come from timing, coverage, behaviour and scope.";
 
@@ -285,9 +309,10 @@ export function basisSides(line) {
 
 // The text `texts` has for a catalogue measure, trimmed, while its card
 // entry fits it (policyDetailsFor); else null
-const fittingText = (measure, texts) => {
+const fittingText = (measure, texts, archived = false) => {
   const text = measure ? texts[measure.id] : undefined;
-  return typeof text === "string" && text.trim() && policyDetailsFor(measure) ? text.trim() : null;
+  const fits = archived ? fitsArchivedNotes(measure) : policyDetailsFor(measure);
+  return typeof text === "string" && text.trim() && fits ? text.trim() : null;
 };
 
 /**
@@ -298,7 +323,7 @@ const fittingText = (measure, texts) => {
  * shows the passages they bear out, and none of them without figures.
  */
 export function deviationNoteFor(measure, notes = OBR_DEVIATION_NOTES, ours = null) {
-  const text = fittingText(measure, notes);
+  const text = fittingText(measure, notes, notes === OBR_DEVIATION_NOTES);
   if (text === null) return null;
   const figures = Object.hasOwn(OBR_NOTE_FIGURES, measure.id) ? OBR_NOTE_FIGURES[measure.id](ours ?? {}) : {};
   return fillNote(text, figures);
@@ -310,7 +335,7 @@ export function deviationNoteFor(measure, notes = OBR_DEVIATION_NOTES, ours = nu
  * fits it; else null.
  */
 export function comparisonBasisFor(measure, bases = OBR_COMPARISON_BASES) {
-  return fittingText(measure, bases);
+  return fittingText(measure, bases, bases === OBR_COMPARISON_BASES);
 }
 
 /**
@@ -319,13 +344,20 @@ export function comparisonBasisFor(measure, bases = OBR_COMPARISON_BASES) {
  */
 export function differencePointsFor(measure, points = OBR_DIFFERENCE_POINTS) {
   const list = measure ? points[measure.id] : undefined;
-  return Array.isArray(list) && list.length && policyDetailsFor(measure) ? list : null;
+  const fits = points === OBR_DIFFERENCE_POINTS ? fitsArchivedNotes(measure) : policyDetailsFor(measure);
+  return Array.isArray(list) && list.length && fits ? list : null;
 }
 
 /** A comparison row's two short basis lines for the panel, by the same rule; else null. */
 export function panelBasisFor(measure, panel = OBR_PANEL_BASES) {
   const sides = measure ? panel[measure.id] : undefined;
-  return sides?.official && sides?.ours && policyDetailsFor(measure) ? sides : null;
+  const fits = panel === OBR_PANEL_BASES ? fitsArchivedNotes(measure) : policyDetailsFor(measure);
+  return sides?.official && sides?.ours && fits ? sides : null;
+}
+
+/** An archived short reason cannot describe a new policy reference. */
+export function notComparableShortFor(measure) {
+  return fitsArchivedNotes(measure) ? NOT_COMPARABLE_SHORT[measure.id] ?? null : null;
 }
 
 /** The measures in `ids` with no note in `notes` (or line in `bases`), in order. */

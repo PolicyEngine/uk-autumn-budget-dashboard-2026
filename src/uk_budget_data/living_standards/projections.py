@@ -53,6 +53,7 @@ from uk_budget_data.living_standards.engine import (
     certified_dataset,
     engine_versions,
     headline_end_year,
+    projection_policy_basis,
     projection_years,
 )
 from uk_budget_data.living_standards.uc_health_element import (
@@ -376,7 +377,9 @@ def run_projections(log=print) -> dict:
 
     # On the OBR October 2026 forecast, as every other run
     # (uk_budget_data.forecast).
-    sim = pe.uk.managed_microsimulation(scenario=with_forecast(None))
+    scenario = with_forecast(None)
+    policy_basis = projection_policy_basis(scenario)
+    sim = pe.uk.managed_microsimulation(scenario=scenario)
     bundle = getattr(sim, "policyengine_bundle", {}) or {}
     used_sha = bundle.get("runtime_dataset_sha256")
     if used_sha != expected["sha256"]:
@@ -411,6 +414,7 @@ def run_projections(log=print) -> dict:
             "dataset_sha256": used_sha,
             "dataset_revision": bundle.get("runtime_dataset_revision"),
             **versions,
+            "policy_basis": policy_basis,
             "uc_health_element_extension": uc_fix,
         }
     }

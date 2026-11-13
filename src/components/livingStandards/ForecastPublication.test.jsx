@@ -18,11 +18,11 @@ describe("the independent outlook and the Budget forecast", () => {
     // sub-tabs, whatever the publication
     window.history.replaceState({}, "", "/?tab=living");
     render(<LivingStandardsTab />);
-    expect(await screen.findByRole("heading", { name: "Living standards under current law" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Living standards under pre-Budget policy" })).toBeInTheDocument();
     cleanup();
     window.history.replaceState({}, "", "/?tab=outlook&sub=poverty");
     render(<LivingStandardsTab />);
-    expect(await screen.findByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Poverty under pre-Budget policy" })).toBeInTheDocument();
   });
 
   it("draws a loaded Budget forecast beside March, whatever its figures", async () => {

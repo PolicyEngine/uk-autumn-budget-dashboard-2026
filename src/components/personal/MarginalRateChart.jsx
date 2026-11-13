@@ -38,8 +38,8 @@ const RIGHT_MARGIN = 20;
 // Over the stacked parts the totals are drawn in ink, the before total dashed
 const TOTAL_COLOUR = CHART_COLOURS.ink;
 const CHANGE_COLOUR = CHART_COLOURS.ink;
-// The dashboard's own terms (Pavel's review, HH6): "Total rate with the policies"
-const SIDE_NAME = { before: "under current law", after: "with the policies" };
+// The dashboard's own terms (Pavel's review, HH6): "Total rate with Budget policies"
+const SIDE_NAME = { before: "under pre-Budget policy", after: "with Budget policies" };
 const points = (value) => {
   const rounded = Math.round(value * 100);
   return `${rounded > 0 ? "+" : rounded < 0 ? "−" : ""}${Math.abs(rounded)}pp`;
@@ -52,7 +52,7 @@ const points = (value) => {
  */
 export function rateExportDescription(view, hasParts, yearLabel) {
   if (view === "both") {
-    return `Share of each extra pound of salary that taxes and benefit withdrawals take in ${yearLabel}, under current law and with the policies.`;
+    return `Share of each extra pound of salary that taxes and benefit withdrawals take in ${yearLabel}, under pre-Budget policy and with Budget policies.`;
   }
   if (view === "change") {
     return `The change the selected policies make to the share of each extra pound of salary that taxes and benefit withdrawals take in ${yearLabel}, in percentage points.`;
@@ -359,9 +359,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
   const csvColumns = [
     { key: "income", label: "Your salary (£)", decimals: 0 },
     { key: "to", label: "To salary (£)", decimals: 0 },
-    ...(parts ?? []).map((part) => ({ key: part.name, label: `${part.label}, with the policies`, decimals: 4 })),
-    { key: "before", label: "Marginal tax rate, current law", decimals: 4 },
-    { key: "after", label: "Marginal tax rate, with the policies", decimals: 4 },
+    ...(parts ?? []).map((part) => ({ key: part.name, label: `${part.label}, with Budget policies`, decimals: 4 })),
+    { key: "before", label: "Marginal tax rate, pre-Budget", decimals: 4 },
+    { key: "after", label: "Marginal tax rate, with Budget policies", decimals: 4 },
   ];
   const csvRows = rates.map((rate, i) => ({ ...rate, ...(breakdown?.after[i] ?? {}) }));
   const download = {
@@ -506,7 +506,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             {!(parts && hidden.includes("total")) && <Line
               type="stepAfter"
               dataKey={isChange ? "change" : side}
-              name={isChange ? "Change" : view === "before" ? "Current law" : "With the policies"}
+              name={isChange ? "Change" : view === "before" ? "Pre-Budget" : "With Budget policies"}
               // In Both this is the after line
               stroke={lineStroke}
               strokeWidth={2}
@@ -517,12 +517,12 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
               isAnimationActive={false}
             />}
             {isBoth && (
-              // Current law dashed, over the policies' solid line so both
+              // Pre-Budget dashed, over the policies' solid line so both
               // show where they meet, as the net income card's Both
               <Line
                 type="stepAfter"
                 dataKey="before"
-                name="Current law"
+                name="Pre-Budget"
                 stroke={BEFORE_COLOUR}
                 strokeWidth={2}
                 strokeDasharray={BEFORE_DASH}
@@ -608,14 +608,14 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         <ChartMoreInfo
           info={{
             shows: yourParts
-              ? `${salary === 0 ? "With no earnings" : `At ${formatPounds(salary)}`}, your marginal rate with the policies consists of ${yourParts}.`
+              ? `${salary === 0 ? "With no earnings" : `At ${formatPounds(salary)}`}, your marginal rate with Budget policies consists of ${yourParts}.`
               : "Of each extra pound of salary, the share that taxes and benefit withdrawals take.",
             how: [
               "The rate comes from the same salary sweep as the net income card: one minus the change in net income over the change in salary, from each salary to the next.",
               isChange
                 ? "The line is the change in the total rate, in percentage points."
                 : isBoth
-                  ? "The dashed line is the total rate under current law, the solid line with the policies."
+                  ? "The dashed line is the total rate under pre-Budget policy, the solid line with Budget policies."
                   : parts
                   ? "Each layer is one tax's or benefit taper's part of the rate; the line is the total rate."
                   : "The line is the total rate.",

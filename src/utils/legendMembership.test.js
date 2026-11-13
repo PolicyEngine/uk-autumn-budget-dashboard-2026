@@ -9,9 +9,9 @@ const measureFor = (id) => {
 };
 
 describe("why a policy moves no one across the poverty line", () => {
-  it("says the Energy payment is not counted in poverty income in its year, and when it is in force otherwise", () => {
+  it("does not claim the native Energy payment is excluded from poverty income", () => {
     const payment = measureFor("household_energy_payment_2026");
-    expect(noPovertyEffectReason(payment, 2026)).toBe("not counted in poverty income");
+    expect(noPovertyEffectReason(payment, 2026)).toBe("no one crosses the poverty line");
     expect(noPovertyEffectReason(payment, 2027)).toMatch(/^in force January 2027 to March 2027/);
   });
 

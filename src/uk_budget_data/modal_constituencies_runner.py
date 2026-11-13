@@ -90,6 +90,11 @@ def unit_spec(run: c.RunPlan, unit: c.Unit, dataset_spec: dict) -> dict:
         # geography._plan refused the file unless it is one.
         "microcosm_export": True,
         "dataset_key": dataset_spec["key"],
+        **(
+            {"execution_binding": run.execution_bindings[unit.reform]}
+            if unit.reform in run.execution_bindings
+            else {}
+        ),
     }
 
 

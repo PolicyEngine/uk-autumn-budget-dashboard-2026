@@ -15,7 +15,7 @@
     "composition": null,
     "config_baseline": null,
     "data_limits": [],
-    "data_limits_registry_sha256": "7690f9cbe5fe0e5c62811bf6434ee90b94ab0cf01e9413560365655e3fde5796",
+    "data_limits_registry_sha256": "47ad2b557d1b9d792d4a79f278c4ee3c6c31763c6dbf99a4a1758fb5078acd61",
     "dataset_years": [
       2024,
       2025,
@@ -29,9 +29,9 @@
     ],
     "description": "",
     "digests": {
-      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
-      "outputs_sha256": "2b28cbb3df9dd143b6b25b00b72214923bc6e9f2b9b656147999e556684cf9e1",
-      "receipt_sha256": "8855018f2115b269f752aa0b628e393fbf345c485e21a44684d86a768bdc2ea7"
+      "execution_identity_sha256": "dacf85f7495ff28d555877e31564624b0c4ea7a2b50fab4c9b949385e5e3b33c",
+      "outputs_sha256": "c34d4a0a48e58e4b3fa9a9d8e29f08e6fd1df11e80787295792ced89e271470b",
+      "receipt_sha256": "f8c3f48268fcf4eedd1b87bd8e3afae00c76dc4d7945679061b94239a357c48f"
     },
     "disclosure_floor": {
       "checked": true,
@@ -40,21 +40,22 @@
       "thin_cells_in_tables": false
     },
     "files": {
-      "budgetary_impact.csv": "be377cf015258af52ce44af881300b1dafbc1d80b382a06757356187c981060c",
-      "distributional_impact.csv": "a3481d4a2b347b4aeb7bca68cc92f8858da5e0798388c42aa3fdb84a6fe7288b",
-      "household_scatter_binned.csv": "593de3ddc2ffff15012089f7b8ee25589874e244921b79dba1f7d8203edff1e7",
-      "income_curve.csv": "027b6fb4c358d6cce9d29bde6c7988f7cb983c91392b2d8556924785dffb221c",
-      "metrics.csv": "99f098f7fee841d8e204928a382c9afa9ad37ca42846b02368fb56831de4e307",
-      "winners_losers.csv": "558dcf32e6f1f1a0eb1cd43d50e5a4772acd752e3561ed6568390b4a8b178c99"
+      "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
+      "distributional_impact.csv": "ee9a7bd092a05e2473d7f9cccb57dd366ba21269e35dbaf481fe9f7f15ac5ca5",
+      "household_scatter_binned.csv": "43b8d1378ec99f5c2d48a694c2abdca7cfea0381fdc3d67923de9e21b1a187ad",
+      "income_curve.csv": "87b54f14232ed77c6a103fc284c303151422d9864aad917f2a835141966e516c",
+      "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
+      "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
     },
-    "generated_at": "2026-11-12T14:24:03.591840+00:00",
+    "generated_at": "2026-11-12T20:14:39.712399+00:00",
+    "generation_id": "60e1202a0a054e0cb7c5443174b623f1",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "beta",
+    "key": "delta",
     "measure_ids": [
-      "beta"
+      "delta"
     ],
     "member_outputs_sha256": null,
     "members": null,
@@ -62,9 +63,11 @@
     "model_limits_registry_sha256": "2c04b2f6e02bf1b182b8ef6fa2296ecd4fa4a501aa715f5fa19800a4c0fb3cfd",
     "modifier_templates": {
       "baseline": [],
-      "reform": []
+      "reform": [
+        null
+      ]
     },
-    "name": "Beta",
+    "name": "Delta",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.16.2",
@@ -77,13 +80,13 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "beta baseline"
+      "name": "delta baseline"
     },
     "certificate": {
       "bundle_version": "6.16.2",
-      "certificate_sha256": "bd23285695ea5620a02417ee8945d826ffbd1cdc2050207481ab28d189315d04",
+      "certificate_sha256": "aef00e8b288294a8cd691114499afe3aab4a13d96457a2558a059929e4c02017",
       "certificate_source": "packaged",
-      "certified_by": "policyengine.py bundle certification",
+      "certified_by": "synthetic historical publication fixture; no model run",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
       "certified_for_core_version": "3.33.3",
       "certified_for_model_version": "2.165.1",
@@ -97,14 +100,14 @@
     },
     "country_id": "uk",
     "data": {
-      "build_id": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+      "build_id": "microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e",
       "build_model_version": "2.165.1",
       "data_package": "microcosm-data",
       "dataset": "microcosm_uk_2024_25",
-      "dataset_revision": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e",
       "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
-      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
-      "release_manifest_revision": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261107T020434Z-eeb6093e",
       "release_version": "0.1.0"
     },
     "fiscal_year": {
@@ -117,18 +120,18 @@
       "name": "policyengine-uk",
       "version": "2.165.1"
     },
-    "outputs_sha256": "2b28cbb3df9dd143b6b25b00b72214923bc6e9f2b9b656147999e556684cf9e1",
+    "outputs_sha256": "c34d4a0a48e58e4b3fa9a9d8e29f08e6fd1df11e80787295792ced89e271470b",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
-      "binding": "content",
+      "binding": "code_revision",
       "kind": "reform",
-      "name": "beta",
-      "reform_sha256": "d91c1ce71511f3c4ca55ff993e3e25a31befafe6556c7297296d0690cf90a0ad",
+      "name": "delta",
+      "reform_sha256": "79fb295b38a190c9d520d408e3c42a5d34dfefcde9f9eb2cfd0ee8970d265189",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
-      "platform": "linux",
-      "python_version": "3.13.18"
+      "platform": "darwin",
+      "python_version": "3.13.13"
     },
     "schema_version": 1,
     "supported_years": [
