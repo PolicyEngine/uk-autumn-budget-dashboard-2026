@@ -84,6 +84,7 @@ from uk_budget_data.budget_measures.planned_cash_isa_limit import (
     planned_cash_isa_limit,
 )
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.household_skip_definitions import rule_is_current
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
     CombineConflict,
@@ -910,6 +911,20 @@ def education_by_age(age: int) -> str:
     return "NOT_IN_EDUCATION"
 
 
+def state_education_for_everyone(people: list) -> None:
+    """Give everyone in one simulation an education stage, if anyone has one.
+
+    Once one person's stage is entered, policyengine-core treats the variable
+    as an input for everyone, and a person left out gets the default (not in
+    education) rather than the formula's stage: a 17-year-old would lose
+    Child Benefit. So everyone else gets the stage the formula would give."""
+    if any("current_education" in person for person in people):
+        for person in people:
+            person.setdefault(
+                "current_education", education_by_age(person["age"])
+            )
+
+
 def child_inputs(child: Child) -> dict:
     """A child as policyengine-uk inputs. Never the claimant or partner;
     from 16, their education as entered, so policyengine-uk's own
@@ -1274,16 +1289,7 @@ def household_entities(
         # Childcare.
         children[0]["childcare_expenses"] = answers.monthly_childcare * 12
     people += children
-    if any("current_education" in person for person in people):
-        # Once one person's stage is entered, policyengine-core treats the
-        # variable as an input for everyone, and a person left out gets the
-        # default (not in education) rather than the formula's stage: a
-        # 17-year-old would lose Child Benefit. So everyone else gets the
-        # stage the formula would give.
-        for person in people:
-            person.setdefault(
-                "current_education", education_by_age(person["age"])
-            )
+    state_education_for_everyone(people)
     benunit = {"would_claim_uc": answers.claims_universal_credit}
     household = {
         "region": answers.region,
@@ -2079,9 +2085,11 @@ BUS_FARE_CAP_REGIONS = frozenset(REGIONS) - {
 
 # Measures that cannot move this household's net income in this year,
 # from the household's answers alone, so the split by policy need not run
-# them: each shows as "not affected", exactly as its run would. Every rule is
-# checked against the full run in tests/test_household_skips.py, over many
-# households and every policy year.
+# them: each shows as "not affected", exactly as its run would.
+# tests/test_household_skips.py compares every rule with the full run, over many
+# households and every policy year, and a rule applies only to the definition
+# its last check ran on (household_skip_definitions). These are the measures
+# with a rule, and why.
 SKIP_REASONS = {
     "employer_ni_relief_under_25s": "an employer cost; wages are held fixed",
     "warm_home_discount_top_up": "paid in 2026-27 only",
@@ -2137,8 +2145,21 @@ def diverts_cash_isa_payments(answers: HouseholdAnswers, year: int) -> bool:
 def provably_unaffected(
     measure_id: str, answers: HouseholdAnswers, year: int
 ) -> bool:
-    """Whether ``measure_id`` cannot change this household's net income in
-    ``year``. False whenever it might (and for any measure without a rule)."""
+    """Whether the split by policy can leave ``measure_id`` out: its rule
+    says it cannot change this household's net income in ``year``, and the
+    rule's last check ran on the measure's definition as it now stands. Once
+    the definition changes, the calculator runs the measure in full."""
+    return rule_is_current(measure_id) and rule_says_unaffected(
+        measure_id, answers, year
+    )
+
+
+def rule_says_unaffected(
+    measure_id: str, answers: HouseholdAnswers, year: int
+) -> bool:
+    """Whether the rule for ``measure_id`` says it cannot change this
+    household's net income in ``year``, whatever definition its last check
+    ran on. False whenever it might (and for any measure without a rule)."""
     adults = [(answers.age, answers.student_loan_plan)]
     if answers.has_partner:
         adults.append((answers.partner_age, answers.partner_student_loan_plan))

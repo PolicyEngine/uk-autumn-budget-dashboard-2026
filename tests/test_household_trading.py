@@ -76,7 +76,9 @@ def test_the_trading_allowance_is_skipped_only_without_self_employment(
     answers, year, expected
 ):
     assert (
-        household_impact.provably_unaffected(MEASURE, Answers(**answers), year)
+        household_impact.rule_says_unaffected(
+            MEASURE, Answers(**answers), year
+        )
         is expected
     )
 
