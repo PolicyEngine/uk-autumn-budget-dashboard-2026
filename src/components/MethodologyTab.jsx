@@ -16,6 +16,7 @@ import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { CALCULATOR_ONLY_MEASURES } from "../utils/calculatorOnlyMeasures";
+import { HOUSEHOLD_ONLY_TITLE, splitUnmodelled } from "../utils/measureClass";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
 import { EXPLAINERS, RESEARCH_URL } from "../utils/explainers";
 import ImprovementsNote from "./methodology/ImprovementsNote";
@@ -204,6 +205,8 @@ function useRevealLinkedAnchor() {
 function MethodologyTab({ onShowTab }) {
   const catalogue = useMeasureCatalogue();
   const UNAVAILABLE = unavailableMeasures(catalogue);
+  // Any Budget policy modelled for households only (utils/measureClass.js)
+  const householdOnly = splitUnmodelled(undefined, { published: catalogue.displayable.map(({ id }) => id) }).household.length > 0;
   // Every published measure, then those the calculator alone adds
   const calculatorPolicies = [
     ...(catalogue.measures ?? []).map((measure) => ({ id: measure.id, name: measure.name })),
@@ -426,12 +429,29 @@ function MethodologyTab({ onShowTab }) {
             <p className="method-more">
               Some Budget policies act on something the model or its survey data do not hold, such as
               prices, ISAs or business mileage, or have rules not yet published, so they cannot be
-              costed household by household. The rise in income tax rates on savings income is
-              modelled but held back from this release, for the reason its card gives.{" "}
-              <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
-                Budget policies we do not model
-              </ViewLink>
-              , on Policies, lists each with its reason.
+              costed household by household.{" "}
+              {householdOnly ? (
+                <>
+                  We model others for one household at a time, in the Household calculator, and leave
+                  them out of every national figure, because our survey data can't yet estimate their
+                  national effect.{" "}
+                  <ViewLink tab="policies" hash="budget-measures-household-only" onShowTab={onShowTab}>
+                    {HOUSEHOLD_ONLY_TITLE}
+                  </ViewLink>{" "}
+                  and{" "}
+                  <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
+                    Budget policies we do not model
+                  </ViewLink>
+                  , on Policies, list each with its reason.
+                </>
+              ) : (
+                <>
+                  <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
+                    Budget policies we do not model
+                  </ViewLink>
+                  , on Policies, lists each with its reason.
+                </>
+              )}
             </p>
           </Topic>
         </MethodSection>

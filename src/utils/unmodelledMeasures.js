@@ -30,6 +30,16 @@ export const TABLE_6_1_URL = `${BUDGET_URL}#table-61-budget-2026-policy-decision
 
 const budget = (paragraphs) => ({ label: `Budget 2026, ${paragraphs}`, href: BUDGET_URL });
 
+/**
+ * The OBR's detailed forecast tables (policy), Table 1.1: its breakdown of
+ * each measure's costing, which it certifies, by tax. The EFO page offers
+ * them only as one zip file.
+ */
+export const OBR_POLICY_TABLE = {
+  label: "OBR, Economic and fiscal outlook – October 2026, detailed forecast tables, Table 1.1",
+  href: "https://obr.uk/download/october-2026-economic-and-fiscal-outlook-detailed-forecast-tables-zip-file/",
+};
+
 const obr = (part) => ({
   label: `OBR, Economic and fiscal outlook – October 2026, ${part}`,
   href: "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
@@ -52,6 +62,9 @@ const obr = (part) => ({
  * 2031-32; positive is a gain to the Exchequer, negative a cost), each with
  * an optional `note` shown under the table. A measure with no row has
  * `noCosting` instead, saying what the documents give in its place.
+ * `certified`, where given, is the OBR's breakdown of the costing by tax
+ * (OBR_POLICY_TABLE, its `measure` number): the card shows it first, as the
+ * government's costing, which the OBR certified, with Table 6.1 as context.
  * `seeAlso` links PolicyEngine's own published work that models the
  * measure, after the reason this dashboard does not.
  */
@@ -89,6 +102,15 @@ export const UNMODELLED_MEASURES = [
       { label: "Why we leave it out", text: "Held back: calibrated on another basis, our taxable interest is too low." },
     ],
     costings: [{ row: 62, values: [15, 125, 555, 520, 555, 590] }],
+    // The government's costing as the OBR certifies it, by tax (OBR_POLICY_TABLE,
+    // measure 62, £ million; its total is Table 6.1's row 62 to the nearest £5m)
+    certified: {
+      measure: 62,
+      heads: [
+        { head: "Income tax", values: [0, 63, 483, 443, 475, 510] },
+        { head: "Onshore corporation tax", values: [13, 63, 74, 78, 80, 81] },
+      ],
+    },
     sources: [budget("paragraph 6.247")],
   },
   {
@@ -218,6 +240,13 @@ export const UNMODELLED_MEASURES = [
       { label: "Why we leave it out", text: "Household calculator only, not the national results: our data lack ISA payments." },
     ],
     costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
+    // The government's costing as the OBR certifies it (OBR_POLICY_TABLE,
+    // measure 11, £ million to the nearest £1m; its total is Table 6.1's
+    // row 11 to the nearest £5m)
+    certified: {
+      measure: 11,
+      heads: [{ head: "Income tax", values: [0, -4, -20, -35, -52, -72] }],
+    },
     sources: [
       budget("paragraphs 2.52 and 6.248"),
       {
