@@ -244,7 +244,15 @@ def test_derived_series_follow_october_cpi():
         key = f"{year}-01-01.{year}-12-31"
         assert changes[OBR + "consumer_price_index_ahc"][key] == pytest.approx(
             by_period[f"{year}-01-01"], abs=5e-5
-        ), year
+        ), {
+            "year": year,
+            "stored_ahc": changes[OBR + "consumer_price_index_ahc"][key],
+            "derived_ahc": by_period[f"{year}-01-01"],
+            "stored_cpi": cpi[key],
+            "stored_rent": changes[OBR + "rent"][key],
+            "initial_weights": ahc.initial_weights,
+            "derived_components": derived.to_dict(orient="records"),
+        }
         if year == 2027:
             assert changes[OBR + "social_rent"][key] == 0.045
         elif year > 2027:
@@ -286,4 +294,40 @@ def test_the_installed_engine_does_not_yet_carry_the_october_forecast():
         "the installed policyengine-uk already carries the OBR October 2026 "
         "CPI, RPI and earnings forecast: remove the forecast override "
         "(policyengine-uk#2711)"
+    )
+
+
+def test_the_declared_basis_names_the_installed_engine_and_no_march_rates():
+    """data_inputs/publication_basis.json goes into every receipt and the
+    public manifest (publication/receipt.py, ``load_basis``). It says which
+    policyengine-uk ships the October 2026 forecast as its own growth rates.
+    That must be the installed one, and the record must not say the October
+    rates are applied over March 2026's, which held only while the engine
+    shipped the March forecast (to policyengine-uk 2.151.0). So this fails
+    on any engine but the one the record names: the record moves with the
+    pin, in the same pull request."""
+    import json
+    from importlib.metadata import version
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / (
+        "data_inputs/publication_basis.json"
+    )
+    basis = json.loads(path.read_text(encoding="utf-8"))
+    ships = f"policyengine-uk {version('policyengine-uk')} ships"
+    assert ships in basis["forecast"]["vintage"]
+    assert ships in basis["notes"]
+    for text in (basis["forecast"]["vintage"], basis["notes"]):
+        assert "March 2026" not in text
+
+    # Naming the native forecast must not hide the retained overlay's
+    # older per-capita population derivation. This checks the declaration,
+    # not approval of a new macro path or removal of the tripwire above.
+    assert (
+        "per-capita GDP, mixed income and non-labour income" in basis["notes"]
+    )
+    assert "older population path" in basis["notes"]
+    assert (
+        "Household weights use the installed model's October population path."
+        in basis["notes"]
     )

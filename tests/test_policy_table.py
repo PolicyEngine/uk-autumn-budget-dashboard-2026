@@ -18,6 +18,7 @@ from uk_budget_data.policy_table import (
     OUTPUT_FILE,
     YEAR_WEIGHTS,
     _check_electricity_where,
+    _electricity_baseline_rate,
     build,
     constants,
     in_force_rate_change,
@@ -60,10 +61,6 @@ def withdrawn_rows(measure_id):
         # Split into the property and savings measures on Budget day
         registry.UNEARNED_INCOME_RATES_ID: (
             registry._create_unearned_income_rates_up
-        ),
-        # Held back from the release (e151a865; María, 28 October)
-        registry.SAVINGS_INCOME_RATES_ID: (
-            registry._create_savings_income_rates_up
         ),
     }
     reform = factory[measure_id]()
@@ -153,7 +150,7 @@ def test_fuel_duty_averages_are_the_engine_and_the_measure(document):
 
 def test_the_pension_tax_allowance_is_the_largest_reduction(document):
     """Budget 2026: up to £94 in 2027-28, rising with the full new State
-    Pension (OBR October 2026 forecast: £182, £250), to 2029-30."""
+    Pension, to 2029-30."""
     row = by_key(
         rows(document, "state_pension_income_tax_protection")[
             "Pension Tax Allowance, the largest tax reduction"
@@ -164,7 +161,10 @@ def test_the_pension_tax_allowance_is_the_largest_reduction(document):
     weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount
     for year in (2028, 2029):
         full = round(
-            math.floor(weekly(f"{year}-04-06") / 0.05 + 1e-9) * 0.05 * 52, 2
+            math.floor(round(weekly(f"{year}-04-06") / 0.05, 6) + 0.5)
+            * 0.05
+            * 52,
+            2,
         )
         assert row[str(year)] == (
             0,
@@ -237,13 +237,48 @@ def test_electricity_says_where_and_what_it_is_scored_against(document):
         _check_electricity_where({**values, "geography_2027": "GB"})
 
 
+def test_electricity_before_is_the_5_percent_its_pre_budget_side_holds(
+    document,
+):
+    """Current law has a rate of its own for domestic electricity from
+    policyengine-uk 2.153.5, zero in Great Britain from October 2026 to
+    March 2027, which is not what the measure is scored against. The
+    table's "before" is the 5% the measure's pre-Budget side holds, the
+    engine's reduced rate, and it is not written unless both sides hold
+    that one baseline."""
+    measure = registry.get_reform(registry.ELECTRICITY_VAT_ID)
+    values = constants(zero_vat_on_domestic_electricity)
+    assert _electricity_baseline_rate(measure, values) == 0.05
+    assert PARAMETERS.gov.hmrc.vat.reduced_rate("2026-04-06") == 0.05
+    for row in rows(document, "domestic_electricity_zero_vat").values():
+        assert {point["before"] for point in row["points"]} == {0.05}
+        assert row["source"]["before"] == {
+            "kind": "modifier_constant",
+            "where": (
+                "budget_measures/pre_budget_vat_on_domestic_electricity.py "
+                "pre_budget_vat_on_domestic_electricity(baseline_rate)"
+            ),
+        }
+    with pytest.raises(ValueError, match="does not apply its pre-Budget"):
+        _electricity_baseline_rate(
+            measure.model_copy(update={"baseline_simulation_modifier": None}),
+            values,
+        )
+    with pytest.raises(ValueError, match="differ on baseline_rate"):
+        _electricity_baseline_rate(measure, {**values, "baseline_rate": 0.08})
+    with pytest.raises(ValueError, match="its Budget side changes"):
+        _electricity_baseline_rate(
+            measure, {**values, "rate_change_2028": -0.01}
+        )
+
+
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
     monkeypatch.setitem(YEAR_WEIGHTS, registry.FUEL_VAT_ID, {2028: 0.5})
     with pytest.raises(ValueError, match="not in force"):
         in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
-def test_the_table_covers_the_eight_package_measures_only(document):
+def test_the_table_covers_the_nine_package_measures_only(document):
     # BADR, employer NI relief and the road fuel VAT cut are withdrawn
     # (27 October 2026)
     assert list(document["measures"]) == list(
@@ -251,11 +286,17 @@ def test_the_table_covers_the_eight_package_measures_only(document):
     )
     # Seven on Budget day: the savings and property rates split in two
     # (Table 6.1 rows 61 and 62), and the savings rates held back until the
-    # corrected savings data are in (e151a865); eight with the £2 bus fare
-    # cap (29 October 2026)
-    assert len(document["measures"]) == 8
+    # corrected savings data were in (e151a865); eight with the £2 bus fare
+    # cap (29 October 2026); nine with the savings rates (11 November 2026)
+    assert len(document["measures"]) == 9
     assert registry.BUS_FARE_CAP_ID in document["measures"]
-    assert registry.SAVINGS_INCOME_RATES_ID not in document["measures"]
+    assert registry.SAVINGS_INCOME_RATES_ID in document["measures"]
+    # Beside the property rates, as the registry lists them
+    assert list(document["measures"]).index(
+        registry.SAVINGS_INCOME_RATES_ID
+    ) == (
+        list(document["measures"]).index(registry.PROPERTY_INCOME_RATES_ID) + 1
+    )
     assert registry.UNEARNED_INCOME_RATES_ID not in document["measures"]
     assert registry.CARERS_ALLOWANCE_TAPER_ID in document["measures"]
     assert registry.LHA_UNFREEZE_ID not in document["measures"]
@@ -302,6 +343,7 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "state_pension_income_tax_protection": "path",
         "domestic_electricity_zero_vat": "switch",
         "property_income_rates_up": "path",
+        "savings_income_rates_up": "path",
         "carers_allowance_earnings_taper": "path",
         "household_energy_payment_2026": "switch",
         "trading_allowance_raise": "before-after",

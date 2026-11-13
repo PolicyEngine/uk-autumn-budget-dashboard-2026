@@ -92,7 +92,8 @@ describe("the landing page", () => {
   it("keeps the provisional badge on the landing page only, and words the Policies view and box as modelled measures", async () => {
     const original = fixtureJson("manifest.json");
     const manifest = {
-      ...original,
+      ...structuredClone(original),
+      updated_at: "2026-10-27T23:59:59+00:00",
       measures: { alpha: { ...original.measures.alpha, status: "provisional" } },
       combined: {},
     };

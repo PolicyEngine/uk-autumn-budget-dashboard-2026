@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import GeographyMethodology, { METHOD_NOTE_URL } from "./GeographyMethodology";
+import { render } from "@testing-library/react";
+import GeographyMethodology from "./GeographyMethodology";
 
 describe("GeographyMethodology", () => {
   it("explains the checks, intervals and tiers", () => {
@@ -23,14 +23,27 @@ describe("GeographyMethodology", () => {
     expect(text).toContain("little change: under 0.1% of income (£10 a year)");
     expect(text).not.toMatch(/noise/i);
 
-    const link = screen.getByRole("link", {
-      name: /^Read the method note for constituency figures/,
-    });
-    expect(link).toHaveAttribute("href", METHOD_NOTE_URL);
-    expect(METHOD_NOTE_URL).toBe(
-      "https://github.com/PolicyEngine/microcosm/issues/1131",
+    expect(text).toContain("HMRC pension-income amounts and recipient counts by constituency and local authority");
+    expect(text).not.toContain("property, pension and road-fuel");
+    expect(container.querySelector('a[href*="microcosm/issues/1131"]')).toBeNull();
+  });
+
+  it("says how constituency figures relate to the national ones", () => {
+    const { container } = render(<GeographyMethodology />);
+    const terms = [...container.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
+    // After the calibration the figures rest on, before the note on later years
+    expect(terms.slice(-3)).toEqual(["Local calibration", "National figures", "Later years"]);
+    const fact = [...container.querySelectorAll(".method-fact")].find(
+      (item) => item.querySelector("dt").textContent === "National figures",
     );
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    const points = [...fact.querySelectorAll("li")].map((point) => point.textContent);
+    expect(points).toEqual([
+      "We estimate constituency figures on the local-area file's own weights and do not scale them to the national figures, so a policy's constituency figures, taken together, need not match its national figure.",
+      "The local-area file matches HMRC's totals of property, dividend and private pension income by income band less closely than the national file does, so maps for policies that act on those incomes rest on a looser fit.",
+      "Use a constituency figure as an estimate of a policy's effect on households there. Its 90% interval reflects resampling with fitted weights held fixed; it leaves out uncertainty from calibration and differences between the two files. For a policy's total, use the national figures.",
+    ]);
+    // No size for the gap: no published file gives the local-area file's
+    // national total, so the note states none
+    expect(fact.textContent).not.toMatch(/\d(\.\d+)?% (above|below|higher|lower|more|less)|£\d/);
   });
 });

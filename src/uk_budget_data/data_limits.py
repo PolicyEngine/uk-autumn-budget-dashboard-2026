@@ -17,7 +17,10 @@ simulations calculate (:func:`observing`), not inferred from its source.
 Variables are compared with the metadata core reads during calculation,
 including formula end dates and conditions, and with their abolition
 parameters. Stored inputs are also compared, for each missing input and
-every model formula directly reading it or its limited parameters.
+every model formula directly reading it or its limited parameters. A
+shared upstream index can be marked parameter_change_only: changing that
+index is held, while an unrelated formula merely reading it is not a
+reader of the missing input.
 
 On built simulations two things are compared for parameters: what formulas
 read under those parameters at the start of each year (the system's cached
@@ -26,7 +29,7 @@ parameters), and the stored trees by position and effective value, so a
 reordered, replaced, re-typed or added parameter shows, and a redundant
 breakpoint or a label does not.
 
-A limit lifts when certified data carry the input: the certified tripwire
+An input-based limit lifts when certified data carry the input: the certified tripwire
 in ``tests/test_data_limits.py`` fails once they do, so the limit is removed
 in the bundle-adoption PR that brings them. The two purchase limits, which
 policyengine-uk #2241 made necessary, lifted so at the a6299504 cut; tests
@@ -62,6 +65,17 @@ class DataLimit:
     parameters: tuple[str, ...]
     missing_input: str
     reason: str
+    # Shared upstream paths whose changes affect the missing input, but
+    # whose use alone does not identify a structural reader of that input.
+    parameter_change_only: tuple[str, ...] = ()
+
+    def __post_init__(self):
+        if not isinstance(self.parameter_change_only, tuple) or any(
+            not isinstance(path, str) for path in self.parameter_change_only
+        ):
+            raise ValueError("parameter_change_only must be a tuple of paths")
+        if not set(self.parameter_change_only) <= set(self.parameters):
+            raise ValueError("parameter_change_only must be within parameters")
 
 
 DATA_LIMITS = (
@@ -232,68 +246,9 @@ DATA_LIMITS = (
             "years, so only a change to that rule is affected."
         ),
     ),
-    # The 16 inputs the a6299504 cut (policyengine-uk 2.151.0) adds to that
-    # list, read from the formulas at 2.151.0 that read them. Fifteen are the
-    # bases of the seven gambling duties, each attributed to households and
-    # nil by default, so every duty, and gambling_duty in household and
-    # government tax, is nil for every household: a duty change scores
-    # nothing. Each is keyed on the rate its duty charges on it.
-    DataLimit(
-        key="remote_uk_horseracing_betting",
-        parameters=(
-            "gov.hmrc.gambling_duty.general_betting.rates.fixed_odds",
-        ),
-        missing_input="remote_uk_horseracing_betting_net_losses",
-        reason=(
-            "The certified data do not record the losses on remote fixed-odds "
-            "bets on UK horseracing attributed to households, and with the "
-            "model's default of none no general betting duty is charged on "
-            "them. A change to the fixed-odds rate therefore scores nothing "
-            "on these losses, nor on the others charged at that rate, which "
-            "the data also lack."
-        ),
-    ),
-    DataLimit(
-        key="land_based_fixed_odds_betting",
-        parameters=(
-            "gov.hmrc.gambling_duty.general_betting.rates.fixed_odds",
-        ),
-        missing_input="land_based_fixed_odds_betting_net_losses",
-        reason=(
-            "The certified data do not record the losses on land-based "
-            "fixed-odds bets attributed to households, and with the model's "
-            "default of none no general betting duty is charged on them. A "
-            "change to the fixed-odds rate therefore scores nothing on these "
-            "losses, nor on the others charged at that rate, which the data "
-            "also lack."
-        ),
-    ),
-    DataLimit(
-        key="horse_and_dog_pool_betting",
-        parameters=(
-            "gov.hmrc.gambling_duty.general_betting.rates.fixed_odds",
-        ),
-        missing_input="horse_and_dog_pool_betting_net_losses",
-        reason=(
-            "The certified data do not record the losses on horse and dog "
-            "racing pool bets attributed to households, and with the model's "
-            "default of none no general betting duty is charged on them. The "
-            "model charges them at the fixed-odds rate, so a change to that "
-            "rate scores nothing on these losses, nor on the others charged "
-            "at it, which the data also lack."
-        ),
-    ),
-    DataLimit(
-        key="remote_other_betting",
-        parameters=("gov.hmrc.gambling_duty.general_betting.rates.remote",),
-        missing_input="remote_other_betting_net_losses",
-        reason=(
-            "The certified data do not record the losses on other remote "
-            "fixed-odds bets attributed to households, and with the model's "
-            "default of none no general betting duty is charged on them. A "
-            "change to the remote rate therefore scores nothing."
-        ),
-    ),
+    # The 0639b9c7 data carry thirteen formerly missing gambling bases.
+    # Financial and other spread-betting bases remain missing. Casino
+    # statutory-band support is held separately by model_limits.
     DataLimit(
         key="financial_spread_betting",
         parameters=(
@@ -320,116 +275,6 @@ DATA_LIMITS = (
             "other spread betting rate therefore scores nothing."
         ),
     ),
-    DataLimit(
-        key="betting_exchange_commission",
-        parameters=(
-            "gov.hmrc.gambling_duty.general_betting.rates.exchange_commission",
-        ),
-        missing_input="betting_exchange_commission",
-        reason=(
-            "The certified data do not record the betting exchange commission "
-            "attributed to households, and with the model's default of none "
-            "no general betting duty is charged on it. A change to the "
-            "exchange commission rate therefore scores nothing."
-        ),
-    ),
-    DataLimit(
-        key="machine_games_lower_rate",
-        parameters=("gov.hmrc.gambling_duty.machine_games.rates.lower",),
-        missing_input="machine_games_lower_rate_net_takings",
-        reason=(
-            "The certified data do not record the net takings from lower-rate "
-            "gaming machines attributed to households, and with the model's "
-            "default of none no machine games duty is charged on them. A "
-            "change to the lower rate therefore scores nothing."
-        ),
-    ),
-    DataLimit(
-        key="machine_games_standard_rate",
-        parameters=("gov.hmrc.gambling_duty.machine_games.rates.standard",),
-        missing_input="machine_games_standard_rate_net_takings",
-        reason=(
-            "The certified data do not record the net takings from "
-            "standard-rate gaming machines attributed to households, and with "
-            "the model's default of none no machine games duty is charged on "
-            "them. A change to the standard rate therefore scores nothing."
-        ),
-    ),
-    DataLimit(
-        key="machine_games_higher_rate",
-        parameters=("gov.hmrc.gambling_duty.machine_games.rates.higher",),
-        missing_input="machine_games_higher_rate_net_takings",
-        reason=(
-            "The certified data do not record the net takings from "
-            "higher-rate gaming machines attributed to households, and with "
-            "the model's default of none no machine games duty is charged on "
-            "them. A change to the higher rate therefore scores nothing."
-        ),
-    ),
-    DataLimit(
-        key="remote_gaming",
-        parameters=("gov.hmrc.gambling_duty.remote_gaming",),
-        missing_input="remote_gaming_net_losses",
-        reason=(
-            "The certified data do not record the losses on remote gaming "
-            "attributed to households, and with the model's default of none "
-            "no remote gaming duty is charged. A change to remote gaming duty "
-            "therefore scores nothing."
-        ),
-    ),
-    DataLimit(
-        key="bingo",
-        parameters=("gov.hmrc.gambling_duty.bingo",),
-        missing_input="bingo_net_receipts",
-        reason=(
-            "The certified data do not record the bingo promotion profits "
-            "attributed to households, and with the model's default of none "
-            "no bingo duty is charged. Bingo duty is abolished from 1 April "
-            "2026 (Finance Act 2026 s. 88), and a measure that reinstates or "
-            "changes it would score nothing."
-        ),
-    ),
-    DataLimit(
-        key="pool_betting",
-        parameters=("gov.hmrc.gambling_duty.pool_betting",),
-        missing_input="pool_betting_net_receipts",
-        reason=(
-            "The certified data do not record the net receipts from pool "
-            "betting other than on horse and dog racing attributed to "
-            "households, and with the model's default of none no pool betting "
-            "duty is charged. A change to pool betting duty therefore scores "
-            "nothing."
-        ),
-    ),
-    DataLimit(
-        key="national_lottery",
-        parameters=("gov.hmrc.gambling_duty.lottery",),
-        missing_input="national_lottery_ticket_spending",
-        reason=(
-            "The certified data do not record National Lottery ticket "
-            "spending, and with the model's default of none no lottery duty "
-            "is charged. A change to lottery duty therefore scores nothing."
-        ),
-    ),
-    DataLimit(
-        key="land_based_casino",
-        parameters=(
-            # The only parameter gaming_duty reads: the model charges the
-            # yield at one effective rate.
-            "household.consumption.gambling.casino_effective_rate",
-            # No formula reads the statutory bands, so a change to them
-            # would score nothing even with the data.
-            "gov.hmrc.gambling_duty.gaming",
-        ),
-        missing_input="land_based_casino_net_losses",
-        reason=(
-            "The certified data do not record the land-based casino gaming "
-            "yield attributed to households, and with the model's default of "
-            "none no gaming duty is charged. The model charges that yield at "
-            "one effective rate and reads none of gaming duty's statutory "
-            "bands, so a change to the rate or the bands scores nothing."
-        ),
-    ),
     # The residential exception changes only the threshold the working-age
     # tariff income starts from: not eligibility, capital or the upper limit
     # (the variable's own documentation, and its one reader).
@@ -454,6 +299,206 @@ DATA_LIMITS = (
             "affected."
         ),
     ),
+    # Exact0639b9c7 metadata transition: one limit per newly missing input.
+    DataLimit(
+        key="child_limit_adoption_exception",
+        parameters=(
+            "gov.dwp.universal_credit.elements.child",
+            "gov.dwp.tax_credits.child_tax_credit",
+        ),
+        missing_input="child_limit_adoption_exception",
+        reason="The certified data do not record whether a child has an adoption exception. The model's default is False: no adoption exception applies. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="child_limit_continuation_exception",
+        parameters=(
+            "gov.dwp.universal_credit.elements.child",
+            "gov.dwp.tax_credits.child_tax_credit",
+        ),
+        missing_input="child_limit_continuation_exception",
+        reason="The certified data do not record whether a child has a continuation exception. The model's default is False: no continuation exception applies. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="child_limit_multiple_birth_exception",
+        parameters=(
+            "gov.dwp.universal_credit.elements.child",
+            "gov.dwp.tax_credits.child_tax_credit",
+        ),
+        missing_input="child_limit_multiple_birth_exception",
+        reason="The certified data do not record whether a child has a multiple-birth exception. The model's default is False: no multiple-birth exception applies. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="child_limit_non_consensual_conception_exception",
+        parameters=(
+            "gov.dwp.universal_credit.elements.child",
+            "gov.dwp.tax_credits.child_tax_credit",
+        ),
+        missing_input="child_limit_non_consensual_conception_exception",
+        reason="The certified data do not record whether a child has a non-consensual-conception exception. The model's default is False: no such exception applies. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="child_limit_non_parental_caring_exception",
+        parameters=(
+            "gov.dwp.universal_credit.elements.child",
+            "gov.dwp.tax_credits.child_tax_credit",
+        ),
+        missing_input="child_limit_non_parental_caring_exception",
+        reason="The certified data do not record whether a child has a non-parental-caring exception. The model's default is False: no non-parental-caring exception applies. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="company_car_availability",
+        parameters=(
+            "gov.hmrc.income_tax.benefits_in_kind.company_car",
+            "gov.hmrc.income_tax.benefits_in_kind.car_fuel",
+        ),
+        missing_input="company_car_availability",
+        reason="The certified data do not record the share of the year each company car is available. The model's default is 1: every company car is available for the whole tax year. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data. This does not lift the national company-car hold.",
+    ),
+    DataLimit(
+        key="company_car_private_use_payments",
+        parameters=(
+            "gov.hmrc.income_tax.benefits_in_kind.company_car",
+            "gov.hmrc.income_tax.benefits_in_kind.car_fuel",
+        ),
+        missing_input="company_car_private_use_payments",
+        reason="The certified data do not record payments for private use of company cars. The model's default is 0: no private-use payments are deducted from the car benefit. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data. This does not lift the national company-car hold.",
+    ),
+    DataLimit(
+        key="company_car_registered_from_6_april_2020",
+        parameters=(
+            "gov.hmrc.income_tax.benefits_in_kind.company_car",
+            "gov.hmrc.income_tax.benefits_in_kind.car_fuel",
+        ),
+        missing_input="company_car_registered_from_6_april_2020",
+        reason="The certified data do not record whether each company car was registered from 6 April 2020. The model's default is False: the registration-date condition is not met. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data. This does not lift the national company-car hold.",
+    ),
+    DataLimit(
+        key="electricity_consumption_kwh",
+        parameters=("gov.ofgem.energy_price_guarantee_northern_ireland",),
+        missing_input="electricity_consumption_kwh",
+        reason="The certified data do not record monthly electricity use in kWh. The model's default is -1: electricity use is unknown, not zero. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data. The NI discounts are inactive throughout the app's supported years; reactivating them is held. Missing use or eligibility must not be described as zero support.",
+    ),
+    DataLimit(
+        key="gas_consumption_kwh",
+        parameters=("gov.ofgem.energy_price_guarantee_northern_ireland",),
+        missing_input="gas_consumption_kwh",
+        reason="The certified data do not record monthly gas use in kWh. The model's default is -1: gas use is unknown, not zero. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data. The NI discounts are inactive throughout the app's supported years; reactivating them is held. Missing use or eligibility must not be described as zero support.",
+    ),
+    DataLimit(
+        key="housing_benefit_family_premium_category",
+        parameters=("gov.dwp.housing_benefit.premiums.family",),
+        missing_input="housing_benefit_family_premium_category",
+        reason="The certified data do not record each Housing Benefit claim's protected family-premium category. The model's default is NONE: no protected family-premium category is established. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="housing_benefit_has_main_phase_esa",
+        parameters=("gov.dwp.housing_benefit.allowances",),
+        missing_input="housing_benefit_has_main_phase_esa",
+        reason="The certified data do not record whether the Housing Benefit main-phase ESA allowance adjustment applies. The model's default is False: no main-phase ESA adjustment applies. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="housing_benefit_permitted_work_disregard",
+        parameters=(
+            "gov.dwp.housing_benefit.means_test.income_disregard",
+            "gov.dwp.pension_credit.earnings_disregard",
+        ),
+        missing_input="housing_benefit_permitted_work_disregard",
+        reason="The certified data do not record the pre-assessed Housing Benefit permitted-work earnings disregard. The model's default is 0: no permitted-work disregard is supplied. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="individual_savings_account_dividend_income",
+        parameters=(
+            "gov.local_authorities.kingston_upon_thames.council_tax_reduction.non_dep_deduction",
+            "gov.local_authorities.merton.council_tax_reduction.non_dep_deduction",
+            "gov.local_authorities.newham.council_tax_reduction.non_dep_deduction",
+            "gov.local_authorities.oxford.council_tax_reduction.non_dep_deduction",
+            "gov.local_authorities.westminster.council_tax_reduction.non_dep_deduction",
+            "gov.economic_assumptions.indices.obr.per_capita.gdp",
+        ),
+        missing_input="individual_savings_account_dividend_income",
+        parameter_change_only=(
+            "gov.economic_assumptions.indices.obr.per_capita.gdp",
+        ),
+        reason="The certified data do not record tax-free dividend income within ISAs. The model's default is 0: no ISA dividend income is added to capital or market income. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="is_in_first_year_of_apprenticeship",
+        parameters=("gov.hmrc.minimum_wage",),
+        missing_input="is_in_first_year_of_apprenticeship",
+        reason="The certified data do not record whether an apprentice is in the first year. The model's default is False: no apprentice is in the first year; this is separate from the recorded apprentice indicator. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="lifetime_isa_first_time_buyer",
+        parameters=("gov.hmrc.isa.lifetime",),
+        missing_input="lifetime_isa_first_time_buyer",
+        reason="The certified data do not record whether a Lifetime ISA withdrawal is for a first-time buyer. The model's default is False: the first-time-buyer condition is not met. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="lifetime_isa_months_since_first_payment",
+        parameters=("gov.hmrc.isa.lifetime",),
+        missing_input="lifetime_isa_months_since_first_payment",
+        reason="The certified data do not record months since the first Lifetime ISA payment. The model's default is 0: no holding period is established. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="lifetime_isa_terminally_ill",
+        parameters=("gov.hmrc.isa.lifetime",),
+        missing_input="lifetime_isa_terminally_ill",
+        reason="The certified data do not record whether a Lifetime ISA holder meets the terminal-illness condition. The model's default is False: that withdrawal-charge exemption is not established. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="lifetime_isa_withdrawals",
+        parameters=("gov.hmrc.isa.lifetime",),
+        missing_input="lifetime_isa_withdrawals",
+        reason="The certified data do not record gross Lifetime ISA withdrawals. The model's default is 0: no withdrawal is charged. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="lifetime_isa_withdrawals_towards_first_home",
+        parameters=("gov.hmrc.isa.lifetime",),
+        missing_input="lifetime_isa_withdrawals_towards_first_home",
+        reason="The certified data do not record Lifetime ISA withdrawals towards a first home. The model's default is 0: no payment towards a first home is established. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="main_residential_property_purchased_is_in_uk",
+        parameters=("gov.hmrc.isa.lifetime",),
+        missing_input="main_residential_property_purchased_is_in_uk",
+        reason="The certified data do not record whether the purchased main residence is in the UK. The model's default is False: the UK-property condition for a Lifetime ISA withdrawal is not met. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="main_residential_property_purchased_with_mortgage",
+        parameters=("gov.hmrc.isa.lifetime",),
+        missing_input="main_residential_property_purchased_with_mortgage",
+        reason="The certified data do not record whether the purchased main residence uses a mortgage. The model's default is False: the mortgage condition for a Lifetime ISA withdrawal is not met. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="ni_epg_full_rate_applies",
+        parameters=("gov.ofgem.energy_price_guarantee_northern_ireland",),
+        missing_input="ni_epg_full_rate_applies",
+        reason="The certified data do not record whether monthly Northern Ireland supplies qualify for the full Energy Price Guarantee discount. The model's default is False: full-rate support is not established. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data. The NI discounts are inactive throughout the app's supported years; reactivating them is held. Missing use or eligibility must not be described as zero support.",
+    ),
+    DataLimit(
+        key="non_cash_isa_cash_interest",
+        parameters=(
+            "gov.hmrc.isa.cash_interest_charge",
+            "gov.hmrc.income_tax.rates.savings.basic",
+        ),
+        missing_input="non_cash_isa_cash_interest",
+        reason="The certified data do not record cash interest within non-cash ISAs. The model's default is 0: the separate manager-paid cash-interest charge has no base. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data. The native charge applies from 2027 and reads the basic savings rate, so that rate is covered too.",
+    ),
+    DataLimit(
+        key="severe_disability_premium_joint_occupier_exclusion_applies",
+        parameters=(
+            "gov.dwp.disability_premia",
+            "gov.local_authorities.scotland.council_tax_reduction.working_age.young_person_follows_universal_credit",
+        ),
+        missing_input="severe_disability_premium_joint_occupier_exclusion_applies",
+        reason="The certified data do not record the family- and year-specific severe-disability joint-occupier assertion. The model's default is False: the occupier exclusion is not established. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
+    DataLimit(
+        key="would_claim_wales_childcare_offer",
+        parameters=("gov.welsh_government.childcare_offer",),
+        missing_input="would_claim_wales_childcare_offer",
+        reason="The certified data do not record whether each family would claim the Childcare Offer for Wales. The model's default is True: every family is treated as willing to claim rather than using recorded take-up. A measure changing the rules that act through this fact, or replacing the input or its readers, cannot be costed on these data.",
+    ),
 )
 
 
@@ -467,6 +512,7 @@ def registry_digest(limits: Iterable[DataLimit]) -> str:
                     list(limit.parameters),
                     limit.missing_input,
                     limit.reason,
+                    list(limit.parameter_change_only),
                 ]
                 for limit in limits
             ],
@@ -549,6 +595,36 @@ NEWLY_MISSING_INPUTS: dict[str, tuple[str, ...]] = {
         "remote_uk_horseracing_betting_net_losses",
         "salary_sacrifice_returned_to_income",
     ),
+    # Derived from exact metadata audit and bound complete predecessor list;
+    # tests/fixtures/input_coverage_0639b9c7.json records the method limits.
+    "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7": (
+        "child_limit_adoption_exception",
+        "child_limit_continuation_exception",
+        "child_limit_multiple_birth_exception",
+        "child_limit_non_consensual_conception_exception",
+        "child_limit_non_parental_caring_exception",
+        "company_car_availability",
+        "company_car_private_use_payments",
+        "company_car_registered_from_6_april_2020",
+        "electricity_consumption_kwh",
+        "gas_consumption_kwh",
+        "housing_benefit_family_premium_category",
+        "housing_benefit_has_main_phase_esa",
+        "housing_benefit_permitted_work_disregard",
+        "individual_savings_account_dividend_income",
+        "is_in_first_year_of_apprenticeship",
+        "lifetime_isa_first_time_buyer",
+        "lifetime_isa_months_since_first_payment",
+        "lifetime_isa_terminally_ill",
+        "lifetime_isa_withdrawals",
+        "lifetime_isa_withdrawals_towards_first_home",
+        "main_residential_property_purchased_is_in_uk",
+        "main_residential_property_purchased_with_mortgage",
+        "ni_epg_full_rate_applies",
+        "non_cash_isa_cash_interest",
+        "severe_disability_premium_joint_occupier_exclusion_applies",
+        "would_claim_wales_childcare_offer",
+    ),
 }
 
 # The cut the dashboard ran when the record began (policyengine 6.10.x,
@@ -564,6 +640,7 @@ RECORD_ROOT = "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71"
 LISTED_AGAINST: dict[str, str] = {
     "microcosm-uk-2024-25-national-20261023T075039Z-a133f37a": RECORD_ROOT,
     "microcosm-uk-2024-25-national-20261025T091414Z-a6299504": RECORD_ROOT,
+    "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
 }
 
 # Inputs a cut listed above that are no longer missing, with why: the
@@ -581,6 +658,19 @@ NO_LONGER_MISSING: dict[str, str] = {
     "non_residential_property_secured_debt": _CARRIED_BY_A6299504,
     "other_residential_property_secured_debt": _CARRIED_BY_A6299504,
     "unit_and_investment_trusts": _CARRIED_BY_A6299504,
+    "remote_uk_horseracing_betting_net_losses": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "land_based_fixed_odds_betting_net_losses": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "horse_and_dog_pool_betting_net_losses": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "remote_other_betting_net_losses": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "betting_exchange_commission": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "machine_games_lower_rate_net_takings": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "machine_games_standard_rate_net_takings": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "machine_games_higher_rate_net_takings": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "remote_gaming_net_losses": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "bingo_net_receipts": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "pool_betting_net_receipts": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "national_lottery_ticket_spending": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
+    "land_based_casino_net_losses": "The 0639b9c7 certified-data CI records this input's holder periods; the exact metadata audit also finds its column. This is presence evidence, not a degeneracy or usability certificate.",
 }
 
 
@@ -2154,6 +2244,7 @@ def _engine_parts():
         )
         from policyengine_core.populations.population import Population
         from policyengine_core.simulations.simulation import Simulation
+        from policyengine_uk.simulation import Simulation as ModelSimulation
 
         _ENGINE.update(
             simulation=Simulation,
@@ -2161,6 +2252,14 @@ def _engine_parts():
             calculate=Simulation.__dict__["calculate"],
             get_holder=Population.__dict__["get_holder"],
             run_formula=Simulation.__dict__["_run_formula"].__code__,
+            # UK 2.165.1 wraps Core's runner to preserve legacy ISA-interest
+            # inputs. It still calls the Core runner that this watch observes.
+            # Keep exact function identities: a custom subclass runner must
+            # not acquire this trust just by inheriting from the UK class.
+            formula_runners=(
+                Simulation._run_formula,
+                ModelSimulation._run_formula,
+            ),
             at_instant_like=AtInstantLike,
             get_at_instant=AtInstantLike.__dict__["get_at_instant"],
             # Stored parameters, scales, brackets and nodes: their values
@@ -2195,6 +2294,24 @@ def _engine_parts():
             }
         )
     return _ENGINE
+
+
+def _known_formula_runner(sim, runners) -> bool:
+    """Whether this simulation uses an explicitly observed engine runner.
+
+    Model runners may delegate to Core while adding model bookkeeping. Accept
+    only the installed Core and UK methods recorded by ``_engine_parts``,
+    bound to this simulation, including an inherited method. Keep custom,
+    unbound or foreign-receiver replacements unobservable. Compare function
+    identity, never a name, module or equality.
+    """
+    try:
+        runner = getattr(sim, "_run_formula", None)
+    except Exception:  # noqa: BLE001 - an unreadable runner stays unobservable
+        return False
+    if not isinstance(runner, types.MethodType) or runner.__self__ is not sim:
+        return False
+    return any(runner.__func__ is known for known in runners)
 
 
 def _run_alone(population, period, parameters_at, formula):
@@ -2853,11 +2970,7 @@ class Observation:
         for sim in self.sims:
             if getattr(sim, "macro_cache_read", False):
                 self._all_unobservable("values may come from a disk cache")
-            run_formula = getattr(type(sim), "_run_formula", None)
-            if (
-                getattr(run_formula, "__code__", None)
-                is not engine["run_formula"]
-            ):
+            if not _known_formula_runner(sim, engine["formula_runners"]):
                 self._all_unobservable("the engine runs formulas its own way")
             for each in (sim, *getattr(sim, "branches", {}).values()):
                 for name in self.changes.sides:
@@ -3301,43 +3414,60 @@ def _formulas_touched(observation) -> dict:
 
 def _reads(limit: DataLimit, names: set) -> bool:
     """Whether code using ``names`` reads what ``limit`` covers: its missing
-    input, a parameter path under it, or every segment of one (formulas
-    reach parameters by attribute)."""
+    input, a structural parameter path under it, or every segment of one
+    (formulas reach parameters by attribute). Shared upstream-only paths
+    still hold actual parameter changes; reading them alone does not make
+    a formula a reader of this missing input."""
     if limit.missing_input in names or ANY_NAME in names:
         return True
     return any(
         set(prefix.split(".")) <= names
         or any(_under(name, prefix) for name in names)
         for prefix in limit.parameters
+        if prefix not in limit.parameter_change_only
     )
+
+
+def _direct_reader_names(variable) -> set:
+    """Names directly read by a variable and its literal helper functions.
+
+    Follow only real Python functions loaded as globals by its formulas,
+    one level deep. Do not call helpers or resolve modules, attributes or
+    callable objects. A direct reference may conservatively name a read
+    even if that helper is not called; this is not a transitive scan.
+    """
+    names = set()
+    for formula in _formulas(variable):
+        if not isinstance(formula, types.FunctionType):
+            continue
+        names |= _code_names(formula.__code__)
+        for name in _loaded_globals(formula.__code__):
+            helper = formula.__globals__.get(name)
+            if isinstance(helper, types.FunctionType):
+                names |= _code_names(helper.__code__)
+    for attribute in ("adds", "subtracts", "defined_for"):
+        values = getattr(variable, attribute, None)
+        if isinstance(values, str):
+            names.add(values)
+        elif attribute != "defined_for" and isinstance(values, (list, tuple)):
+            names |= {value for value in values if isinstance(value, str)}
+    return names
 
 
 def limit_variables(limit: DataLimit, systems=()) -> frozenset:
     """The missing input and the model variables directly reading a limit.
 
-    Derive the purchase-tax readers from installed formula names and
-    parameter paths, rather than keeping a second registry of their names.
-    Include both compared systems so a newly added reader is covered too.
-    The installed model keeps a replaced or ended reader covered.
+    Include literal defined-for conditions and directly referenced Python
+    helper functions, as well as formula names and adds/subtracts. Include
+    both compared systems so a newly added reader is covered too. The
+    installed model keeps a replaced or ended reader covered.
     """
     from policyengine_uk.system import system as installed
 
     found = {limit.missing_input}
     for system in (installed, *systems):
         for name, variable in system.variables.items():
-            names = set()
-            for formula in _formulas(variable):
-                if isinstance(formula, types.FunctionType):
-                    names |= _code_names(formula.__code__)
-            for attribute in ("adds", "subtracts"):
-                values = getattr(variable, attribute, None)
-                if isinstance(values, str):
-                    names.add(values)
-                elif isinstance(values, (list, tuple)):
-                    names |= {
-                        value for value in values if isinstance(value, str)
-                    }
-            if _reads(limit, names):
+            if _reads(limit, _direct_reader_names(variable)):
                 found.add(name)
     return frozenset(found)
 

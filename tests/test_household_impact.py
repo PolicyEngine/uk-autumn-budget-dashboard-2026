@@ -15,6 +15,7 @@ The hand checks recompute the main changes from the parameters.
 
 import dataclasses
 import json
+from decimal import Decimal
 from pathlib import Path
 
 import policyengine as pe
@@ -253,11 +254,16 @@ def test_a_single_holds_every_other_measure_at_current_law():
     student_loans = household_impact.modifier_name(
         plan_2.baseline_simulation_modifier
     )
-    # The Plan 2 measure's pre-Budget side has its own modifier
-    assert sides.before["modifiers"] == [student_loans]
+    electricity = get_reform("domestic_electricity_zero_vat")
+    pre_budget_electricity = household_impact.modifier_name(
+        electricity.baseline_simulation_modifier
+    )
+    # Both other measures keep their own pre-Budget sides, in member order.
+    baseline_modifiers = [pre_budget_electricity, student_loans]
+    assert sides.before["modifiers"] == baseline_modifiers
     assert sides.singles["threshold_freeze_2031_32"] == {
         "parameter_changes": freeze.parameter_changes,
-        "modifiers": [student_loans],
+        "modifiers": baseline_modifiers,
     }
     # Modifiers in order of measure id: the electricity measure's
     # (domestic_...) before the Plan 2 measure's student loans
@@ -838,12 +844,14 @@ def test_a_pensioner_is_paid_the_full_rate_or_the_amount_entered_on_the_forecast
 
 
 def test_the_full_new_state_pension_in_2028_29_is_octobers():
-    """£259.24 a week in 2028-29 on the October 2026 forecast; the March
-    forecast policyengine-uk ships gives £256.98."""
+    """£259.24 a week in 2028-29 on the October 2026 forecast. The March
+    forecast policyengine-uk 2.151.0 shipped gave £256.98; from 2.164.1
+    (OBR October 2026 economic assumptions) the engine ships October's
+    rate itself, so the two agree."""
     weekly = household_impact.full_new_state_pension(2028) / 52
     assert round(weekly, 2) == 259.24
-    march = PARAMETERS.get_child(NEW_STATE_PENSION)("2028-01-01")
-    assert round(float(march), 2) == 256.98
+    native = PARAMETERS.get_child(NEW_STATE_PENSION)("2028-01-01")
+    assert round(float(native), 2) == 259.24
 
 
 @pytest.mark.parametrize("year", POLICY_YEARS)
@@ -916,8 +924,18 @@ def test_the_state_pension_is_entered_only_at_state_pension_age():
 def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
     """A 72-year-old with £2,000 savings interest and £1,000 dividends:
     before, with no State Pension entered, policyengine-uk paid £13,172 of
-    Pension Credit instead. Now the full new State Pension, and too much
-    income for Pension Credit."""
+    Pension Credit instead. Now the full new State Pension, and at most a
+    sliver of Guarantee Credit.
+
+    The pinned policyengine-uk 2.165.1 model uprates the standard minimum
+    guarantee by the previous May to July earnings growth (SSAA 1992
+    s. 150A; the engine's changelog: "April 2027's single guarantee rises
+    from £238 to £247.282 before rounding, rather than £243.47"). In 2029-30 it is
+    £260.807 a week, £13,561.94 a year, while the Pension Credit income
+    the engine assesses is the State Pension (£13,817.30) less all income
+    tax, £13,514.09: Guarantee Credit of £47.86. Savings interest and
+    dividends are not Pension Credit income (no capital is entered), but
+    the engine deducts the tax on them."""
     answers = Answers(
         age=72,
         employment_income=0,
@@ -931,7 +949,9 @@ def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
     assert programme(result, "state_pension")["baseline"] == pytest.approx(
         full, abs=0.01
     )
-    assert programme(result, "pension_credit")["baseline"] == 0
+    assert programme(result, "pension_credit")["baseline"] == pytest.approx(
+        47.86, abs=0.01
+    )
     used = result["state_pension_used"]
     assert used["state_pension"] == pytest.approx(full, abs=0.01)
     assert used["partner_state_pension"] is None
@@ -1689,13 +1709,17 @@ def test_a_councils_council_tax_is_taken_off_net_income():
     # places it from the region
     assert glasgow["area"]["brma"] == average["area"]["brma"]
     assert glasgow["area"]["brma_source"] == "region default"
-    assert glasgow["net_income"]["baseline"] == pytest.approx(
-        average["net_income"]["baseline"]
-        - (
-            own - household_impact.estimated_council_tax("SCOTLAND", "D", YEAR)
-        ),
-        abs=0.01,
+    # All four displayed amounts are penny-rounded. Keep the exact one-penny
+    # allowance without binary float noise rejecting its boundary.
+    expected = Decimal(str(average["net_income"]["baseline"])) - (
+        Decimal(str(own))
+        - Decimal(
+            str(household_impact.estimated_council_tax("SCOTLAND", "D", YEAR))
+        )
     )
+    assert abs(
+        Decimal(str(glasgow["net_income"]["baseline"])) - expected
+    ) <= Decimal("0.01")
     _rows_add_up(glasgow)
 
 

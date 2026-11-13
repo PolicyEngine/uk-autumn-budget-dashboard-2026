@@ -5,9 +5,9 @@ Inputs:
   dataset;
 - data_inputs/living_standards/hbai_outturn.json (:mod:`.hbai`);
 - data_inputs/living_standards/obr_rhdi.json (:mod:`.obr`);
-- OBR March 2026 series from the policyengine-uk parameters pinned by the
-  policyengine bundle (gov.economic_assumptions.yoy_growth.obr.*), using the
-  same series and section grouping as PolicyEngine/uk-spring-statement-2026;
+- OBR March 2026 series from the committed workbook and frozen historical
+  model inputs (:mod:`.historical_forecast`), independent of the model
+  installed for the projections;
 - data_inputs/living_standards/obr_forecast_post.json, if present: the
   Budget forecast loaded by ``uk-budget-data obr-forecast`` (:mod:`.forecast`).
 
@@ -29,6 +29,10 @@ from uk_budget_data.living_standards.engine import (
     fy,
     headline_end_year,
     headline_end_year_note,
+)
+from uk_budget_data.living_standards.historical_forecast import (
+    PRE_SOURCE,
+    read_historical_march_pre,
 )
 from uk_budget_data.living_standards.projections import GROUP_POVERTY_MEASURES
 from uk_budget_data.living_standards.uc_health_element import (
@@ -103,35 +107,6 @@ SECTIONS = [
         ],
     ),
 ]
-
-
-# OBR EFO March 2026 detailed forecast tables, economy (published 3 March 2026;
-# still the latest OBR forecast until the 28 October 2026 EFO). Every OBR series
-# below is the calendar-year row of the table: growth in the annual average,
-# not fiscal year and not Q4 on Q4. Checked against the xlsx on 20 Oct 2026.
-EFO = "OBR EFO March 2026, economy detailed forecast tables"
-SOURCES = {
-    "consumer_price_index": f"{EFO}, Table 1.7, CPI (calendar year), rounded to 1 d.p. as in Table A.1",
-    "cpih": f"{EFO}, Table 1.7, CPIH (calendar year)",
-    "consumer_price_index_ahc": (
-        "PolicyEngine derivation from OBR March 2026 CPI and rents (not an OBR series; "
-        "ONS ad hoc 2863 definition, excluding rents, maintenance and water); 2027 onwards held at 1.9%"
-    ),
-    "rpi": f"{EFO}, Table 1.7, RPI (calendar year), rounded to 1 d.p. as in Table A.1",
-    "average_earnings": (
-        f"{EFO}, Table 1.6, average weekly earnings growth (wages and salaries per employee, "
-        "calendar year), rounded to 1 d.p. as in Table A.1"
-    ),
-    "non_labour_income": f"{EFO}, Table 1.12, growth in non-labour income (calendar year)",
-    "house_prices": f"{EFO}, Table 1.16, house price index growth (calendar year), rounded to 1 d.p.",
-    "rent": f"{EFO}, Table 1.7, actual rents for housing (ONS D7GQ, calendar year)",
-    "social_rent": "England social rent policy cap (CPI + 1%, MHCLG policy statement on rents for social housing); not an OBR forecast",
-    "mortgage_interest": (
-        f"{EFO}, Table 1.7, mortgage interest payments (calendar year), 2027-2029; "
-        "OBR stops forecasting this series after 2030 Q1, so the 2030 value (5.5%) is "
-        "carried over from policyengine-uk's November 2025 update, not an OBR March 2026 figure"
-    ),
-}
 
 
 def build_outlook(
@@ -621,19 +596,18 @@ def build_outlook(
         },
     }
 
-    # The pre-Budget series are the OBR March 2026 forecast, as
-    # policyengine-uk ships it: its own parameters, not the October forecast
-    # the projections run on (forecast_parameters), or the Forecast changes
-    # sub-tab would draw October twice. check_pre_is_march holds them to the
-    # committed March 2026 EFO tables below.
-    obr = system.parameters.gov.economic_assumptions.yoy_growth.obr
+    # Historical March values stay independent of the current model's
+    # October forecast. Missing or changed historical source inputs refuse
+    # the build; check_pre_is_march still checks the resulting chart.
+    from uk_budget_data.living_standards import INPUTS_DIR
+
+    historical = read_historical_march_pre(INPUTS_DIR, list(FORECAST_YEARS))
     sections = []
     for title, series in SECTIONS:
         out_series = []
         for key, label, leaf in series:
-            node = getattr(obr, leaf)
             pre = [
-                {"year": str(y), "value": round(float(node(f"{y}-01-01")), 4)}
+                {"year": str(y), "value": historical[key].values[y]}
                 for y in FORECAST_YEARS
             ]
             out_series.append(
@@ -641,7 +615,7 @@ def build_outlook(
                     "key": key,
                     "label": label,
                     "parameter": f"gov.economic_assumptions.yoy_growth.obr.{leaf}",
-                    "source": SOURCES[leaf],
+                    "source": historical[key].source,
                     "pre": pre,
                     "post": [dict(p) for p in pre],
                 }
@@ -738,6 +712,7 @@ def build_outlook(
         },
         "forecast": {
             "pre_label": "OBR March 2026 (pre-Budget)",
+            "pre_source": dict(PRE_SOURCE),
             "basis": "Calendar year, growth in annual average",
             "post_label": "Budget forecast",
             "post_published": POST_PUBLISHED,

@@ -18,16 +18,16 @@
   "combined": {
     "combined--alpha+beta": {
       "approval": {
-        "artifact_sha256": "6e0ee67303020227b9ef86f5897e01092e6ecb4178a835c22fdc38f522a462d2",
-        "at": "2026-10-27T02:06:20.525568+00:00",
+        "artifact_sha256": "086163e32b1c53be3dd556ee31a38c73f752ab6aeb37591e614b435d481045cf",
+        "at": "2026-11-12T14:24:04.360039+00:00",
         "by": "Reviewer",
         "outputs_sha256": "547f2ffc7d8bde18252b4cf59fad6ae17bba2d764345dcf93e2dd573adc63ef8"
       },
-      "artifact": "artifacts/combined--alpha+beta/6e0ee67303020227",
-      "artifact_sha256": "6e0ee67303020227b9ef86f5897e01092e6ecb4178a835c22fdc38f522a462d2",
+      "artifact": "artifacts/combined--alpha+beta/086163e32b1c53be",
+      "artifact_sha256": "086163e32b1c53be3dd556ee31a38c73f752ab6aeb37591e614b435d481045cf",
       "data_limits": [],
       "description": "",
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
       "measures": [
         "alpha",
         "beta"
@@ -38,7 +38,7 @@
       },
       "name": "Combined--Alpha+Beta",
       "outputs_sha256": "547f2ffc7d8bde18252b4cf59fad6ae17bba2d764345dcf93e2dd573adc63ef8",
-      "receipt_sha256": "7005bfe3da44ecf52f936c1acda39031c448be56b519d67699dee915c9a9aa64",
+      "receipt_sha256": "90244cb995672d46f3367401f76e7839f7f607e06c8c836dd584d6027c2e0f03",
       "status": "approved",
       "unsupported_years": [
         2033
@@ -50,15 +50,15 @@
     }
   },
   "execution": {
-    "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+    "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
     "identity": {
       "certificate": {
-        "bundle_version": "6.11.1",
-        "certificate_sha256": "d941c04fc26818cdb5b769417d4c6d8ade42c25bb65c9dbfa4882545c81ab411",
+        "bundle_version": "6.16.2",
+        "certificate_sha256": "bd23285695ea5620a02417ee8945d826ffbd1cdc2050207481ab28d189315d04",
         "certified_by": "policyengine.py bundle certification",
         "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
         "certified_for_core_version": "3.33.3",
-        "certified_for_model_version": "2.151.0",
+        "certified_for_model_version": "2.165.1",
         "compatibility_basis": "built_with_model_package",
         "country_id": "uk"
       },
@@ -69,24 +69,24 @@
       },
       "country_id": "uk",
       "data": {
-        "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
-        "build_model_version": "2.151.0",
+        "build_id": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+        "build_model_version": "2.165.1",
         "data_package": "microcosm-data",
         "dataset": "microcosm_uk_2024_25",
-        "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+        "dataset_revision": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
         "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
-        "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
-        "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+        "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
+        "release_manifest_revision": "microcosm-uk-2024-25-national-20261103T154302Z-0639b9c7",
         "release_version": "0.1.0"
       },
       "model": {
         "name": "policyengine-uk",
-        "version": "2.151.0"
+        "version": "2.165.1"
       },
       "schema_version": 1,
       "wrapper": {
         "name": "policyengine",
-        "version": "6.11.1"
+        "version": "6.16.2"
       }
     }
   },
@@ -95,19 +95,19 @@
   "measures": {
     "alpha": {
       "approval": {
-        "artifact_sha256": "d68eb084c02699c15920f9b95bd33437cc65b2c9c8abd909d75e4168ad94221c",
-        "at": "2026-10-27T02:06:20.183162+00:00",
+        "artifact_sha256": "f1e35676ab6706005662b26e1c8c3b35f860d845bdb7dfd31fa94fbc3590418f",
+        "at": "2026-11-12T14:24:03.836364+00:00",
         "by": "Reviewer",
         "outputs_sha256": "debb4171d66468f2407e70f20199e93b2bf53bb9d752dba7c154e1ceb912e2a7"
       },
-      "artifact": "artifacts/alpha/d68eb084c02699c1",
-      "artifact_sha256": "d68eb084c02699c15920f9b95bd33437cc65b2c9c8abd909d75e4168ad94221c",
+      "artifact": "artifacts/alpha/f1e35676ab670600",
+      "artifact_sha256": "f1e35676ab6706005662b26e1c8c3b35f860d845bdb7dfd31fa94fbc3590418f",
       "data_limits": [],
       "description": "",
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
       "name": "Alpha",
       "outputs_sha256": "debb4171d66468f2407e70f20199e93b2bf53bb9d752dba7c154e1ceb912e2a7",
-      "receipt_sha256": "b0cf3bc6e3ed51314c865d1f2219b4e8be65e51e1e627ce8a92db9acdb3661d5",
+      "receipt_sha256": "7b5e85a20851857dc9cd47112f4561041e4d2f96db8d1230e0582b0d7a0d5e6a",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -123,19 +123,19 @@
     },
     "beta": {
       "approval": {
-        "artifact_sha256": "c6cc3cb3a91be4b31ecbe72127713df89354409854b0151a5dd92e1e6e84fdc8",
-        "at": "2026-10-27T02:06:20.218928+00:00",
+        "artifact_sha256": "135f919f1a8de96d4b15e9f72b1a55483d1a85cc40e92e9683e5e7baa5c95792",
+        "at": "2026-11-12T14:24:03.893268+00:00",
         "by": "Reviewer",
         "outputs_sha256": "2b28cbb3df9dd143b6b25b00b72214923bc6e9f2b9b656147999e556684cf9e1"
       },
-      "artifact": "artifacts/beta/c6cc3cb3a91be4b3",
-      "artifact_sha256": "c6cc3cb3a91be4b31ecbe72127713df89354409854b0151a5dd92e1e6e84fdc8",
+      "artifact": "artifacts/beta/135f919f1a8de96d",
+      "artifact_sha256": "135f919f1a8de96d4b15e9f72b1a55483d1a85cc40e92e9683e5e7baa5c95792",
       "data_limits": [],
       "description": "",
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
       "name": "Beta",
       "outputs_sha256": "2b28cbb3df9dd143b6b25b00b72214923bc6e9f2b9b656147999e556684cf9e1",
-      "receipt_sha256": "c002742847c9fa6bd7a65b076c56a62c412d6c00968dd01e29844236fe2c3d5b",
+      "receipt_sha256": "8855018f2115b269f752aa0b628e393fbf345c485e21a44684d86a768bdc2ea7",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -150,22 +150,22 @@
       ]
     },
     "delta": {
-      "artifact": "artifacts/delta/1b8fc5fa51b1426f",
-      "artifact_sha256": "1b8fc5fa51b1426fa6cafca4c9c44079412cb6c847a5b24fbc008ff9753c969b",
+      "artifact": "artifacts/delta/4a12e33b4658789c",
+      "artifact_sha256": "4a12e33b4658789c6475b6729c3bcbac51b67027567c9c106eea07b2ddedee9b",
       "attestation": {
         "checker": "First reviewer",
         "measure_id": "delta",
         "reason": "The modifier leaves the simulation unchanged.",
-        "receipt_sha256": "b4ca386acb1121551df1bf66e5b2ccb19a94f410070643ec43ca2ff5f46b45c8",
+        "receipt_sha256": "e24ce9bfefd0c7ed8c0262f2a71f69ff2ec3b851b4fa041734e555d4ccb79f86",
         "released_at": "2026-10-22T12:00:00+00:00",
         "second": "Second reviewer"
       },
       "data_limits": [],
       "description": "",
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
       "name": "Delta",
       "outputs_sha256": "c34d4a0a48e58e4b3fa9a9d8e29f08e6fd1df11e80787295792ced89e271470b",
-      "receipt_sha256": "c737bb87d397a09c5f6418e0dc4486199f80ae8d27dc19c19bc1780ed9d875d8",
+      "receipt_sha256": "d275372422688b909108787aa8fd91e7b2eb946e19eebfc47f714f32d66575a6",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -180,17 +180,17 @@
       ]
     },
     "epsilon": {
-      "artifact": "artifacts/epsilon/95696f701f69401b",
-      "artifact_sha256": "95696f701f69401be933a3643c663b9f9f46091b7a2f4bf531c52956af527164",
+      "artifact": "artifacts/epsilon/d9a51bb9f9525ac5",
+      "artifact_sha256": "d9a51bb9f9525ac5c4f7c2265256d585e14e6d37223bd9c25ee7a415eb8860cb",
       "data_limits": [
         "pip_daily_living_points"
       ],
       "description": "",
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
       "name": "Epsilon",
       "outputs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "reason": "The certified data record each claimant's PIP daily living award, not the assessment points behind it, so the model leaves everyone's points at its default of -1 (not assessed) and keeps the recorded award. A change to the points needed for the standard or enhanced rate therefore moves no one. Changes to the rates themselves are not affected. A measure that changes the recorded awards is held too, as a precaution: in a year with no recorded award the model carries an earlier one forward unless newer points replace it, though its copy of the certified data records an award in every Budget year.",
-      "receipt_sha256": "2cc6f46910f84ceab7fffdfe7d56a0dda00ed069e503b83ad5d251d7dfc90f1d",
+      "receipt_sha256": "186172984c2d464ebef3ad767fbfc3c75a5cfacf8f1e20347720b7f8e1b284ae",
       "status": "not_computable",
       "unsupported_years": [
         2033
@@ -201,14 +201,14 @@
       ]
     },
     "gamma": {
-      "artifact": "artifacts/gamma/95b0af5fee615dd3",
-      "artifact_sha256": "95b0af5fee615dd3dd233b263022637006ff4304f013f47ac39662d14b64b105",
+      "artifact": "artifacts/gamma/c50f17315bc775e9",
+      "artifact_sha256": "c50f17315bc775e96f8cddcef0253df3763ea444aa7be7698d89dd98fe50ccc7",
       "data_limits": [],
       "description": "",
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
       "name": "Gamma",
       "outputs_sha256": "05b70b62fb6186188b77174c595da19a54821b2a081465bcbab3960ce5732b07",
-      "receipt_sha256": "e72da266d637d672b1cfb2d9369ab4697fa533118665ed51c5f935fa3dc58e33",
+      "receipt_sha256": "68f1d6dd7db6ebf4cb5ef3e0728eabffe45c0bb190a1679007b209e8370b1be9",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "awaiting_source"
@@ -223,14 +223,14 @@
       ]
     },
     "theta": {
-      "artifact": "artifacts/theta/5c0ef89d9ad90317",
-      "artifact_sha256": "5c0ef89d9ad9031737fd9c3e0e34f59ca4651a04f130117a322e0be05693eddc",
+      "artifact": "artifacts/theta/c6a8aa64680d2245",
+      "artifact_sha256": "c6a8aa64680d22451894ff5a6af673ed9d6994fe8dda5b0ac279be2fd1d94d90",
       "data_limits": [],
       "description": "",
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+      "execution_identity_sha256": "2f1e22b76a1df043a4a399e49c7cbf4554203a09c743455911e59b666f18323a",
       "name": "Theta",
       "outputs_sha256": "82bbe3c3f1c72067ad948217256a7182c41c7c2e4bbaa6aee384099a155856dd",
-      "receipt_sha256": "6843aac96f60e55f00b67a337e1e0d28bedb1ceea431d53384e524208303bb11",
+      "receipt_sha256": "cd7e37928553e2d29daec6dd47157a152f4ed858372dbf04aff90a8a866e7845",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "awaiting_source"
@@ -249,5 +249,5 @@
   "revision": 1,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-27T02:06:20.525770+00:00"
+  "updated_at": "2026-11-12T14:24:04.360270+00:00"
 }

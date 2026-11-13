@@ -101,7 +101,7 @@ describe("the example cards' background figures", () => {
     first.unmount();
     // Asked, and keyed, with the measures the calculator always adds;
     // checked against the selected measures' approved definitions
-    const key = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, "savings_income_rates_up", "cash_isa_limit_kept", "machine_games_duty_rise"] });
+    const key = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, "cash_isa_limit_kept", "machine_games_duty_rise"] });
     expect(peekHouseholdImpact(key, null, approvedFor(POLICIES), POLICIES)?.net.change).toBe(5);
     expect(readStoredHeadline(key, null, approvedFor(POLICIES), POLICIES)?.net.change).toBe(5);
     // Again, from the session cache: no request
@@ -125,7 +125,7 @@ describe("the example cards' background figures", () => {
     rerender({ examples: EXAMPLES, policies: ["road_fuel_vat_cut"], year: YEAR, enabled: true, expectedDefinitions: DEFINITIONS, post: api.post });
     expect(old.signal.aborted).toBe(true);
     await waitFor(() => expect(api.calls).toHaveLength(2));
-    expect(api.calls[1].body.policies).toEqual(["road_fuel_vat_cut", "savings_income_rates_up", "cash_isa_limit_kept", "machine_games_duty_rise"]);
+    expect(api.calls[1].body.policies).toEqual(["road_fuel_vat_cut", "cash_isa_limit_kept", "machine_games_duty_rise"]);
     unmount();
     expect(api.calls[1].signal.aborted).toBe(true);
     expect(result.current.figures).toEqual({});
@@ -144,7 +144,7 @@ describe("the example cards' background figures", () => {
       ),
     );
     await waitFor(() => expect(api.calls).toHaveLength(2));
-    expect(api.calls[1].body.policies).toEqual(["fuel_duty_rise_deferral", "savings_income_rates_up", "cash_isa_limit_kept", "machine_games_duty_rise"]);
+    expect(api.calls[1].body.policies).toEqual(["fuel_duty_rise_deferral", "cash_isa_limit_kept", "machine_games_duty_rise"]);
     // The request asked again names only the selected measures it asks
     // with (the calculator-only ones have no approved definition)
     expect(api.calls[1].definitions).toEqual(approvedFor(["fuel_duty_rise_deferral"]));
@@ -421,53 +421,55 @@ describe("the example cards' background figures, checked against the approved de
   });
 });
 
-// Review of bc51d6d2, finding 1: once the publication names the
-// calculator-only savings rise, the page approves its definition
-// (publishedRequest), and the cards check it as a selected measure's
-describe("the example cards' background figures, once the publication names the savings rise", () => {
-  const SAVINGS = "savings_income_rates_up";
-  // The other calculator-only measures, which the publication names no
-  // definition for, so they are asked with but left unchecked
-  const UNNAMED = ["cash_isa_limit_kept", "machine_games_duty_rise"];
-  const savingsDefinition = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "e".repeat(64) } };
-  const WITH_SAVINGS = { ...DEFINITIONS, [SAVINGS]: savingsDefinition };
+// Review of bc51d6d2, finding 1: once the publication names a
+// calculator-only measure (the savings rise, then), the page approves its
+// definition (publishedRequest), and the cards check it as a selected
+// measure's. The cash ISA limit stands in: the savings rise is published
+// now (11 November 2026), and asked only when selected
+describe("the example cards' background figures, once the publication names a calculator-only measure", () => {
+  const NAMED = "cash_isa_limit_kept";
+  // The other calculator-only measure, which the publication names no
+  // definition for, so it is asked with but left unchecked
+  const UNNAMED = ["machine_games_duty_rise"];
+  const itsDefinition = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "e".repeat(64) } };
+  const WITH_IT = { ...DEFINITIONS, [NAMED]: itsDefinition };
 
   it("name its approved definition in every request, though it is not selected", async () => {
     const api = deferredPost();
-    const { result } = render({ post: api.post, expectedDefinitions: WITH_SAVINGS });
+    const { result } = render({ post: api.post, expectedDefinitions: WITH_IT });
     await waitFor(() => expect(api.calls).toHaveLength(1));
     await act(async () => api.answer(api.calls[0], 5));
     await waitFor(() => expect(api.calls.length).toBeGreaterThan(1));
     for (const call of api.calls) {
-      expect(call.body.policies).toEqual([...POLICIES, SAVINGS, ...UNNAMED]);
-      expect(call.definitions).toEqual({ fuel_duty_rise_deferral: approvedDefinition(), [SAVINGS]: savingsDefinition });
+      expect(call.body.policies).toEqual([...POLICIES, NAMED, ...UNNAMED]);
+      expect(call.definitions).toEqual({ fuel_duty_rise_deferral: approvedDefinition(), [NAMED]: itsDefinition });
     }
     expect(result.current.figures[EXAMPLES[0].id][YEAR].change).toBe(5);
   });
 
   it.each([
     ["reports none for it", { fuel_duty_rise_deferral: approvedDefinition() }],
-    ["reports another reform for it", { fuel_duty_rise_deferral: approvedDefinition(), [SAVINGS]: { ...approvedDefinition(), git_sha: APPROVED_COMMIT } }],
+    ["reports another reform for it", { fuel_duty_rise_deferral: approvedDefinition(), [NAMED]: { ...approvedDefinition(), git_sha: APPROVED_COMMIT } }],
   ])("show no figure from an answer that %s", async (_why, reported) => {
     const api = deferredPost();
-    const { result } = render({ post: api.post, expectedDefinitions: WITH_SAVINGS });
+    const { result } = render({ post: api.post, expectedDefinitions: WITH_IT });
     await waitFor(() => expect(api.calls).toHaveLength(1));
     await act(async () => api.answer(api.calls[0], 88, reported));
     await waitFor(() => expect(result.current.failed.has(`${EXAMPLES[0].id}:${YEAR}`)).toBe(true));
     expect(result.current.figures[EXAMPLES[0].id]?.[YEAR]).toBeUndefined();
-    const cell = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, SAVINGS, ...UNNAMED] });
+    const cell = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, NAMED, ...UNNAMED] });
     expect(sessionStorage.getItem(`ab2026:example-headline:v1:${cell}`)).toBeNull();
   });
 
   it("never leave it out of a figure unsaid when the API does not know it", async () => {
     const api = deferredPost();
-    const { result } = render({ post: api.post, expectedDefinitions: WITH_SAVINGS });
+    const { result } = render({ post: api.post, expectedDefinitions: WITH_IT });
     await waitFor(() => expect(api.calls).toHaveLength(1));
     await act(async () =>
       api.calls[0].reject(
-        new HouseholdApiError("invalid", `Value error, Unknown measures: ${SAVINGS}`, {
+        new HouseholdApiError("invalid", `Value error, Unknown measures: ${NAMED}`, {
           status: 422,
-          fields: [{ field: "policies", label: "Policies", message: `Value error, Unknown measures: ${SAVINGS}` }],
+          fields: [{ field: "policies", label: "Policies", message: `Value error, Unknown measures: ${NAMED}` }],
         }),
       ),
     );
@@ -483,9 +485,9 @@ describe("the example cards' background figures, once the publication names the 
     await waitFor(() => expect(api.calls).toHaveLength(1));
     await act(async () =>
       api.calls[0].reject(
-        new HouseholdApiError("invalid", `Value error, Unknown measures: ${SAVINGS}`, {
+        new HouseholdApiError("invalid", `Value error, Unknown measures: ${NAMED}`, {
           status: 422,
-          fields: [{ field: "policies", label: "Policies", message: `Value error, Unknown measures: ${SAVINGS}` }],
+          fields: [{ field: "policies", label: "Policies", message: `Value error, Unknown measures: ${NAMED}` }],
         }),
       ),
     );

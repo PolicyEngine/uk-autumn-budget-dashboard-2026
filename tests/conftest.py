@@ -112,7 +112,7 @@ def stand_in_data_limits(request, monkeypatch):
 
 @pytest.fixture
 def stand_in_model_limits(monkeypatch):
-    """The three expired model limits registered around the registry, for
+    """The four expired model limits registered as the registry, for
     tests of the machinery written around them
     (tests/model_limit_stand_ins.py). No model has a stand-in's fix unless
     the test installs it (``with_fix``)."""

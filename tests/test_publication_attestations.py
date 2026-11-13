@@ -11,6 +11,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from policyengine_uk.utils.scenario import Scenario
 
+from tests import model_limit_stand_ins
 from tests.attestation_measures import template_helper_modifier
 from tests.fixed_shape_measures import module_level_modifier
 from tests.publication_support import World
@@ -244,13 +245,18 @@ def test_identical_regeneration_voids_the_previous_attestation(world):
     stage(m.Manifest(), regenerated.path, **args(world))
 
 
-def test_release_never_waives_model_limit_or_reconciliation(world):
+def test_release_never_waives_model_limit_or_reconciliation(
+    world, monkeypatch
+):
+    """The minimum guarantee limit has expired; this test isolates its
+    stand-in, the
+    Pension Credit minimum guarantee's, the limit this test used while it
+    was in force (tests/model_limit_stand_ins.py). It alone is the
+    registry, with its digest, before the receipt is written."""
+    stand_in = model_limit_stand_ins.PC_MINIMUM_GUARANTEE
+    model_limit_stand_ins.register(monkeypatch, (stand_in,))
     limited = model_limits.record(
-        next(
-            limit
-            for limit in model_limits.MODEL_LIMITS
-            if limit.key == "pc_minimum_guarantee_uprating"
-        ),
+        stand_in,
         ["gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"],
     )
     reference = modifier_artifact(world, model_limits=[limited])

@@ -9,17 +9,30 @@ The fixture is a real manifest and real artifacts, written by the same code
 that publishes, so the browser code is tested against bytes and digests the
 Python side actually produces. Its receipts are certified against a dummy
 dataset (see tests/publication_support.py), so it is test data only.
+
+Theta is an explicit synthetic exception: it records the expired Pension
+Credit stand-in, not an active native PC limit. The real registry retains
+the casino limit. While this script runs the PC stand-in is appended to
+that registry, but every receipt keeps the real casino registry's digest,
+which is the contract the browser checks. The script verifies the original
+registry/digest and restores the registry in finally.
 """
 
-import json, shutil, sys
+import json
+import shutil
+import sys
 from pathlib import Path
+from unittest.mock import patch
+
 from policyengine_uk.utils.scenario import Scenario
+
 from tests.fixed_shape_measures import module_level_modifier
+from tests.model_limit_stand_ins import PC_MINIMUM_GUARANTEE
 from tests.publication_support import PROJECTION_END, World
-from uk_budget_data import model_limits
+from uk_budget_data import model_limits, sign_off
 from uk_budget_data.data_limits import DATA_LIMITS, record
-from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication import attestations
+from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import approve, stage
 from uk_budget_data.publication.receipt import scenario_identity
@@ -33,7 +46,18 @@ original_attestations_root = attestations.ATTESTATIONS_ROOT
 original_attestation_repository = attestations.ATTESTATION_REPOSITORY
 attestations.ATTESTATIONS_ROOT = world.root / "attestations"
 attestations.ATTESTATION_REPOSITORY = attestations.ATTESTATIONS_ROOT
+# The limits the gate knows, with theta's stand-in added. REGISTRY_SHA256 is
+# left alone (see the module docstring).
+original_model_limits = model_limits.MODEL_LIMITS
+original_registry_sha256 = model_limits.REGISTRY_SHA256
 try:
+    original_keys = {limit.key for limit in original_model_limits}
+    assert "casino_statutory_gaming_bands" in original_keys
+    assert PC_MINIMUM_GUARANTEE.key not in original_keys
+    assert original_registry_sha256 == model_limits._registry_digest(
+        original_model_limits
+    )
+    model_limits.MODEL_LIMITS = (*original_model_limits, PC_MINIMUM_GUARANTEE)
     manifest = m.Manifest()
     args = dict(data_root=world.data_root, inputs=world.inputs)
     values = {
@@ -77,7 +101,13 @@ try:
                 + "\n"
             )
             World.commit_attestation(attestation_file)
-        stage(manifest, refs[key].path, **args)
+        if key == "delta":
+            # Keep the Python-derived full-receipt attestation in this
+            # synthetic fixture even while the real sign-off switch is off.
+            with patch.object(sign_off, "REQUIRED", True):
+                stage(manifest, refs[key].path, **args)
+        else:
+            stage(manifest, refs[key].path, **args)
     for key in ("alpha", "beta"):
         approve(manifest, key, "Reviewer", **args)
     world.expect("gamma", "positive", IN)
@@ -100,16 +130,15 @@ try:
         "epsilon", {IN: 0.0, BEYOND: 0.0}, rate=0.26, data_limits=[points]
     )
     stage(manifest, refs["epsilon"].path, **args)
-    # A measure the installed model mis-costs (a 2027 Pension Credit measure,
-    # held until the minimum guarantee follows earnings): its receipt
-    # records the model limit, so it is shown as provisional and can never
-    # be approved. The fixture had one entry for each limit; the other three
-    # expired at policyengine-uk 2.151.0 (PR 238).
+    # A measure the installed model mis-costs: its receipt records a model
+    # limit, so it is shown as provisional and can never be approved. The
+    # fixture had one entry for each limit. All four have expired (three at
+    # policyengine-uk 2.151.0, PR 238; the Pension Credit minimum
+    # guarantee's with 2.165.1), so this entry records that last one's
+    # stand-in: a 2027 Pension Credit measure, as it was held until the
+    # guarantee followed earnings.
     guarantee = model_limits.record(
-        next(
-            limit for limit in model_limits.MODEL_LIMITS
-            if limit.key == "pc_minimum_guarantee_uprating"
-        ),
+        PC_MINIMUM_GUARANTEE,
         ["gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"],
     )
     world.expect("theta", "positive", IN)
@@ -155,6 +184,14 @@ try:
         )
     )
 finally:
-    attestations.ATTESTATIONS_ROOT = original_attestations_root
-    attestations.ATTESTATION_REPOSITORY = original_attestation_repository
-    world.close()
+    model_limits.MODEL_LIMITS = original_model_limits
+    try:
+        assert model_limits.MODEL_LIMITS is original_model_limits
+        assert model_limits.REGISTRY_SHA256 == original_registry_sha256
+        assert model_limits._registry_digest(original_model_limits) == (
+            original_registry_sha256
+        )
+    finally:
+        attestations.ATTESTATIONS_ROOT = original_attestations_root
+        attestations.ATTESTATION_REPOSITORY = original_attestation_repository
+        world.close()

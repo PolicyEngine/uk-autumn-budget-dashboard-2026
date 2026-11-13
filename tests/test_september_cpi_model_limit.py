@@ -4,8 +4,9 @@ were held until both parts of policyengine-uk #2533 landed.
 That limit expired at 2.151.0 (PR 238). Its tests of the year filter, and
 of how it overlaps the State Pension and minimum guarantee limits, run on
 its stand-in (tests/model_limit_stand_ins.py), whose fix is a marker a test
-installs; the tests of its check for the fix went with it. The year filter
-is in force for the minimum guarantee's limit (also from 2027).
+installs; the tests of its check for the fix went with it. The minimum
+guarantee's limit (also from 2027) expired with policyengine-uk 2.165.1 and
+is a stand-in too.
 """
 
 import pytest
@@ -15,6 +16,7 @@ from tests.model_limit_stand_ins import with_fix
 from tests.test_model_limits import (
     INCOME_TAX,
     fixed,
+    keys_but_the_guarantee,
     limit_by_key,
     scenario,
     simulation,
@@ -71,14 +73,21 @@ def test_a_2027_benefit_measure_records_the_limit(parameter):
 
 
 def test_a_2027_minimum_guarantee_measure_records_both_its_limits():
-    """The guarantee is on the benefit index and must rise with earnings,
-    so it stays held after #2533's fix until the earnings fix lands."""
-    assert limits_touched(
+    """The guarantee was on the benefit index and must rise with earnings,
+    so it stayed held after #2533's fix until the earnings fix landed. Each
+    record names the guarantee. From policyengine-uk 2.151.2 the engine
+    builds the pension-age Housing Benefit allowances and the savings
+    credit threshold from the guarantee, so a record may name those too."""
+    touched = limits_touched(
         simulation(), simulation({PENSION_CREDIT: {"2027": 900.0}})
-    ) == [
-        record(LIMIT, [PENSION_CREDIT]),
-        record(PENSION_CREDIT_LIMIT, [PENSION_CREDIT]),
+    )
+    assert [item["key"] for item in touched] == [
+        LIMIT.key,
+        PENSION_CREDIT_LIMIT.key,
     ]
+    for item, limit in zip(touched, (LIMIT, PENSION_CREDIT_LIMIT)):
+        assert PENSION_CREDIT in item["parameters"]
+        assert item == record(limit, item["parameters"])
 
 
 def test_a_2027_september_cpi_change_records_the_limit():
@@ -89,7 +98,7 @@ def test_a_2027_september_cpi_change_records_the_limit():
     touched = limits_touched(
         simulation(), simulation({SEPTEMBER_INDEX: {"2027": 1.7}})
     )
-    assert [item["key"] for item in touched] == [
+    assert keys_but_the_guarantee(touched) == [
         STATE_PENSION_LIMIT.key,
         LIMIT.key,
     ]
@@ -113,7 +122,7 @@ def test_with_2336_but_not_2533_the_add_on_is_held_by_this_limit(changes):
     that moves the index until #2533's fix (coordinator, 22 October). From
     2.151.0 the benefit amounts move with the index too."""
     touched = limits_touched(fixed(), fixed(changes))
-    assert [item["key"] for item in touched] == [LIMIT.key]
+    assert keys_but_the_guarantee(touched) == [LIMIT.key]
     assert {SEPTEMBER_INDEX, PIP} <= set(touched[0]["parameters"])
 
 

@@ -46,6 +46,20 @@ class TestReformProcessor:
         other = Reform(id="test", name="Test")
         assert ReformProcessor(reform=other).official_basis == ()
 
+    def test_processor_takes_the_measures_gainer_basis(self):
+        """The variables whose change is a person's gain from the measure
+        (calculators.GAINER_BASES); none for any other measure."""
+        from uk_budget_data.models import Reform
+        from uk_budget_data.pipeline import ReformProcessor
+
+        allowance = Reform(id="trading_allowance_raise", name="Allowance")
+        assert ReformProcessor(reform=allowance).gainer_basis == (
+            "income_tax",
+            "national_insurance",
+        )
+        other = Reform(id="test", name="Test")
+        assert ReformProcessor(reform=other).gainer_basis == ()
+
 
 class TestDataPipeline:
     """Tests for the main DataPipeline class."""
@@ -251,6 +265,28 @@ def test_income_curve_uses_the_same_baseline_as_the_population(own_baseline):
     )
     assert baseline_scenario is not None
     assert baseline_scenario.parameter_changes == expected.parameter_changes
+
+
+def test_the_processor_counts_gainers_each_year_on_the_measures_basis():
+    """A measure with a basis gets one gainers row a year, from the same
+    two simulations as its other tables; one without gets none."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    config = DataConfig(years=[2027, 2028])
+    reform = Reform(id="trading_allowance_raise", name="Allowance")
+    processor = _processor_with_spies(reform, config)
+    processor.gainers_calc = _Spy([{"gainers": 1.0}])
+    baseline, reformed = object(), object()
+    result = processor.process(baseline, reformed, None)
+    basis = ("income_tax", "national_insurance")
+    assert processor.gainers_calc.calls == [
+        (baseline, reformed, reform.id, "Allowance", 2027, basis),
+        (baseline, reformed, reform.id, "Allowance", 2028, basis),
+    ]
+    assert result.gainers == [{"gainers": 1.0}, {"gainers": 1.0}]
+
+    other = _processor_with_spies(Reform(id="m", name="M"), config)
+    assert other.process(baseline, reformed, None).gainers == []
 
 
 class _StubCalculator:

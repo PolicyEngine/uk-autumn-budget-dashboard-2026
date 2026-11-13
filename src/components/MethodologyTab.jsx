@@ -293,7 +293,7 @@ function MethodologyTab({ onShowTab }) {
                       </>
                     ),
                     more: [
-                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, forecasts the OBR published before the October 2026 one, and ONS population estimates.",
+                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, receipts and spending totals from the OBR's March 2026 and October 2026 forecasts, and ONS population estimates.",
                       "The local-area file's calibration targets constituency and local-authority totals as well.",
                     ],
                   },
@@ -302,12 +302,12 @@ function MethodologyTab({ onShowTab }) {
                   "Projection",
                   <>
                     We project incomes and prices to each year we show, with the growth rates of
-                    the <SourceLink id="obr_efo_current" />, which we apply over{" "}
-                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s own
-                    assumptions (the OBR&apos;s March 2026 forecast); after the forecast period,
+                    the <SourceLink id="obr_efo_current" />, which{" "}
+                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>{" "}also uses for
+                    its own assumptions; after the forecast period,
                     the OBR&apos;s long-run assumptions (
                     <SourceLink id="obr_fiscal_risks">Fiscal risks and sustainability</SourceLink>).
-                    Some series keep the March path (
+                    A few series are not that forecast&apos;s own (
                     <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>).
                   </>,
                 ],
@@ -381,9 +381,9 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Baseline",
                   {
-                    value: "Current law.",
+                    value: "Current law, with electricity VAT held at 5% for the comparison.",
                     more: [
-                      "It has no zero rate of VAT on domestic electricity, so the zero rate in force from 1 October 2026 to 31 March 2027 counts as part of the Budget's zero rate, as Table 6.1 counts it.",
+                      "Current law zero-rates domestic electricity in Great Britain from 1 October 2026 to 31 March 2027; Northern Ireland remains at 5%. We hold the baseline at 5% for those months so the comparison includes the existing winter relief, as Table 6.1 does. The measure covers Great Britain from October 2026 to June 2027, with Northern Ireland included from April 2027 as the Budget expects.",
                       <>
                         Fuel duty is 60.59p a litre from April 2027 (
                         <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>).
@@ -426,12 +426,13 @@ function MethodologyTab({ onShowTab }) {
             <p className="method-more">
               Some Budget policies act on something the model or its survey data do not hold, such as
               prices, ISAs or business mileage, or have rules not yet published, so they cannot be
-              costed household by household. The rise in income tax rates on savings income is
-              modelled but held back from this release, for the reason its card gives.{" "}
+              costed household by household.{" "}
               <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
                 Budget policies we do not model
               </ViewLink>
-              , on Policies, lists each with its reason.
+              , on Policies, lists each with its reason. For two policies on that list,
+              company car tax and the rise in Machine Games Duty, we hold back our national
+              estimates while we finish and check them.
             </p>
           </Topic>
         </MethodSection>
@@ -695,7 +696,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_SECTIONS.geography}
             title="Figures by area"
-            preview="Disclosure checks · 90% intervals · Map colours · Local calibration"
+            preview="Disclosure checks · 90% intervals · Map colours · Local calibration · National figures"
           >
             <p className="method-more">
               Constituency figures come from the same survey as the national ones. We publish each
@@ -914,7 +915,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
-          summary="Some charts add up separate policy runs, some inputs and the weights do not follow the October 2026 forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+          summary="Some charts add up separate policy runs, a few growth rates are not the October 2026 forecast's own, fuel duty covers households' own fuel only, and surveys under-record some incomes."
           note={<ImprovementsNote />}
         >
           <Topic title="Policies added up" preview={`Revenue, decile and age charts · Household scatter${POVERTY_FIGURES_SHOWN ? " · Winners and losers" : ""}`}>
@@ -939,25 +940,30 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={ECONOMIC_ASSUMPTIONS}
             title="Economic assumptions"
-            preview="The October 2026 forecast · What keeps the March path · Weights · Fuel duty"
+            preview="The October 2026 forecast · Series not from it · Weights · Fuel duty"
           >
             <p className="method-more">
-              The Budget figures grow prices, earnings, rents, mortgage interest, other incomes and
-              council tax at the rates of the <SourceLink id="obr_efo_current" />, in the baseline
-              and the reform alike; we apply them over policyengine-uk&apos;s March 2026 rates, with these exceptions:
+              The Budget figures grow prices, earnings, rents, mortgage interest and council tax at the
+              rates of the <SourceLink id="obr_efo_current" />, in the baseline and the reform alike.
+              The installed model&apos;s fuel volumes and population follow that forecast too, and 2025
+              is the outturn it publishes. Differences include:
             </p>
             <ul className="method-list">
-              <li>The fuel volumes behind fuel duty, and the population, keep the March 2026 path.</li>
               <li>
-                2025 keeps policyengine-uk&apos;s figures, not the October forecast&apos;s revisions:
-                average earnings growth stays at 5.3%, against October&apos;s 4.1%.
+                Per-capita GDP, mixed income and non-labour income retain the dashboard overlay&apos;s
+                rates, derived using an older population path. Household weights instead follow the
+                installed model&apos;s October population path.
               </li>
               <li>Mortgage interest keeps policyengine-uk&apos;s growth from 2030, where the OBR&apos;s table stops.</li>
               <li>
                 CPI after housing costs and social rents are PolicyEngine&apos;s own derivations from
                 the October figures, not OBR series.
               </li>
-              <li>The weights keep the certified dataset&apos;s calibration to earlier OBR forecasts.</li>
+              <li>
+                Calibration fits the weights to OBR receipts and spending totals for 2025. Most take
+                2024-25 from the March 2026 forecast&apos;s tables and 2025-26 from the October 2026
+                forecast&apos;s.
+              </li>
             </ul>
             <p className="method-more">
               Current law&apos;s fuel duty is 60.59p a litre from April 2027, then rises each April
@@ -1002,6 +1008,10 @@ function MethodologyTab({ onShowTab }) {
                 Treasury&apos;s costing: about 670,000 in 2027-28, against 500,000.
               </li>
               <li>The data hold few small traders, the people the trading allowance reaches.</li>
+              <li>
+                The surveys record traders&apos; profits, not their receipts, so the trading allowance
+                figures rest on our assumption of who already claims the £1,000 allowance.
+              </li>
               <li>Electricity spending grows with CPI, not the energy price cap; the electricity VAT zero rate scales with it.</li>
             </ul>
             <p className="method-more">

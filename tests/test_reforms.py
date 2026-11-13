@@ -68,14 +68,13 @@ CANDIDATES = (
     "machine_games_duty_rise",
 )
 # Individual candidates that are not components of the combined package.
-# Registered but held back from the package: the savings rates' yield is
-# about 60% of Table 6.1 because the data miss ISA interest (Vahid and Max,
-# 28 Oct); the data hold no payments into cash ISAs, so the cash ISA limit
-# is the Household calculator's only (María, 29 Oct); so is the Machine
-# Games Duty rise, whose engine change reaches lower-stake machines too
-# on survey data (2 Nov).
+# Registered but held back from the package: the data hold no payments into
+# cash ISAs, so the cash ISA limit is the Household calculator's only
+# (María, 29 Oct); so is the Machine Games Duty rise, whose engine change
+# reaches lower-stake machines too on survey data (2 Nov). The savings
+# rates, held back on Budget day while the savings data were corrected,
+# joined the package as a static costing on 11 November (Max).
 NOT_IN_PACKAGE = (
-    "savings_income_rates_up",
     "cash_isa_limit_kept",
     "machine_games_duty_rise",
 )
@@ -171,23 +170,62 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     )
 
 
-def test_the_package_is_the_eight_announced_measures():
+def test_the_package_is_the_nine_announced_measures():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
     # Seven on Budget day: the announced measures with savings rates held
     # back (Table 6.1 row 62); property rates are row 61. Eight from
-    # 29 October 2026 with the £2 bus fare cap. Ten registered: the savings
-    # rates held back and the cash ISA limit, Household calculator only.
-    # Eleven with the Machine Games Duty rise, likewise (2 November 2026).
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
+    # 29 October 2026 with the £2 bus fare cap. Nine from 11 November 2026
+    # with the savings rates, as a static costing. Eleven registered: the
+    # cash ISA limit and the Machine Games Duty rise (2 November 2026) are
+    # the Household calculator's only.
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
     assert len(reforms._MEASURE_FACTORIES) == 11
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--7baf4e89377bcc9c"
+    assert key == "combined--f25f6972a09c62a6"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All eight announced measures")
+    assert description.startswith("All nine announced measures")
+
+
+def test_the_savings_rates_are_in_the_package_and_not_the_calculators_only():
+    """Published as a static costing (Max, 11 November 2026): in the
+    package beside the property rates, in the registry's order, with the
+    same two-point rise the registry gives it alone, and no longer among
+    the measures the page adds to every household request."""
+    from uk_budget_data import definitions
+
+    components = list(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
+    assert "savings_income_rates_up" in components
+    assert "savings_income_rates_up" not in NOT_IN_PACKAGE
+    assert (
+        "savings_income_rates_up" not in definitions.CALCULATOR_ONLY_MEASURES
+    )
+    assert set(definitions.CALCULATOR_ONLY_MEASURES) == set(NOT_IN_PACKAGE)
+    # The package lists its members in the registry's order
+    registered = [m for m in CANDIDATES if m in components]
+    assert components == registered
+    assert (
+        components.index("savings_income_rates_up")
+        == components.index("property_income_rates_up") + 1
+    )
+    # A static costing: rates only, no modifier on either side
+    measure = get_reform("savings_income_rates_up")
+    assert measure.simulation_modifier is None
+    assert measure.baseline_simulation_modifier is None
+    assert not measure.baseline_parameter_changes
+    assert set(measure.parameter_changes) == set(
+        reforms.SAVINGS_INCOME_RATE_PATHS
+    )
+    assert "no behavioural response" in measure.description
+    combined = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
+    for path in reforms.SAVINGS_INCOME_RATE_PATHS:
+        assert (
+            combined.parameter_changes[path] == measure.parameter_changes[path]
+        )
+    assert "Savings income tax rates up" in combined.description
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -246,9 +284,16 @@ def test_the_combined_package_merges_every_members_changes():
         ).items():
             assert combined.parameter_changes[path] == values, path
     assert combined.simulation_modifier is not None
-    # The Plan 2 measure, which counted modelled repayments on both sides,
-    # is withdrawn: no baseline modifier
-    assert combined.baseline_simulation_modifier is None
+    # The electricity measure is scored against 5% VAT in every month, so
+    # it brings a pre-Budget side and the package's baseline runs it
+    # (tests/test_electricity_vat_baseline.py). No other member has one.
+    assert combined.baseline_simulation_modifier is not None
+    assert [
+        measure_id
+        for measure_id in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+        if get_reform(measure_id).has_custom_baseline()
+    ] == ["domestic_electricity_zero_vat"]
+    assert combined.baseline_parameter_changes is None
 
 
 # --- Receipts ---------------------------------------------------------------
@@ -274,6 +319,8 @@ def test_the_template_modifiers_are_proved_pure_and_three_are_hand_written():
         ],
         "warm_home_discount_top_up": ["apply_benefit_receipt_payment"],
         "zero_vat_on_domestic_electricity": ["apply_vat_base_change"],
+        # Its pre-Budget side: no attestation needed either
+        "pre_budget_vat_on_domestic_electricity": ["apply_vat_base_change"],
         "road_fuel_vat_cut": ["apply_vat_base_change"],
     }
     for name, templates in pure.items():
@@ -732,9 +779,12 @@ def test_electricity_vat_in_northern_ireland_from_april_2027(year, saving):
     "age, relieved", [(20, False), (21, True), (24, True), (25, False)]
 )
 def test_employer_ni_on_30000_pounds_by_age(age, relieved):
-    """2027-28: 15% of £30,000 - £5,000, £3,750, unless 21 to 24. Under-21s
-    already have the relief in law, so the measure leaves them as the
-    model has them."""
+    """2027-28: 15% of £30,000 - £5,000, £3,750, from age 21, unless the
+    measure relieves it (21 to 24). Under-21s already have the relief in
+    law (Social Security Contributions and Benefits Act 1992 s. 9A): from
+    policyengine-uk 2.160.0 the model charges them nothing up to the upper
+    secondary threshold, £50,270 a year, so the measure leaves them at
+    £0."""
     year = 2027
     sit = situation(
         {"worker": {"age": {year: age}, "employment_income": {year: 30_000}}}
@@ -742,8 +792,9 @@ def test_employer_ni_on_30000_pounds_by_age(age, relieved):
     baseline, reformed = change(
         "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
     )
-    assert baseline == pytest.approx(3_750, abs=PENNY)
-    assert reformed == pytest.approx(0 if relieved else 3_750, abs=PENNY)
+    in_law = 0 if age < 21 else 3_750
+    assert baseline == pytest.approx(in_law, abs=PENNY)
+    assert reformed == pytest.approx(0 if relieved else in_law, abs=PENNY)
     # Wages are fixed, so the household's income does not move
     income = change(
         "employer_ni_relief_under_25s", sit, "household_net_income", year
@@ -803,19 +854,15 @@ def test_employer_ni_relief_leaves_apprentices_as_the_model_has_them():
     assert reformed == pytest.approx(baseline, abs=PENNY)
 
 
-def test_the_employer_ni_description_states_the_apprentice_default():
-    """The measure reads ``is_apprentice``, which the certified data leave
-    at its default, False, so its cost includes 21 to 24-year-old
-    apprentices. A measure that reads an input the data leave at its
-    default is released at the Treasury check (G3) with the default stated
-    in its public text (coordinator, 24 October, policyengine.py#715), and
-    the description is the text G3 approves. So while the measure reads the
-    input, the description must say the data identify no apprentices."""
+def test_the_employer_ni_description_distinguishes_presence_from_usability():
+    """The carried indicator does not prove its variation or accuracy."""
     source = inspect.getsource(modifier("employer_ni_relief_ages_21_to_24"))
     assert '"is_apprentice"' in source
     description = WITHDRAWN["employer_ni_relief_under_25s"]().description
-    assert "identify no apprentices" in description
-    assert "cost includes 21 to 24-year-old apprentices" in description
+    assert "carry an apprentice indicator" in description
+    assert "does not establish its variation or accuracy" in description
+    assert "identify no apprentices" not in description
+    assert "cost includes 21 to 24-year-old apprentices" not in description
 
 
 def test_the_badr_description_carries_the_capital_gains_caveat():
@@ -828,20 +875,15 @@ def test_the_badr_description_carries_the_capital_gains_caveat():
 
 
 @pytest.mark.certified_data
-def test_the_certified_data_still_flag_no_apprentices():
-    """Tripwire: when certified data flag apprentices, this fails, and the
-    employer NI relief's description and methodology note, which say the
-    cost includes them, are corrected in the bundle-adoption PR that brings
-    that data."""
+def test_the_certified_data_supply_the_apprentice_indicator():
+    """A holder-presence tripwire; no claim about positive records."""
     from uk_budget_data.pipeline import build_microsimulation
 
     sim = build_microsimulation(None)
-    # Control: a column the data do carry has its periods set, so an empty
-    # holder below means the data lack the input, not that nothing loaded.
     assert sim.get_holder("age").get_known_periods()
-    assert sim.get_holder("is_apprentice").get_known_periods() == [], (
-        "the certified data now set is_apprentice: correct the employer NI "
-        "relief's description and methodology note"
+    assert sim.get_holder("is_apprentice").get_known_periods(), (
+        "the certified data no longer set is_apprentice: review the "
+        "employer NI description and input-coverage evidence"
     )
 
 
@@ -1011,8 +1053,8 @@ CARD_TEXT_BLOCKS = {
         r"export const SPENDING_MEASURES = \[.*\];"
     ],
     # The measures the Household calculator always adds and the national
-    # results never carry (the savings rates rise and the cash ISA limit),
-    # which no receipt lists, so the page has to name them; as
+    # results never carry (the cash ISA limit and the Machine Games Duty
+    # rise), which no receipt lists, so the page has to name them; as
     # measureCatalogue.test.jsx allows
     "utils/calculatorOnlyMeasures.js": [
         r"(?s)export const CALCULATOR_ONLY_MEASURES = \{.*?\n\};"
@@ -1129,6 +1171,28 @@ def test_cash_isa_limit_needs_the_calculators_answer():
     assert before == pytest.approx(after, abs=PENNY)
 
 
+def test_cash_isa_limit_keeps_the_households_gross_income_fixed():
+    """Changing where the answered savings earn interest changes tax, not
+    the household's answered gross resources. On the adopted engine,
+    other_investment_income is part of market_income, so adding the
+    counterfactual interest there would create extra gross resources.
+    """
+    year = 2029
+    household = situation(
+        {
+            "p": _person(
+                year,
+                employment_income=70_000,
+                cash_isa_subscriptions=20_000,
+            )
+        }
+    )
+    before, after = change(
+        "cash_isa_limit_kept", household, "market_income", year
+    )
+    assert before == pytest.approx(after, abs=PENNY)
+
+
 def test_cash_isa_limit_on_survey_data_taxes_a_share_at_the_deposit_rate():
     """Survey data that store cash ISA payments (policyengine-uk 2.164.1 has
     the variable; defined here first, as it is there) and other investment
@@ -1171,7 +1235,8 @@ def test_cash_isa_limit_on_survey_data_taxes_a_share_at_the_deposit_rate():
             def apply(self):
                 self.add_variable(cash_isa_subscriptions)
 
-        _apply_reform_class(Define, sim)
+        if "cash_isa_subscriptions" not in sim.tax_benefit_system.variables:
+            _apply_reform_class(Define, sim)
         sim.set_input("cash_isa_subscriptions", year, np.array([20_000.0]))
         if modify:
             planned_cash_isa_limit(sim)

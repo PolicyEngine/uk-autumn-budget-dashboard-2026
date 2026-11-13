@@ -49,6 +49,9 @@ from uk_budget_data.budget_measures.pension_tax_allowance import (
 from uk_budget_data.budget_measures.planned_cash_isa_limit import (
     planned_cash_isa_limit,
 )
+from uk_budget_data.budget_measures.pre_budget_vat_on_domestic_electricity import (
+    pre_budget_vat_on_domestic_electricity,
+)
 from uk_budget_data.budget_measures.pump_vat_on_fuel_duty_deferral import (
     pump_vat_on_fuel_duty_deferral,
 )
@@ -566,12 +569,20 @@ def _electricity_vat_description() -> str:
     )
 
 
+# The measure is scored against 5% in every month, as Table 6.1 scores it.
+# Current law zero-rates Great Britain's domestic electricity from
+# 1 October 2026 to 31 March 2027 (SI 2026/987), and policyengine-uk
+# 2.153.5 and later charge it so. So the measure has a pre-Budget side,
+# which holds electricity at 5% for the years the measure changes
+# (budget_measures/pre_budget_vat_on_domestic_electricity.py); the Budget
+# side holds the same 5% and takes the zero-rated months off it.
 def _create_domestic_electricity_zero_vat() -> Reform:
     return Reform(
         id=ELECTRICITY_VAT_ID,
         name="Zero VAT on domestic electricity",
         description=_electricity_vat_description(),
         simulation_modifier=zero_vat_on_domestic_electricity,
+        baseline_simulation_modifier=pre_budget_vat_on_domestic_electricity,
     )
 
 
@@ -590,8 +601,9 @@ def _create_employer_ni_relief_under_25s() -> Reform:
             "upper earnings limit (£50,270) for employees under 25, "
             "extending the under-21 relief to ages 21 to 24. Wages are held "
             "fixed, so it changes revenue, not household incomes. The data "
-            "identify no apprentices, so the cost includes 21 to 24-year-old "
-            "apprentices, whose employers already pay none in law."
+            "carry an apprentice indicator; its presence alone does not "
+            "establish its variation or accuracy. Apprentices keep the "
+            "model's existing employer NI treatment."
         ),
         simulation_modifier=employer_ni_relief_ages_21_to_24,
     )
@@ -981,6 +993,17 @@ def _create_household_energy_payment_2026() -> Reform:
 # (TRADING_ALLOWANCE_RAISED, TRADING_ALLOWANCE_FROM), with no new-venture
 # limit. The parameter is not uprated, so writing every year from the
 # first is the whole change. The property allowance (£1,000) is unchanged.
+#
+# Who gains is set in the data, not here. From the national build 0639b9c7
+# (Microcosm's trading_allowance_receipts stage) the data store each
+# trader's gross receipts: a trader drawn as already claiming the £1,000
+# allowance has receipts of profit plus £1,000, any other trader profit
+# plus £3,000. The draw's shares are 72% for profits up to £4,500, 14% from
+# £4,500 to £9,000 and none above, set so that an earlier national gave
+# HMRC's estimate (about 400,000 people paying £380 less on average). The
+# engine then relieves a claimant by up to £3,000 less their stored £1,000
+# and no other trader. The description says so; the earlier data stored no
+# receipts, and the engine then relieved a profit up to £3,000 in full.
 TRADING_ALLOWANCE_RAISED = 3_000
 TRADING_ALLOWANCE_FROM = 2027
 
@@ -994,10 +1017,12 @@ def _create_trading_allowance_raise() -> Reform:
             "trading allowance, which relieves trading receipts in place "
             "of actual expenses, rises from £1,000 to "
             f"£{TRADING_ALLOWANCE_RAISED:,}, for income tax and Class 4 "
-            "National Insurance. Without gross receipts in the data, the "
-            "model relieves a profit up to £3,000 in full and gives no "
-            "relief above it, so the cost may be overstated for some people "
-            "and understated for others."
+            "National Insurance. The surveys behind our data record "
+            "traders' profits, not their receipts, so we assume who already "
+            "claims the £1,000 allowance: 72% of traders with profits up to "
+            "£4,500, 14% of those with profits from £4,500 to £9,000 and "
+            "none above. Only those traders gain, and we count no one who "
+            "switches from actual expenses to the larger allowance."
         ),
         parameter_changes=threshold_change(
             TRADING_ALLOWANCE,
@@ -1059,9 +1084,13 @@ def _create_bus_fare_cap_2027() -> Reform:
 # law is the Budget's and the pre-Budget side carries the cut
 # (budget_measures/planned_cash_isa_limit.py; its numbers are default
 # arguments there). Its effect rests on what a household pays into cash
-# ISAs, which the survey data do not hold (PolicyEngine/microcosm#1415), so
-# it is registered for the Household calculator only: listed, not in the
-# package, and never in the national results (calculatorOnlyMeasures.js).
+# ISAs. The data the page was first published on held no such payments;
+# the national build 0639b9c7 imputes them from HMRC's ISA statistics
+# (PolicyEngine/microcosm#1415). A national figure would still rest on
+# where savers put what the planned limit left out (the modifier's
+# docstring), so it is registered for the Household calculator only:
+# listed, not in the package, and never in the national results
+# (calculatorOnlyMeasures.js).
 def _create_cash_isa_limit_kept() -> Reform:
     return Reform(
         id=CASH_ISA_LIMIT_ID,
@@ -1074,9 +1103,9 @@ def _create_cash_isa_limit_kept() -> Reform:
             "interest from what the planned limit left out: the same "
             "payments each year from April 2027, the excess held in a "
             "taxable account earning Bank Rate as the OBR forecasts it, the "
-            "interest paid out each year. For one household at a time: the "
-            "survey data hold no payments into ISAs, so there is no "
-            "national figure."
+            "interest paid out each year. For one household at a time: a "
+            "national figure would rest on where savers put what the "
+            "planned limit left out, so we publish none."
         ),
         baseline_simulation_modifier=planned_cash_isa_limit,
     )
@@ -1236,6 +1265,11 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     STATE_PENSION_ALLOWANCE_ID,
     ELECTRICITY_VAT_ID,
     PROPERTY_INCOME_RATES_ID,
+    # 11 November 2026 (Max): the savings rates rise, Table 6.1 row 62,
+    # held back since Budget day while the savings data were corrected,
+    # joins as a static costing with the next certified data. Package of
+    # nine.
+    SAVINGS_INCOME_RATES_ID,
     # Budget day: registered once announced (HCWS421). Its cells in some
     # deciles rest on fewer than 3 survey households, so the combined run
     # refuses while it is here: drop it and keep it in _MEASURE_FACTORIES,
@@ -1244,7 +1278,7 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     HOUSEHOLD_ENERGY_PAYMENT_ID,
     TRADING_ALLOWANCE_ID,
     # 29 October 2026 (María): the £2 bus fare cap, left out on Budget day
-    # only because runs were in flight. Package of eight.
+    # only because runs were in flight.
     BUS_FARE_CAP_ID,
 )
 
@@ -1255,14 +1289,15 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
 # Also withdrawn that day: the savings and property income tax rates as one
 # measure (``UNEARNED_INCOME_RATES_ID``), split into the property and the
 # savings measures, Table 6.1 rows 61 and 62. Nine registered since the £2
-# bus fare cap (29 October 2026); eight in the package (savings held back).
+# bus fare cap (29 October 2026); all nine in the package since the savings
+# rates joined it (11 November 2026).
 # The cash ISA limit kept at £20,000 (Table 6.1 row 11) joined on
 # 29 October, for the Household calculator only: ten registered. The
 # Machine Games Duty rise (row 56) joined on 2 November, likewise for the
-# Household calculator only: eleven registered. Each of the three held
+# Household calculator only: eleven registered. Each of the two held
 # back joins the package by adding its id to
 # AUTUMN_BUDGET_2026_COMBINED_COMPONENTS (and leaving
-# calculatorOnlyMeasures.js).
+# calculatorOnlyMeasures.js and definitions.CALCULATOR_ONLY_MEASURES).
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,
@@ -1293,8 +1328,8 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
     Built by ``publication.combine.combine_measures``, as a combined run
     is: the members' merged parameter changes (it refuses two members
     changing one parameter) and each member's modifier, in order of measure
-    id. The Plan 2 measure brings its baseline modifier, so the combined
-    baseline counts modelled student loan repayments too.
+    id. The electricity measure brings its pre-Budget side, so the combined
+    baseline charges 5% VAT on domestic electricity in every month too.
     """
     from uk_budget_data.models import DataConfig
     from uk_budget_data.publication.combine import combine_measures

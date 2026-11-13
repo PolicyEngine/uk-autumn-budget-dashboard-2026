@@ -15,8 +15,10 @@ here.
 """
 
 import functools
+import json
 import sys
 import types
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -48,6 +50,19 @@ BY_INPUT = {limit.missing_input: limit for limit in DATA_LIMITS}
 RECORDED = sorted(
     {name for names in NEWLY_MISSING_INPUTS.values() for name in names}
 )
+R3_EVIDENCE = json.loads(
+    (
+        Path(__file__).parent / "fixtures/input_coverage_0639b9c7.json"
+    ).read_text()
+)
+R3_INPUTS = R3_EVIDENCE["newly_missing_inputs"]
+R3_DECLARATIONS = {
+    entry["input"]: entry
+    for entry in R3_EVIDENCE["input_declarations_and_scopes"]
+}
+R3_RELEASED_KEYS = {
+    entry["key"] for entry in R3_EVIDENCE["released_missing_input_limits"]
+}
 # The recorded inputs the installed cut still lacks: each needs its limit.
 STILL_MISSING = [name for name in RECORDED if name not in NO_LONGER_MISSING]
 
@@ -84,7 +99,9 @@ def test_the_a6299504_cut_lists_the_25_inputs_policyengine_py_accepted():
     listed = set(NEWLY_MISSING_INPUTS[A6299504])
     assert len(NEWLY_MISSING_INPUTS[A6299504]) == len(listed) == 25
     assert len(listed & set(NEWLY_MISSING_INPUTS[A133])) == 9
-    assert set(NEWLY_MISSING_INPUTS[A133]) - listed == set(NO_LONGER_MISSING)
+    assert set(NEWLY_MISSING_INPUTS[A133]) - listed == (
+        set(NO_LONGER_MISSING) & set(NEWLY_MISSING_INPUTS[A133])
+    )
 
 
 @pytest.mark.parametrize("cut", sorted(NEWLY_MISSING_INPUTS))
@@ -276,6 +293,24 @@ DEFAULTS = {
     ),
 }
 
+# Keep historical default declarations, but test live missing inputs only.
+DEFAULTS = {
+    name: value for name, value in DEFAULTS.items() if name in STILL_MISSING
+}
+DEFAULTS.update(
+    {
+        name: (
+            (
+                system.variables[name].possible_values.NONE
+                if isinstance(entry["default"], dict)
+                else entry["default"]
+            ),
+            entry["default_words"],
+        )
+        for name, entry in R3_DECLARATIONS.items()
+    }
+)
+
 
 def test_every_input_still_missing_has_its_default_recorded_here():
     assert set(DEFAULTS) == set(STILL_MISSING)
@@ -293,7 +328,7 @@ def test_each_limit_states_the_default_the_model_uses(name):
 # parameters come from what these do with it. The watch's own reading of
 # the model (``limit_variables``, which the stored-input comparison uses)
 # must find each of them.
-READERS = {
+HISTORICAL_READERS = {
     "pip_daily_living_points": ("pip_dl_category",),
     "pip_mobility_points": ("pip_m_category",),
     "bus_uncapped_single_fares": ("person_bus_fare_spending",),
@@ -337,6 +372,19 @@ READERS = {
     "housing_benefit_residential_capital": ("housing_benefit_tariff_income",),
 }
 
+# Preserve the native historical-duty controls after their data limits lift.
+READERS = {
+    key: readers
+    for key, readers in HISTORICAL_READERS.items()
+    if key in BY_KEY
+}
+READERS.update(
+    {
+        name: tuple(entry["direct_readers"] + entry["helper_readers"])
+        for name, entry in R3_DECLARATIONS.items()
+    }
+)
+
 # The limits the a6299504 cut adds, whose reasons say what the default does
 # through exactly these readers.
 A6299504_KEYS = [
@@ -352,7 +400,13 @@ def test_every_new_limit_has_its_readers_listed():
 
 
 def test_the_a6299504_cut_adds_16_limits():
-    assert len(A6299504_KEYS) == 16
+    assert (
+        len(
+            set(NEWLY_MISSING_INPUTS[A6299504])
+            - set(NEWLY_MISSING_INPUTS[A133])
+        )
+        == 16
+    )
 
 
 def formula_readers(name) -> set:
@@ -401,9 +455,11 @@ def test_every_gambling_duty_is_nil_by_default_and_reaches_the_tax_totals():
     """Why a duty change on nil bases is a £0 that could pass for a
     costing: at the defaults every duty is nil, and supplied bases move
     gambling_duty, household tax and government tax alike."""
-    duties = {READERS[key][0] for key in A6299504_KEYS} - {
-        "housing_benefit_tariff_income"
+    historical_gambling_keys = R3_RELEASED_KEYS | {
+        "financial_spread_betting",
+        "other_spread_betting",
     }
+    duties = {HISTORICAL_READERS[key][0] for key in historical_gambling_keys}
     assert duties == set(system.variables["gambling_duty"].adds)
     nil = gambling_household()
     for duty in sorted(duties | {"gambling_duty"}):
@@ -540,6 +596,11 @@ HELD = [
     ),
 ]
 
+# Only the thirteen evidenced input limits retire; the historical paths
+# remain controls for accidental retention or over-broad replacement.
+HELD = [(path, [key for key in held if key in BY_KEY]) for path, held in HELD]
+FIXED_ODDS_LIMITS = [key for key in FIXED_ODDS_LIMITS if key in BY_KEY]
+
 
 @pytest.mark.parametrize("path, held", HELD)
 def test_a_change_is_held_by_the_limits_whose_input_it_acts_through(
@@ -588,9 +649,10 @@ def test_every_held_path_exists_in_the_installed_engine(path):
     system.parameters.get_child(path.split("[")[0])
 
 
-def test_every_gambling_duty_parameter_is_held():
-    """With every base nil, no gambling duty parameter can score, the
-    gaming duty bands not even with data: each falls under a limit."""
+def test_only_missing_gambling_bases_and_unsupported_bands_are_held():
+    """Carried bases retire only their input limits; the casino gap remains."""
+    from uk_budget_data import model_limits
+
     node = system.parameters.get_child(GAMBLING_DUTY)
     paths = [
         item.name
@@ -598,7 +660,20 @@ def test_every_gambling_duty_parameter_is_held():
         if isinstance(item, Parameter)
     ]
     assert len(paths) == 22
-    assert [path for path in paths if not limits_for_paths([path])] == []
+    for path in paths:
+        expected = [
+            key
+            for suffix, key in (
+                ("financial_spread", "financial_spread_betting"),
+                ("other_spread", "other_spread_betting"),
+            )
+            if path == f"{BETTING}.{suffix}"
+        ]
+        assert keys(limits_for_paths([path])) == expected
+        casino = path.startswith(f"{GAMBLING_DUTY}.gaming.")
+        assert [
+            limit.key for limit in model_limits.limits_for_paths([path])
+        ] == (["casino_statutory_gaming_bands"] if casino else [])
 
 
 # --- PIP: the case policyengine.py#715 flags ----------------------------

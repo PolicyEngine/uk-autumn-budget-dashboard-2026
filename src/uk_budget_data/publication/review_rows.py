@@ -143,6 +143,10 @@ TABLE_KINDS = {
     "poverty_inequality.csv": NATIONAL_TABLE,
     # A measure's UK total on its official costing's basis (#297).
     "official_basis.csv": NATIONAL_TABLE,
+    # UK counts of the people who gain and lose from a measure, by year,
+    # with the records and survey households behind them (at least
+    # tables.GAINERS_MIN_HOUSEHOLDS, or the row's figures are blank).
+    "gainers.csv": NATIONAL_TABLE,
 }
 # A receipt holds provenance and digests, and the manifest entries, their
 # statuses and digests, and any household check receipt, which concerns

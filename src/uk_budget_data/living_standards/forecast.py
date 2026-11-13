@@ -34,7 +34,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from uk_budget_data.living_standards.obr import (
+from .historical_forecast import PRE_SOURCE
+from .obr import (
     CARRIED_YEARS,
     NOT_IN_PDF_TABLE_A1,
     OBR_SERIES,
@@ -47,16 +48,6 @@ from uk_budget_data.living_standards.obr import (
 POST_FILE_NAME = "obr_forecast_post.json"
 DEFAULT_POST_LABEL = "OBR October 2026 (Autumn Budget)"
 OBR_FORECAST_URL = "https://obr.uk/efo/"
-
-# Where the pre-Budget series come from (policyengine-uk's parameters).
-PRE_SOURCE = {
-    "release": "OBR Economic and fiscal outlook, March 2026",
-    "url": "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
-    "via": (
-        "policyengine-uk parameters "
-        "gov.economic_assumptions.yoy_growth.obr.*"
-    ),
-}
 
 # meta.notes' line from the build while no later forecast is loaded
 STALE_POST_NOTE = (

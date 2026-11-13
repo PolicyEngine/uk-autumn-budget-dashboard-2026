@@ -136,6 +136,11 @@ class ReformResult(BaseModel):
     # The measure on its official costing's basis (#297), where
     # calculators.OFFICIAL_BASES names one; else none
     official_basis: list[dict] = []
+    # The people who gain and lose on the measure's own basis, by year,
+    # where calculators.GAINER_BASES names one; else none. Each row lists
+    # the households behind its counts, which are never published
+    # (publication.tables.gainer_rows)
+    gainers: list[dict] = []
 
     model_config = {"arbitrary_types_allowed": True}
 

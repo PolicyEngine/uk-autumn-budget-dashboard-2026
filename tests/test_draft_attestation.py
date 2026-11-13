@@ -97,16 +97,17 @@ def test_a_package_reason_names_every_hand_written_member(drafted):
     )
 
 
-def test_the_eight_package_reason_names_its_hand_written_members(
+def test_the_nine_package_reason_names_its_hand_written_members(
     drafted,
 ):
     from uk_budget_data.publication.combine import combined_key
 
     members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
     key = combined_key(members)
-    # Seven released on Budget day (savings rates held back), and the £2 bus
-    # fare cap from 29 October 2026
-    assert key == "combined--7baf4e89377bcc9c"
+    # Seven released on Budget day, the £2 bus fare cap from 29 October 2026
+    # and the savings rates from 11 November 2026 (a parameter change, so the
+    # reason does not name them)
+    assert key == "combined--f25f6972a09c62a6"
     record = drafted(key, members)
     assert record["measure_id"] == key
     assert (

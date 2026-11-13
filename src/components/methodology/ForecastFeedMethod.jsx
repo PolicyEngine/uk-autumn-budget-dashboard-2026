@@ -67,8 +67,8 @@ export default function ForecastFeedMethod() {
         <li>
           Most benefit rates in the baseline rise each April with the previous September&apos;s CPI on this
           forecast. The State Pension follows the triple lock, and the Universal Credit standard allowance
-          adds the above-inflation rises legislated to 2029-30. The model raises the Pension Credit guarantee
-          with CPI too, though the law reviews it against earnings.
+          adds the above-inflation rises legislated to 2029-30. The Pension Credit guarantee rises with
+          average earnings, the least the law allows.
         </li>
       </ul>
       {series.length > 0 && (

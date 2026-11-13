@@ -109,14 +109,14 @@
    }
   },
   "savings_income_rates_up": {
-   "artifact": "held back from the release: the savings and property seat's revision 20 run (preview-r20)",
+   "artifact": "not in the release yet: the costings run on the certified data pair (national 0639b9c7 on policyengine-uk 2.165.1) recorded on policyengine.py#731 on 4 November 2026, to the nearest £1m; the regeneration replaces this entry with the artifact's path and its figures",
    "values": {
     "2026-27": 0.0,
-    "2027-28": 270.5995,
-    "2028-29": 288.1519,
-    "2029-30": 307.21,
-    "2030-31": 327.0521,
-    "2031-32": 344.8327
+    "2027-28": 530.0,
+    "2028-29": 557.0,
+    "2029-30": 584.0,
+    "2030-31": 612.0,
+    "2031-32": 636.0
    }
   }
  }

@@ -158,7 +158,9 @@ def test_members_without_their_own_baseline_use_the_configured_one():
     }
 
 
-def test_the_registered_package_is_the_generic_combination_of_its_members():
+def test_the_registered_package_is_the_generic_combination_of_its_members(
+    monkeypatch,
+):
     """Differential: the combined candidate package carries exactly the
     generic combiner's parameter changes and modifiers, in member order."""
     members = [
@@ -172,7 +174,30 @@ def test_the_registered_package_is_the_generic_combination_of_its_members():
     ]
     # Lists in member order (by id), so a dropped or repeated modifier
     # shows.
-    assert [m.__name__ for m in sides["baseline"]["modifiers"]] == []
+    assert [m.__name__ for m in sides["baseline"]["modifiers"]] == [
+        "pre_budget_vat_on_domestic_electricity",
+    ]
+    # The registered package must run that same composed baseline, once.
+    # Probe the modifier's boundary without building a simulation.
+    calls = []
+
+    def record_vat_change(sim, **changes):
+        calls.append((sim, changes))
+        return sim
+
+    monkeypatch.setattr(
+        "uk_budget_data.budget_measures."
+        "pre_budget_vat_on_domestic_electricity.apply_vat_base_change",
+        record_vat_change,
+    )
+    sim = object()
+    assert package.baseline_simulation_modifier is not None
+    assert package.baseline_simulation_modifier(sim) is sim
+    package_calls = calls.copy()
+    calls.clear()
+    for modifier in sides["baseline"]["modifiers"]:
+        assert modifier(sim) is sim
+    assert package_calls == calls
     assert [m.__name__ for m in sides["reform"]["modifiers"]] == [
         "bus_fare_cap_2027",
         "carers_allowance_earnings_taper",

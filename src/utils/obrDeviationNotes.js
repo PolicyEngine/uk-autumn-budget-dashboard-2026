@@ -11,7 +11,10 @@ import { policyDetailsFor } from "./policyDetails";
  * tagged Timing, Coverage, Behaviour or Scope, by year where a figure
  * changes), and NOT_COMPARABLE_SHORT for a year that cannot be compared.
  * OBR_DEVIATION_NOTES and OBR_COMPARISON_BASES are the full Budget-day
- * texts, for the table's Difference tip and the CSV.
+ * texts, for the table's Difference tip and the CSV. A note may take
+ * figures from the release in place of typed ones (OBR_NOTE_FIGURES,
+ * fillNote): the passages it marks show only with figures that bear them
+ * out.
  *
  * Each is keyed by measure id and shows only while the measure's card
  * entry (policyDetails.js) still fits it: the publication describes the
@@ -58,8 +61,11 @@ export const OBR_DIFFERENCE_POINTS = {
         2027: "Official total also includes £8m Other AME (current)",
       },
     },
-    // The ONS base is 10% to 12% lower than DESNZ's
-    { reason: "Coverage", text: "ONS spending base falls 10–12% below ours (DESNZ)" },
+    // Budget 2026 policy costings, page 12: the costing grows its base with
+    // "the OBR's forecast for growth in nominal consumer expenditure on
+    // electricity"; policyengine-uk uprates electricity_consumption with
+    // the OBR's CPI
+    { reason: null, text: "We grow spending with CPI; government uses the OBR's electricity spending forecast" },
   ],
   state_pension_income_tax_protection: [
     // About 670,000 gain in 2027-28, against the Treasury's 500,000
@@ -94,12 +100,26 @@ export const OBR_DIFFERENCE_POINTS = {
   trading_allowance_raise: [
     { reason: "Timing", text: "Self Assessment taxpayers first pay less in 2028-29" },
     { reason: "Behaviour", text: "Official includes switching from actual expenses" },
-    { reason: "Coverage", text: "Our survey data has no traders' gross receipts" },
+    // The data draw who already claims the £1,000 allowance (Microcosm's
+    // trading_allowance_receipts stage, from the national build 0639b9c7);
+    // only they gain
+    { reason: "Coverage", text: "We count only traders we assume already claim the £1,000 allowance" },
   ],
   savings_income_rates_up: [
     { reason: "Timing", text: "Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29" },
-    { reason: "Coverage", text: "Our savings calibration included ISA interest, so we estimate too little tax" },
-    { reason: null, text: "We are correcting the data" },
+    // EFO October 2026, paragraph 3.17: the response reduces the yield by
+    // around £0.2bn a year; ours is static
+    { reason: "Behaviour", text: "Official includes savers moving into ISAs: about £0.2bn a year" },
+    // OBR policy table 1.1, measure 62, Onshore CT: £78m, £80m and £81m;
+    // Table 6.1's total is that plus income tax (£443m, £475m and £510m)
+    {
+      reason: "Scope",
+      byYear: {
+        2029: "Official total also includes £78m of onshore corporation tax",
+        2030: "Official total also includes £80m of onshore corporation tax",
+        2031: "Official total also includes £81m of onshore corporation tax",
+      },
+    },
   ],
   bus_fare_cap_2027: [
     // OBR policy table 1.1, measure 4: the grant (PSCE in RDEL) −113.10 and
@@ -150,20 +170,69 @@ export const OBR_DEVIATION_NOTES = {
   household_energy_payment_2026:
     "Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, which the OBR certified (the Treasury rounds it to £2,625 million in the Budget's Table 6.1). The gap arises because the costing also covers two things we don't model: the devolved governments' share of the funding (about £425 million, our estimate using the Barnett formula) and £100 million for councils in England for targeted support. Without them, about £2,100 million remains for the payment in England, and our estimate reaches 94% of it. The government spends up to £2,000 million of that on £100 payments to as many as 20 million households, and neither the OBR nor the Treasury itemises the rest. Both estimates fall to zero from 2027-28.",
   domestic_electricity_zero_vat:
-    "Our cost exceeds the VAT receipts in the government's costing, which the OBR certified, by £106m (14%) in 2026-27 (£840m against £734m) and by £57m (19%) in 2027-28 (£353m against £296m). The OBR adds £21m and £8m of Other AME (current) in its detailed policy table, Table 1.1, and the Treasury rounds the totals to £755m and £305m in Table 6.1. The official costing also covers charities, residential care and some businesses, and includes households switching from gas to electricity. Both make the official figure larger, so neither explains the gap. We price DESNZ's domestic electricity volumes at the average prices households pay, and grow that spending with CPI. The government based its costing on ONS consumer spending, which falls 10% to 12% below our DESNZ base. If we scaled our cost down by that much, it would exceed the VAT line by 1% to 3% in 2026-27 and 5% to 8% in 2027-28.",
+    "We compare our cost with the VAT receipts in the government's costing, which the OBR certified: £734m in 2026-27 and £296m in 2027-28. The OBR adds £21m and £8m of Other AME (current) in its detailed policy table, Table 1.1, and the Treasury rounds the totals to £755m and £305m in Table 6.1. The official costing also covers charities, residential care and some businesses, and includes households switching from gas to electricity. Both make the official figure larger. We count only the VAT on households' electricity bills, and we hold their spending fixed. We score every month against 5%, as the government does in its costing, and we weight each year by its share of a year's electricity use. We grow households' electricity spending with CPI, while the government grows its spending base with the OBR's forecast of consumer spending on electricity.",
   carers_allowance_earnings_taper:
     "Our static estimate reaches about 60% of the official costing in both years we compare: £24 million against £40 million in 2030-31, and £48 million against £80 million in 2031-32. The OBR gives £38 million and £79 million before the Treasury rounds them. They include £5 million and £10 million of extra block grant for Scotland, where the Scottish Government pays Carer Support Payment in place of Carer's Allowance. The UK government spends the rest, £33 million and £69 million, on Carer's Allowance and Universal Credit, and the costing has no line for income tax (OBR policy Table 1.1). Before we subtract the income tax on the higher allowance (£15 million and £32 million) for our net cost, we estimate £39 million and £79 million, which exceed that spending by about a sixth. The official figure also includes a labour-supply response, which we don't model. HMRC collects the income tax on the allowance through PAYE, and we don't count that tax against Universal Credit earnings, so we estimate a larger Universal Credit saving.",
   state_pension_income_tax_protection:
     "The official costing includes no benefit savings, and the OBR puts the costing's income tax line at £44m, £83m and £144m in its detailed policy table, Table 1.1. Ours, £42m, £112m and £193m, falls about 5% short of that line in 2027-28 and exceeds it by 35% and 34% in 2028-29 and 2029-30. More pensioners gain in our data (about 670,000 in 2027-28, against the Treasury's 500,000). After we subtract the savings on Pension Credit, Housing Benefit and Council Tax Reduction, we estimate a net cost of £30m, £83m and £144m. For 2028-29 and 2029-30 we set the allowance at £182 and £250 a year, from the October 2026 forecast of the State Pension.",
   trading_allowance_raise:
-    "From 2028-29 our estimate trails the matching income tax and NICs lines of the government's costing, which the OBR certified, by £46m to £103m a year (27% to 47%). The OBR gives those lines as £221m, £165m, £171m and £178m in its detailed policy table, Table 1.1. The rounded Table 6.1 total we show (£225m, £165m, £175m and £180m from 2028-29) also includes the costing's PSCE in RDEL, Scottish BGA (current) and Scottish self-financed expenditure lines, about £2m a year. The gap peaks in 2028-29, the official line's largest year, while ours stays between £118m and £130m a year. The official costing includes people switching from actual expenses to the larger allowance, which we don't model. Our survey data has no gross receipts, so we give traders with profits above £3,000 nothing from the change, and we estimate no Class 4 effect against the NICs line's £11m to £15m a year. We give miscellaneous income no allowance either. For some profits between £1,000 and £3,000 we overstate the gain, because we leave them unrelieved under the current £1,000 allowance.",
+    "From 2028-29 our estimate trails the matching income tax and NICs lines of the government's costing, which the OBR certified, by £46m to £103m a year (27% to 47%). The OBR gives those lines as £221m, £165m, £171m and £178m in its detailed policy table, Table 1.1. The rounded Table 6.1 total we show (£225m, £165m, £175m and £180m from 2028-29) also includes the costing's PSCE in RDEL, Scottish BGA (current) and Scottish self-financed expenditure lines, about £2m a year. The gap peaks in 2028-29, the official line's largest year, while ours stays between £118m and £130m a year. The official costing includes people switching from actual expenses to the larger allowance, which we don't model. We count only traders we assume already claim the £1,000 allowance. We assume 72% of traders with profits up to £4,500 claim it, 14% of those with profits from £4,500 to £9,000, and none above. We set those shares so that an earlier version of our data gave HMRC's estimate of about 400,000 people paying £380 less on average. Those traders' profits fall below the £12,570 at which Class 4 starts, so we estimate no Class 4 effect against the NICs line's £11m to £15m a year. Each deducts up to about £1,900 more in 2027-28 and £1,800 by 2031-32, short of the £2,000 the law gives, because we grow the £1,000 they deduct today with self-employment incomes. We give miscellaneous income no allowance either.",
   fuel_duty_rise_deferral:
     "Our cost falls £273 million below the official figure in 2026-27 (£301 million against £574 million) and £261 million below in 2027-28 (£521 million against £782 million). Both estimates fall to zero from 2028-29. We compare with the government's estimate, which the OBR used but could not certify, and the Treasury rounds it to £575 million and £780 million in Table 6.1. Most of the gap arises because we count only the petrol and diesel that households buy, about £13 billion of the £24 billion of fuel duty the OBR forecasts for 2026-27. The official estimate covers all taxable fuel, including fuel that businesses buy. We also count £50 million and £87 million of VAT on the lower pump price, which the government leaves out of its fuel duty figure. Without that VAT, if we scaled ours to the OBR's fuel duty receipts, we would estimate a fuel duty cost of about £460 million in 2026-27 and £780 million in 2027-28. The government also expects drivers to buy more fuel at the lower price, so it estimates a smaller cost. The rest of the 2026-27 gap fits a costing in which the full 5p returns on 1 January 2027 (about £555 million on 45 billion litres). Under the law, 3p comes back on 1 January and 2p on 1 March (about £410 million).",
   property_income_rates_up:
     "The government counts the tax in its costing when taxpayers pay it, after the tax year it relates to. The OBR adds almost no Self Assessment receipts from the savings and property rate rises in 2027-28 and £1.0bn in 2028-29 (Economic and fiscal outlook, Table 4.4), so we don't compare those two years with our tax-year figures. From 2029-30 ours exceeds the income tax line of the government's costing, which the OBR certified, by 9% to 11%: +£429m against +£394m in 2029-30 (the OBR's detailed policy table, Table 1.1, measure 61). The Table 6.1 total we show, +£435m in 2029-30, also includes the costing's onshore corporation tax, Scottish BGA (current) and Scottish self-financed expenditure lines. The OBR says landlords incorporating and lower compliance reduce the costing's yield by about £0.1bn a year (paragraph 3.17), which we don't model, so before behaviour the official income tax line would exceed ours.",
   savings_income_rates_up:
-    "Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29. From 2029-30 ours reaches 68% to 69% of the income tax line of the government's costing, which the OBR certified (the OBR's detailed policy table, Table 1.1, measure 62): +£307m against +£443m in 2029-30. The Table 6.1 total we show, +£520m in 2029-30, also includes the costing's Onshore CT line. The OBR says savers moving money into ISAs and other tax-advantaged assets reduce the costing's yield by about £0.2bn a year (Economic and fiscal outlook, paragraph 3.17). We don't model that response, so before it the official income tax line would exceed ours by more. The gap turns on how much savings income faces the raised basic, higher and additional rates: about £32bn to £36bn a year from 2029-30 to 2031-32 on the official income tax line before that response, against £15bn to £17bn in ours. Most of that difference comes from our data. We calibrated savings interest to HMRC's figures on a different basis: ours included interest in ISAs, which HMRC leaves out of its figures, so our taxable interest came out about a third too low. We are correcting this, with HMRC's other savings income and the OBR's savings income growth, and will update the dashboard with the corrected data.",
+    "Self Assessment taxpayers pay later, so we don't compare 2027-28 or 2028-29. The OBR puts the costing's income tax at £63m in 2027-28 and £483m in 2028-29 (its detailed policy table, Table 1.1, measure 62), and adds almost no Self Assessment receipts from the savings and property rate rises in 2027-28 and £1.0bn in 2028-29 (Economic and fiscal outlook, October 2026, Table 4.4, page 91). HMRC estimates that about 12% of taxpayers will pay £113 more on average in 2027-28 (HMRC policy paper, Income Tax: changes to tax rates for property and savings income, 29 October 2026, gov.uk/government/publications/income-tax-changes-to-tax-rates-for-property-and-savings-income). On the OBR's forecast of 41.6 million taxpayers that year (its detailed forecast tables for receipts, Table 4.18), that comes to about £0.56bn of extra tax for 2027-28: our arithmetic on HMRC's and the OBR's published figures, not an official estimate. [[We estimate {ours2027} for that tax year.]] We publish a static costing: we hold everyone's savings income fixed. The OBR says savers moving money into ISAs and other tax-advantaged assets reduce the costing's yield by about £0.2bn a year (Economic and fiscal outlook, October 2026, paragraph 3.17, page 69). [[From 2029-30 our estimate exceeds the income tax line of the government's costing, which the OBR certified, by {gap} a year, less than that response: {ours2029} against +£443m in 2029-30.]] The Table 6.1 total we show, +£520m in 2029-30, also includes £78m of onshore corporation tax.",
 };
+
+/**
+ * The figures a note takes from the release, by measure id: a function of
+ * our published estimates (`ours`: £m by the fiscal year's start year, the
+ * figures the comparison draws) giving each {placeholder} of the note its
+ * text, or null where the figures do not bear the passage out. So no note
+ * states one of our figures, or a comparison that rests on them, from
+ * typed text that a regeneration could leave behind.
+ *
+ * Savings: the OBR's income tax line is typed (its policy Table 1.1,
+ * measure 62: £443m, £475m and £510m from 2029-30); ours is read. The gap
+ * shows only while ours exceeds the line in every year from 2029-30 by
+ * less than the £200m a year the OBR gives for savers' response
+ * (paragraph 3.17), which is what the passage says. Max's separate rule
+ * (2 and 11 November 2026) sends a raw gap over £200m back to him;
+ * this rounded display condition is not that release threshold.
+ */
+export const OBR_NOTE_FIGURES = {
+  savings_income_rates_up: (ours) => {
+    const line = { 2029: 443, 2030: 475, 2031: 510 };
+    const whole = (year) => (Number.isFinite(ours?.[year]) ? Math.round(ours[year]) : null);
+    const gaps = Object.keys(line).map((year) => (whole(year) === null ? null : whole(year) - line[year]));
+    const within = gaps.every((gap) => gap !== null && gap > 0 && gap < 200);
+    const [least, most] = [Math.min(...gaps), Math.max(...gaps)];
+    return {
+      ours2027: whole(2027) > 0 ? `£${whole(2027)}m` : null,
+      ours2029: within ? `+£${whole(2029)}m` : null,
+      gap: within ? (least === most ? `£${least}m` : `£${least}m to £${most}m`) : null,
+    };
+  },
+};
+
+/**
+ * A note with its marked passages settled: each [[passage]] with every
+ * {placeholder} in it replaced from `values`, or left out whole when any
+ * of them has no value there (null, missing or blank). A note with no
+ * marked passage comes back as it is.
+ */
+export function fillNote(text, values = {}) {
+  if (typeof text !== "string" || !text.includes("[[")) return text;
+  const valueOf = (name) => (Object.hasOwn(values ?? {}, name) && typeof values[name] === "string" && values[name].trim() ? values[name] : null);
+  return text
+    .replace(/\[\[([\s\S]*?)\]\]/g, (_, passage) => {
+      const names = [...passage.matchAll(/\{(\w+)\}/g)].map((match) => match[1]);
+      return names.every((name) => valueOf(name) !== null) ? passage.replace(/\{(\w+)\}/g, (__, name) => valueOf(name)) : "";
+    })
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 
 /**
  * What each side counts, as one line ("Official: …. Ours: …."), for the
@@ -223,10 +292,16 @@ const fittingText = (measure, texts) => {
 
 /**
  * A comparison row's note: the one `notes` has for its catalogue measure,
- * while its card entry fits it (policyDetailsFor); else null.
+ * while its card entry fits it (policyDetailsFor); else null. `ours` is
+ * the measure's own published figures (£m by the fiscal year's start
+ * year): a note that takes figures from the release (OBR_NOTE_FIGURES)
+ * shows the passages they bear out, and none of them without figures.
  */
-export function deviationNoteFor(measure, notes = OBR_DEVIATION_NOTES) {
-  return fittingText(measure, notes);
+export function deviationNoteFor(measure, notes = OBR_DEVIATION_NOTES, ours = null) {
+  const text = fittingText(measure, notes);
+  if (text === null) return null;
+  const figures = Object.hasOwn(OBR_NOTE_FIGURES, measure.id) ? OBR_NOTE_FIGURES[measure.id](ours ?? {}) : {};
+  return fillNote(text, figures);
 }
 
 /**

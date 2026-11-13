@@ -508,11 +508,50 @@ def test_calculated_values_both_sides_hold_are_compared(
     """A value the engine calculated, or a modifier cached, is compared
     where both sides hold one: the figures move VAT through it, though no
     input or formula differs."""
-    baseline, reformed = figures(
-        shopping(modifier=base_modifier),
-        shopping(changes, modifier),
-        years=years,
+    cached_witness = modifier in (
+        cache_consumption,
+        double_projected_transport,
     )
+    if cached_witness:
+        # Native 2.165.1 subtracts domestic fuel/power from the reduced
+        # share, making its default remainder zero. Give BOTH simulations
+        # the same positive synthetic base; this is not a parameter delta.
+        common = {REDUCED_RATE_SHARE: {"2027": 0.2, "2028": 0.2}}
+        baseline, reformed = shopping(common), shopping(common)
+        name, year = (
+            ("consumption", 2027)
+            if modifier is cache_consumption
+            else (TRANSPORT, 2028)
+        )
+        for sim in (baseline, reformed):
+            sim.calculate(name, year)
+        input_keys = set(reformed._user_input_keys)
+        # Construction drops calculated caches after its modifier. Write
+        # this positive cache witness only AFTER that cleanup has finished.
+        modifier(reformed)
+        assert (
+            set(baseline._user_input_keys)
+            == set(reformed._user_input_keys)
+            == input_keys
+        )
+        assert not LIMIT.stored_inputs_only
+    else:
+        baseline, reformed = shopping(modifier=base_modifier), shopping(
+            changes, modifier
+        )
+    figures(baseline, reformed, years=years)
+    if cached_witness:
+        # Each exact expected cache path must really differ in some period;
+        # a zero reduced-rate base or discarded cache is not a witness.
+        for path in recorded:
+            name = path.removeprefix("variable:")
+            assert any(
+                not numpy.array_equal(
+                    baseline.calculate(name, year),
+                    reformed.calculate(name, year),
+                )
+                for year in years
+            ), path
     assert limits_touched(baseline, reformed) == [record(LIMIT, recorded)]
 
 
@@ -525,20 +564,33 @@ def test_with_the_fix_calculated_values_record_nothing():
 
 
 class Unreadable:
-    """A simulation whose stored values can't be read."""
+    """Only the VAT-covered holders are unreadable; all others stay native."""
 
     def __init__(self, sim):
+        self.sim = sim
         self.tax_benefit_system = sim.tax_benefit_system
 
+    def __getattr__(self, name):
+        return getattr(self.sim, name)
+
     def get_holder(self, name):
-        raise RuntimeError("no holder")
+        if name in LIMIT.variables:
+            raise RuntimeError("no VAT holder")
+        return self.sim.get_holder(name)
 
 
 def test_stored_values_that_cannot_be_read_count_as_different():
-    """Fail closed: every covered variable records."""
-    assert limits_touched(
-        Unreadable(simulation()), Unreadable(simulation())
-    ) == [record(LIMIT, map(variable_path, LIMIT.variables))]
+    """Fail closed for every VAT variable, leaving other holders native."""
+    baseline, reformed = simulation(), simulation()
+    wrapped = [Unreadable(sim) for sim in (baseline, reformed)]
+    for original, proxy in zip((baseline, reformed), wrapped):
+        assert proxy._user_input_keys is original._user_input_keys
+        for limit in model_limits.MODEL_LIMITS:
+            for name in set(limit.variables) - set(LIMIT.variables):
+                assert proxy.get_holder(name) is original.get_holder(name)
+    assert limits_touched(*wrapped) == [
+        record(LIMIT, map(variable_path, LIMIT.variables))
+    ]
 
 
 def test_a_stand_in_without_holders_compares_variables_by_behaviour():

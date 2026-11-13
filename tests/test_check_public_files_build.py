@@ -565,7 +565,9 @@ def test_with_sign_off_off_the_build_check_publishes_only_listed_files(tree):
     fixture = REPO / "src" / "test" / "fixtures" / "publication"
     shutil.copytree(fixture, tree / "public" / "data")
     stray = tree / "public/data/artifacts/alpha/aaaaaaaaaaaaaaaa"
-    shutil.copytree(stray.parent / "d68eb084c02699c1", stray)
+    fixture_manifest = json.loads((fixture / "manifest.json").read_text())
+    alpha_artifact = fixture_manifest["measures"]["alpha"]["artifact"]
+    shutil.copytree(fixture / alpha_artifact, stray)
     unlisted = sorted(
         path.relative_to(tree).as_posix()
         for path in (tree / "public/data/artifacts").rglob("*")

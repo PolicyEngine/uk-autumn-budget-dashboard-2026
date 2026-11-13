@@ -1,0 +1,5 @@
+reform_id,reform_name,year,decile,avg_change
+alpha_rates_up,Alpha rates up,2029,1,-1.5
+alpha_rates_up,Alpha rates up,2029,all,-10.0
+alpha_rates_up,Alpha rates up,2030,1,-1.6
+alpha_rates_up,Alpha rates up,2030,all,-10.5

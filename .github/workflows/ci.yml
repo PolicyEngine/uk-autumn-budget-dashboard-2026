@@ -265,3 +265,114 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run lint
+
+  publication-fixtures:
+    name: Publication fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SOURCE_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          repository: ${{ env.SOURCE_REPOSITORY }}
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          save-cache: false
+          version: "latest"
+      - run: uv python install 3.13
+      - run: uv sync --locked --extra dev
+      - name: Generate synthetic publication fixtures under aggregate limits
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_uid=$(id -u)
+          runner_gid=$(id -g)
+          unit="pe-publication-fixtures-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.scope"
+          fixture_scratch_dir="$RUNNER_TEMP/publication-fixture-work"
+          mkdir -p "$fixture_scratch_dir"
+          scope_empty() {
+            listing=$(sudo -n systemctl list-units --all --full --plain --no-legend --type=scope "$unit") || return 2
+            [ -n "$listing" ] || return 0
+            read -r listed_name _ <<< "$listing"
+            [ "$listed_name" = "$unit" ] || return 2
+            load=$(sudo -n systemctl show "$unit" -p LoadState --value) || return 2
+            control=$(sudo -n systemctl show "$unit" -p ControlGroup --value) || return 2
+            [ "$load" = loaded ] && [ -n "$control" ] || return 2
+            case "$control" in
+              */"$unit") ;;
+              *) return 2 ;;
+            esac
+            [ -r "/sys/fs/cgroup$control/cgroup.events" ] || return 2
+            grep -qx 'populated 0' "/sys/fs/cgroup$control/cgroup.events"
+          }
+          cleanup() {
+            result=$?
+            trap - EXIT
+            if scope_empty; then
+              exit "$result"
+            else
+              query_status=$?
+            fi
+            if [ "$query_status" -eq 2 ]; then
+              result=1
+            fi
+            # Even a failed query still triggers cleanup of this exact unit.
+            if ! sudo -n systemctl stop "$unit"; then
+              result=1
+            fi
+            if scope_empty; then
+              exit "$result"
+            else
+              query_status=$?
+            fi
+            [ "$query_status" -ne 2 ] || exit 1
+            sudo -n systemctl kill --kill-whom=all --signal=KILL "$unit" || exit 1
+            for _ in 1 2 3 4 5; do
+              if scope_empty; then
+                exit "$result"
+              else
+                query_status=$?
+              fi
+              [ "$query_status" -ne 2 ] || exit 1
+              sleep 1
+            done
+            exit 1
+          }
+          trap cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+          sudo -n systemd-run --scope --unit="$unit" \
+            -p MemoryMax=2147483648 -p MemorySwapMax=0 \
+            -p CPUQuota=100% -p TasksMax=64 \
+            -p RuntimeMaxSec=270s -p TimeoutStopSec=5s \
+            /usr/bin/setpriv --reuid="$runner_uid" --regid="$runner_gid" \
+            --init-groups --reset-env \
+            /usr/bin/env -i PATH=/usr/bin:/bin TMPDIR="$fixture_scratch_dir" \
+            HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 \
+            OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+            NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 \
+            GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+            /usr/bin/timeout --signal=TERM --kill-after=5s 270s \
+            "$GITHUB_WORKSPACE/.venv/bin/python" \
+            "$GITHUB_WORKSPACE/scripts/export_publication_fixtures.py" \
+            --output "$RUNNER_TEMP/publication-fixtures-$EXPECTED_HEAD_SHA" \
+            --runner-temp "$RUNNER_TEMP" --expected-head "$EXPECTED_HEAD_SHA" \
+            --repository "$GITHUB_REPOSITORY" --source-repository "$SOURCE_REPOSITORY" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --github-sha "$GITHUB_SHA" --scope "$unit"
+      - name: Keep synthetic fixtures for independent acceptance
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-fixtures-${{ env.EXPECTED_HEAD_SHA }}
+          path: |
+            ${{ runner.temp }}/publication-fixtures-${{ env.EXPECTED_HEAD_SHA }}/synthetic-fixtures.tar.gz
+            ${{ runner.temp }}/publication-fixtures-${{ env.EXPECTED_HEAD_SHA }}/generation-metadata.json
+            ${{ runner.temp }}/publication-fixtures-${{ env.EXPECTED_HEAD_SHA }}/source-manifest.json
+          retention-days: 1
+          if-no-files-found: error

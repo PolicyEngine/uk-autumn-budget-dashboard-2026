@@ -322,30 +322,40 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
-  it("says the savings measure is held back from this release in its Why we leave it out point", () => {
+  it("no longer lists the savings income tax rise, which the dashboard publishes (11 November 2026)", () => {
     render(<UnmodelledMeasures />);
     open();
+    expect(UNMODELLED_MEASURES.map(({ id }) => id)).not.toContain("savings-income-tax");
+    expect(document.getElementById("unmodelled-savings-income-tax")).toBeNull();
+    // Table 6.1 row 62 is its costing: on no card here
+    expect(UNMODELLED_MEASURES.flatMap(({ costings }) => costings.map(({ row }) => row))).not.toContain(62);
+    // No card says our savings data fall short
     const why = (measure) => measure.points.find((point) => point.label === "Why we leave it out").text;
-    const held = UNMODELLED_MEASURES.filter((measure) => /^Held back\b/.test(why(measure)));
-    expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
-    const card = document.getElementById("unmodelled-savings-income-tax");
-    // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
-    expect(card.querySelector(".policy-card-points")).toHaveTextContent(/Held back: calibrated on another basis/);
-    expect(why(held[0])).not.toMatch(/miss(?:es)? ISA interest/);
-    fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
-    expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
+    expect(UNMODELLED_MEASURES.filter((measure) => /taxable interest|savings (?:income )?data/i.test(why(measure)))).toEqual([]);
   });
 
   it("says the cash ISA limit is in the Household calculator only, not the national results", () => {
     render(<UnmodelledMeasures />);
     open();
     const measure = UNMODELLED_MEASURES.find(({ id }) => id === "cash-isa-limit");
-    // Not in our data yet (#368): the survey data hold no payments into ISAs
+    // In the "Not in our data yet" group (#368). From the national build
+    // 0639b9c7 the data hold ISA payments, so the card no longer says they
+    // lack them: a national figure would rest on where savers put what the
+    // planned limit left out
     expect(measure.reason).toBe("data");
     const card = document.getElementById("unmodelled-cash-isa-limit");
     expect(card.querySelector(".policy-card-points")).toHaveTextContent(
-      /Household calculator only, not the national results: our data lack ISA payments\./,
+      /Household calculator only: a national figure rests on where the excess goes\./,
     );
+    expect(card.querySelector(".policy-card-points")).not.toHaveTextContent(/lack ISA payments|no payments into ISAs/);
+  });
+
+  it("no longer says the model has no ISA payments or bonuses on the First Time Buyer ISA card", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const card = document.getElementById("unmodelled-first-time-buyer-isa");
+    expect(card.querySelector(".policy-card-points")).toHaveTextContent(/The model lacks the new ISA; our data lack Lifetime ISA withdrawals\./);
+    expect(card.querySelector(".policy-card-points")).not.toHaveTextContent(/no ISA payments/);
   });
 
   it("keeps At a glance short and the summary one sentence, and shows every change a card names", () => {

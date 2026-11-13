@@ -5,19 +5,19 @@ import { IMPROVEMENTS_NOTE } from "./improvementsText";
 
 // The note as Max approved it (28 October 2026, "Use the widened text"),
 // character for character: the coordinator's whats-improving-note.md, less
-// the date and the poverty and people-affected item (30 October 2026)
+// the date and the poverty and people-affected item (30 October 2026), and
+// with the adoption candidate's completed savings and Pension Tax
+// Allowance work removed (E3 and PR 376). The later-update lead remains;
+// the upstream model already has the Budget measures from 2.170.0
 const APPROVED = `What we're improving
 
-The next update of these results will:
-- add national figures for the savings income tax rise, once we have improved our savings income data (the calculator already includes it);
+A later update of these results will:
 - apply the trading allowance to miscellaneous income as well as trading income, which will raise our estimate of its cost;
 - correct how the Carer's Allowance taper interacts with overlapping benefits, such as the State Pension, in 2030-31;
-- extend the fuel duty cut to road fuel gases (LPG and natural gas), as the government's costing does;
-- give the Pension Tax Allowance to everyone who reaches State Pension age during the tax year.
+- extend the fuel duty cut to road fuel gases (LPG and natural gas), as the government's costing does.
 
 We are also working on:
-- projecting household electricity spending with retail energy prices rather than general inflation;
-- adding the Budget's measures to PolicyEngine UK itself, so anyone using our open-source model can run them.
+- projecting household electricity spending with retail energy prices rather than general inflation.
 `;
 
 // The note as plain text, the approved file's layout: the title, a blank
@@ -27,9 +27,23 @@ const asText = ({ title, parts }) =>
   `${[title, "", ...parts.flatMap(({ lead, items }, index) => [...(index ? [""] : []), lead, ...items.map((item) => `- ${item}`)])].join("\n")}\n`;
 
 describe("What we're improving (ImprovementsNote)", () => {
-  it("says exactly the approved note, every item kept", () => {
+  it("keeps the remaining work after the selected integrations", () => {
     expect(asText(IMPROVEMENTS_NOTE)).toBe(APPROVED);
-    expect(IMPROVEMENTS_NOTE.parts.map(({ items }) => items.length)).toEqual([5, 2]);
+    expect(IMPROVEMENTS_NOTE.parts.map(({ items }) => items.length)).toEqual([3, 1]);
+  });
+
+  // PR 376 and E3 complete the PTA and savings source work in this
+  // adoption candidate. Other work still has no next-update promise;
+  // the generic upstream implementation item was already completed.
+  it("promises nothing for the next update, and lists no finished work", () => {
+    for (const { lead, items } of IMPROVEMENTS_NOTE.parts) {
+      expect(lead).not.toMatch(/next update/i);
+      for (const item of items) expect(item).not.toMatch(/adding the Budget's measures to PolicyEngine UK|add national figures for the savings income tax rise|give the Pension Tax Allowance/);
+    }
+    // Every item but the last of a list ends with a semicolon, the last with a full stop
+    for (const { items } of IMPROVEMENTS_NOTE.parts) {
+      items.forEach((item, index) => expect(item).toMatch(index === items.length - 1 ? /\.$/ : /;$/));
+    }
   });
 
   it("shows it as a titled section, its leads as lines and its bullets as lists", () => {

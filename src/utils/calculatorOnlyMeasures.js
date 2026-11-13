@@ -5,33 +5,31 @@
  * The household API still knows them (its reform registry), so one
  * household can be calculated with them.
  *
- * The savings income tax rise is held back from the national results while
- * the savings data are corrected (María, #290, 28 October 2026); Vahid and
- * María agreed it goes in the calculator only, and it is always included
- * there (Vahid, 28 October). The cash ISA limit kept at £20,000 joined it
- * on 29 October (María): its effect rests on what a household pays into
- * cash ISAs, which our survey data do not hold yet. The Machine Games
- * Duty rise joined them on 2 November: our survey data hold no gambling
- * yet, and the model cannot tell higher-stake machines from the rest. On
- * the next certified national (policyengine.py#731) both have data, but
- * stay here: the cash ISA figure rests on where savers would have put the
- * excess, and the duty's on machines the Budget leaves at 20%. To publish
- * one, take it out of this list and add it to the package
- * (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS in reforms.py). This is the one
- * place the page names them outside the measure catalogue.
+ * The cash ISA limit kept at £20,000 joined on 29 October (María): its
+ * effect rests on what a household pays into cash ISAs, which our survey
+ * data do not hold yet. The Machine Games Duty rise joined on 2 November:
+ * our survey data hold no gambling yet, and the model cannot tell
+ * higher-stake machines from the rest. On the next certified national
+ * (policyengine.py#731) both have data, but stay here: the cash ISA figure
+ * rests on where savers would have put the excess, and the duty's on
+ * machines the Budget leaves at 20%.
+ *
+ * The savings income tax rise was the first measure here, held back from
+ * the national results while the savings data were corrected (María, #290,
+ * 28 October 2026). It left on 11 November 2026, published as a static
+ * costing, and is now a measure like any other: in the manifest, and in a
+ * household's request only when the header's selection has it.
+ *
+ * To publish another, take it out of this list and add it to the package
+ * (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS in reforms.py; definitions.py's
+ * CALCULATOR_ONLY_MEASURES mirrors this list). This is the one place the
+ * page names them outside the measure catalogue.
  */
-export const SAVINGS_INCOME_RATES_ID = "savings_income_rates_up";
-
 export const CALCULATOR_ONLY_MEASURES = {
-  [SAVINGS_INCOME_RATES_ID]: {
-    id: SAVINGS_INCOME_RATES_ID,
-    name: "Savings income tax up",
-    // As the result card names it after the count ("with 7 policies and …")
-    phrase: "the savings income tax rise",
-  },
   cash_isa_limit_kept: {
     id: "cash_isa_limit_kept",
     name: "Cash ISA limit kept at £20,000",
+    // As the result card names it after the count ("with 7 policies and …")
     phrase: "the cash ISA limit kept at £20,000",
   },
   machine_games_duty_rise: {
@@ -92,7 +90,7 @@ export const definitionChecked = (policies, definitions) =>
 /**
  * The measures a household's result covers, in words: the selected ones by
  * number, then each calculator-only one by name ("7 policies and the
- * savings income tax rise"). The number matches the header's selection
+ * cash ISA limit kept at £20,000"). The number matches the header's selection
  * ("All 7"), and the measures the calculator adds are named, not counted
  * in it, since the result includes them (#306). `count` and `named` say
  * the same as `text`.

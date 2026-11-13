@@ -93,19 +93,18 @@ describe("the unmodelled measures' pictures (unmodelledVisuals.js)", () => {
 });
 
 describe("each kind of picture", () => {
-  it("savings tax: each rate's ladder rung, the old rate grey and 2 points in amber", () => {
-    const { container } = renderVisual("savings-income-tax");
+  // The ladder-rung bars were first drawn for the savings income tax rise,
+  // which left this list when the dashboard published it (11 November 2026)
+  it("company car tax: each band's ladder rung, the old percentage grey and 1 point in amber", () => {
+    const { container } = renderVisual("company-car-tax");
     const rows = container.querySelectorAll(".umv-bar-row");
-    expect([...rows].map((row) => row.querySelector(".umv-value").textContent)).toEqual(["22% → 24%", "42% → 44%", "47% → 49%"]);
+    expect([...rows].map((row) => row.querySelector(".umv-value").textContent)).toEqual(["9% → 10%", "19% → 20%"]);
     for (const row of rows) {
       const [base, add] = row.querySelectorAll(".umv-fill");
       expect(base).toHaveClass("is-before");
       expect(add).toHaveClass("is-loss");
-      expect(parseFloat(add.style.width)).toBeCloseTo((100 * 2) / 55, 5);
+      expect(parseFloat(add.style.width)).toBeCloseTo((100 * 1) / 40, 5);
     }
-    // The grey rates are the ones already set for 6 April 2027 (Budget
-    // 2025), never in force before it
-    expect(container.querySelector(".umv-key").textContent).toBe("Already set for 6 Apr 20272 points more");
   });
 
   it("cash ISA: £20,000 kept against the planned £12,000, the gap outlined and labelled no cut", () => {

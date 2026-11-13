@@ -149,6 +149,47 @@ TABLES: dict[str, TableSpec] = {
             ("reform_id", "year"),
             required=False,
         ),
+        # The people who gain from a measure and the people who lose, by
+        # year (calculators.GainersCalculator), where
+        # calculators.GAINER_BASES names the measure's basis: ``variables``
+        # names the engine variables whose change is a person's gain
+        # (";"-separated). For each group, the weighted people, the records
+        # and the survey households behind them, and the mean gain or loss
+        # in GBP a year. A row whose gainers or losers rest on fewer than
+        # GAINERS_MIN_HOUSEHOLDS survey households keeps its key and
+        # ``variables`` and leaves every figure blank (gainer_rows); a mean
+        # alone is blank when its group is empty. A table of its own, and
+        # not required, so only the measures with a basis carry it and every
+        # other artifact keeps its bytes.
+        TableSpec(
+            "gainers",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("variables", STR),
+                ("gainers", FLOAT),
+                ("gainer_records", INT),
+                ("gainer_survey_households", INT),
+                ("mean_gain", FLOAT),
+                ("losers", FLOAT),
+                ("loser_records", INT),
+                ("loser_survey_households", INT),
+                ("mean_loss", FLOAT),
+            ),
+            ("reform_id", "year"),
+            required=False,
+            nullable=(
+                "gainers",
+                "gainer_records",
+                "gainer_survey_households",
+                "mean_gain",
+                "losers",
+                "loser_records",
+                "loser_survey_households",
+                "mean_loss",
+            ),
+        ),
         # The example households' net income across one income each
         # (uk_budget_data.example_households): ``household`` names the
         # household, ``x_variable`` the income on its x-axis, ``income``
@@ -462,6 +503,20 @@ SCATTER_INCOME_BASIS_YEAR = 2027
 SCATTER_ROUND_TO = 1000
 
 
+# The gainers table counts people who gain and lose, with the mean gain
+# and loss. A group that rests on fewer survey households than this is not
+# published: the floor the binned scatter keeps for its counts, the UK Data
+# Service's advice against secondary disclosure (disclosure_floor), above
+# the three its licence requires.
+GAINERS_MIN_HOUSEHOLDS = SCATTER_MIN_HOUSEHOLDS
+# Each group of the gainers table: its count column, the prefix of its
+# records, survey-household and household-list names, and its mean column.
+GAINER_GROUPS = (
+    ("gainers", "gainer", "mean_gain"),
+    ("losers", "loser", "mean_loss"),
+)
+
+
 # The household scatter keeps the sample size and seed of the script that
 # has always made public/data/household_scatter.csv.
 SCATTER_SAMPLE_SIZE = 500
@@ -549,6 +604,55 @@ def sample_household_scatter(
             int(row["household_id"]),
         ),
     )
+
+
+def gainer_rows(rows: Iterable[Mapping[str, Any]]) -> list[dict]:
+    """The gainers table's rows from the calculator's
+    (``calculators.GainersCalculator``), held to the floor.
+
+    Each row lists the households its gainers and its losers live in
+    (``gainer_household_ids``, ``loser_household_ids``): the survey
+    households, once ``disclosure_floor.survey_gainer_rows`` has named
+    them, as it does for every run on a dataset. Microcosm builds several
+    records from one survey household, so the published support is the
+    distinct households listed, beside the records. The lists themselves
+    are left out.
+
+    A group that rests on 1 to GAINERS_MIN_HOUSEHOLDS - 1 households is not
+    published, and nor is the other group of its row: every figure in the
+    row is None, so neither the row nor another table's total can give the
+    thin group back by difference. A group with nobody in it is safe to
+    show: it counts 0 people, records and households, and has no mean.
+    """
+    published = []
+    for row in rows:
+        figures: dict[str, Any] = {}
+        thin = False
+        for count, prefix, mean in GAINER_GROUPS:
+            records = int(row[f"{prefix}_records"])
+            households = len(set(row[f"{prefix}_household_ids"]))
+            if households > records or (households == 0) != (records == 0):
+                raise ValueError(
+                    f"{row['reform_id']} {row['year']}: {records} {prefix} "
+                    f"records in {households} households"
+                )
+            thin = thin or 0 < households < GAINERS_MIN_HOUSEHOLDS
+            figures[count] = float(row[count])
+            figures[f"{prefix}_records"] = records
+            figures[f"{prefix}_survey_households"] = households
+            figures[mean] = None if row[mean] is None else float(row[mean])
+        if thin:
+            figures = dict.fromkeys(figures)
+        published.append(
+            {
+                "reform_id": row["reform_id"],
+                "reform_name": row["reform_name"],
+                "year": row["year"],
+                "variables": row["variables"],
+                **figures,
+            }
+        )
+    return published
 
 
 def band(value: float, width: float, low: float, high: float) -> float:

@@ -1796,6 +1796,7 @@ def test_the_committed_policy_gates_budget_2026_on_post_behavioural():
         "carers_allowance_earnings_taper",
         "trading_allowance_raise",
         "property_income_rates_up",
+        # Published as a static costing since 11 November 2026
         "savings_income_rates_up",
         # Held back from the release, ready for when they are published
         "cash_isa_limit_kept",
@@ -2001,3 +2002,62 @@ def test_the_pension_tax_allowance_is_compared_before_the_end_only():
     assert status[2030] == status[2031] == NOT_COMPARABLE
     assert {status[y] for y in (2026, 2027, 2028, 2029)} == {PASS}
     assert result["responsiveness"]["status"] == RESPONSIVE
+
+
+def test_the_savings_rates_are_compared_from_2029_30_only():
+    """The checked-in inputs for the savings rates (Table 6.1 row 62),
+    published as a static costing: not compared in 2026-27 (before the
+    rates rise) or in 2027-28 and 2028-29 (the costing counts the tax when
+    taxpayers pay it), compared from 2029-30 within the band for a costing
+    that includes behaviour, and responsive from 2027-28."""
+    from pathlib import Path
+
+    inputs = Path(__file__).resolve().parents[1] / "data_inputs" / "treasury"
+    measure = "savings_income_rates_up"
+    # Table 6.1's own figures in the years compared, £bn
+    treasury = {2029: 0.52, 2030: 0.555, 2031: 0.59}
+
+    def reconciled(compared):
+        return reconcile(
+            # Nothing before the start, then a static yield every tax year
+            {2026: 0.0, 2027: 0.5, 2028: 0.5, **compared},
+            measure_id=measure,
+            outputs_sha256=DIGEST,
+            sources=load_sources(inputs / "sources"),
+            mapping=load_mapping(inputs / "mapping.csv"),
+            exceptions=[],
+            policy=load_policy(inputs / "policy.yaml"),
+            expected=[
+                e for e in load_expected(inputs / "expected_effects.csv")
+            ],
+            years=range(2026, 2032),
+        )
+
+    result = reconciled(treasury)
+    rows = {row["year"]: row for row in result["rows"]}
+    for year in (2026, 2027, 2028):
+        assert rows[year]["status"] == NOT_COMPARABLE, year
+        # The reason cites the OBR's tables, which show when the tax
+        # arrives; the policy costings page says nothing on timing
+        assert "Table 4.4" in rows[year]["reason"], year
+        assert "policy costings p. 75" not in rows[year]["reason"], year
+    for year, figure in treasury.items():
+        assert rows[year]["status"] == PASS, year
+        assert rows[year]["comparator"]["value_bn"] == pytest.approx(figure)
+        assert rows[year]["allowance_band"] == "includes_behaviour", year
+    assert result["summary"]["status"] == PASS
+    assert result["responsiveness"]["status"] == RESPONSIVE
+    # The band: a static figure up to 25% above Table 6.1 passes with no
+    # exception, and one beyond it fails until a reviewer accepts it
+    at_the_band = reconciled({y: v * 1.25 for y, v in treasury.items()})
+    assert {
+        row["status"] for row in at_the_band["rows"] if row["year"] >= 2029
+    } == {PASS}
+    beyond = reconciled({y: v * 1.25 + 0.001 for y, v in treasury.items()})
+    assert {
+        row["status"] for row in beyond["rows"] if row["year"] >= 2029
+    } == {FAILED}
+    assert beyond["summary"]["status"] == FAILED
+    # A measure that did nothing would not pass as a small number
+    inert = reconciled({y: 0.0 for y in treasury})
+    assert inert["responsiveness"]["status"] == INERT

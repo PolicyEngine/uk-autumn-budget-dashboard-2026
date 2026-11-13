@@ -62,6 +62,9 @@ from uk_budget_data.budget_measures.household_energy_payment_2026 import (
 from uk_budget_data.budget_measures.pension_tax_allowance import (
     pension_tax_allowance,
 )
+from uk_budget_data.budget_measures.pre_budget_vat_on_domestic_electricity import (
+    pre_budget_vat_on_domestic_electricity,
+)
 from uk_budget_data.budget_measures.road_fuel_vat_cut import (
     ROAD_FUEL_VAT_RATE,
     road_fuel_vat_cut,
@@ -456,7 +459,8 @@ def _pension_tax_allowance(reform) -> list[dict]:
         if not values["first_year"] <= year <= values["last_year"]:
             return 0
         weekly = (
-            math.floor(engine_value(weekly_path, year) / step + 1e-9) * step
+            math.floor(round(engine_value(weekly_path, year) / step, 6) + 0.5)
+            * step
         )
         full = round(weekly * 52, 2)
         return math.ceil(
@@ -480,8 +484,8 @@ def _pension_tax_allowance(reform) -> list[dict]:
                 {
                     "kind": "modifier_constant",
                     "where": "20% of the full new State Pension "
-                    f"(policyengine-uk {weekly_path} x 52, rounded down to "
-                    f"5p a week) above the personal allowance "
+                    f"(policyengine-uk {weekly_path} x 52, rounded to the "
+                    f"nearest 5p a week) above the personal allowance "
                     f"({allowance_path}), rounded up; "
                     + _modifier_source(
                         pension_tax_allowance, "first_year, last_year"
@@ -629,6 +633,56 @@ def _check_electricity_where(values: dict) -> None:
         )
 
 
+def _electricity_baseline_rate(reform, values: dict) -> float:
+    """The rate the zero rate is scored against: the 5% the measure's
+    pre-Budget side holds electricity at
+    (``pre_budget_vat_on_domestic_electricity``), since current law has
+    its own rate for domestic electricity from policyengine-uk 2.153.5,
+    zero in Great Britain from October 2026 to March 2027, which is not
+    what the measure is scored against. The table's "before" is right only
+    while both sides hold one baseline, so it is not written unless
+
+    - the measure applies that pre-Budget side;
+    - both sides name the same baseline rate and the same engine rate;
+    - the pre-Budget side holds every year the Budget side changes, and
+      no other; and
+    - the rate is the engine's reduced rate, which domestic electricity
+      bears outside the zero rate."""
+    before = constants(pre_budget_vat_on_domestic_electricity)
+    if (
+        reform.baseline_simulation_modifier
+        is not pre_budget_vat_on_domestic_electricity
+    ):
+        raise ValueError(
+            "the electricity measure does not apply its pre-Budget side, "
+            "which holds the 5% it is scored against"
+        )
+    for name in ("baseline_rate", "own_rate_parameter"):
+        if before[name] != values[name]:
+            raise ValueError(
+                f"the electricity measure's two sides differ on {name}"
+            )
+    changed = {
+        int(name.rsplit("_", 1)[1])
+        for name in values
+        if name.startswith("rate_change_")
+    }
+    held = set(range(before["first_year"], before["last_year"] + 1))
+    if held != changed:
+        raise ValueError(
+            "the electricity measure's pre-Budget side holds "
+            f"{sorted(held)}, but its Budget side changes {sorted(changed)}"
+        )
+    if before["baseline_rate"] != engine_value(
+        "gov.hmrc.vat.reduced_rate", POLICY_YEARS[0]
+    ):
+        raise ValueError(
+            "the electricity measure's baseline rate is not the engine's "
+            "reduced rate"
+        )
+    return before["baseline_rate"]
+
+
 def _electricity_vat(reform) -> list[dict]:
     values = constants(zero_vat_on_domestic_electricity)
     changes = {
@@ -636,7 +690,6 @@ def _electricity_vat(reform) -> list[dict]:
         for name, value in values.items()
         if name.startswith("rate_change_")
     }
-    path = "gov.hmrc.vat.reduced_rate"
     # While the pre-Budget zero rate is in the measure (SI 2026/987), the
     # 5% is the scoring baseline, as Table 6.1 scores it (#290, Max); the
     # card's visual marks those months as law before the Budget
@@ -644,8 +697,10 @@ def _electricity_vat(reform) -> list[dict]:
     return _vat_rows(
         registry.ELECTRICITY_VAT_ID,
         zero_vat_on_domestic_electricity,
-        engine_value(path, POLICY_YEARS[0]),
-        _engine_source(path),
+        _electricity_baseline_rate(reform, values),
+        _modifier_source(
+            pre_budget_vat_on_domestic_electricity, "baseline_rate"
+        ),
         "VAT on domestic electricity",
         changes,
         "rate_change_2026, rate_change_2027",

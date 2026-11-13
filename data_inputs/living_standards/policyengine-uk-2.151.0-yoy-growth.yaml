@@ -1,0 +1,1470 @@
+# OBR Economic Projections
+#
+# Data sources by horizon:
+# - 2009-2024: OBR outturn data from detailed forecast tables.
+# - 2025-2030: OBR forecast from the latest Economic and Fiscal Outlook
+#   (EFO, March 2026). Values come from the EFO economy supplementary
+#   tables — RPI/CPI/CPIH from Table 1.7, average earnings from Table 1.6.
+#   Exceptions are documented on each series: mortgage_interest 2030 is
+#   carried over from the November 2025 EFO, consumer_price_index_ahc is
+#   derived rather than published by the OBR, and social_rent forecasts
+#   apply the England social rent cap.
+# - 2031-2073: OBR long-run equilibrium assumptions, taken from the OBR
+#   Fiscal Risks and Sustainability report and the long-run RPI-CPI wedge
+#   methodology. Steady-state values:
+#     * consumer_price_index: 2.00%  (Bank of England target)
+#     * rpi:                  2.39%  (CPI + 0.39pp long-run wedge)
+#     * cpih:                 2.39%  (CPI + 0.39pp housing-costs wedge,
+#                                     converges with RPI once RPI adopts
+#                                     CPIH methodology from Feb 2030 per ONS)
+#     * average_earnings:     3.83%  (productivity growth + CPI)
+#
+# How the 2031+ series are constructed:
+# - CPI hits its 2% target on 2031-01-01 and is held flat.
+# - RPI, CPIH and average earnings use the checked-in convergence rates;
+#   their annual steps are not uniform. RPI/CPIH reach steady state in 2035,
+#   earnings in 2036; the rates then hold flat through 2073-01-01.
+# - These intermediate rates are model assumptions beyond the EFO horizon.
+#   Review them when a new EFO is released. The helper module below creates
+#   cumulative indices from these rates, not the convergence paths themselves:
+#   `policyengine_uk/parameters/gov/economic_assumptions/create_economic_assumption_indices.py`
+#   refreshes downstream indices from these growth rates.
+#
+# References:
+#   https://obr.uk/efo/                                  (latest EFO)
+#   https://obr.uk/frltp/                                (Fiscal risks and
+#                                                          long-term projections)
+#   https://obr.uk/box/the-long-run-difference-between-rpi-and-cpi-inflation/
+#   https://www.bankofengland.co.uk/monetary-policy/inflation
+
+metadata:
+  # Each value is the growth over a calendar year, dated 1 January, and
+  # processing reads it there, so a bare-year reform key names the calendar
+  # year (policyengine_uk/utils/dated_reforms.py).
+  calendar_year_series: true
+
+obr:
+  rpi:
+    description: Retail price index year-on-year growth.
+    values:
+      # Outturn (2009-2024)
+      2009-01-01: 0.018
+      2010-01-01: 0.008
+      2011-01-01: 0.016
+      2012-01-01: 0.007
+      2013-01-01: 0.047
+      2014-01-01: 0.006
+      2015-01-01: 0.020
+      2016-01-01: 0.024
+      2017-01-01: 0.032
+      2018-01-01: 0.026
+      2019-01-01: 0.022
+      2020-01-01: 0.003
+      2021-01-01: 0.059
+      2022-01-01: 0.1158
+      2023-01-01: 0.0969
+      2024-01-01: 0.0359
+      # Forecast (2025-2030)
+      2025-01-01: 0.041
+      2026-01-01: 0.031
+      2027-01-01: 0.030
+      2028-01-01: 0.028
+      2029-01-01: 0.029
+      2030-01-01: 0.023
+      # Long-run assumptions (2031+)
+      2031-01-01: 0.0230
+      2032-01-01: 0.0237
+      2033-01-01: 0.0238
+      2034-01-01: 0.0238
+      2035-01-01: 0.0239
+      2036-01-01: 0.0239
+      2037-01-01: 0.0239
+      2038-01-01: 0.0239
+      2039-01-01: 0.0239
+      2040-01-01: 0.0239
+      2041-01-01: 0.0239
+      2042-01-01: 0.0239
+      2043-01-01: 0.0239
+      2044-01-01: 0.0239
+      2045-01-01: 0.0239
+      2046-01-01: 0.0239
+      2047-01-01: 0.0239
+      2048-01-01: 0.0239
+      2049-01-01: 0.0239
+      2050-01-01: 0.0239
+      2051-01-01: 0.0239
+      2052-01-01: 0.0239
+      2053-01-01: 0.0239
+      2054-01-01: 0.0239
+      2055-01-01: 0.0239
+      2056-01-01: 0.0239
+      2057-01-01: 0.0239
+      2058-01-01: 0.0239
+      2059-01-01: 0.0239
+      2060-01-01: 0.0239
+      2061-01-01: 0.0239
+      2062-01-01: 0.0239
+      2063-01-01: 0.0239
+      2064-01-01: 0.0239
+      2065-01-01: 0.0239
+      2066-01-01: 0.0239
+      2067-01-01: 0.0239
+      2068-01-01: 0.0239
+      2069-01-01: 0.0239
+      2070-01-01: 0.0239
+      2071-01-01: 0.0239
+      2072-01-01: 0.0239
+      2073-01-01: 0.0239
+    metadata:
+      unit: /1
+      label: Retail price index growth
+      reference:
+        - title: OBR EFO March 2026 (Table A.1)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: OBR long-run RPI-CPI wedge methodology (2031+ values derived from this)
+          href: https://obr.uk/box/the-long-run-difference-between-rpi-and-cpi-inflation/
+  average_earnings:
+    description: Average earnings year-on-year growth.
+    values:
+      # Outturn (2009-2024)
+      2009-01-01: 0.018
+      2010-01-01: 0.008
+      2011-01-01: 0.016
+      2012-01-01: 0.007
+      2013-01-01: 0.047
+      2014-01-01: 0.006
+      2015-01-01: 0.020
+      2016-01-01: 0.024
+      2017-01-01: 0.032
+      2018-01-01: 0.026
+      2019-01-01: 0.022
+      2020-01-01: 0.003
+      2021-01-01: 0.059
+      2022-01-01: 0.0614
+      2023-01-01: 0.0622
+      2024-01-01: 0.051
+      # Forecast (2025-2030)
+      2025-01-01: 0.053
+      2026-01-01: 0.034
+      2027-01-01: 0.024
+      2028-01-01: 0.021
+      2029-01-01: 0.022
+      2030-01-01: 0.024
+      # Long-run assumptions (2031+)
+      2031-01-01: 0.0332
+      2032-01-01: 0.0371
+      2033-01-01: 0.0374
+      2034-01-01: 0.0377
+      2035-01-01: 0.0380
+      2036-01-01: 0.0383
+      2037-01-01: 0.0383
+      2038-01-01: 0.0383
+      2039-01-01: 0.0383
+      2040-01-01: 0.0383
+      2041-01-01: 0.0383
+      2042-01-01: 0.0383
+      2043-01-01: 0.0383
+      2044-01-01: 0.0383
+      2045-01-01: 0.0383
+      2046-01-01: 0.0383
+      2047-01-01: 0.0383
+      2048-01-01: 0.0383
+      2049-01-01: 0.0383
+      2050-01-01: 0.0383
+      2051-01-01: 0.0383
+      2052-01-01: 0.0383
+      2053-01-01: 0.0383
+      2054-01-01: 0.0383
+      2055-01-01: 0.0383
+      2056-01-01: 0.0383
+      2057-01-01: 0.0383
+      2058-01-01: 0.0383
+      2059-01-01: 0.0383
+      2060-01-01: 0.0383
+      2061-01-01: 0.0383
+      2062-01-01: 0.0383
+      2063-01-01: 0.0383
+      2064-01-01: 0.0383
+      2065-01-01: 0.0383
+      2066-01-01: 0.0383
+      2067-01-01: 0.0383
+      2068-01-01: 0.0383
+      2069-01-01: 0.0383
+      2070-01-01: 0.0383
+      2071-01-01: 0.0383
+      2072-01-01: 0.0383
+      2073-01-01: 0.0383
+    metadata:
+      unit: /1
+      label: Average earnings growth
+      reference:
+        - title: OBR EFO March 2026 (Table A.1)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: OBR long-run economic methodology (2031+ values derived from this, unchanged from November 2025)
+          href: https://obr.uk/forecasts-in-depth/the-economy-forecast/potential-output-and-the-output-gap/
+
+  consumer_price_index:
+    description: Consumer price index year-on-year growth.
+    values:
+      # Outturn (2009-2024)
+      2009-01-01: 0.022
+      2010-01-01: 0.035
+      2011-01-01: 0.043
+      2012-01-01: 0.027
+      2013-01-01: 0.023
+      2014-01-01: 0.011
+      2015-01-01: 0.001
+      2016-01-01: 0.011
+      2017-01-01: 0.028
+      2018-01-01: 0.023
+      2019-01-01: 0.017
+      2020-01-01: 0.006
+      2021-01-01: 0.04
+      2022-01-01: 0.0907
+      2023-01-01: 0.0730
+      2024-01-01: 0.025
+      # Forecast (2025-2030)
+      2025-01-01: 0.034
+      2026-01-01: 0.023
+      2027-01-01: 0.020
+      2028-01-01: 0.020
+      2029-01-01: 0.020
+      2030-01-01: 0.020
+      # Long-run assumptions (2031+): Bank of England 2% target
+      2031-01-01: 0.0200
+      2032-01-01: 0.0200
+      2033-01-01: 0.0200
+      2034-01-01: 0.0200
+      2035-01-01: 0.0200
+      2036-01-01: 0.0200
+      2037-01-01: 0.0200
+      2038-01-01: 0.0200
+      2039-01-01: 0.0200
+      2040-01-01: 0.0200
+      2041-01-01: 0.0200
+      2042-01-01: 0.0200
+      2043-01-01: 0.0200
+      2044-01-01: 0.0200
+      2045-01-01: 0.0200
+      2046-01-01: 0.0200
+      2047-01-01: 0.0200
+      2048-01-01: 0.0200
+      2049-01-01: 0.0200
+      2050-01-01: 0.0200
+      2051-01-01: 0.0200
+      2052-01-01: 0.0200
+      2053-01-01: 0.0200
+      2054-01-01: 0.0200
+      2055-01-01: 0.0200
+      2056-01-01: 0.0200
+      2057-01-01: 0.0200
+      2058-01-01: 0.0200
+      2059-01-01: 0.0200
+      2060-01-01: 0.0200
+      2061-01-01: 0.0200
+      2062-01-01: 0.0200
+      2063-01-01: 0.0200
+      2064-01-01: 0.0200
+      2065-01-01: 0.0200
+      2066-01-01: 0.0200
+      2067-01-01: 0.0200
+      2068-01-01: 0.0200
+      2069-01-01: 0.0200
+      2070-01-01: 0.0200
+      2071-01-01: 0.0200
+      2072-01-01: 0.0200
+      2073-01-01: 0.0200
+    metadata:
+      unit: /1
+      label: Consumer price index growth
+      reference:
+        - title: OBR EFO March 2026 (Table A.1)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: Bank of England inflation target (2031+ assumes 2% target)
+          href: https://www.bankofengland.co.uk/monetary-policy/inflation
+
+  road_fuel_volume:
+    description: UK road-fuel petrol and diesel clearances year-on-year growth.
+    values:
+      # HMRC Hydrocarbon Oils Bulletin Table 2a: petrol plus diesel clearances.
+      2021-01-01: 0.24418262350052777
+      2022-01-01: 0.06256523245735934
+      2023-01-01: -0.005727524527185501
+      2024-01-01: -0.0012858149728238732
+      # OBR March 2026 fuel-duty receipts forecast, net of non-road fuel
+      # receipts, divided by fiscal-year average petrol/diesel duty rates.
+      2025-01-01: -0.019907019324541197
+      2026-01-01: -0.01438967286340953
+      2027-01-01: -0.02416859220902523
+      2028-01-01: -0.02700230120226388
+      2029-01-01: -0.037280775640417985
+      2030-01-01: -0.052236910509542045
+      # Hold the final OBR forecast volume flat after 2030-31.
+      2031-01-01: 0.0
+      2032-01-01: 0.0
+      2033-01-01: 0.0
+      2034-01-01: 0.0
+      2035-01-01: 0.0
+      2036-01-01: 0.0
+      2037-01-01: 0.0
+      2038-01-01: 0.0
+      2039-01-01: 0.0
+      2040-01-01: 0.0
+      2041-01-01: 0.0
+      2042-01-01: 0.0
+      2043-01-01: 0.0
+      2044-01-01: 0.0
+      2045-01-01: 0.0
+      2046-01-01: 0.0
+      2047-01-01: 0.0
+      2048-01-01: 0.0
+      2049-01-01: 0.0
+      2050-01-01: 0.0
+      2051-01-01: 0.0
+      2052-01-01: 0.0
+      2053-01-01: 0.0
+      2054-01-01: 0.0
+      2055-01-01: 0.0
+      2056-01-01: 0.0
+      2057-01-01: 0.0
+      2058-01-01: 0.0
+      2059-01-01: 0.0
+      2060-01-01: 0.0
+      2061-01-01: 0.0
+      2062-01-01: 0.0
+      2063-01-01: 0.0
+      2064-01-01: 0.0
+      2065-01-01: 0.0
+      2066-01-01: 0.0
+      2067-01-01: 0.0
+      2068-01-01: 0.0
+      2069-01-01: 0.0
+      2070-01-01: 0.0
+      2071-01-01: 0.0
+      2072-01-01: 0.0
+      2073-01-01: 0.0
+    metadata:
+      unit: /1
+      label: Road fuel volume growth
+      reference:
+        - title: HMRC Hydrocarbon Oils Bulletin
+          href: https://www.gov.uk/government/statistics/hydrocarbon-oils-bulletin
+        - title: OBR EFO March 2026 (fuel-duty receipts forecast)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: OBR fuel-duty supplementary release, receipts by vehicle type
+          href: https://obr.uk/docs/dlm_uploads/Fuel-duty-supplementary-release_receipts-by-vehicle-type.pdf
+
+  petrol_spending_litre_proxy:
+    description: Unleaded-petrol spending proxy growth that preserves weighted road-fuel litres after dividing by model pump prices. Derived as (1 + road_fuel_volume) x (price_t / price_t-1) / (1 + population) - 1, using household.consumption.fuel.prices; re-derive whenever those prices change.
+    values:
+      2021-01-01: 0.4276130160591334
+      2022-01-01: 0.32114330849740713
+      2023-01-01: -0.11978022401038202
+      2024-01-01: -0.05378435951558702
+      2025-01-01: -0.07097011631498962
+      2026-01-01: 0.09631434800374827
+      2027-01-01: -0.027765858532455168
+      2028-01-01: -0.030878786058031737
+      2029-01-01: -0.04149818363243518
+      2030-01-01: -0.056482738187697334
+      2031-01-01: -0.00428158916658361
+      2032-01-01: -0.004182433778131878
+      2033-01-01: -0.004083258639577703
+      2034-01-01: -0.003984063745019917
+      2035-01-01: -0.003884849088554687
+      2036-01-01: -0.0037856146642757382
+      2037-01-01: -0.003686360466274796
+      2038-01-01: -0.0035870864886409226
+      2039-01-01: -0.0034877927254609586
+      2040-01-01: -0.0034877927254609586
+      2041-01-01: -0.003388479170819303
+      2042-01-01: -0.003388479170819303
+      2043-01-01: -0.0032891458187980227
+      2044-01-01: -0.0031897926634769647
+      2045-01-01: -0.0031897926634769647
+      2046-01-01: -0.003090419698933422
+      2047-01-01: -0.0029910269192421346
+      2048-01-01: -0.0028916143184762877
+      2049-01-01: -0.002792181890705958
+      2050-01-01: -0.002692729629998891
+      2051-01-01: -0.0024937655860348684
+      2052-01-01: -0.002394253790901746
+      2053-01-01: -0.0021951706246258196
+      2054-01-01: -0.0020955992415926383
+      2055-01-01: -0.001996007984031989
+      2056-01-01: -0.0018963968459926317
+      2057-01-01: -0.001796765821521329
+      2058-01-01: -0.001697114904662067
+      2059-01-01: -0.0015974440894569453
+      2060-01-01: -0.0015974440894569453
+      2061-01-01: -0.0015974440894569453
+      2062-01-01: -0.0014977533699451762
+      2063-01-01: -0.0014977533699451762
+      2064-01-01: -0.0014977533699451762
+      2065-01-01: -0.0014977533699451762
+      2066-01-01: -0.0014977533699451762
+      2067-01-01: -0.0014977533699451762
+      2068-01-01: -0.0014977533699451762
+      2069-01-01: -0.0014977533699451762
+      2070-01-01: -0.0014977533699451762
+      2071-01-01: -0.0014977533699451762
+      2072-01-01: -0.0014977533699451762
+      2073-01-01: -0.0013980427401638629
+    metadata:
+      unit: /1
+      label: Petrol spending litre-proxy growth
+      reference:
+        - title: HMRC Hydrocarbon Oils Bulletin
+          href: https://www.gov.uk/government/statistics/hydrocarbon-oils-bulletin
+        - title: OBR EFO March 2026 (fuel-duty receipts forecast)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: DESNZ annual average ULSP pump price (household.consumption.fuel.prices.petrol)
+          href: https://www.gov.uk/government/statistical-data-sets/oil-and-petroleum-products-monthly-statistics
+
+  diesel_spending_litre_proxy:
+    description: Diesel spending proxy growth that preserves weighted road-fuel litres after dividing by model pump prices. Derived as (1 + road_fuel_volume) x (price_t / price_t-1) / (1 + population) - 1, using household.consumption.fuel.prices; re-derive whenever those prices change.
+    values:
+      2021-01-01: 0.4035933750476013
+      2022-01-01: 0.38608334996374616
+      2023-01-01: -0.12613670608493466
+      2024-01-01: -0.07344928074891444
+      2025-01-01: -0.06483399761456943
+      2026-01-01: 0.1748436772712496
+      2027-01-01: -0.027765858532455168
+      2028-01-01: -0.030878786058031737
+      2029-01-01: -0.04149818363243518
+      2030-01-01: -0.056482738187697334
+      2031-01-01: -0.00428158916658361
+      2032-01-01: -0.004182433778131878
+      2033-01-01: -0.004083258639577703
+      2034-01-01: -0.003984063745019917
+      2035-01-01: -0.003884849088554687
+      2036-01-01: -0.0037856146642757382
+      2037-01-01: -0.003686360466274796
+      2038-01-01: -0.0035870864886409226
+      2039-01-01: -0.0034877927254609586
+      2040-01-01: -0.0034877927254609586
+      2041-01-01: -0.003388479170819303
+      2042-01-01: -0.003388479170819303
+      2043-01-01: -0.0032891458187980227
+      2044-01-01: -0.0031897926634769647
+      2045-01-01: -0.0031897926634769647
+      2046-01-01: -0.003090419698933422
+      2047-01-01: -0.0029910269192421346
+      2048-01-01: -0.0028916143184762877
+      2049-01-01: -0.002792181890705958
+      2050-01-01: -0.002692729629998891
+      2051-01-01: -0.0024937655860348684
+      2052-01-01: -0.002394253790901746
+      2053-01-01: -0.0021951706246258196
+      2054-01-01: -0.0020955992415926383
+      2055-01-01: -0.001996007984031989
+      2056-01-01: -0.0018963968459926317
+      2057-01-01: -0.001796765821521329
+      2058-01-01: -0.001697114904662067
+      2059-01-01: -0.0015974440894569453
+      2060-01-01: -0.0015974440894569453
+      2061-01-01: -0.0015974440894569453
+      2062-01-01: -0.0014977533699451762
+      2063-01-01: -0.0014977533699451762
+      2064-01-01: -0.0014977533699451762
+      2065-01-01: -0.0014977533699451762
+      2066-01-01: -0.0014977533699451762
+      2067-01-01: -0.0014977533699451762
+      2068-01-01: -0.0014977533699451762
+      2069-01-01: -0.0014977533699451762
+      2070-01-01: -0.0014977533699451762
+      2071-01-01: -0.0014977533699451762
+      2072-01-01: -0.0014977533699451762
+      2073-01-01: -0.0013980427401638629
+    metadata:
+      unit: /1
+      label: Diesel spending litre-proxy growth
+      reference:
+        - title: HMRC Hydrocarbon Oils Bulletin
+          href: https://www.gov.uk/government/statistics/hydrocarbon-oils-bulletin
+        - title: OBR EFO March 2026 (fuel-duty receipts forecast)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: DESNZ annual average ULSD pump price (household.consumption.fuel.prices.diesel)
+          href: https://www.gov.uk/government/statistical-data-sets/oil-and-petroleum-products-monthly-statistics
+
+  consumer_price_index_ahc:
+    description: Consumer price index year-on-year growth, modified to remove housing costs.
+    values:
+      # Outturn (2022-2025): ONS ad hoc 3582, calendar-year average of CPI
+      # excluding rents, maintenance and repairs, and water charges.
+      2022-01-01: 0.0927
+      2023-01-01: 0.0826
+      2024-01-01: 0.0327
+      2025-01-01: 0.0265
+      # Forecast (2026-2030): derived by policyengine_uk/utils/create_ahc_deflator.py
+      # from OBR CPI and rent forecasts and Ofwat water bills (see documentation).
+      2026-01-01: 0.0217
+      2027-01-01: 0.0188
+      2028-01-01: 0.0194
+      2029-01-01: 0.0194
+      2030-01-01: 0.0192
+    metadata:
+      unit: /1
+      label: After housing costs consumer price index growth
+      documentation: |
+        CPI excluding rents, maintenance and repairs, and water charges, the
+        price index DWP uses to deflate after-housing-costs incomes in HBAI.
+        The OBR does not publish it. Outturn is the ONS ad hoc series. Forecast
+        growth is OBR calendar-year CPI growth with rents (OBR actual rents
+        growth), water (Ofwat average bills) and maintenance and repair
+        (assumed to grow with CPI) removed using ONS CPI item weights:
+        other = (CPI - w_rent x rent - w_water x water - w_repair x CPI) / w_other,
+        with weights rolled forward each year by relative price growth.
+        policyengine_uk/utils/create_ahc_deflator.py computes it, and
+        policyengine_uk/tests/test_ahc_deflator.py checks the stored values
+        against it. Rerun the script after changing CPI, rent or water bill
+        growth.
+      reference:
+        - title: ONS ad hoc 3582, CPI series excluding rents, maintenance repairs and water charges, February 2007 to June 2026
+          href: https://www.ons.gov.uk/economy/inflationandpriceindices/adhocs/3582consumerpriceindicesseriesexcludingrentsmaintenancerepairsandwaterchargesfebruary2007tojune2026
+        - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7), CPI and actual rents inputs
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: ONS CPI weights
+          href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceinflationupdatingweightsannexatablesw1tow3
+
+  cpih:
+    description: Consumer price index including owner occupiers' housing costs year-on-year growth.
+    values:
+      # Outturn (2022-2024)
+      2022-01-01: 0.0792
+      2023-01-01: 0.0679
+      2024-01-01: 0.0327
+      # Forecast (2025-2030)
+      2025-01-01: 0.0388
+      2026-01-01: 0.0255
+      2027-01-01: 0.0211
+      2028-01-01: 0.0204
+      2029-01-01: 0.0209
+      2030-01-01: 0.0212
+      # Long-run assumptions (2031+): CPI + 0.4pp wedge for housing costs
+      2031-01-01: 0.0230
+      2032-01-01: 0.0237
+      2033-01-01: 0.0238
+      2034-01-01: 0.0238
+      2035-01-01: 0.0239
+      2036-01-01: 0.0239
+      2037-01-01: 0.0239
+      2038-01-01: 0.0239
+      2039-01-01: 0.0239
+      2040-01-01: 0.0239
+      2041-01-01: 0.0239
+      2042-01-01: 0.0239
+      2043-01-01: 0.0239
+      2044-01-01: 0.0239
+      2045-01-01: 0.0239
+      2046-01-01: 0.0239
+      2047-01-01: 0.0239
+      2048-01-01: 0.0239
+      2049-01-01: 0.0239
+      2050-01-01: 0.0239
+      2051-01-01: 0.0239
+      2052-01-01: 0.0239
+      2053-01-01: 0.0239
+      2054-01-01: 0.0239
+      2055-01-01: 0.0239
+      2056-01-01: 0.0239
+      2057-01-01: 0.0239
+      2058-01-01: 0.0239
+      2059-01-01: 0.0239
+      2060-01-01: 0.0239
+      2061-01-01: 0.0239
+      2062-01-01: 0.0239
+      2063-01-01: 0.0239
+      2064-01-01: 0.0239
+      2065-01-01: 0.0239
+      2066-01-01: 0.0239
+      2067-01-01: 0.0239
+      2068-01-01: 0.0239
+      2069-01-01: 0.0239
+      2070-01-01: 0.0239
+      2071-01-01: 0.0239
+      2072-01-01: 0.0239
+      2073-01-01: 0.0239
+    metadata:
+      unit: /1
+      label: CPIH growth
+      reference:
+        - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: OBR long-run RPI-CPI wedge methodology (2031+ values derived from this)
+          href: https://obr.uk/box/the-long-run-difference-between-rpi-and-cpi-inflation/
+
+  non_labour_income:
+    description: Non-labour income year-on-year growth.
+    values:
+      # Outturn (2021-2024)
+      2021-01-01: 0.0870
+      2022-01-01: 0.0987
+      2023-01-01: 0.1215
+      2024-01-01: 0.0492
+      # Forecast (2025-2030) from OBR EFO March 2026, Table 1.12
+      2025-01-01: 0.0349
+      2026-01-01: 0.0397
+      2027-01-01: 0.0513
+      2028-01-01: 0.0350
+      2029-01-01: 0.0301
+      2030-01-01: 0.0317
+    metadata:
+      unit: /1
+      label: Non-labour income growth
+      reference:
+        - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.12)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+
+  # Growth in each country's council tax receipts, net of council tax
+  # reduction. Receipts are the Band D level times the tax base (Band D
+  # equivalent dwellings), so they grow with the number of homes as well as
+  # with bills. Dataset projection grows household weights separately, so it
+  # grows each household's bill by this series net of the weights' growth
+  # (uprate_council_tax, #2067). The fiscal year starting in year t is stored
+  # at t-01-01, as growth over the year before, rounded to 4 decimals.
+  #
+  # 2025-2030 are OBR's receipts forecasts. 2023 and 2024 are outturns of the
+  # liability behind each country's OBR line, net of council tax reduction,
+  # from the official statistics named below
+  # (policyengine_uk/tests/test_council_tax_uprating.py recomputes them). They
+  # are amounts due, not cash collected, so changes in in-year collection
+  # rates do not move them. Before #2067 these two years held Band D level
+  # growth instead.
+  council_tax:
+    england:
+      description: Growth in council tax receipts in England.
+      values:
+        # Outturn (2023-2024): growth in the council tax requirement including
+        # adult social care and parish precepts (MHCLG, 2025-26 release, Table
+        # 1): £36,313.2m in 2022-23, £38,718.3m in 2023-24, £41,222.4m in
+        # 2024-25. OBR's England line is this requirement: its 2024-25 outturn
+        # is £41.2225bn.
+        2023-01-01: 0.0662
+        2024-01-01: 0.0647
+        # Forecast (2025-2030) from OBR EFO March 2026, Expenditure Table 4.1
+        2025-01-01: 0.0702
+        2026-01-01: 0.0545
+        2027-01-01: 0.0605
+        2028-01-01: 0.0615
+        2029-01-01: 0.0562
+        2030-01-01: 0.0550
+      metadata:
+        unit: /1
+        reference:
+          - title: MHCLG, Council Tax levels set by local authorities in England 2025 to 2026, Table 1 (2023 and 2024)
+            href: https://www.gov.uk/government/statistics/council-tax-levels-set-by-local-authorities-in-england-2025-to-2026
+          - title: OBR EFO March 2026 (detailed forecast tables, expenditure, Table 4.1)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    scotland:
+      description: Growth in council tax receipts in Scotland.
+      values:
+        # Outturn (2023-2024): growth in the net amount of council tax billed,
+        # after council tax reduction and excluding water and sewerage charges
+        # (Scottish Government, Council Tax Collection Statistics 2024-25,
+        # Figure 1): £2,825.6m in 2022-23, £3,005.8m in 2023-24, £3,076.8m in
+        # 2024-25. OBR's 2024-25 outturn, £2.9384bn, is the amount of that
+        # year's bills received by 31 March 2025.
+        2023-01-01: 0.0638
+        2024-01-01: 0.0236
+        # Forecast (2025-2030) from OBR EFO March 2026, Expenditure Table 4.1
+        2025-01-01: 0.0384
+        2026-01-01: 0.0384
+        2027-01-01: 0.0384
+        2028-01-01: 0.0384
+        2029-01-01: 0.0384
+        2030-01-01: 0.0384
+      metadata:
+        unit: /1
+        reference:
+          - title: Scottish Government, Council Tax Collection Statistics 2024-25, Figure 1 (2023 and 2024)
+            href: https://www.gov.scot/publications/council-tax-collection-statistics-2024-25/pages/3/
+          - title: OBR EFO March 2026 (detailed forecast tables, expenditure, Table 4.1)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    wales:
+      description: Growth in council tax receipts in Wales.
+      values:
+        # Outturn (2023-2024): growth in the net collectable council tax debit,
+        # net of the council tax reduction scheme (Welsh Government, Council
+        # tax collection rates, Table 2 total debits of each year's release):
+        # £1,981.6m in 2022-23, £2,122.1m in 2023-24, £2,331.6m in 2024-25.
+        # OBR's 2024-25 outturn, £2.2284bn, is the amount of that year's bills
+        # collected in the year.
+        2023-01-01: 0.0709
+        2024-01-01: 0.0987
+        # Forecast (2025-2030) from OBR EFO March 2026, Expenditure Table 4.1
+        2025-01-01: 0.0773
+        2026-01-01: 0.0743
+        2027-01-01: 0.0743
+        2028-01-01: 0.0743
+        2029-01-01: 0.0743
+        2030-01-01: 0.0743
+      metadata:
+        unit: /1
+        reference:
+          - title: Welsh Government, Council tax collection rates April 2022 to March 2023 (2023)
+            href: https://www.gov.wales/council-tax-collection-rates-april-2022-march-2023
+          - title: Welsh Government, Council tax collection rates April 2023 to March 2024 (2023 and 2024)
+            href: https://www.gov.wales/council-tax-collection-rates-april-2023-march-2024
+          - title: Welsh Government, Council tax collection rates April 2024 to March 2025 (2024)
+            href: https://www.gov.wales/council-tax-collection-rates-april-2024-march-2025
+          - title: OBR EFO March 2026 (detailed forecast tables, expenditure, Table 4.1)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+
+  per_capita:
+    gdp:
+      description: Per capita nominal GDP year-on-year growth.
+      values:
+        # Outturn (2021-2024) - derived from nominal GDP growth minus population growth
+        2021-01-01: 0.0892
+        2022-01-01: 0.1019
+        2023-01-01: 0.0532
+        2024-01-01: 0.0372
+        # Forecast (2025-2030) from OBR EFO March 2026, Table A.1 nominal GDP minus population growth.
+        # Population growth here is ons.population (March 2025 vintage), not the
+        # lower growth implied by the March 2026 EFO; see ons.population.
+        2025-01-01: 0.0438
+        2026-01-01: 0.0292
+        2027-01-01: 0.0323
+        2028-01-01: 0.0310
+        2029-01-01: 0.0296
+        2030-01-01: 0.0315
+      metadata:
+        unit: /1
+        label: Per capita GDP growth
+        reference:
+          - title: OBR EFO March 2026 (Table A.1, nominal GDP minus population growth)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+
+    mixed_income:
+      description: Per capita mixed income year-on-year growth.
+      values:
+        # Outturn (2021-2024) - derived from mixed income growth minus population growth
+        2021-01-01: 0.0635
+        2022-01-01: 0.0296
+        2023-01-01: -0.0060
+        2024-01-01: 0.0273
+        # Forecast (2025-2030) from OBR EFO March 2026, Table 1.12 minus population growth
+        # (ons.population, March 2025 vintage; see ons.population).
+        2025-01-01: 0.0069
+        2026-01-01: 0.0306
+        2027-01-01: 0.0371
+        2028-01-01: 0.0364
+        2029-01-01: 0.0353
+        2030-01-01: 0.0361
+      metadata:
+        unit: /1
+        label: Per capita mixed income growth
+        reference:
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.12)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+
+    non_labour_income:
+      description: Per capita non-labour income year-on-year growth.
+      values:
+        # Outturn (2021-2024) - derived from non-labour income growth minus population growth
+        2021-01-01: 0.0830
+        2022-01-01: 0.0894
+        2023-01-01: 0.1084
+        2024-01-01: 0.0385
+        # Forecast (2025-2030) from OBR EFO March 2026, Table 1.12 minus population growth
+        # (ons.population, March 2025 vintage; see ons.population).
+        2025-01-01: 0.0275
+        2026-01-01: 0.0358
+        2027-01-01: 0.0474
+        2028-01-01: 0.0309
+        2029-01-01: 0.0256
+        2030-01-01: 0.0271
+      metadata:
+        unit: /1
+        label: Per capita non-labour income growth
+        reference:
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.12)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+
+  house_prices:
+    description: House prices year-on-year growth.
+    values:
+      # Outturn (2021-2024)
+      2021-01-01: 0.082
+      2022-01-01: 0.0926
+      2023-01-01: 0.0036
+      2024-01-01: 0.007
+      # Forecast (2025-2030)
+      2025-01-01: 0.028
+      2026-01-01: 0.024
+      2027-01-01: 0.029
+      2028-01-01: 0.027
+      2029-01-01: 0.026
+      2030-01-01: 0.024
+    metadata:
+      unit: /1
+      label: House prices growth
+      reference:
+        - title: OBR EFO March 2026 (Table A.1)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+
+  mortgage_interest:
+    description: Mortgage interest year-on-year growth.
+    values:
+      # Outturn (2021-2024)
+      2021-01-01: -0.0226
+      2022-01-01: 0.1462
+      2023-01-01: 0.5224
+      2024-01-01: 0.2730
+      # Forecast (2025-2030)
+      2025-01-01: 0.0952
+      2026-01-01: 0.0797
+      2027-01-01: 0.1040
+      2028-01-01: 0.0476
+      2029-01-01: 0.0468
+      # 2030: the OBR November 2025 EFO calendar-2030 forecast (5.535%),
+      # carried over. The March 2026 EFO stops forecasting mortgage interest
+      # payments after 2030 Q1 (Table 1.7 note), so it has no calendar-2030
+      # figure; its 2030 Q1 rate is 5.40% and its 2029-30 rate 5.05%.
+      2030-01-01: 0.0553
+    metadata:
+      unit: /1
+      label: Mortgage interest growth
+      reference:
+        - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+        - title: OBR EFO November 2025 (detailed forecast tables, economy, Table 1.7), 2030 value only
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/
+
+  social_rent:
+    description: >
+      Average social rent year-on-year growth across the stock. Historical
+      values use observed Regulator of Social Housing stock-average general
+      needs social rent growth in England. Forecast values use the England
+      social rent policy cap with no additional composition multiplier: the
+      April increase in year Y is CPI inflation in the previous September
+      plus 1 percentage point. The OBR does not publish a social rent
+      forecast.
+    values:
+      # Observed RSH stock-average growth (2022-2025)
+      2022-01-01: 0.016
+      2023-01-01: 0.041
+      2024-01-01: 0.072
+      2025-01-01: 0.080
+      # Forecast (2026-2030): policy cap with composition multiplier set to 1.
+      # 2026: ONS September 2025 CPI 3.8% + 1pp.
+      2026-01-01: 0.048
+      # 2027: placeholder. The cap needs September 2026 CPI (ONS, due
+      # 21 October 2026) + 1pp; 3.3% is calendar-2026 CPI (2.3%) + 1pp.
+      # The OBR March 2026 forecast of September 2026 CPI is 2.1%, which
+      # would give 3.1%, but August 2026 CPI outturn was already 3.1%.
+      2027-01-01: 0.033
+      # 2028-2030: OBR March 2026 Q3 CPI forecasts for 2027-2029 (Table 1.7:
+      # 2.01%, 2.02%, 2.00%) + 1pp, to 0.1pp.
+      2028-01-01: 0.030
+      2029-01-01: 0.030
+      2030-01-01: 0.030
+    metadata:
+      unit: /1
+      label: Social rent growth
+      reference:
+        - title: Registered provider social housing stock and rents in England, 2021 to 2022
+          href: https://www.gov.uk/government/statistics/registered-provider-social-housing-stock-and-rents-in-england-2021-to-2022
+        - title: Registered provider social housing stock and rents in England, 2022 to 2023
+          href: https://www.gov.uk/government/statistics/registered-provider-social-housing-stock-and-rents-in-england-2022-to-2023
+        - title: Registered provider social housing stock and rents in England, 2023 to 2024
+          href: https://www.gov.uk/government/statistics/registered-provider-social-housing-stock-and-rents-in-england-2023-to-2024
+        - title: Registered provider social housing stock and rents in England, 2024 to 2025
+          href: https://www.gov.uk/government/statistics/registered-provider-social-housing-stock-and-rents-in-england-2024-to-2025
+        - title: Policy statement on rents for social housing
+          href: https://www.gov.uk/government/publications/direction-on-the-rent-standard-2026/policy-statement-on-rents-for-social-housing
+        - title: ONS D7G7, CPI annual rate, all items (September CPI input to the cap)
+          href: https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/d7g7/mm23
+
+  rent:
+    description: Rent year-on-year growth, private and social (ONS series D7GQ).
+    values:
+      # Outturn (2022-2024)
+      2022-01-01: 0.0347
+      2023-01-01: 0.0575
+      2024-01-01: 0.0716
+      # Forecast (2025-2030)
+      2025-01-01: 0.0542
+      2026-01-01: 0.0334
+      2027-01-01: 0.0302
+      2028-01-01: 0.0230
+      2029-01-01: 0.0238
+      2030-01-01: 0.0258
+
+    metadata:
+      unit: /1
+      label: Rent growth
+      reference:
+        - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+
+ons:
+  population:
+    description: Population year-on-year growth.
+    # 2022-2073 is the population growth row of the OBR's long-term economic
+    # determinants for the March 2025 EFO, published 19 June 2025 (#1305).
+    # The fiscal year starting in year t is stored at t-01-01, rounded to
+    # four decimals (2025-26's 0.7230% is 2025-01-01: 0.0072). The OBR notes
+    # that readings are at the start of the fiscal year or mid-year. To
+    # 2029-30 the series is the OBR's March 2025 forecast; from 2030-31 it is
+    # the migration category variant of the ONS 2022-based national
+    # population projections. The 2021 value predates #1305 and has no
+    # recorded source. This series is a March 2025 vintage. Calendar-year
+    # population growth implied by the March 2026 EFO economy tables (real GDP
+    # in Table 1.1 over real GDP per person in Table 1.5) is lower: 0.37% in
+    # 2025, against 0.72% here, and 0.30% to 0.36% a year in 2026-2030. The
+    # ONS has since published 2024-based projections (28 April 2026).
+    values:
+      2021-01-01: 0.004
+      2022-01-01: 0.0093
+      2023-01-01: 0.0131
+      2024-01-01: 0.0107
+      2025-01-01: 0.0072
+      2026-01-01: 0.0038
+      2027-01-01: 0.0037
+      2028-01-01: 0.0040
+      2029-01-01: 0.0044
+      2030-01-01: 0.0045
+      2031-01-01: 0.0043
+      2032-01-01: 0.0042
+      2033-01-01: 0.0041
+      2034-01-01: 0.0040
+      2035-01-01: 0.0039
+      2036-01-01: 0.0038
+      2037-01-01: 0.0037
+      2038-01-01: 0.0036
+      2039-01-01: 0.0035
+      2040-01-01: 0.0035
+      2041-01-01: 0.0034
+      2042-01-01: 0.0034
+      2043-01-01: 0.0033
+      2044-01-01: 0.0032
+      2045-01-01: 0.0032
+      2046-01-01: 0.0031
+      2047-01-01: 0.0030
+      2048-01-01: 0.0029
+      2049-01-01: 0.0028
+      2050-01-01: 0.0027
+      2051-01-01: 0.0025
+      2052-01-01: 0.0024
+      2053-01-01: 0.0022
+      2054-01-01: 0.0021
+      2055-01-01: 0.0020
+      2056-01-01: 0.0019
+      2057-01-01: 0.0018
+      2058-01-01: 0.0017
+      2059-01-01: 0.0016
+      2060-01-01: 0.0016
+      2061-01-01: 0.0016
+      2062-01-01: 0.0015
+      2063-01-01: 0.0015
+      2064-01-01: 0.0015
+      2065-01-01: 0.0015
+      2066-01-01: 0.0015
+      2067-01-01: 0.0015
+      2068-01-01: 0.0015
+      2069-01-01: 0.0015
+      2070-01-01: 0.0015
+      2071-01-01: 0.0015
+      2072-01-01: 0.0015
+      2073-01-01: 0.0014
+    metadata:
+      unit: /1
+      label: Population growth
+      reference:
+        - title: OBR, "Long-term economic determinants - March 2025 Economic and fiscal outlook" (19 June 2025), population growth row
+          href: https://obr.uk/supplementary-forecast-information-on-long-term-economic-determinants-and-personal-independence-payment-policy-costing/
+        - title: ONS, "National population projections - 2022-based" (migration category variant, used by the OBR from 2030-31)
+          href: https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections/bulletins/nationalpopulationprojections/2022based
+  household_interest_income:
+    description: Household interest income year-on-year growth from ONS National Accounts D.41g.
+    values:
+      # Outturn from ONS HAXV - Total household interest received (D.41)
+      # https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/haxv/ukea
+      2020-01-01: 0.000
+      2021-01-01: 0.225  # 19.6/16.0 - 1
+      2022-01-01: 1.210  # 43.3/19.6 - 1
+      2023-01-01: 0.987  # 86.0/43.3 - 1
+      2024-01-01: 0.142  # 98.2/86.0 - 1
+      # Forecast: use OBR non-labour income growth as proxy (Table 1.12)
+      2025-01-01: 0.0349
+      2026-01-01: 0.0397
+      2027-01-01: 0.0513
+      2028-01-01: 0.0350
+      2029-01-01: 0.0301
+      2030-01-01: 0.0317
+    metadata:
+      unit: /1
+      label: Household interest income growth
+      reference:
+        - title: ONS National Accounts D.41g - Households interest received (HAXV series)
+          href: https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/haxv/ukea
+        - title: OBR EFO March 2026 - Non-labour income growth used as proxy for 2025+ (Table 1.12)
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+  private_rental_prices:
+    # Historical values are calendar-year averages from ONS PIPR. Forecast
+    # values back out private-rent growth from the OBR aggregate rent forecast
+    # after applying social-rent growth, because no public region-specific
+    # private-rent forecast is available.
+    UNITED_KINGDOM:
+      description: Private rental prices year-on-year growth in United Kingdom.
+      values:
+        2022-01-01: 0.042818
+        2023-01-01: 0.073824
+        2024-01-01: 0.087127
+        2025-01-01: 0.063279
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: United kingdom private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    ENGLAND:
+      description: Private rental prices year-on-year growth in England.
+      values:
+        2022-01-01: 0.041519
+        2023-01-01: 0.071723
+        2024-01-01: 0.087245
+        2025-01-01: 0.063996
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: England private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    WALES:
+      description: Private rental prices year-on-year growth in Wales.
+      values:
+        2022-01-01: 0.040081
+        2023-01-01: 0.083841
+        2024-01-01: 0.084642
+        2025-01-01: 0.077081
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: Wales private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    SCOTLAND:
+      description: Private rental prices year-on-year growth in Scotland.
+      values:
+        2022-01-01: 0.051426
+        2023-01-01: 0.100690
+        2024-01-01: 0.084690
+        2025-01-01: 0.042929
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: Scotland private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    NORTHERN_IRELAND:
+      description: Private rental prices year-on-year growth in Northern Ireland.
+      values:
+        2022-01-01: 0.087615
+        2023-01-01: 0.087019
+        2024-01-01: 0.092217
+        2025-01-01: 0.068702
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: Northern Ireland private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    NORTH_EAST:
+      description: Private rental prices year-on-year growth in North East.
+      values:
+        2022-01-01: 0.034651
+        2023-01-01: 0.054987
+        2024-01-01: 0.067069
+        2025-01-01: 0.090155
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: North east private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    NORTH_WEST:
+      description: Private rental prices year-on-year growth in North West.
+      values:
+        2022-01-01: 0.057118
+        2023-01-01: 0.075098
+        2024-01-01: 0.092231
+        2025-01-01: 0.077692
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: North west private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    YORKSHIRE:
+      description:
+        Private rental prices year-on-year growth in Yorkshire and The
+        Humber.
+      values:
+        2022-01-01: 0.054138
+        2023-01-01: 0.067502
+        2024-01-01: 0.069094
+        2025-01-01: 0.040862
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: Yorkshire and the humber private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    EAST_MIDLANDS:
+      description: Private rental prices year-on-year growth in East Midlands.
+      values:
+        2022-01-01: 0.050733
+        2023-01-01: 0.060960
+        2024-01-01: 0.086271
+        2025-01-01: 0.069478
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: East midlands private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    WEST_MIDLANDS:
+      description: Private rental prices year-on-year growth in West Midlands.
+      values:
+        2022-01-01: 0.043043
+        2023-01-01: 0.066340
+        2024-01-01: 0.087831
+        2025-01-01: 0.061272
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: West midlands private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    EAST_OF_ENGLAND:
+      description: Private rental prices year-on-year growth in East of England.
+      values:
+        2022-01-01: 0.045095
+        2023-01-01: 0.052949
+        2024-01-01: 0.073996
+        2025-01-01: 0.071305
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: East of England private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    LONDON:
+      description: Private rental prices year-on-year growth in London.
+      values:
+        2022-01-01: 0.027583
+        2023-01-01: 0.084473
+        2024-01-01: 0.103216
+        2025-01-01: 0.066484
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: London private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    SOUTH_EAST:
+      description: Private rental prices year-on-year growth in South East.
+      values:
+        2022-01-01: 0.045856
+        2023-01-01: 0.065655
+        2024-01-01: 0.079285
+        2025-01-01: 0.057820
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: South east private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+    SOUTH_WEST:
+      description: Private rental prices year-on-year growth in South West.
+      values:
+        2022-01-01: 0.056862
+        2023-01-01: 0.067635
+        2024-01-01: 0.068267
+        2025-01-01: 0.053907
+        2026-01-01: 0.020663830
+        2027-01-01: 0.027757447
+        2028-01-01: 0.016893617
+        2029-01-01: 0.018391489
+        2030-01-01: 0.022136170
+      metadata:
+        unit: /1
+        label: South west private rental prices growth
+        reference:
+          - title: "ONS Price Index of Private Rents, UK: monthly price statistics"
+            href: https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics
+          - title: OBR EFO March 2026 (detailed forecast tables, economy, Table 1.7)
+            href: https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/
+ofwat:
+  water_bills:
+    description: Water and sewerage bills year-on-year growth.
+    # Growth in the average household water and sewerage bill in England and
+    # Wales. Each value is the charging year starting in April, so 2025-01-01
+    # holds 2025-26.
+    # - 2022-2024: nominal growth in Ofwat's average bill, from the real
+    #   bills and CPIH in policyengine_uk/utils/water/forecast_water_bills.py.
+    # - 2025 (2025-26): 27%, the increase Ofwat reports for 2025-26 in its
+    #   29 January 2026 statement. It replaces the 26% forecast in Ofwat's
+    #   30 January 2025 statement.
+    # - 2026 (2026-27): 5.4%, the national average from Water UK's 28 January
+    #   2026 company charges (GBP 639, up GBP 33), confirmed by Ofwat the next day.
+    # - 2027-2029: projections from forecast_water_bills.py (#1239). They are
+    #   the customer-weighted mean of per-company bills before inflation, from
+    #   the CCW table of Ofwat's PR24 draft determinations, plus a hardcoded
+    #   CPIH path. The weights were in ofwat_increases.csv, which was never
+    #   committed, so these three values cannot be reproduced from the repo.
+    values:
+      2022-01-01: 0.052
+      2023-01-01: 0.092
+      2024-01-01: 0.044
+      2025-01-01: 0.27
+      2026-01-01: 0.054
+      2027-01-01: 0.046
+      2028-01-01: 0.045
+      2029-01-01: 0.045
+    metadata:
+      unit: /1
+      label: Water bills growth
+      reference:
+        - title: Ofwat, "Ofwat responds to water sector average bill figures" (29 January 2026)
+          href: https://www.ofwat.gov.uk/ofwat-responds-to-water-sector-average-bill-figures/
+        - title: Water UK, "Record investment as average household water bills rise £33 a year from April" (28 January 2026)
+          href: https://www.water.org.uk/news-views-publications/news/record-investment-average-household-water-bills-rise-ps33-year-april
+        - title: Ofwat, "Average bills 2025/26 press statement" (30 January 2025)
+          href: https://www.ofwat.gov.uk/average-bills-2025-26-press-statement/
+        - title: CCW, "Breakdown of water companies' bill increases 2025-30" (Ofwat PR24 draft determinations)
+          href: https://www.ccw.org.uk/our-work/price-review/how-much-will-my-water-and-sewerage-bills-increase-by-2030/breakdown-of-water-companies-bill-increases-2025-30/
+scottish_water:
+  water_bills:
+    description: Year-on-year growth in Scottish Water's household water and sewerage charges.
+    # Scottish Water sets Scotland's household charges within limits from the
+    # Water Industry Commission for Scotland (WICS); Ofwat's series covers
+    # England and Wales only. Each value is the charging year starting in
+    # April, so 2025-01-01 holds 2025-26.
+    # - 2022-2026: the increase in household charges that Scottish Water
+    #   announced and WICS approved for each year. Every council tax band's
+    #   charge is a fixed fraction of Band D, so each band rises by the same
+    #   percentage.
+    # - 2027-2029: the core cap in WICS's Draft Determination for 2027-33
+    #   (consultation 30 June to 1 September 2026), CPI + 2% in each of the
+    #   first three years (para. 9.1.3), with CPI from WICS's forecast of
+    #   October CPI in the previous year, 1.9%, 1.9% and 2.1% (Table 68, from
+    #   OBR's March 2026 forecast). WICS publishes the Final Determination on
+    #   29 October 2026; replace these with it.
+    # Later years hold the 2029-30 rate.
+    values:
+      2022-01-01: 0.042
+      2023-01-01: 0.05
+      2024-01-01: 0.088
+      2025-01-01: 0.099
+      2026-01-01: 0.0867
+      2027-01-01: 0.039
+      2028-01-01: 0.039
+      2029-01-01: 0.041
+    metadata:
+      unit: /1
+      label: Scottish Water household charges growth
+      reference:
+        - title: WICS, Scottish Water's charges scheme 2022-23 (4.2%)
+          href: https://wics.scot/publications/price-setting/strategic-review-charges-2021-27/scottish-waters-charges-scheme/charges-scheme-2022-23
+        - title: WICS, Scottish Water's charges scheme 2023-24 (5%)
+          href: https://wics.scot/publications/price-setting/strategic-review-charges-2021-27/scottish-waters-charges-scheme/charges-scheme-2023-24
+        - title: WICS, Scottish Water's charges scheme 2024-25 (8.8%, letter of 30 January 2024)
+          href: https://wics.scot/publications/price-setting/strategic-review-charges-2021-27/scottish-waters-charges-scheme/charges-scheme-2024-25
+        - title: Scottish Water, "Charges 2025 to 2026" (28 January 2025; 9.9%)
+          href: https://www.scottishwater.co.uk/About-Us/News-and-Views/2025/01/Charges-2025-to-2026-Announcement
+        - title: Scottish Water, "Average water bills to rise £42 in 2026" (22 January 2026; 8.67%)
+          href: https://www.scottishwater.co.uk/about-us/news-and-views/2026/01/230126-charges-2026
+        - title: WICS, Strategic Review of Charges 2027-33 Draft Determination (June 2026), para. 9.1.3 (CPI + 2% core cap) and Table 68 (CPI forecast, p. 258)
+          href: https://wics.scot/system/files/2026-06/Draft-Determination-2027-33.pdf
+        - title: WICS, "WICS publishes 2027-33 Draft Determination" (Final Determination 29 October 2026)
+          href: https://wics.scot/latest/wics-publishes-2027-33-draft-determination
+finance_ni:
+  domestic_rates:
+    description: Growth in the average Northern Ireland domestic rates bill (regional rate plus district rate), used to project the domestic_rates dataset input.
+    # A Northern Ireland household's rates bill is its capital value times
+    # the regional rate plus its council's district rate, levied "as if they
+    # were items of a single rate" (Rates (Northern Ireland) Order 1977,
+    # arts 6, 7 and 9). Domestic capital values are still those of the
+    # 1 January 2005 valuation list, so the bill grows with the two
+    # poundages. Each year below is the growth in the combined domestic
+    # poundage across the 11 councils, weighted by each council's domestic
+    # rates paid in the previous year (LPS; the 2020-21 figures stand in for
+    # 2019-20, the first year not published). It is a national average: it
+    # does not reproduce any one council's bill or changes in reliefs.
+    #
+    # Neither OBR March 2026 line covers the whole bill, and OBR labels
+    # neither as regional or district; the attribution here is inferred.
+    # Expenditure Table 4.1 holds "NI domestic rates" at £0.494bn in every
+    # year to 2030-31 inside its council tax total, and ONS classes district
+    # domestic rates with council tax, so it appears to be the district
+    # rates. Receipts Table 3.2 "Northern Ireland domestic rates" (in "Other
+    # taxes") appears to be the regional rate: ONS classes the regional
+    # domestic rate as a central government tax, and with Table 3.2's NI
+    # business rates line it sums to £0.914bn in 2026-27, against DoF's
+    # "just over £900million" from the regional rate that year. Receipts
+    # growth is not bill growth either: Table 3.2 grows 2.0% in 2026-27, a
+    # year whose domestic regional rate rose 5.0%.
+    values:
+      # Outturn: published poundages. Regional rate 0.4574p in 2019-20 to
+      # 2022-23, then 0.4848p, 0.5042p, 0.5294p and 0.5559p (2026-27). The
+      # district figures are each council's district growth, bill-weighted.
+      2020-01-01: 0.0148 # regional 0%, district +3.36%
+      2021-01-01: 0.0066 # regional 0%, district +1.43%
+      2022-01-01: 0.0132 # regional 0%, district +2.90%
+      2023-01-01: 0.0630 # regional +6.0%, district +6.68%
+      2024-01-01: 0.0491 # regional +4.0%, district +5.91%
+      2025-01-01: 0.0474 # regional +5.0%, district +4.46%
+      2026-01-01: 0.0433 # regional +5.0%, district +3.58%
+      # Projection (an assumption, not enacted policy): 2026-27 growth held.
+      # The Finance Minister's 2026-29/30 draft Budget proposals (6 January
+      # 2026, published before Executive agreement; no final Budget found by
+      # October 2026) assume the domestic regional rate rises 5% a year to
+      # 2028-29. No published Northern Ireland-wide district rate forecast
+      # was found, so district growth is assumed to stay at its 2026-27
+      # rate. Regional 5% plus district 3.58% gives 4.34% to 4.36% a year as
+      # the regional share drifts up, within 0.03pp of the value held.
+      # 2029-30 onward extrapolates beyond the draft Budget's resource
+      # period (to 2028-29).
+      2027-01-01: 0.0433
+      2028-01-01: 0.0433
+      2029-01-01: 0.0433
+      2030-01-01: 0.0433
+    metadata:
+      unit: /1
+      label: Northern Ireland domestic rates bill growth
+      reference:
+        - title: Department of Finance, Rate poundages 2024-25 to 2026-27 (domestic regional and district rates by council)
+          href: https://www.finance-ni.gov.uk/articles/rate-poundages
+        - title: Department of Finance, Rate poundages 2019-20 to 2023-24 (archived 6 July 2023)
+          href: https://web.archive.org/web/20230706151829/https://www.finance-ni.gov.uk/articles/rate-poundages
+        - title: Land & Property Services, Domestic rates collected by district council 2020-21 to 2025-26
+          href: https://www.data.gov.uk/dataset/30535a44-0a05-4bff-98cf-001301a6b4d6/rates-paid-by-district-council-and-sector
+        - title: Rates (Regional Rates) Order (Northern Ireland) 2026, art 3(2) (domestic regional rate 0.5559p, 2026-27)
+          href: https://www.legislation.gov.uk/nisr/2026/19/made
+        - title: Rates (Regional Rates) Order (Northern Ireland) 2025, art 3(2) (0.5294p, 2025-26)
+          href: https://www.legislation.gov.uk/nisr/2025/27/made
+        - title: Rates (Regional Rates) Order (Northern Ireland) 2024, art 3(2) (0.5042p, 2024-25)
+          href: https://www.legislation.gov.uk/nisr/2024/28/made
+        - title: Regional Rates (Northern Ireland) Regulations 2023, reg 2(3) (0.4848p, 2023-24)
+          href: https://www.legislation.gov.uk/uksi/2023/198/made
+        - title: Department of Finance, Proposed draft Budget 2026-29/30, written ministerial statement (domestic regional rate +5% a year)
+          href: https://www.niassembly.gov.uk/assembly-business/official-report/written-ministerial-statements/department-of-finance-proposed-draft-budget-2026-2930/
+        - title: Rates (Northern Ireland) Order 1977, arts 6, 7 and 9
+          href: https://www.legislation.gov.uk/nisi/1977/2157/article/9
+        - title: ONS, Country and regional public sector finances methodology guide, sections 29 and 30
+          href: https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/methodologies/countryandregionalpublicsectorfinancesmethodologyguide
+
+carbon_intensity:
+  description: Carbon intensity year-over-year growth (decline).
+  values:
+    2022-01-01: -0.049
+    2023-01-01: -0.049
+    2024-01-01: -0.049
+    2025-01-01: -0.049
+    2026-01-01: -0.049
+    2027-01-01: -0.049
+    2028-01-01: -0.049
+    2029-01-01: -0.049
+    2030-01-01: -0.049
+  metadata:
+    unit: /1
+    label: Carbon intensity growth
+    reference:
+      - title: "Energy and emissions projections: 2023 to 2050"
+        href: https://www.gov.uk/government/publications/energy-and-emissions-projections-2023-to-2050

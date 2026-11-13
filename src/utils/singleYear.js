@@ -613,7 +613,7 @@ export function areaName(brma) {
 export const SINGLE_YEAR_METHOD = [
   [
     "Engine and policies",
-    "The calculator uses the same engine (policyengine.py and policyengine-uk) as the national figures to apply the policies selected in the header to one household's answers. It also adds the savings income tax rise, which the national figures leave out.",
+    "The calculator uses the same engine (policyengine.py and policyengine-uk) as the national figures to apply the policies selected in the header to one household's answers. It also adds the policies that the national figures leave out, which the list under “Policies in the calculator” marks as calculator only.",
   ],
   [
     "One year",

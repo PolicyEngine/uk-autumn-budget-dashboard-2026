@@ -12,6 +12,12 @@
  * and none is drawn from survey data of ours. Paragraph numbers are the
  * Budget document's own: they are printed in its PDF, not in the HTML
  * version.
+ *
+ * Two cards are measures we hold back, not measures we cannot model:
+ * company car tax and the Machine Games Duty rise (HELD_FOR_CHECKS). The
+ * national data hold company cars and machine takings from policyengine
+ * 6.16.2, so each card's "Why we leave it out" point says where our own
+ * work stands, in words and with no figure of ours.
  */
 
 import { SOURCES } from "./sources";
@@ -69,31 +75,31 @@ export const UNMODELLED_REASONS = [
     label: "Outside a household model",
     why: "Taxes on firms, reliefs on business premises, a change in who collects a tax and loans don't change household incomes the way this dashboard measures them.",
   },
-  { id: "data", label: "Not in our data yet", why: "These need something our data or engine lacks, or rules that still await publication." },
+  // Also the two cards we hold back while we check our own estimates
+  // (HELD_FOR_CHECKS): they keep their places, so the list's order stays
+  {
+    id: "data",
+    label: "Not in our data yet",
+    why: "These need something our data or engine lacks, rules that still await publication, or checks of our own estimate that we have yet to finish.",
+  },
 ];
+
+/**
+ * The cards for measures we model but hold back from the national results
+ * while we check our own estimates (11 November 2026). Each stays a card
+ * here, and out of the publication manifest, until we publish its figures:
+ * then it leaves this list and UNMODELLED_MEASURES together
+ * (heldMeasures.test.js and tests/test_held_measures.py pin both).
+ */
+export const HELD_FOR_CHECKS = ["machine-games-duty", "company-car-tax"];
 
 /** The labels of every card's points, in order. */
 export const UNMODELLED_POINT_LABELS = ["For a household", "Who it reaches", "Why we leave it out"];
 
 export const UNMODELLED_MEASURES = [
   {
-    id: "savings-income-tax",
-    order: 1,
-    reason: "coming-soon",
-    name: "Tax on savings interest up 2 points",
-    starts: "6 Apr 2027",
-    summary: "Raises tax on savings income by 2 points, to 24%, 44% and 49%.",
-    points: [
-      { label: "For a household", text: "Each £100 of taxable interest pays £2 more tax." },
-      { label: "Who it reaches", text: "People with taxable savings interest across the UK." },
-      { label: "Why we leave it out", text: "Held back: calibrated on another basis, our taxable interest is too low." },
-    ],
-    costings: [{ row: 62, values: [15, 125, 555, 520, 555, 590] }],
-    sources: [budget("paragraph 6.247")],
-  },
-  {
     id: "adjusted-triple-lock",
-    order: 2,
+    order: 1,
     reason: "separately",
     name: "Adjusted Triple Lock for the State Pension",
     starts: "Apr 2030",
@@ -116,7 +122,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "bank-surcharge",
-    order: 3,
+    order: 2,
     reason: "outside",
     name: "Bank surcharge up from 3% to 6% for 15 months",
     starts: "1 Jan 2027",
@@ -131,7 +137,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "pubs-business-rates-relief",
-    order: 4,
+    order: 3,
     reason: "outside",
     name: "Business rates relief for pubs and venues up to 35%",
     starts: "1 Apr 2027",
@@ -146,7 +152,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "online-marketplace-liability",
-    order: 5,
+    order: 4,
     reason: "outside",
     name: "Online marketplaces to collect the tax on UK sellers' sales",
     starts: "1 Oct 2027",
@@ -161,7 +167,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "your-first-home",
-    order: 6,
+    order: 5,
     reason: "outside",
     name: "Your First Home equity loan scheme",
     starts: "Apr 2027",
@@ -182,7 +188,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "machine-games-duty",
-    order: 7,
+    order: 6,
     reason: "data",
     name: "Machine Games Duty up from 20% to 25%",
     starts: "1 Apr 2027",
@@ -190,7 +196,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "Businesses pay; any household effect comes via stakes, prizes, owners or staff." },
       { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
-      { label: "Why we leave it out", text: "Household calculator only: our data hold no gambling or machine types." },
+      { label: "Why we leave it out", text: "Household calculator only: we haven't yet finished and checked a national estimate." },
     ],
     costings: [
       {
@@ -207,7 +213,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "cash-isa-limit",
-    order: 8,
+    order: 7,
     reason: "data",
     name: "Cash ISA limit kept at £20,000",
     starts: "6 Apr 2027",
@@ -215,7 +221,11 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "Interest stays tax-free on up to £20,000 a year of new savings." },
       { label: "Who it reaches", text: "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23." },
-      { label: "Why we leave it out", text: "Household calculator only, not the national results: our data lack ISA payments." },
+      // From the national build 0639b9c7 the data hold each adult's ISA
+      // payments (Microcosm's isa_subscriptions stage), so the reason is no
+      // longer the data: a national figure would rest on where savers put
+      // what the planned limit left out (planned_cash_isa_limit.py)
+      { label: "Why we leave it out", text: "Household calculator only: a national figure rests on where the excess goes." },
     ],
     costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
     sources: [
@@ -228,7 +238,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "national-living-wage",
-    order: 9,
+    order: 8,
     reason: "data",
     name: "Minimum wage up 3.9%",
     starts: "1 Apr 2027",
@@ -244,7 +254,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "universal-credit-surplus-earnings",
-    order: 10,
+    order: 9,
     reason: "data",
     name: "Universal Credit surplus earnings threshold stays at £2,500",
     starts: "1 Apr 2027",
@@ -259,7 +269,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "mileage-rates",
-    order: 11,
+    order: 10,
     reason: "data",
     name: "Tax-free mileage rates up",
     starts: "Apr 2026 / Apr 2027",
@@ -274,7 +284,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "company-car-tax",
-    order: 12,
+    order: 11,
     reason: "data",
     name: "Company car tax up 1 point in 2030-31",
     starts: "6 Apr 2030",
@@ -282,14 +292,14 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "More income tax on the same company car." },
       { label: "Who it reaches", text: "Employees with a company car." },
-      { label: "Why we leave it out", text: "The model has no company cars." },
+      { label: "Why we leave it out", text: "Our costing falls well short of the Treasury's; we haven't established why." },
     ],
     costings: [{ row: 86, values: [0, 0, 0, 0, 310, 345] }],
     sources: [budget("paragraph 6.207")],
   },
   {
     id: "business-asset-disposal-relief",
-    order: 13,
+    order: 12,
     reason: "data",
     name: "Business Asset Disposal Relief limit down to £500,000",
     starts: "6 Apr 2027",
@@ -307,7 +317,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "first-time-buyer-isa",
-    order: 14,
+    order: 13,
     reason: "data",
     name: "First Time Buyer ISA, and a lower Lifetime ISA charge",
     starts: "Oct 2026 / Apr 2029",
@@ -315,7 +325,10 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "The bonus arrives at purchase, adding to the deposit, not income." },
       { label: "Who it reaches", text: "People saving for a first home, including Lifetime ISA holders." },
-      { label: "Why we leave it out", text: "The model has no ISA payments, bonuses or home purchases." },
+      // policyengine-uk 2.165.1 has the Lifetime ISA's payments, bonus and
+      // withdrawal charge but no First Time Buyer ISA, and the data hold
+      // Lifetime ISA payments but no withdrawals
+      { label: "Why we leave it out", text: "The model lacks the new ISA; our data lack Lifetime ISA withdrawals." },
     ],
     costings: [
       { row: 38, values: [0, 0, 0, 110, 110, 235], note: "Row 38 is the First Time Buyer ISA." },
@@ -325,7 +338,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "parental-allowance",
-    order: 15,
+    order: 14,
     reason: "data",
     name: "Parental pay for self-employed fathers, partners and adopters",
     starts: "Apr 2029",
@@ -351,7 +364,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "gas-standing-charges",
-    order: 16,
+    order: 15,
     reason: "data",
     name: "Gas standing charges to end",
     // Budget paragraph 4.3: "aiming for delivery by the end of 2027 or as soon

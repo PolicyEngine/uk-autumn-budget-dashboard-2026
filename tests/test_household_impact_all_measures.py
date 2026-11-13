@@ -16,7 +16,6 @@ seven measures apply to a household, the six with formula modifiers included.
 import dataclasses
 
 import pytest
-from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
@@ -286,14 +285,59 @@ def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     )
 
 
-def test_the_installed_engine_has_no_electricity_zero_rate():
+@pytest.mark.parametrize(
+    "year, weight", [(2026, WINTER_SHARE), (2027, SPRING_SHARE)]
+)
+def test_the_vat_row_is_nothing_before_the_budget_and_the_cut_after(
+    year, weight
+):
     """policyengine-uk 2.153.5 and later zero-rate Great Britain's domestic
     electricity from 1 October 2026 to 31 March 2027 in current law
-    (gov.hmrc.vat.domestic_electricity_rate). On such an engine the
-    measure's 2026 leg counts that half-year twice: set rate_change_2026 to
-    0 before moving the pin."""
-    with pytest.raises(ValueError, match="Could not find the parameter"):
-        system.parameters.get_child("gov.hmrc.vat.domestic_electricity_rate")
+    (gov.hmrc.vat.domestic_electricity_rate). The measure is scored against
+    5% in every month, so its pre-Budget side holds the 5% and its Budget
+    side takes the zero-rated months off it, once
+    (tests/test_electricity_vat_baseline.py). On any engine the page's VAT
+    row, which shows only the change the measures make, is then £0 before
+    the Budget and the whole cut after it."""
+    result = calculate(
+        Answers(year, electricity_spending=1_040),
+        year,
+        ["domestic_electricity_zero_vat"],
+    )
+    row = programme(result, "vat_change")
+    cut = 1_040 * 0.05 * weight / 1.05
+    assert row["baseline"] == pytest.approx(0, abs=PENNY)
+    assert row["reform"] == pytest.approx(-cut, abs=0.01)
+    assert row["change"] == pytest.approx(-cut, abs=0.01)
+
+
+def test_the_pre_budget_side_runs_only_with_the_electricity_measure():
+    """The before side holds electricity's 5% when the electricity measure
+    is selected, and a measure's single keeps it for the others."""
+    hold = (
+        "uk_budget_data.budget_measures.pre_budget_vat_on_domestic_electricity"
+        ":pre_budget_vat_on_domestic_electricity"
+    )
+    cut = household_impact.modifier_name(zero_vat_on_domestic_electricity)
+    alone = household_impact.measure_sides(["household_energy_payment_2026"])
+    assert hold not in alone.before["modifiers"]
+    both = household_impact.measure_sides(
+        ["domestic_electricity_zero_vat", "household_energy_payment_2026"]
+    )
+    assert hold in both.before["modifiers"]
+    assert cut not in both.before["modifiers"]
+    assert cut in both.after["modifiers"]
+    assert hold not in both.after["modifiers"]
+    # Each single switches one measure on: the electricity measure's own
+    # single cuts, the other measure's keeps the 5% held
+    assert cut in both.singles["domestic_electricity_zero_vat"]["modifiers"]
+    assert hold not in (
+        both.singles["domestic_electricity_zero_vat"]["modifiers"]
+    )
+    assert hold in both.singles["household_energy_payment_2026"]["modifiers"]
+    assert cut not in (
+        both.singles["household_energy_payment_2026"]["modifiers"]
+    )
 
 
 def test_northern_ireland_keeps_the_electricity_vat_until_april_2027():

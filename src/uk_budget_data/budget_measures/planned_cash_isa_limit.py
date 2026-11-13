@@ -63,13 +63,15 @@ def planned_cash_isa_limit(
     forecast", Bank Rate, per cent, by fiscal year), as ``bank_rate``
     pairs; a later year takes the last rate.
 
-    The interest enters ``other_investment_income``, which policyengine-uk
-    2.151.0 taxes as savings income (``taxable_savings_interest_income``)
-    and counts in total income (so in adjusted net income), but leaves out
-    of market and net income. So the household's incomes stay as answered
-    and only its taxes move: the pre-Budget side pays the tax on that
-    interest, and the Budget side does not, the interest staying in the
-    ISA.
+    On the adopted policyengine 6.16.2 bundle (policyengine-uk 2.165.1),
+    the interest enters ``taxable_savings_interest_income`` directly.
+    Income tax and adjusted net income read that tax base, while gross
+    market resources stay as answered: the pre-Budget side pays tax on
+    the interest, and the Budget side does not. Wrapping
+    ``other_investment_income`` instead would also add the interest to
+    market income on this engine, changing the answered resources. This
+    routing is for the adopted bundle; it does not assert compatibility
+    with the older 2.151.0 engine's different total-income composition.
 
     The household calculator gives the saver's payments a year as
     ``cash_isa_subscriptions``, which policyengine-uk 2.151.0 lacks (it
@@ -123,16 +125,11 @@ def planned_cash_isa_limit(
                 self.add_variable(cash_isa_subscriptions)
 
         _apply_reform_class(DefineSubscriptions, sim)
-    # Survey data store other investment income, so its formula cannot be
-    # wrapped there: the interest goes into taxable savings interest
-    # instead, which income tax reads as savings income and adjusted net
-    # income counts (so the £100,000 childcare limits read it too, as they
-    # would the interest itself)
-    target = (
-        "taxable_savings_interest_income"
-        if survey
-        else "other_investment_income"
-    )
+    # Both household and survey counterfactuals change the tax base only.
+    # On the adopted engine other investment income also enters gross
+    # market resources; adding the interest there would change two things.
+    # This computed tax base also avoids replacing stored survey income.
+    target = "taxable_savings_interest_income"
     native = sim.tax_benefit_system.get_variable(target)
     path = survey_deposit_rate if survey else bank_rate
     rates = dict(path)

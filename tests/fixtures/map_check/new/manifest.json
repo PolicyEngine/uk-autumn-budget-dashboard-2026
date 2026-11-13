@@ -1,0 +1,16 @@
+{
+  "measures": {
+    "alpha_rates_up": {
+      "artifact": "artifacts/alpha_rates_up/aaaa0002",
+      "name": "Alpha rates up"
+    },
+    "beta_payment": {
+      "artifact": "artifacts/beta_payment/bbbb0002",
+      "name": "Beta payment"
+    },
+    "gamma_new_measure": {
+      "artifact": "artifacts/gamma_new_measure/cccc0002",
+      "name": "Gamma new measure"
+    }
+  }
+}

@@ -55,11 +55,13 @@ EXTENSION_SHARES = {
     "2027-06-30": 0.22299838723127563,
     "2027-07-31": 0.3333333333333333,
 }
-# policyengine-uk 2.151.0's baseline has no zero rate at all, so the
-# October 2026 to March 2027 zero rate is in neither side. True puts it in
-# the measure too, as Table 6.1 and the costing score it: then set
-# rate_change_2026 to -0.028342979605206865 (-0.05 x WINTER_SHARE). False
-# would score only the months after March 2027, with rate_change_2026 = 0.0.
+# True puts the October 2026 to March 2027 zero rate in the measure, as
+# Table 6.1 and the costing score it: then set rate_change_2026 to
+# -0.028342979605206865 (-0.05 x WINTER_SHARE). False would score only the
+# months after March 2027, with rate_change_2026 = 0.0. Either way the
+# measure is scored against 5% in every month (baseline_rate below): the
+# pre-Budget side (pre_budget_vat_on_domestic_electricity.py) and this one
+# both hold the baseline there, whatever the installed engine charges.
 PRE_BUDGET_ZERO_RATE_IN_MEASURE = True
 # Budget 2026 document: the zero rate is "expected to apply UK-wide from
 # April 2027", so 2027-28 (geography_2027) includes Northern Ireland;
@@ -74,21 +76,36 @@ PRE_BUDGET_ZERO_RATE_IN_MEASURE = True
 # UK-wide from April 2027 (Budget 2026 document RB 6.210 and paragraph
 # 3.4), so the 2027-28 leg includes Northern Ireland.
 #
-# The model has one reduced rate for every reduced-rate good, so the change
-# is applied to electricity spending alone. 2026-27 carries the October to
+# The change is applied to electricity spending alone (the reduced rate
+# covers other goods too). 2026-27 carries the October to
 # March share of the year's use (-0.05 x WINTER_SHARE), not its 182 days of
 # 365: the zero-rated months are the higher-use half of the year. 2027-28
 # carries the April to June share of use (-0.05 x SPRING_SHARE), not its 91
-# days of 366. policyengine-uk 2.153.5 and later zero-rate
-# October 2026 to March 2027 in current law, so on those engines the 2026
-# leg would count that half-year twice: a test fails if the installed engine
-# has it.
+# days of 366.
+#
+# The baseline. policyengine-uk 2.153.5 and later charge domestic
+# electricity at a rate of its own (own_rate_parameter), and their current
+# law zero-rates Great Britain from 1 October 2026 to 31 March 2027
+# (SI 2026/987): 2.165.1 gives 0.05 x 183 / 365 for 2026-27 in Great
+# Britain and 0.05 in Northern Ireland. Left alone, the 2026 leg would take
+# those months off a second time and charge a negative rate. So each leg
+# names baseline_rate and own_rate_parameter, and the template holds the
+# baseline at 5% in ``vat`` and ``baseline_vat`` before it applies the
+# change: 2026-27 is charged 0.05 x (1 - WINTER_SHARE) in Great Britain and
+# 5% in Northern Ireland, on any engine. The measure's pre-Budget side
+# (pre_budget_vat_on_domestic_electricity.py) holds the same baseline for
+# the same years, 2026 and 2027; tests/test_electricity_vat_baseline.py
+# keeps the two modules' baseline_rate, own_rate_parameter and years equal.
+# policyengine-uk 2.151.0 has no such rate and no zero rate, and nothing is
+# held there.
 def zero_vat_on_domestic_electricity(
     sim,
     rate_change_2026=-0.028342979605206865,  # -0.05 x WINTER_SHARE
     rate_change_2027=-0.011149919361563782,  # -0.05 x SPRING_SHARE
     geography="GB",
     geography_2027="UK",
+    baseline_rate=0.05,
+    own_rate_parameter="gov.hmrc.vat.domestic_electricity_rate",
 ):
     sim = apply_vat_base_change(
         sim,
@@ -97,6 +114,8 @@ def zero_vat_on_domestic_electricity(
         start_year=2026,
         end_year=2026,
         geography=geography,
+        baseline_rate=baseline_rate,
+        own_rate_parameter=own_rate_parameter,
     )
     return apply_vat_base_change(
         sim,
@@ -105,4 +124,6 @@ def zero_vat_on_domestic_electricity(
         start_year=2027,
         end_year=2027,
         geography=geography_2027,
+        baseline_rate=baseline_rate,
+        own_rate_parameter=own_rate_parameter,
     )
