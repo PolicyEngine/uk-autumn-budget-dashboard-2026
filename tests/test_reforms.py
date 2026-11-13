@@ -66,6 +66,7 @@ CANDIDATES = (
     "bus_fare_cap_2027",
     "cash_isa_limit_kept",
     "machine_games_duty_rise",
+    "company_car_tax_2030",
 )
 # Individual candidates that are not components of the combined package.
 # Registered but held back from the package: the savings rates' yield is
@@ -73,11 +74,13 @@ CANDIDATES = (
 # 28 Oct); the data hold no payments into cash ISAs, so the cash ISA limit
 # is the Household calculator's only (María, 29 Oct); so is the Machine
 # Games Duty rise, whose engine change reaches lower-stake machines too
-# on survey data (2 Nov).
+# on survey data (2 Nov); and the company car tax rates, which wait on the
+# first certified data pair with the company car base (4 Nov).
 NOT_IN_PACKAGE = (
     "savings_income_rates_up",
     "cash_isa_limit_kept",
     "machine_games_duty_rise",
+    "company_car_tax_2030",
 )
 # Withdrawn on 27 October 2026 (Vahid): out of the registry and the
 # package, so no default command runs or publishes them. Their factories
@@ -180,8 +183,9 @@ def test_the_package_is_the_eight_announced_measures():
     # 29 October 2026 with the £2 bus fare cap. Ten registered: the savings
     # rates held back and the cash ISA limit, Household calculator only.
     # Eleven with the Machine Games Duty rise, likewise (2 November 2026).
+    # Twelve with the company car tax rates, held back (4 November 2026).
     assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
-    assert len(reforms._MEASURE_FACTORIES) == 11
+    assert len(reforms._MEASURE_FACTORIES) == 12
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
     assert key == "combined--7baf4e89377bcc9c"
     # The area run's package alias stands for that key
@@ -218,6 +222,7 @@ ANNOUNCED = (
     "bus_fare_cap_2027",
     "cash_isa_limit_kept",
     "machine_games_duty_rise",
+    "company_car_tax_2030",
 )
 
 
@@ -1299,6 +1304,20 @@ FIRST_YEARS = {
         {"employment_income": 30_000},
         {"machine_games_standard_rate_net_takings": 1_000},
     ),
+    # A £30,000 petrol car at 120 g/km on £60,000 of pay: 32% to 33% of the
+    # list price, £300 more benefit, £120 more income tax at 40%, from
+    # 2030-31 (policyengine-uk 2.165.0 on; 2.151.0 has no company cars)
+    "company_car_tax_2030": (
+        2030,
+        "income_tax",
+        {
+            "employment_income": 60_000,
+            "company_car_list_price": 30_000,
+            "company_car_fuel_type": "PETROL",
+            "company_car_co2_emissions": 120,
+        },
+        {},
+    ),
 }
 
 
@@ -1330,6 +1349,11 @@ def test_every_measure_has_a_first_year_check():
 @pytest.mark.parametrize("measure_id", CANDIDATES)
 def test_each_measure_moves_from_its_first_year_and_not_before(measure_id):
     first, variable, person, household = FIRST_YEARS[measure_id]
+    if (
+        measure_id == reforms.COMPANY_CAR_TAX_ID
+        and not reforms.models_company_cars()
+    ):
+        pytest.skip("the installed policyengine-uk has no company cars")
     for year, moves in ((first - 1, False), (first, True)):
         sit = situation(
             {"p": _person(year, **person)},

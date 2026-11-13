@@ -139,6 +139,7 @@ TRADING_ALLOWANCE_ID = "trading_allowance_raise"
 BUS_FARE_CAP_ID = "bus_fare_cap_2027"
 CASH_ISA_LIMIT_ID = "cash_isa_limit_kept"
 MACHINE_GAMES_DUTY_ID = "machine_games_duty_rise"
+COMPANY_CAR_TAX_ID = "company_car_tax_2030"
 TRADING_ALLOWANCE = "gov.hmrc.income_tax.allowances.trading_allowance"
 MACHINE_GAMES_STANDARD_RATE = (
     "gov.hmrc.gambling_duty.machine_games.rates.standard"
@@ -1139,6 +1140,111 @@ def _create_machine_games_duty_rise() -> Reform:
 
 
 # =============================================================================
+# COMPANY CAR APPROPRIATE PERCENTAGES 1 POINT HIGHER FROM 2030-31
+# =============================================================================
+
+# Budget 2026 (6.207; Table 6.1 row 86; policy costings p. 95): from 6 April
+# 2030 every company car appropriate percentage is 1 point above its
+# 2029-30 rate, "subject to a maximum of 40%": zero-emission cars 9% to
+# 10%, cars emitting 1 to 50 g/km 19% to 20%, and every other band 1 point
+# up. The appropriate percentage is the share of a car's list price taxed
+# each year as a benefit in kind (ITEPA 2003 s. 139); the car fuel benefit
+# uses it too (s. 150), and employers pay Class 1A National Insurance on
+# both, so the engine moves all three from these parameters.
+#
+# policyengine-uk models company cars from 2.165.0
+# (PolicyEngine/policyengine-uk#2750). The engine the dashboard pins today,
+# 2.151.0, has neither the parameters nor the car inputs, so there the
+# measure has no parameter changes and changes nothing, which is exact for
+# that engine: it taxes no company car. On 2.165.0 and later it writes the
+# 13 rates below. The values are written out, not read from the engine,
+# so that building the registry never reads a parameter 2.151.0 lacks;
+# tests/test_company_car_tax.py holds each one equal to the engine's
+# 2029-30 rate plus 1 point, and fails if current law gains a 2030-31 step
+# of its own. Left alone: the diesel supplement (4 points added to the
+# percentage of a diesel without RDE2, s. 141, not a percentage itself;
+# raising the maximum is what lets a capped diesel move), the graduated
+# increment, step and threshold (1 point per 5 g/km from 75 g/km), and
+# the s. 139A rates for cars first registered from 6 April 2020, in force
+# only in 2020-21 and 2021-22.
+#
+# Held back from the national results (not in
+# AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) until policyengine.py#731's
+# release carries the national dd99a1dcd and its local cut, the first pair
+# with PolicyEngine/microcosm#1491's company car base (913,000 holders,
+# £3.06bn of taxable value; HMRC 920,000 and £3.07bn). On the national
+# before that fix (f6e33b93) the cars come to about half of HMRC's. The
+# Household calculator does not ask about a company car, so it is not a
+# calculator-only measure either.
+COMPANY_CAR_TAX_FROM = 2030
+COMPANY_CAR = "gov.hmrc.income_tax.benefits_in_kind.company_car"
+APPROPRIATE_PERCENTAGE = f"{COMPANY_CAR}.appropriate_percentage"
+COMPANY_CAR_RATES_2030 = {
+    # 9% in 2029-30 (Finance Act 2025 s. 6(2))
+    f"{APPROPRIATE_PERCENTAGE}.zero_emission": 0.10,
+    # 1 to 50 g/km, every electric range band: 19% in 2029-30
+    **{
+        f"{APPROPRIATE_PERCENTAGE}.electric_range[{band}].amount": 0.20
+        for band in range(5)
+    },
+    # 51-54, 55-59, 60-64, 65-69 and 70-74 g/km: 20%, 21%, 22%, 23% and 23%
+    f"{APPROPRIATE_PERCENTAGE}.co2_band[0].amount": 0.21,
+    f"{APPROPRIATE_PERCENTAGE}.co2_band[1].amount": 0.22,
+    f"{APPROPRIATE_PERCENTAGE}.co2_band[2].amount": 0.23,
+    f"{APPROPRIATE_PERCENTAGE}.co2_band[3].amount": 0.24,
+    f"{APPROPRIATE_PERCENTAGE}.co2_band[4].amount": 0.24,
+    # 75 g/km, then 1 point per full 5 g/km: 23% in 2029-30
+    f"{APPROPRIATE_PERCENTAGE}.graduated.base_rate": 0.24,
+    # 39% in 2029-30
+    f"{APPROPRIATE_PERCENTAGE}.maximum": 0.40,
+}
+
+
+def models_company_cars() -> bool:
+    """Whether the installed policyengine-uk taxes company cars (2.165.0
+    on): it has the appropriate percentage parameters."""
+    try:
+        forecast_parameters().get_child(APPROPRIATE_PERCENTAGE)
+    except ValueError:
+        return False
+    return True
+
+
+def company_car_tax_2030() -> Optional[dict[str, dict[str, float]]]:
+    """The 13 appropriate percentages, every policy year from 2030, on an
+    engine that taxes company cars; None on one that does not."""
+    if not models_company_cars():
+        return None
+    changes = {}
+    for path, value in COMPANY_CAR_RATES_2030.items():
+        changes.update(
+            rate_change(path, _years_from(COMPANY_CAR_TAX_FROM, value))
+        )
+    return changes
+
+
+def _create_company_car_tax_2030() -> Reform:
+    return Reform(
+        id=COMPANY_CAR_TAX_ID,
+        name="Company car tax rates up 1 point in 2030-31",
+        description=(
+            "From 6 April 2030 every company car appropriate percentage, "
+            "the share of a car's list price taxed each year as a benefit "
+            "in kind, is 1 percentage point above its 2029-30 rate: 10% "
+            "for zero-emission cars instead of 9%, 20% for cars emitting "
+            "1 to 50 g/km instead of 19%, and 1 point more in every other "
+            "band, up to a maximum of 40%. The car fuel benefit, which "
+            "uses the same percentage, rises with it. Employees pay more "
+            "income tax on the benefit, and employers more Class 1A "
+            "National Insurance, which the model keeps with the employer "
+            "as revenue. Cars, list prices and fuel are held fixed, with "
+            "no switching to cheaper cars."
+        ),
+        parameter_changes=company_car_tax_2030(),
+    )
+
+
+# =============================================================================
 # STATE PENSION DOUBLE LOCK FROM APRIL 2030 (not registered)
 # =============================================================================
 
@@ -1259,10 +1365,12 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
 # The cash ISA limit kept at £20,000 (Table 6.1 row 11) joined on
 # 29 October, for the Household calculator only: ten registered. The
 # Machine Games Duty rise (row 56) joined on 2 November, likewise for the
-# Household calculator only: eleven registered. Each of the three held
-# back joins the package by adding its id to
-# AUTUMN_BUDGET_2026_COMBINED_COMPONENTS (and leaving
-# calculatorOnlyMeasures.js).
+# Household calculator only: eleven registered. The company car tax rates
+# (row 86) joined on 4 November, held back from the national results and
+# not in the calculator: twelve registered. Each of the four held back
+# joins the package by adding its id to
+# AUTUMN_BUDGET_2026_COMBINED_COMPONENTS (and, for the three in it,
+# leaving calculatorOnlyMeasures.js).
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,
@@ -1275,6 +1383,7 @@ _MEASURE_FACTORIES = (
     _create_bus_fare_cap_2027,
     _create_cash_isa_limit_kept,
     _create_machine_games_duty_rise,
+    _create_company_car_tax_2030,
 )
 
 

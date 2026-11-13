@@ -93,6 +93,7 @@ from uk_budget_data.publication.combine import (
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_ID,
     CASH_ISA_LIMIT_ID,
+    COMPANY_CAR_TAX_ID,
     EMPLOYER_NI_ID,
     MACHINE_GAMES_DUTY_FROM,
     MACHINE_GAMES_DUTY_ID,
@@ -2119,6 +2120,7 @@ SKIP_REASONS = {
     "machine_games_duty_rise": (
         "no losses on higher-stake gaming machines, or before 2027-28"
     ),
+    "company_car_tax_2030": "no company car (the calculator does not ask)",
 }
 
 
@@ -2216,6 +2218,10 @@ def provably_unaffected(
             year < MACHINE_GAMES_DUTY_FROM
             or not answers.higher_stake_machine_losses
         )
+    if measure_id == COMPANY_CAR_TAX_ID:
+        # The answers carry no company car (policyengine-uk 2.151.0 has no
+        # company car inputs), so the benefit is £0 on both sides.
+        return True
     return False
 
 
