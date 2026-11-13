@@ -287,3 +287,48 @@ def test_the_installed_engine_does_not_yet_carry_the_october_forecast():
         "CPI, RPI and earnings forecast: remove the forecast override "
         "(policyengine-uk#2711)"
     )
+
+
+def test_the_installed_engine_does_not_yet_uprate_the_carers_allowance_limit():
+    """Tripwire (María, #371): policyengine-uk 2.151.0 holds the Carer's
+    Allowance earnings limit at £204 after 2026-27, so the forecast sets it
+    in code (CARERS_ALLOWANCE_EARNINGS_LIMIT). policyengine-uk#2699 (2.162.17)
+    projects it as 16 hours at the National Living Wage, and #2700 projects
+    the wage from OBR Table 1.13. Once the bundle moves to a release that
+    uprates it, this fails: if the engine's path is the forecast's (£212,
+    £217, £222, £228, £234), remove the setting from
+    forecast_parameter_changes in that PR; otherwise keep it and update this
+    tripwire."""
+    from policyengine_uk.system import system
+
+    limit = system.parameters.gov.dwp.carers_allowance.earnings_limit
+    engine = {year: limit(f"{year}-04-30") for year in range(2027, 2032)}
+    assert set(engine.values()) == {204}, (
+        "the installed policyengine-uk uprates the Carer's Allowance "
+        f"earnings limit ({engine}): if it matches "
+        "carers_allowance_earnings_limits(), remove the forecast's setting "
+        "(policyengine-uk#2699, #2700)"
+    )
+
+
+def test_carers_allowance_earnings_limit_is_16_hours_at_the_wage(october):
+    """From April 2027, 16 hours at that April's National Living Wage,
+    rounded up to the pound (EM to SI 2025/352, paragraph 5.6): £212 from
+    £13.21, then the OBR's wage forecast, as the taper reads it. 2026-27
+    keeps the engine's £204."""
+    limit = october.gov.dwp.carers_allowance.earnings_limit
+    assert limit("2026-04-30") == 204
+    # The scenario keys each fiscal year's value to the year a simulation of
+    # that fiscal year reads (2030 is 2030-31), so it holds from 1 January
+    # to 31 December of that year and no other (María, #371: a period bug).
+    assert limit("2026-12-31") == 204
+    for year, value in zip(range(2027, 2032), (212, 217, 222, 228, 234)):
+        assert limit(f"{year}-01-01") == value
+        assert limit(f"{year}-12-31") == value
+    assert {year: limit(f"{year}-04-30") for year in range(2027, 2032)} == {
+        2027: 212,
+        2028: 217,
+        2029: 222,
+        2030: 228,
+        2031: 234,
+    }
