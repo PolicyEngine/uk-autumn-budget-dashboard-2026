@@ -45,6 +45,8 @@ import HeadlineTile from "../livingStandards/HeadlineTile";
 import "../livingStandards/LivingStandards.css";
 import { Percent, UsersRound, Wallet } from "lucide-react";
 import "./IncomePosition.css";
+// The share of people who move is a people-affected figure: withheld for now
+import { POVERTY_FIGURES_SHOWN } from "../../utils/povertyFigures";
 
 const BEFORE = CHART_COLOURS.before;
 const AFTER = CHART_COLOURS.after;
@@ -724,7 +726,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const [whereShown, setWhereShown] = useState(WHERE_KEYS);
   const [gainsShown, setGainsShown] = useState(GAINS_KEYS);
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
-  const moves = useFile(MOBILITY_FILE, parseRecords);
+  // Only the withheld "Who moves" tip reads it, so it is not fetched while hidden
+  const moves = useFile(POVERTY_FIGURES_SHOWN ? MOBILITY_FILE : null, parseRecords);
   // The header's selection: one policy's own run, or the published combined
   // run of exactly the selected policies (read under the manifest's
   // combined key, #228), else none. Every figure below is that run's own,
@@ -796,7 +799,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const placeTip = [
     PERCENTILE_DEFINITION,
     moveWords,
-    everyone && everyone.up !== null && everyone.down !== null
+    POVERTY_FIGURES_SHOWN && everyone && everyone.up !== null && everyone.down !== null
       ? `Across the UK, ${everyone.up.toFixed(1)}% of people move up at least a percentile and ${everyone.down.toFixed(1)}% move down.`
       : null,
   ]
@@ -1116,7 +1119,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
  */
 export function ResultTiles({ totals, changeValue, changeNote, household, year, policies }) {
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
-  const moves = useFile(MOBILITY_FILE, parseRecords);
+  // Only the withheld "Who moves" tip reads it, so it is not fetched while hidden
+  const moves = useFile(POVERTY_FIGURES_SHOWN ? MOBILITY_FILE : null, parseRecords);
   const catalogue = useMeasureCatalogue();
   const run = distributionRunOf(policies, catalogue);
   const runId = run.reformId;
@@ -1164,7 +1168,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
       tip: [
         PERCENTILE_DEFINITION,
         moveWords,
-        everyone && everyone.up !== null && everyone.down !== null
+        POVERTY_FIGURES_SHOWN && everyone && everyone.up !== null && everyone.down !== null
           ? `Across the UK, ${everyone.up.toFixed(1)}% of people move up at least a percentile and ${everyone.down.toFixed(1)}% move down.`
           : null,
       ]

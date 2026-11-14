@@ -33,7 +33,7 @@ The list on `budget-day-measures` (PR #290), the measures announced in Budget 20
 | Id | Measure |
 |---|---|
 | `fuel_duty_rise_deferral` | Fuel duty cut extended: 52.95p to 1 July 2027, then current law, RPI from April 2028 |
-| `state_pension_income_tax_protection` | Pension Tax Allowance: a non-refundable income tax reduction for people over State Pension age, withdrawn £1 per £3 of income above the full new State Pension, 2027-28 to 2029-30 (hand-written) |
+| `state_pension_income_tax_protection` | Pension Tax Allowance: a non-refundable income tax reduction for people over State Pension age or reaching it in the tax year, withdrawn £1 per £3 of income above the full new State Pension, 2027-28 to 2029-30 (hand-written) |
 | `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, 1 October 2026 to 1 July 2027: Great Britain, UK-wide from April 2027 (hand-written) |
 | `property_income_rates_up` | Property income tax rates up 2 points from 6 April 2027, in England, Wales and Northern Ireland; finance cost relief follows the basic rate UK-wide (Table 6.1 row 61) |
 | `savings_income_rates_up` | Savings income tax rates up 2 points from 6 April 2027, UK-wide (Table 6.1 row 62) |
