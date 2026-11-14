@@ -33,6 +33,7 @@ import { wholeSelectionRun } from "../utils/ageImpact";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
 import { formatPp, peopleInPovertyText, roundPeople } from "../utils/povertyPeople";
+import { POVERTY_FIGURES_SHOWN } from "../utils/povertyFigures";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { shortNameOf } from "../utils/policyDetails";
@@ -694,11 +695,15 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 ]
               : [],
             // Pavel's review MT1: why VAT and fuel duty move this but not poverty
+            // (not while the poverty figures are withheld, povertyFigures.js)
             caveats:
-              metric.choices === "inequality"
+              metric.choices === "inequality" && POVERTY_FIGURES_SHOWN
                 ? ["VAT and fuel duty count here but not in the poverty figures, so they can move inequality without moving poverty."]
                 : [],
-            method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty and inequality" },
+            method: {
+              anchor: METHOD_ANCHORS.poverty,
+              label: POVERTY_FIGURES_SHOWN ? "How we measure poverty and inequality" : "How we measure inequality",
+            },
           }}
         />
       </div>

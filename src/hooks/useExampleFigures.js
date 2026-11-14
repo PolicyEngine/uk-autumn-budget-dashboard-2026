@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { withCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { definitionChecked, isCalculatorOnly, withCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 import {
+  DefinitionMismatchError,
   HEADLINE_INCLUDE,
+  UNREGISTERED_PROBLEM,
   buildHouseholdRequest,
+  definitionRefusals,
   engineDifferences,
   householdApiUrl,
   normaliseHouseholdImpact,
@@ -24,12 +27,20 @@ import { peekHouseholdImpact, rememberHouseholdHeadline } from "./useHouseholdIm
  *   other years for the bars (8 examples x 5 years: at most 40 headline
  *   requests, each two runs, only when the file does not answer).
  * - At most EXAMPLE_FILL_CONCURRENCY requests at once; each goes to the
- *   detail URL (Modal) when the build has one, else the main API, never both.
+ *   detail URL (Modal) when the build has one, else the main API, and to
+ *   the main API as well only when the detail URL fails or its answer fails
+ *   the checks below.
+ * - Each request names the approved definition (`expectedDefinitions`) of
+ *   every measure it asks with. An answer from other package versions than
+ *   `expectedEngine`, or one that doesn't report each of those definitions,
+ *   is refused, never shown and never stored: nothing is answered unchecked
+ *   (#136). With a selected measure that has no approved definition,
+ *   nothing is asked.
  * - Each answer goes in the session cache the calculator reads (its headline
  *   only, so choosing the card shows it at once while its details load) and
- *   in sessionStorage (its net income and engine, nothing else), so a
- *   revisit asks nothing. An answer from other package versions than
- *   `expectedEngine` is refused and never stored.
+ *   in sessionStorage (its net income, engine and definitions, nothing
+ *   else), so a revisit asks nothing. Either is used again only after the
+ *   same checks.
  * - A change of selection or publication, or unmounting, aborts every
  *   request still out; a change of year only reorders what is still to ask.
  */
@@ -40,14 +51,22 @@ export const EXAMPLE_FILL_CONCURRENCY = 4;
 // sessionStorage, by the calculator's own cache key
 const STORE_PREFIX = "ab2026:example-headline:v1:";
 
-/** A stored headline ({ net, engine }) for `key`, or null (missing, unreadable or another engine's). */
-export function readStoredHeadline(key, expectedEngine = null) {
+/**
+ * A stored headline ({ net, engine, definitions }) for `key`, or null:
+ * missing, unreadable, another engine's, or not reporting the approved
+ * definition (`approved`) of every one of `policies`, the measures it was
+ * asked with. With no policies there is nothing to check it against, and
+ * no headline (as peekHouseholdImpact).
+ */
+export function readStoredHeadline(key, expectedEngine, approved, policies) {
   try {
+    if (!Array.isArray(policies) || policies.length === 0) return null;
     const raw = globalThis.sessionStorage?.getItem(STORE_PREFIX + key);
     if (!raw) return null;
     const value = JSON.parse(raw);
     if (!value?.net || !Number.isFinite(Number(value.net.change))) return null;
     if (expectedEngine && engineDifferences(expectedEngine, value.engine).length) return null;
+    if (definitionRefusals(approved ?? {}, value.definitions ?? null, policies).length) return null;
     return value;
   } catch {
     return null;
@@ -82,9 +101,25 @@ function storeList(key, list) {
 
 /**
  * The measures a refusal names as unknown to the API (its 422: "Unknown
- * measures: a, b" on `policies`), or null for any other error.
+ * measures: a, b" on `policies`), or null for any other error. The client
+ * gives that 422 as a DefinitionMismatchError when it names only measures
+ * the request asked with: unknown only if every measure it refuses is one
+ * the running code doesn't register, so a definition that differs is
+ * never dropped from the selection.
  */
 export function unknownMeasures(error) {
+  if (error instanceof DefinitionMismatchError) {
+    const unregistered =
+      !error.unchecked &&
+      error.refused.length > 0 &&
+      error.refused.every(
+        (item) =>
+          Array.isArray(item?.problems) &&
+          item.problems.length > 0 &&
+          item.problems.every((problem) => problem === UNREGISTERED_PROBLEM),
+      );
+    return unregistered ? error.refused.map((item) => item.id) : null;
+  }
   const messages = [error?.message ?? "", ...(error?.fields ?? []).map((field) => field?.message ?? "")];
   for (const message of messages) {
     const match = /Unknown measures?:\s*([^"\]]+)/.exec(message);
@@ -136,6 +171,10 @@ export const exampleKey = (inputs, { year, policies, publicationKey = "" }) =>
  * @param {boolean} params.enabled - Fill only while true (the file does not answer, the view is shown)
  * @param {string} [params.publicationKey]
  * @param {Object|null} [params.expectedEngine]
+ * @param {Object<string, Object>|null} [params.expectedDefinitions] - Each
+ *   selected measure's approved definition (`publishedDefinitions`), and a
+ *   calculator-only measure's once the publication names it
+ *   (`publishedRequest`): every measure with one is checked
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
  * @param {Function} [params.post] - The request (tests pass their own)
  * @returns {{ figures: Object, pending: Set<string>, failed: Set<string>, reduced: string[]|null }}
@@ -150,6 +189,7 @@ export default function useExampleFigures({
   enabled,
   publicationKey = "",
   expectedEngine = null,
+  expectedDefinitions = null,
   confirmPublication = null,
   post = postHouseholdDetail,
 }) {
@@ -159,8 +199,15 @@ export default function useExampleFigures({
   yearRef.current = year;
   const selectionKey = policies.join(",");
   const engineKey = JSON.stringify(expectedEngine);
-  const runKey = `${publicationKey}|${selectionKey}|${engineKey}`;
-  const active = enabled && policies.length > 0 && householdApiUrl() !== null;
+  // The approved definitions of the measures a request carries, the
+  // calculator-only ones with one among them (definitionChecked): each
+  // answer is checked against them, so a change of one starts again
+  const approvedAll = policies.every((id) => Object.hasOwn(expectedDefinitions ?? {}, id));
+  const definitionsKey = approvedAll
+    ? JSON.stringify(definitionChecked(withCalculatorOnly(policies), expectedDefinitions).map((id) => [id, expectedDefinitions[id]]))
+    : "";
+  const runKey = `${publicationKey}|${selectionKey}|${engineKey}|${definitionsKey}`;
+  const active = enabled && policies.length > 0 && approvedAll && householdApiUrl() !== null;
 
   useEffect(() => {
     if (!active) return undefined;
@@ -170,6 +217,13 @@ export default function useExampleFigures({
     // (remembered for the session, so a revisit asks with them at once)
     const supportedKey = `${STORE_PREFIX}supported:${publicationKey}|${selectionKey}`;
     let used = readStoredList(supportedKey, policies) ?? policies;
+    // The approved definitions of `ids`, and only those: a request names them
+    const approvedFor = (ids) => Object.fromEntries(ids.map((id) => [id, expectedDefinitions[id]]));
+    // An answer counts only from the receipts' package versions, computing
+    // each measure it was asked with from that measure's approved definition
+    const checked = (data, ids) =>
+      (!expectedEngine || engineDifferences(expectedEngine, data.engine).length === 0) &&
+      definitionRefusals(approvedFor(ids), data.definitions, ids).length === 0;
     let figures = {};
     // Measures the API refused, the calculator-only ones among them
     const refused = new Set();
@@ -200,14 +254,21 @@ export default function useExampleFigures({
       for (const y of years) {
         for (const example of examples) {
           // With the calculator-only measures, as choosing it asks, but
-          // any the API refused
+          // any the API refused. Each measure with an approved definition
+          // is checked: the selected ones, and a calculator-only one only
+          // once the publication names it (calculatorOnlyMeasures.js)
           const own = withCalculatorOnly(used).filter((id) => !refused.has(id));
+          const checks = definitionChecked(own, expectedDefinitions);
           const key = exampleKey(example.inputs, { year: y, policies: own, publicationKey });
-          const net = peekHouseholdImpact(key, expectedEngine)?.net ?? readStoredHeadline(key, expectedEngine)?.net ?? null;
+          const approved = approvedFor(checks);
+          const net =
+            peekHouseholdImpact(key, expectedEngine, approved, checks)?.net ??
+            readStoredHeadline(key, expectedEngine, approved, checks)?.net ??
+            null;
           if (net) put(example.id, y, net);
           else {
             pending.add(`${example.id}:${y}`);
-            asks.push({ example, year: y, key, own });
+            asks.push({ example, year: y, key, own, checks });
           }
         }
       }
@@ -220,17 +281,27 @@ export default function useExampleFigures({
     // One cell: its headline, checked, cached and stored. A refusal of
     // measures the API does not know is thrown for the caller; any other
     // failure leaves the cell to "Calculated when chosen"
-    const ask = async ({ example, year: y, key, own }) => {
+    const ask = async ({ example, year: y, key, own, checks }) => {
       const cell = `${example.id}:${y}`;
       try {
+        const asked = checks;
         const body = buildHouseholdRequest(example.inputs, { year: y, policies: own, include: HEADLINE_INCLUDE });
-        const raw = await post(body, { signal });
+        // The detail URL's answer is taken only if it passes the checks;
+        // otherwise the main API is asked, and its answer checked in turn
+        const accept = (answer) => {
+          try {
+            return checked(normaliseHouseholdImpact(answer), asked);
+          } catch {
+            return false;
+          }
+        };
+        const raw = await post(body, { signal, definitions: approvedFor(asked), accept });
         if (signal.aborted) return;
         const data = normaliseHouseholdImpact(raw);
-        if (expectedEngine && engineDifferences(expectedEngine, data.engine).length) throw new Error("engine");
+        if (!checked(data, asked)) throw new Error("Not the published engine or definitions");
         put(example.id, y, data.net);
         rememberHouseholdHeadline(key, data);
-        storeHeadline(key, { net: data.net, engine: data.engine ?? null });
+        storeHeadline(key, { net: data.net, engine: data.engine ?? null, definitions: data.definitions ?? null });
       } catch (error) {
         if (signal.aborted) return;
         const unknown = unknownMeasures(error);
@@ -252,8 +323,18 @@ export default function useExampleFigures({
           probed = true;
         } catch (error) {
           if (!(error instanceof UnknownMeasuresError)) return;
+          // Only a calculator-only measure with no approved definition is
+          // dropped unnamed: one the publication names is checked as a
+          // selected one is, and never left out of a figure unsaid
+          const unnamed = (id) => isCalculatorOnly(id) && !Object.hasOwn(expectedDefinitions, id);
+          if (error.unknown.some((id) => isCalculatorOnly(id) && !unnamed(id))) {
+            for (const { example, year: y } of asks) failed.add(`${example.id}:${y}`);
+            pending.clear();
+            publish();
+            return;
+          }
           used = used.filter((id) => !error.unknown.includes(id));
-          for (const id of error.unknown) refused.add(id);
+          for (const id of error.unknown) if (unnamed(id)) refused.add(id);
           storeList(supportedKey, used);
           if (used.length === 0) {
             for (const { example, year: y } of asks) failed.add(`${example.id}:${y}`);
@@ -281,7 +362,8 @@ export default function useExampleFigures({
       );
     })();
     return () => controller.abort();
-    // runKey stands for the selection, publication and engine; examples are fixed
+    // runKey stands for the selection, publication, engine and definitions;
+    // examples are fixed
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, runKey]);
 

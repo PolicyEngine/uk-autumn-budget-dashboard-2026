@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
 import { OPEN_POPULATION_SUB } from "../utils/populationSub";
+import { POVERTY_FIGURES_SHOWN } from "../utils/povertyFigures";
 import SubTabs, { SubTabPanel, subTabId, useSubTabParam } from "./SubTabs";
 import { YOUNG_PEOPLE_ANCHOR } from "../utils/viewAnchors";
 import { scrollBelowBars, settleHeadings } from "../utils/pageScroll";
 
-/** Population impact's sub-tabs; the first, Public finances, is the default. */
+/**
+ * Population impact's sub-tabs; the first, Public finances, is the default.
+ * Poverty is left out while the poverty figures are withheld
+ * (povertyFigures.js), so ?sub=poverty opens the default.
+ */
 export const POPULATION_SUB_TABS = [
   { value: "finances", label: "Public finances", icon: "landmark" },
   { value: "all", label: "All households", icon: "users" },
   { value: "age", label: "By age", icon: "usersRound" },
   { value: "living", label: "Living standards", icon: "coins" },
   { value: "poverty", label: "Poverty", icon: "percent" },
-];
+].filter((tab) => POVERTY_FIGURES_SHOWN || tab.value !== "poverty");
 
 const SUB_TAB_VALUES = POPULATION_SUB_TABS.map((tab) => tab.value);
 

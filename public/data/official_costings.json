@@ -158,14 +158,14 @@
         },
         "2027": {
           "not_comparable": {
-            "reason": "Self Assessment tax on 2027-28 property income is mostly paid from 31 January 2029, so the Treasury's costing (on a National Accounts basis) has \u00a335m in 2027-28 and about 1.5 years of liability in 2028-29 (\u00a3575m), while the model scores each tax year's liability. From 2029-30 the two agree within 1.5%. Table 6.1 row 61."
+            "reason": "Taxpayers pay most Self Assessment tax on 2027-28 property income from 31 January 2029, so the Treasury's costing (on a National Accounts basis) has \u00a335m in 2027-28 and about 1.5 years of liability in 2028-29 (\u00a3575m), while the model scores each tax year's liability. Table 6.1 row 61."
           },
           "post_behavioural": null,
           "static_costing": null
         },
         "2028": {
           "not_comparable": {
-            "reason": "Self Assessment tax on 2027-28 property income is mostly paid from 31 January 2029, so the Treasury's costing (on a National Accounts basis) has \u00a335m in 2027-28 and about 1.5 years of liability in 2028-29 (\u00a3575m), while the model scores each tax year's liability. From 2029-30 the two agree within 1.5%. Table 6.1 row 61."
+            "reason": "Taxpayers pay most Self Assessment tax on 2027-28 property income from 31 January 2029, so the Treasury's costing (on a National Accounts basis) has \u00a335m in 2027-28 and about 1.5 years of liability in 2028-29 (\u00a3575m), while the model scores each tax year's liability. Table 6.1 row 61."
           },
           "post_behavioural": null,
           "static_costing": null

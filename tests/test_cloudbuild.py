@@ -228,6 +228,34 @@ def test_the_minimum_instances_belong_to_the_service_not_the_revision(
     assert int(deploy_args[deploy_args.index("--min") + 1]) >= 1
 
 
+@pytest.mark.parametrize(
+    "existing_service", [True, False], ids=["update", "create"]
+)
+def test_the_service_has_a_maximum_of_20_instances(
+    tmp_path, workspace, existing_service
+):
+    """Without a maximum the service keeps Cloud Run's default of 100, so a
+    flood of requests could run 100 busy 8 vCPU instances at about $76 an
+    hour. The service's maximum (--max) is shared by the revisions in the
+    traffic split; at most 6 instances ran at once around Budget day."""
+    if existing_service:
+        script = step_script("deploy-candidate", workspace)
+        scripted_service = service()
+    else:
+        script = step_script(
+            "deploy-candidate", workspace, _ALLOW_CREATE="true"
+        )
+        scripted_service = service(exists=False, traffic=[])
+    result, log, _ = run(script, tmp_path, scripted_service)
+    assert result.returncode == 0, result.stderr
+    deploy_args = next(
+        line for line in log if line.startswith("run deploy")
+    ).split()
+    assert deploy_args.count("--max") == 1
+    assert deploy_args[deploy_args.index("--max") + 1] == "20"
+    assert "--max-instances" not in deploy_args
+
+
 def test_a_failed_lookup_stops_the_build_before_any_deploy(
     tmp_path, workspace
 ):
