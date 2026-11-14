@@ -78,6 +78,7 @@ const TERM_ICONS = {
   "Who moves": ArrowUpDown,
   "Among all households": Users,
   "Winners and losers": ArrowUpDown,
+  "No-change thresholds": ArrowUpDown,
   Data: Database,
   Status: Info,
   Period: CalendarRange,

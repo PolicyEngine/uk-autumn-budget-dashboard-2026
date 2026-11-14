@@ -92,6 +92,17 @@ def test_isa_interest_is_left_out_of_total_income():
     assert reformed == pytest.approx(0, abs=0.01)
 
 
+def test_gift_aid_leaves_total_income_alone():
+    """The taper reads total income (Income Tax Act 2007 s. 23, Step 1),
+    not adjusted net income, which Gift Aid lowers: Jonathan gives £800 to
+    charity and still gets £44 off."""
+    situation = _pensioner(13_186.40)
+    situation["people"]["p"]["gift_aid"] = {YEAR: 800}
+    baseline, reformed = _income_tax(situation)
+    assert baseline == pytest.approx(123.28, abs=0.01)
+    assert reformed == pytest.approx(79.28, abs=0.01)
+
+
 @pytest.mark.parametrize(
     "income", ["savings_interest_income", "dividend_income", "property_income"]
 )
