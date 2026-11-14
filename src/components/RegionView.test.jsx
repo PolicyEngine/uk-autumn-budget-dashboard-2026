@@ -182,7 +182,7 @@ describe("RegionView", () => {
     renderView({ selectedPolicies: ["two_child_limit"] });
     expect(
       await screen.findByText(
-        "Results by region are not yet published for this policy.",
+        "We have not yet published results by region for this policy.",
       ),
     ).toBeInTheDocument();
   });
@@ -191,7 +191,7 @@ describe("RegionView", () => {
     vi.stubGlobal("fetch", geographyFetch({ "/data/regional.csv": 404 }));
     const { unmount } = renderView();
     expect(
-      await screen.findByText("Results by region are not yet published."),
+      await screen.findByText("We have not yet published results by region."),
     ).toBeInTheDocument();
     unmount();
 
@@ -202,10 +202,10 @@ describe("RegionView", () => {
     );
     renderView();
     expect(
-      await screen.findByText("Results by region are not yet published."),
+      await screen.findByText("We have not yet published results by region."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("The published file could not be read, so no figures are shown."),
+      screen.getByText("The page could not read the published file, so it shows no figures."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });

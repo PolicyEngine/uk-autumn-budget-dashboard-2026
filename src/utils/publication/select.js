@@ -21,8 +21,8 @@ export const REASONS = {
   notPublished: "Not yet published",
   unsupportedYear: "Beyond the dataset's projected years",
   yearNotPublished: "Not published for this year",
-  notLoaded: "The published files could not be loaded or verified",
-  missingRow: "No figure published for this year",
+  notLoaded: "We could not load or verify the published files",
+  missingRow: "We have published no figure for this year",
   noCombinedRun: "No combined run is published for this selection",
 };
 

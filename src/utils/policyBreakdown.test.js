@@ -396,7 +396,7 @@ describe("a tax reduction (the Pension Tax Allowance's design)", () => {
     const rows = Object.fromEntries(tab.household.map((row) => [row.id, row]));
     expect(rows.tax_without_reduction).toMatchObject({ kind: "input", before: 123.28 });
     expect(rows.tax_reduction_largest).toMatchObject({ label: "Pension Tax Allowance, the largest tax reduction", before: 0, after: 94 });
-    expect(rows.tax_reduction_taper.label).toBe("Withdrawn by the taper (£1 for every £3 of total income above the full new State Pension)");
+    expect(rows.tax_reduction_taper.label).toBe("Taper withdrawal (£1 for every £3 of total income above the full new State Pension)");
     expect(rows.tax_reduction_taper.after).toBeCloseTo(-50, 6);
     expect(tab.household.filter((row) => row.kind === "part").map((row) => [row.id, row.before, row.after, row.change])).toEqual([
       ["income_tax_total", -123, -79, 44],

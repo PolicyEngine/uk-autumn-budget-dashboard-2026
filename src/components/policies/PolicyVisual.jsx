@@ -327,7 +327,7 @@ export function TradingAllowanceVisual({ entry, visual, name }) {
       {/* The example as a list, as the fuel duty card's fills */}
       <figcaption className="pviz-fills" aria-hidden="true">
         <span className="pviz-fills-title">
-          Income tax saved: employee on {wholePounds(example.income)}, {wholePounds(example.sideIncome)} side income, no expenses
+          Income tax saving: employee on {wholePounds(example.income)}, {wholePounds(example.sideIncome)} side income, no expenses
         </span>
         <span className="pviz-fills-list">
           <span className="pviz-fill">
@@ -548,8 +548,8 @@ export function BusFareCapVisual({ entry, visual, name }) {
   const { before, after, window, share, example } = view;
   const years = Object.entries(example.saved);
   const description =
-    `${name}: single bus fares capped at ${wholePounds(after)} instead of ${wholePounds(before)}, ${window}. ` +
-    `Modelled as ${percent(share)} of bus fare spending at ${wholePounds(before)} fares while the cap runs. ` +
+    `${name}: single bus fare cap of ${wholePounds(after)} instead of ${wholePounds(before)}, ${window}. ` +
+    `We model the saving as ${percent(share)} of bus fare spending at ${wholePounds(before)} fares while the cap runs. ` +
     `Example: a household in England outside London with ${wholePounds(example.spending)} a year of bus fares gets ` +
     years.map(([year, value]) => `${wholePounds(value)} in ${year}`).join(" and ") +
     ".";
@@ -572,7 +572,7 @@ export function BusFareCapVisual({ entry, visual, name }) {
       </div>
       {/* The example as a list, as the fuel duty card's fills */}
       <figcaption className="pviz-fills" aria-hidden="true">
-        <span className="pviz-fills-title">Saved on {wholePounds(example.spending)} a year of bus fares</span>
+        <span className="pviz-fills-title">Saving on {wholePounds(example.spending)} a year of bus fares</span>
         <span className="pviz-fills-list">
           {years.map(([year, value]) => (
             <span key={year} className="pviz-fill">

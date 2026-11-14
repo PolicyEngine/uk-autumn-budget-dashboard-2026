@@ -77,7 +77,7 @@ from uk_budget_data.private_outputs import (
     PrivateOutputError,
     private_directory,
 )
-from uk_budget_data.publication import combine
+from uk_budget_data.publication import area_code, combine
 from uk_budget_data.publication import manifest as publication_manifest
 from uk_budget_data.publication import receipt as publication_receipt
 from uk_budget_data.publication.combine import combined_key
@@ -2117,6 +2117,77 @@ def _area_identities(reform_id: str, years, revision, member_revisions=None):
     return identities[:2]
 
 
+def definition_digests(reform_id: str, years) -> dict:
+    """Each side's definition digest, without the commit: the scenario the
+    area run builds, bound at ``receipt.DEFINITION_REVISION``. None for
+    current law. A content-bound side's is its own ``reform_sha256``.
+
+    The area tables are bound to these (``release_index.area_problems``),
+    so a national rerun at another commit keeps them while the definitions
+    are the same.
+    """
+    identities = _area_identities(
+        reform_id, years, publication_receipt.DEFINITION_REVISION
+    )
+    return {
+        side: identity.model_dump().get("reform_sha256")
+        for side, identity in zip(("baseline", "reform"), identities)
+    }
+
+
+def dataset_record(parsed: argparse.Namespace) -> dict:
+    """The dataset a geography run reads, for ``area_provenance.json``: its
+    kind, its name (a local file's name, or the bundle's repository and
+    dataset name) and SHA-256 where known."""
+    local = _local_dataset(parsed.dataset)
+    if local is not None:
+        digest = hashlib.sha256()
+        with open(local, "rb") as handle:
+            for block in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(block)
+        return {
+            "kind": parsed.dataset_kind,
+            "name": local.name,
+            "sha256": digest.hexdigest(),
+        }
+    name, repository = (
+        _bundle_dataset()
+        if parsed.dataset is None
+        else _bundle_dataset(str(parsed.dataset))
+    )
+    entry = get_release_manifest("uk").datasets.get(name)
+    sha256 = getattr(entry, "sha256", None)
+    return {
+        "kind": parsed.dataset_kind,
+        "name": f"{repository}/{name}",
+        "sha256": (
+            sha256
+            if isinstance(sha256, str)
+            and re.fullmatch(r"[0-9a-f]{64}", sha256)
+            else None
+        ),
+    }
+
+
+def certified_datasets() -> dict[str, Optional[str]]:
+    """Every UK dataset the installed bundle certifies, under the name
+    ``dataset_record`` gives a bundle dataset (repository/name), with its
+    SHA-256 where the bundle gives one: what ``publish index`` accepts as
+    an area run's dataset (``release_index._dataset_problem``)."""
+    release = get_release_manifest("uk")
+    found = {}
+    for name, entry in release.datasets.items():
+        repository = entry.repo_id or release.data_package.repo_id
+        sha256 = getattr(entry, "sha256", None)
+        found[f"{repository}/{name}"] = (
+            sha256
+            if isinstance(sha256, str)
+            and re.fullmatch(r"[0-9a-f]{64}", sha256)
+            else None
+        )
+    return found
+
+
 def _approved_revision(
     reform_id: str, document: dict, revision, checked: dict
 ):
@@ -2187,8 +2258,23 @@ def area_provenance(
     Code-bound scenarios are bound at the approved commit when only
     non-calculation files have been committed since (``_approved_revision``);
     a package's code-bound members at their own approved commits.
+
+    It also records what ``publish index`` binds the tables to: each
+    reform's definition (``definition_digests``) and, as ``run``, the
+    commit and years (the caller adds the dataset). Area code must be
+    committed, so that the commit names the code the run uses.
     """
     revision = publication_receipt.code_revision()
+    dirty = sorted(
+        path
+        for path in revision.dirty_paths
+        if area_code.is_area_path(path) or path in area_code.AREA_CODE_SYMBOLS
+    )
+    if dirty:
+        raise ValueError(
+            "area code is not committed (" + ", ".join(dirty[:5]) + "); "
+            "commit it before the area run"
+        )
     checked = {}
     reforms = {}
     for reform_id in reform_ids:
@@ -2238,11 +2324,13 @@ def area_provenance(
             "outputs_sha256": entry.outputs_sha256,
             "execution_identity_sha256": entry.execution_identity_sha256,
             **identities,
+            "definition": definition_digests(reform_id, sorted(set(years))),
         }
     return {
         "manifest_revision": manifest.revision,
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "reforms": reforms,
+        "run": {"git_sha": revision.git_sha, "years": sorted(set(years))},
     }
 
 
@@ -2700,6 +2788,7 @@ def _run_geography(
             data_root=parsed.manifest.parent,
             years=plan.years,
         )
+        plan.provenance["run"]["dataset"] = dataset_record(parsed)
     except (
         ValueError,
         OSError,

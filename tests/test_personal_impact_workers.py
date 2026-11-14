@@ -859,9 +859,6 @@ def test_a_later_calculation_starts_before_an_earlier_one_finishes():
         )
         started.setdefault(f"{name} done", time.monotonic())
 
-    # Warm the forkserver, so the timing below is the slots' and not a
-    # cold engine preload's (several seconds when this test runs first).
-    personal_impact.run_in_workers(1, [(os.getpid, ())], 180)
     first_started = time.monotonic()
     first = threading.Thread(target=calculation, args=("first", 4))
     first.start()

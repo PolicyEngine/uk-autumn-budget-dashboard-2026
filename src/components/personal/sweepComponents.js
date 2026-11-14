@@ -16,12 +16,12 @@ export const SWEEP_COMPONENTS = [
     color: CHART_COLOURS.marketIncome,
     net: ["market_income"],
     rate: null,
-    absent: { rate: "Not part of the rate: it is the salary the rate is taken from" },
+    absent: { rate: "Not part of the rate: it is the salary the rate applies to" },
   },
   {
     key: "state_pension",
     label: "State Pension",
-    about: "The State Pension, paid from State Pension age.",
+    about: "The State Pension, which starts at State Pension age.",
     color: CHART_COLOURS.netStatePension,
     net: ["state_pension"],
     rate: null,
@@ -30,7 +30,7 @@ export const SWEEP_COMPONENTS = [
   {
     key: "universal_credit",
     label: "Universal Credit",
-    about: "The means-tested benefit for working-age households, withdrawn as earnings rise.",
+    about: "The means-tested benefit for working-age households, which tapers away as earnings rise.",
     color: CHART_COLOURS.mtrUniversalCredit,
     net: ["universal_credit"],
     rate: ["universal_credit"],
@@ -55,7 +55,7 @@ export const SWEEP_COMPONENTS = [
   {
     key: "other_benefits",
     label: "Other benefits",
-    about: "Benefits not named here, such as Pension Credit and disability benefits.",
+    about: "Benefits we do not name here, such as Pension Credit and disability benefits.",
     color: CHART_COLOURS.mtrOtherBenefits,
     net: ["other_benefits"],
     rate: ["other_benefits"],
@@ -75,7 +75,7 @@ export const SWEEP_COMPONENTS = [
     color: CHART_COLOURS.mtrAllowanceTaper,
     net: null,
     rate: ["personal_allowance_taper"],
-    absent: { net: "Included in income tax on this card" },
+    absent: { net: "Part of income tax on this card" },
   },
   {
     key: "national_insurance",
@@ -88,7 +88,7 @@ export const SWEEP_COMPONENTS = [
   {
     key: "student_loan",
     label: "Student loan",
-    about: "Student loan repayments taken from earnings above your plan's threshold.",
+    about: "Student loan repayments on earnings above your plan's threshold.",
     color: CHART_COLOURS.mtrStudentLoan,
     net: ["student_loan"],
     rate: ["student_loan"],
@@ -96,7 +96,7 @@ export const SWEEP_COMPONENTS = [
   {
     key: "council_tax",
     label: "Council Tax",
-    about: "The local tax on your home, set by your council.",
+    about: "The local tax on your home, which your council sets.",
     color: CHART_COLOURS.netCouncilTax,
     net: ["council_tax"],
     rate: null,
@@ -132,7 +132,7 @@ export const SWEEP_COMPONENTS = [
   {
     key: "other",
     label: "Other",
-    about: "Taxes and deductions not named here.",
+    about: "Taxes and deductions we do not name here.",
     color: CHART_COLOURS.mtrOther,
     net: ["other_taxes"],
     rate: ["other"],
@@ -224,13 +224,13 @@ export function componentEffect(component, netInUse, rateInUse) {
 
 /** Why a component is never on one chart, where "no effect" would mislead. */
 const STRUCTURAL = {
-  earnings: "the marginal tax rate is taken from earnings, not made of them",
-  pa_taper: "on net income it is counted in income tax",
+  earnings: "the marginal tax rate applies to earnings, which are not part of it",
+  pa_taper: "on net income it is part of income tax",
 };
 
 /**
  * The note on a shared chip whose component is missing from one chart or
- * both: "Council Tax: no effect on your marginal tax rate — shown on
+ * both: "Council Tax: no effect on your marginal tax rate — appears on
  * Household net income only." A component never on a chart (the
  * personal allowance taper is inside income tax on net income) says why;
  * one on neither, "no effect on either chart for you". Null when it is on both.
@@ -242,8 +242,8 @@ export function noEffectNote(component, effect) {
   const shownOn = CHART_NAMES[effect.net ? "net" : "rate"];
   // Never on that chart for anyone, for a reason other than "does not change with salary"
   const structural = component[missing] === null ? STRUCTURAL[component.key] : null;
-  if (structural) return `${component.label}: shown on ${shownOn} only — ${structural}.`;
-  return `${component.label}: no effect on ${NO_EFFECT_ON[missing]} — shown on ${shownOn} only.`;
+  if (structural) return `${component.label}: appears on ${shownOn} only — ${structural}.`;
+  return `${component.label}: no effect on ${NO_EFFECT_ON[missing]} — appears on ${shownOn} only.`;
 }
 
 /** A shared chip's tip: the note on where it has no effect (if any), then what it is. */

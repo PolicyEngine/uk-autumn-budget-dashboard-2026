@@ -251,7 +251,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     buildChartCsv({
       title: `Average change in household net income per person by policy, ${yearLabel}`,
       units:
-        "£ per person per year; each policy's own effect; each person counts their household's change in net income (not equivalised)",
+        "£ per person per year; each policy's own effect; each person counts their household's change in net income (without equivalisation)",
       columns: [
         { key: "name", label: "Policy" },
         { key: "group", label: GROUPS[0].label, decimals: 2 },

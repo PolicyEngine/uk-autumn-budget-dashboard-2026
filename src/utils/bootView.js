@@ -6,9 +6,12 @@
  * App.jsx's own routing decides what opens; this only picks the placeholder.
  */
 
+import { POVERTY_FIGURES_SHOWN } from "./povertyFigures";
+
 export const BOOT_TABS = Object.freeze(["dashboard", "household", "outlook", "policies", "methodology"]);
 export const BOOT_SUBS = Object.freeze({
-  dashboard: Object.freeze(["finances", "all", "age", "living", "poverty"]),
+  // Poverty only while its figures are shown (povertyFigures.js), as PopulationImpactView
+  dashboard: Object.freeze(["finances", "all", "age", "living", ...(POVERTY_FIGURES_SHOWN ? ["poverty"] : [])]),
   outlook: Object.freeze(["living", "poverty", "forecast"]),
 });
 // Old sub-tab names that now open another (App.jsx oldAgeSubGroup)

@@ -1,3 +1,8 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+
+# Official source files: keep git from diffing them as text
+data_inputs/**/*.pdf binary
+data_inputs/**/*.xlsx binary
+data_inputs/**/*.ods binary

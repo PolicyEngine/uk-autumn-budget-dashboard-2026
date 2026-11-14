@@ -73,11 +73,25 @@ export function isProgrammaticScroll(y = typeof window === "undefined" ? 0 : win
 const siteNavShown = () => document.documentElement.hasAttribute("data-site-nav-shown");
 
 /**
+ * How much of the site nav is in view in its place in the page's flow (px):
+ * at the page's top, before a scroll down takes it away (globals.css). The
+ * bars below it sit that much lower now than once the page has scrolled
+ * past it. 0 when it is shown over the page (it stays) or has gone.
+ */
+export function siteNavInFlow() {
+  if (typeof document === "undefined" || siteNavShown()) return 0;
+  const nav = document.querySelector(SITE_NAV);
+  return nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+}
+
+/**
  * Where the page has to be scrolled to for `target` to sit `gap` px below
- * the bars (unclamped: below 0 it cannot get there).
+ * the bars (unclamped: below 0 it cannot get there). The bars are measured
+ * as they will be there: a site nav in its place at the page's top will
+ * have scrolled away.
  */
 export function scrollTopFor(target, { gap = STICKY_GAP, above } = {}) {
-  return target.getBoundingClientRect().top + window.scrollY - stickyBottom({ above }) - gap;
+  return target.getBoundingClientRect().top + window.scrollY - (stickyBottom({ above }) - siteNavInFlow()) - gap;
 }
 
 /** Scroll the page to `top`, marked as not the reader's own scroll. */
@@ -103,7 +117,9 @@ const NEAR_TOP = 80;
  */
 export function clearOfHeadings(top) {
   if (typeof document === "undefined") return top;
-  const bottom = stickyBottom();
+  // The bars as they are once a site nav in the page's flow has gone (it
+  // covers nothing while it is there)
+  const bottom = stickyBottom() - siteNavInFlow();
   const y = window.scrollY;
   const headings = [];
   for (const heading of document.querySelectorAll(HEADINGS)) {
@@ -259,9 +275,10 @@ export function isTouchOnly() {
  * reader (wheel or trackpad, touch, keys, or dragging the scrollbar) hides
  * it. The page also moves by itself (tab rows going compact, charts
  * loading, scroll anchoring): those moves come with no input and leave it
- * as it is. Within the nav's height of the page's top it is hidden, so the
- * top looks as on load; except on a touch-only device, where the very top
- * of the page (scrollY 0) is the one place it shows.
+ * as it is. Within the nav's height of the page's top it never lies over
+ * the page: it goes back to its place in the page's flow (globals.css), so
+ * the top looks as on load; except on a touch-only device, where the very
+ * top of the page (scrollY 0) is the one place it shows.
  *
  * input(kind, way, t): the reader's wheel/key/touch input ("up"/"down"),
  *   or "drag" (the scrollbar held: either way counts; "release" ends it).

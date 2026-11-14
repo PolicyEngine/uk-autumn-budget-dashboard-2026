@@ -29,7 +29,7 @@ export const isStackReform = (reform) => typeof reform === "string" && reform.st
 
 /** The table's note on approximate stacked figures. */
 export const STACK_APPROXIMATE_NOTE =
-  "Approximate: a policy's figure here is not published (counted as zero) or rests on fewer than 30 survey households.";
+  "Approximate: a policy has no published figure here (it counts as zero) or its figure rests on fewer than 30 survey households.";
 
 /** The card's note for a stacked figure that is approximate. */
 export const stackApproximateNote = (withheld) =>

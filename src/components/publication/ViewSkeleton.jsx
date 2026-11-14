@@ -2,6 +2,7 @@ import { PanelLeftOpen } from "lucide-react";
 import TitleIcon from "../TitleIcon";
 import { TAB_ICONS } from "../ViewTabs";
 import { BOOT_SUBS, BOOT_TABS } from "../../utils/bootView";
+import { POVERTY_FIGURES_SHOWN } from "../../utils/povertyFigures";
 import "./publication.css";
 
 /**
@@ -22,7 +23,8 @@ export const SKELETON_SUB_TABS = {
     { value: "all", label: "All households", icon: "users" },
     { value: "age", label: "By age", icon: "usersRound" },
     { value: "living", label: "Living standards", icon: "coins" },
-    { value: "poverty", label: "Poverty", icon: "percent" },
+    // Only while the poverty figures are shown (povertyFigures.js)
+    ...(POVERTY_FIGURES_SHOWN ? [{ value: "poverty", label: "Poverty", icon: "percent" }] : []),
   ],
   outlook: [
     { value: "living", label: "Living standards", icon: "coins" },
@@ -64,7 +66,7 @@ const LAYOUTS = {
     { icon: "trend", title: "Economic forecast", cards: [["lines", "wide"], ["lines"], ["lines"]] },
   ],
   policies: [
-    { icon: "fileText", title: "Policies we model", subtitle: "What each policy changes, when, and how it is modelled.", cards: [["text", "wide"], ["text", "wide"], ["text", "wide"]] },
+    { icon: "fileText", title: "Policies we model", subtitle: "What each policy changes, when, and how we model it.", cards: [["text", "wide"], ["text", "wide"], ["text", "wide"]] },
   ],
   methodology: [
     { icon: "book", title: "Methodology", cards: [["text", "wide"], ["text", "wide"]] },

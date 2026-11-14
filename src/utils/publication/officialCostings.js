@@ -79,7 +79,7 @@ export function officialCostingRows(document, manifest) {
  */
 export async function loadOfficialCostings(catalogue, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal } = {}) {
   const manifest = catalogue?.manifest;
-  if (!manifest) throw new Error("No Budget results are published yet");
+  if (!manifest) throw new Error("We have published no Budget results yet");
   const response = await fetchImpl(`${basePath}/data/${OFFICIAL_COSTINGS_FILE}`, { signal, cache: "no-cache" });
   if (response.status === 404) throw new OfficialCostingsPendingError();
   if (!response.ok) throw new Error("The official costings are unavailable");

@@ -443,7 +443,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
     .filter((policy) => selectedPolicies.includes(policy.id))
     .map((policy) => ({ key: policy.seriesKey ?? `measure:${policy.id}`, label: policy.label ?? policy.name, decimals: 2 }));
   const units =
-    "£ per person per year; each person counts their household's change in net income (not equivalised)";
+    "£ per person per year; each person counts their household's change in net income (without equivalisation)";
   const csvText = () =>
     single
       ? buildChartCsv({
@@ -902,7 +902,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>No shares are published for this selection in {yearLabel}.</p>
+            <p>We have not published {yearLabel} shares for this selection.</p>
           </div>
         )}
       </SwapTransition>
@@ -914,7 +914,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
       <div className="chart-footer">
         {filtered?.hidden > 0 && (
           <Note>
-            {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect hidden
+            Hiding {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect
           </Note>
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
@@ -924,7 +924,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
             how: perMeasure
               ? [
                   // Each row's policy on its own is in the description (round 3)
-                  "No published run covers this selection together, so the rows' shares can't be added up across policies.",
+                  "No published run covers this selection together, so you can't add up the rows' shares across policies.",
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             method: AGE_METHOD,

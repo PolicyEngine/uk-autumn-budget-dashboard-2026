@@ -9,30 +9,40 @@ import { clearBasisIncomeCache } from "../hooks/useBasisIncome";
 import { presetRequests, resetPresetResults } from "../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../test/personalPolicies";
+import { approvedDefinition, route, withReportedDefinitions } from "../test/definitionsFixture";
 
 // #104 review (m23, P1): the examples' precomputed answers are checked
 // against the engine every published measure's receipts record, whatever is
 // selected when they load. With no measure selected the page expects no
 // engine, and a file from another engine used to be seeded then and shown
-// later, unchecked, with no request.
+// later, unchecked, with no request. #136: and against each one's approved
+// definition, which the file records as the precompute bound it; a file
+// with none, or another for any measure, is never used either.
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 const { policyengine, "policyengine-uk": uk, "policyengine-core": core } = HOUSEHOLD_FIXTURE.engine;
 const PUBLISHED_ENGINE = { policyengine, "policyengine-uk": uk, "policyengine-core": core };
 const STALE_ENGINE = { ...PUBLISHED_ENGINE, "policyengine-uk": "0.0.0-stale" };
 const SUPPORTED = POLICIES_FOR_TEST.filter((p) => HOUSEHOLD_FIXTURE.included.includes(p.id)).map((p) => p.id);
 const MEASURES = POLICIES_FOR_TEST.filter((p) => SUPPORTED.includes(p.id));
+// What every measure's receipt approved, and so what the file must record
+const DEFINITIONS = Object.fromEntries(SUPPORTED.map((id) => [id, approvedDefinition(id)]));
+const [CHANGED] = [...SUPPORTED].sort();
+const OTHER_DEFINITIONS = { ...DEFINITIONS, [CHANGED]: { ...DEFINITIONS[CHANGED], reform: { ...DEFINITIONS[CHANGED].reform, reform_sha256: "e".repeat(64) } } };
 
 const baseEntry = fixtureJson("manifest.json").measures.alpha;
-const catalogue = buildMeasureCatalogue({
-  manifest: {
-    ...fixtureJson("manifest.json"),
-    measures: Object.fromEntries(
-      POLICIES_FOR_TEST.map((p) => [p.id, { ...baseEntry, ...p, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [] }]),
-    ),
-    combined: {},
-  },
-  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((p) => [p.id, { engine: PUBLISHED_ENGINE }])),
-});
+// The page's catalogue, its receipts approving `definitionFor(id)`
+const catalogueApproving = (definitionFor) =>
+  buildMeasureCatalogue({
+    manifest: {
+      ...fixtureJson("manifest.json"),
+      measures: Object.fromEntries(
+        POLICIES_FOR_TEST.map((p) => [p.id, { ...baseEntry, ...p, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [] }]),
+      ),
+      combined: {},
+    },
+    tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((p) => [p.id, { engine: PUBLISHED_ENGINE, definition: definitionFor(p.id) }])),
+  });
+const catalogue = catalogueApproving((id) => approvedDefinition(id));
 const Wrapper = ({ children }) => <MeasureCatalogueProvider catalogue={catalogue}>{children}</MeasureCatalogueProvider>;
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
 const headlineCard = () => document.querySelector(".result-card");
@@ -43,10 +53,12 @@ function householdItem(name) {
   return within(region).queryByRole("button", { name }) ?? within(region).getByRole("option", { name: chip });
 }
 
-// The presets file, under `engine`, each answer with a marker headline
-// (+£4,242 a year) so where a result came from shows on screen
+// The presets file, under `engine` and recording `definitions` (no key at
+// all for null, as a file written before them has), each answer
+// with a marker headline (+£4,242 a year) so where a result came from shows
+// on screen
 let household;
-function servePresets(engine) {
+function servePresets(engine, definitions = DEFINITIONS) {
   household = [];
   const entries = presetRequests(SUPPORTED).map(({ preset_id, year, request }) => {
     const answer = householdAnswerFor(request);
@@ -55,10 +67,10 @@ function servePresets(engine) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url, init = {}) => {
-      if (String(url).endsWith("/data/household_presets.json")) return json({ policies: SUPPORTED, engine, entries });
-      if (url === HOUSEHOLD_API) {
+      if (String(url).endsWith("/data/household_presets.json")) return json({ policies: SUPPORTED, engine, ...(definitions === null ? {} : { definitions }), entries });
+      if (route(url) === HOUSEHOLD_API) {
         household.push(JSON.parse(init.body));
-        return json(householdAnswerFor(JSON.parse(init.body)));
+        return withReportedDefinitions(json(householdAnswerFor(JSON.parse(init.body))), url);
       }
       return json({ detail: "not found" }, 404);
     }),
@@ -118,5 +130,39 @@ describe("the examples' precomputed answers and the receipts' engine", () => {
     await waitFor(() => expect(headlineCard().textContent).toContain("4,242"), { timeout: 3000 });
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(0);
+  });
+});
+
+describe("the examples' precomputed answers and the receipts' definitions (PR 136)", () => {
+  it.each([
+    ["records none (written before them)", null],
+    ["records another for a measure", OTHER_DEFINITIONS],
+    ["leaves a measure out", Object.fromEntries(Object.entries(DEFINITIONS).filter(([id]) => id !== CHANGED))],
+  ])("refuses a file that %s, however the selection got there, and asks the API", async (_, definitions) => {
+    servePresets(PUBLISHED_ENGINE, definitions);
+    await chooseExampleAfterClearing();
+    await waitFor(() => expect(document.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), { timeout: 3000 });
+    expect(household.length).toBeGreaterThan(0);
+    expect(headlineCard().textContent).not.toContain("4,242");
+  });
+
+  // Review of 79ae9c12, P3: the cards' figures were the file's until it was
+  // read again for the new definitions, so the render in between showed
+  // figures checked against the old ones
+  it("shows none of the file's figures once a receipt approves another definition, not even before it is read again", async () => {
+    servePresets(PUBLISHED_ENGINE);
+    const page = (approving) => (
+      <MeasureCatalogueProvider catalogue={approving}>
+        <PersonalImpactTab selectedPolicies={SUPPORTED} policies={MEASURES} year={2029} />
+      </MeasureCatalogueProvider>
+    );
+    const cards = () => screen.getByRole("region", { name: "Choose a household" }).textContent;
+    const { rerender } = render(page(catalogue));
+    await waitFor(() => expect(cards()).toContain("4,242"), { timeout: 3000 });
+    rerender(page(catalogueApproving((id) => OTHER_DEFINITIONS[id] ?? approvedDefinition(id))));
+    // The render the change makes, before the file is read again
+    expect(cards()).not.toContain("4,242");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(cards()).not.toContain("4,242");
   });
 });

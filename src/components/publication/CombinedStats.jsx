@@ -6,6 +6,7 @@ import {
   formatRelative,
 } from "../../utils/publication/format";
 import UnavailableNotice from "./UnavailableNotice";
+import { POVERTY_FIGURES_SHOWN } from "../../utils/povertyFigures";
 import "./publication.css";
 
 function joinNames(names) {
@@ -23,6 +24,9 @@ function joinNames(names) {
  * candidate label before the Budget, none for statement figures from
  * Budget day.
  *
+ * Not on the page today. While the poverty and people-affected figures are
+ * withheld (povertyFigures.js), only the Gini card is drawn.
+ *
  * @param {{stats: Object, measureNames?: Object<string, string>,
  *   manifest?: Object|null}} props
  */
@@ -35,25 +39,29 @@ function CombinedStats({ stats, measureNames = {}, manifest = null }) {
         <p className="publication-unavailable-detail">{stats.reason}.</p>
         {sets.length > 0 && (
           <p className="publication-unavailable-detail">
-            Combined runs are published for:{" "}
+            We publish combined runs for:{" "}
             {sets.map((ids) => joinNames(ids.map(name))).join("; ")}.
           </p>
         )}
       </UnavailableNotice>
     );
   }
-  const cards = [
-    ["People affected", formatPercent(stats.peopleAffected)],
-    ["Relative change in the Gini index", formatRelative(stats.giniChange)],
-    [
-      "Change in absolute poverty, before housing costs",
-      formatPoints(stats.povertyChangePp),
-    ],
-    [
-      "Relative change in absolute poverty",
-      formatPercent(stats.povertyChangePct),
-    ],
-  ];
+  const cards = (
+    POVERTY_FIGURES_SHOWN
+      ? [
+          ["People affected", formatPercent(stats.peopleAffected)],
+          ["Relative change in the Gini index", formatRelative(stats.giniChange)],
+          [
+            "Change in absolute poverty, before housing costs",
+            formatPoints(stats.povertyChangePp),
+          ],
+          [
+            "Relative change in absolute poverty",
+            formatPercent(stats.povertyChangePct),
+          ],
+        ]
+      : [["Relative change in the Gini index", formatRelative(stats.giniChange)]]
+  );
   return (
     <section
       className="publication-stats"

@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+import { FULL_COMMIT } from "./publication/definitions";
 import { isDisplayable, measureAvailability } from "./publication/manifest";
 import { combinedEntryFor, isSupported } from "./publication/select";
 import { MEASURE_RAMPS, measureRamp } from "./chartTheme";
@@ -74,6 +75,29 @@ export function publishedEngine(catalogue, ids) {
   return engine?.value ?? null;
 }
 
+/**
+ * The definition each selected measure's verified receipt approved (its
+ * commit and reform identities), for the household API to recompute and
+ * report. A measure with none, or whose receipt names no full commit (the
+ * only kind the API takes), is in `missing` with the reason: Household
+ * impact is then unavailable for it, never answered unchecked.
+ *
+ * @returns {{definitions: Object<string, Object>, missing: Array<{id: string, reason: string}>}}
+ */
+export function publishedDefinitions(catalogue, ids) {
+  // Collected as entries: an id such as `__proto__` stays an own key
+  const found = [];
+  const missing = [];
+  for (const id of ids) {
+    const tables = catalogue?.tablesByKey && Object.hasOwn(catalogue.tablesByKey, id) ? catalogue.tablesByKey[id] : null;
+    const definition = tables?.definition;
+    if (!definition) missing.push({ id, reason: "its published figures record no definition to check the calculator against" });
+    else if (typeof definition.git_sha !== "string" || !FULL_COMMIT.test(definition.git_sha)) missing.push({ id, reason: "its published receipt names no full commit to check the calculator at" });
+    else found.push([id, definition]);
+  }
+  return { definitions: Object.fromEntries(found), missing };
+}
+
 /** Only an explicit publication manifest supplies catalogue membership. */
 export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetary = [], distributional = [], winnersLosers = [], metrics = [], tablesByKey = null, failures = {} } = {}) {
   const rows = [...budgetary, ...distributional, ...winnersLosers, ...metrics];
@@ -90,7 +114,7 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
     const size = budgetRows.reduce((sum, row) => sum + Math.abs(Number(row.value)), 0);
     const direction = impact === null || impact === 0 ? "neutral" : impact < 0 ? "cost" : "revenue";
     const name = entry?.name || receipt?.name || ownRows.find((row) => row.reform_name)?.reform_name || id;
-    const description = entry?.description || receipt?.description || ownRows.find((row) => row.reform_description)?.reform_description || "A public description has not yet been published.";
+    const description = entry?.description || receipt?.description || ownRows.find((row) => row.reform_description)?.reform_description || "We have not yet published a public description.";
     const availability = measureAvailability(manifest, id);
     const verified = tablesByKey != null && Object.hasOwn(tablesByKey, id) && !failures[id];
     if (!verified && isDisplayable(entry)) {

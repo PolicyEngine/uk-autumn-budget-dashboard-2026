@@ -34,7 +34,7 @@ function EmployerReason({ id, year }) {
     <>
       employers pay less National Insurance (
       {revenue !== null && <>about £{Math.abs(revenue).toFixed(1)}bn in {fiscalYear(year)}; </>}
-      see {finances}), and wages are held fixed in the model
+      see {finances}), and the model keeps wages fixed
     </>
   );
 }

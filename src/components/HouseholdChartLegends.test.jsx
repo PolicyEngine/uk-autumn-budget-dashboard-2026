@@ -82,7 +82,7 @@ describe("legendMembership", () => {
   });
 
   it("gives the employer NI relief its incidence, and a measure out of force its window", () => {
-    expect(zeroReason(catalogue.byId.get(EMPLOYER_NI), 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/held fixed/) });
+    expect(zeroReason(catalogue.byId.get(EMPLOYER_NI), 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/keeps wages fixed/) });
     // A measure that passes an employer saving on as pay is no employer
     // cost: before it starts it is out of force, after it is in force
     const threshold = { id: "employer_nics_secondary_threshold_raise", name: "Employer NI threshold raised", description: detailsOf("employer_nics_secondary_threshold_raise").writtenFor };
@@ -107,7 +107,7 @@ describe("legendMembership", () => {
     // Changed since its entry was written (on Budget day, say): its window
     // may no longer hold, so it is not used
     const changed = { ...catalogue.byId.get("warm_home_discount_top_up"), description: "The Warm Home Discount rises for two winters." };
-    expect(zeroReason(changed, 2027)).toEqual({ kind: "none", text: "no change for the households shown" });
+    expect(zeroReason(changed, 2027)).toEqual({ kind: "none", text: "no change for the households we show" });
   });
 });
 
@@ -151,7 +151,7 @@ describe.each([
     // One disclosure per card: no second style
     expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
     const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
-    expect(employer.textContent).toMatch(/^Employer National Insurance relief, under-25s: employers pay less National Insurance.*wages are held fixed in the model$/);
+    expect(employer.textContent).toMatch(/^Employer National Insurance relief, under-25s: employers pay less National Insurance.*the model keeps wages fixed$/);
     // One bullet per policy, under the lead
     expect(employer.closest("ul").classList.contains("info-sublist")).toBe(true);
     expect(employer.closest("ul").children).toHaveLength(3);

@@ -18,9 +18,13 @@ PACKAGES = {
 
 
 @contextmanager
-def api(known: set, packages: dict = PACKAGES):
+def api(known: set, packages: dict = PACKAGES, calculator_only: bool = True):
     """A household API stand-in that refuses measures it doesn't know, as
-    the real one does (HTTP 422, "Unknown measures: …")."""
+    the real one does (HTTP 422, "Unknown measures: …"). It knows the
+    page's calculator-only measures too unless ``calculator_only`` is
+    False."""
+    if calculator_only:
+        known = set(known) | set(check.calculator_only_ids())
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -143,6 +147,42 @@ def test_an_api_missing_a_measure_fails_and_names_it(tmp_path):
     assert "gas, vat" in problems[0] and "deploy it" in problems[0]
 
 
+def test_reads_the_calculator_only_ids_from_the_page():
+    """Today's: the savings rise (a constant) and the cash ISA limit."""
+    ids = check.calculator_only_ids()
+    assert ids[:2] == ["savings_income_rates_up", "cash_isa_limit_kept"]
+    assert check.calculator_only_ids("no/such/file.js") == []
+
+
+def test_an_api_that_refuses_a_calculator_only_measure_fails(tmp_path):
+    """The page sends the calculator-only measures with every household,
+    so an API deployed before one was registered breaks every calculation
+    though it knows every measure the manifest lists (#377)."""
+    ids = ["fuel", "vat"]
+    extra = tmp_path / "calculatorOnlyMeasures.js"
+    extra.write_text(
+        'export const SAVINGS_ID = "savings_income_rates_up";\n'
+        "export const CALCULATOR_ONLY_MEASURES = {\n"
+        "  [SAVINGS_ID]: {\n    id: SAVINGS_ID,\n  },\n"
+        '  new_measure: {\n    id: "new_measure",\n  },\n};\n'
+    )
+    assert check.calculator_only_ids(extra) == [
+        "savings_income_rates_up",
+        "new_measure",
+    ]
+    with api(
+        {"fuel", "vat", "savings_income_rates_up"}, calculator_only=False
+    ) as url:
+        problems = check.check(
+            [url],
+            write_manifest(tmp_path, ids),
+            write_presets(tmp_path, ids),
+            timeout=10,
+            calculator_only_file=extra,
+        )
+    assert len(problems) == 1 and "new_measure" in problems[0]
+
+
 def test_every_api_is_checked(tmp_path):
     ids = ["fuel", "vat"]
     with api({"fuel", "vat"}) as good, api({"fuel"}) as stale:
@@ -208,3 +248,133 @@ def test_main_exits_1_on_a_problem(tmp_path, capsys):
             ]
         )
     assert code == 1 and "FAIL" in capsys.readouterr().out
+
+
+# #136: the page uses the presets only when they record each measure's
+# approved definition, and leaves out an answer reporting another
+
+
+def approval(commit="1" * 40):
+    """A measure's definition as a receipt approves it (synthetic)."""
+    return {
+        "git_sha": commit,
+        "baseline": {
+            "kind": "current_law",
+            "representation": None,
+            "reform_sha256": None,
+            "binding": "content",
+        },
+        "reform": {
+            "kind": "reform",
+            "representation": "policyengine-uk.scenario/v1",
+            "reform_sha256": "d" * 64,
+            "binding": "content",
+        },
+    }
+
+
+def presets_with(tmp_path, ids, recorded, entries=()):
+    path = tmp_path / "household_presets.json"
+    document = {"engine": PACKAGES, "policies": ids, "entries": list(entries)}
+    if recorded is not None:
+        document["definitions"] = recorded
+    path.write_text(json.dumps(document))
+    return path
+
+
+def answer(definitions):
+    return {
+        "preset_id": "x",
+        "year": 2027,
+        "response": {"definitions": definitions},
+    }
+
+
+IDS = ["fuel", "vat"]
+APPROVED = {key: approval() for key in IDS}
+
+
+def test_presets_recording_the_approved_definitions_pass(tmp_path):
+    # Answers that report none of their own ({}, as the precompute's) take
+    # the file's record
+    path = presets_with(tmp_path, IDS, APPROVED, [answer({}), answer(None)])
+    assert check.preset_problems(path, IDS, PACKAGES, APPROVED) == []
+
+
+def test_presets_recording_no_definitions_fail(tmp_path):
+    path = presets_with(tmp_path, IDS, None)
+    (problem,) = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+    assert "records no measure definitions" in problem
+
+
+def test_presets_recording_another_definition_fail_and_name_it(tmp_path):
+    recorded = {**APPROVED, "vat": approval("2" * 40)}
+    path = presets_with(tmp_path, IDS, recorded)
+    (problem,) = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+    assert "records other definitions" in problem
+    assert "for vat," in problem and "fuel" not in problem
+    # One the code could not bind records another definition
+    path = presets_with(tmp_path, IDS, {**APPROVED, "vat": {"error": "x"}})
+    (problem,) = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+    assert "records other definitions" in problem and "for vat," in problem
+
+
+def test_presets_leaving_a_measure_out_say_it_records_none_for_it(tmp_path):
+    # Review of 79ae9c12, P3: a measure missing from the record (or null)
+    # records no definition, not another one
+    for recorded in ({"fuel": APPROVED["fuel"]}, {**APPROVED, "vat": None}):
+        path = presets_with(tmp_path, IDS, recorded)
+        (problem,) = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+        assert "records no definition for vat," in problem
+        assert "other definitions" not in problem and "fuel" not in problem
+    # Both at once: each named under its own
+    path = presets_with(tmp_path, IDS, {"fuel": approval("2" * 40)})
+    missing, other = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+    assert "records no definition for vat," in missing
+    assert "records other definitions" in other and "for fuel," in other
+
+
+def test_an_answer_reporting_another_definition_is_counted(tmp_path):
+    entries = [
+        answer({}),
+        answer({"vat": approval("2" * 40)}),
+        answer(APPROVED),
+    ]
+    path = presets_with(tmp_path, IDS, APPROVED, entries)
+    (problem,) = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+    assert problem.startswith("1 of ") and "3 answers" in problem
+
+
+def test_only_measures_with_an_approval_are_checked(tmp_path):
+    # vat has none: publish definitions reports that, not this check
+    path = presets_with(tmp_path, IDS, {"fuel": APPROVED["fuel"]})
+    approved = {"fuel": APPROVED["fuel"]}
+    assert check.preset_problems(path, IDS, PACKAGES, approved) == []
+    # And with no approval at all, as before #136
+    assert (
+        check.preset_problems(presets_with(tmp_path, IDS, None), IDS, PACKAGES)
+        == []
+    )
+
+
+def test_check_reads_the_approvals_from_the_receipts(tmp_path, monkeypatch):
+    from uk_budget_data import definitions
+
+    data_root = write_manifest(tmp_path, IDS)
+    seen = {}
+
+    def approved_definitions(root, ids):
+        seen["args"] = (root, list(ids))
+        return APPROVED
+
+    monkeypatch.setattr(
+        definitions, "approved_definitions", approved_definitions
+    )
+    with api(set(IDS)) as url:
+        problems = check.check(
+            [url], data_root, presets_with(tmp_path, IDS, None), timeout=10
+        )
+    assert seen["args"] == (data_root, IDS)
+    assert (
+        len(problems) == 1 and "records no measure definitions" in problems[0]
+    )

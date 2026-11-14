@@ -33,7 +33,10 @@ import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { receiptDefinitionFor, reportedDefinitions, requestedDefinitions, route } from "./test/definitionsFixture";
+import { SAVINGS_INCOME_RATES_ID, withoutCalculatorOnly } from "./utils/calculatorOnlyMeasures";
 import { OBR_CARD_TITLE, OBR_PENDING } from "./components/OBRComparisonTable";
+import { POVERTY_FIGURES_SHOWN } from "./utils/povertyFigures";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -73,7 +76,7 @@ const NOT_YET_PUBLISHED = new Set([
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
-  /NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/,
+  /This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL/,
   /Results are not available here/,
   /API error/,
   /Application error/,
@@ -89,7 +92,11 @@ const LOADED = {
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "By area" }),
   // Population impact's other sub-tabs, by ?sub=
   living: (panel) => within(panel).findAllByRole("heading", { name: /Change in income inequality/ }),
-  poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
+  // Population impact's Poverty while its figures are shown; while they are
+  // withheld (povertyFigures.js), ?sub=poverty opens Public finances
+  ...(POVERTY_FIGURES_SHOWN
+    ? { poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }) }
+    : { povertyFallback: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }) }),
   finances: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }),
   // The cards, "Your household" first; the form and results are checked
   // below.
@@ -123,19 +130,26 @@ const publicationFetch = dashboardFixtureFetch();
 const PUBLISHED_ENGINE = receiptEngine(
   fixtureJson(`${fixtureJson("manifest.json").measures.alpha.artifact}/receipt.json`),
 );
-function publishedAnswerFor(body) {
+// And compute each measure from the definition its receipt approved: answer
+// with each requested measure's.
+const publishedDefinition = receiptDefinitionFor(fixtureJson);
+function publishedAnswerFor(body, url) {
   const answer = householdAnswerFor(body);
-  return { ...answer, engine: { ...answer.engine, ...PUBLISHED_ENGINE } };
+  return {
+    ...answer,
+    engine: { ...answer.engine, ...PUBLISHED_ENGINE },
+    definitions: reportedDefinitions(url, publishedDefinition),
+  };
 }
 
 function serve(input, init = {}) {
   const url = typeof input === "string" ? input : input.url;
   const method = (init.method ?? input.method ?? "GET").toUpperCase();
   if (url.startsWith(HOUSEHOLD_API)) {
-    const ok = url === HOUSEHOLD_API && method === "POST";
+    const ok = route(url) === HOUSEHOLD_API && method === "POST";
     requests.push({ url, status: ok ? 200 : 404, body: init.body });
     return ok
-      ? new Response(JSON.stringify(publishedAnswerFor(init.body)), {
+      ? new Response(JSON.stringify(publishedAnswerFor(init.body, url)), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         })
@@ -183,6 +197,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// What a withheld poverty or people-affected figure would say (povertyFigures.js),
+// and the views that must say none of it
+const WITHHELD_TEXT = /poverty|people affected|of people move|winners and losers|better off|worse off/i;
+const WITHHELD_IN = new Set(["dashboard", "age", "living", "finances", "povertyFallback", "household"]);
+
 // Each tab by its address, and Population impact's other sub-tabs:
 // [name, LOADED key, address, the panel's label]
 const CASES = [
@@ -190,7 +209,9 @@ const CASES = [
   ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
   ["Population impact: By age", "age", "/?sub=age", "By age"],
   ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
-  ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
+  POVERTY_FIGURES_SHOWN
+    ? ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"]
+    : ["Population impact: ?sub=poverty, withheld", "povertyFallback", "/?sub=poverty", "Public finances"],
   // The bare address is the landing page, over this view (landing.test.jsx)
   ["Population impact: Public finances", "finances", "/?tab=dashboard", "Public finances"],
   ["Pre-measures forecast: Poverty", "outlookPoverty", "/?tab=outlook&sub=poverty", "Poverty"],
@@ -215,7 +236,17 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       // Every Options pill on the tab names every choice its dialog holds
       expectCompletePills(panel);
       // Every card's Download offers the same formats (CSV, PNG, SVG)
-      for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
+      const menus = downloadMenus(panel);
+      for (const menu of menus) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
+      // While the poverty and people-affected figures are withheld
+      // (povertyFigures.js), no Population impact sub-tab or the Household
+      // calculator shows or offers one
+      if (!POVERTY_FIGURES_SHOWN && WITHHELD_IN.has(value)) {
+        expect(panel.textContent).not.toMatch(WITHHELD_TEXT);
+        for (const menu of menus) expect(menu.name ?? "").not.toMatch(WITHHELD_TEXT);
+        expect(within(panel.closest("#panel-dashboard") ?? panel).queryByRole("tab", { name: "Poverty" })).toBeNull();
+      }
+      if (value === "povertyFallback") expect(new URLSearchParams(window.location.search).get("sub")).toBeNull();
 
       for (const pattern of FAILURE_TEXT) {
         expect(document.body.textContent, String(pattern)).not.toMatch(pattern);
@@ -234,7 +265,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         // figures (the fixture's measures are not the presets file's, so
         // they are asked in the background): headlines, never your household
         const yours = (r) => JSON.parse(r.body).household.age === 30;
-        const beforeCalculate = requests.filter((r) => r.url === HOUSEHOLD_API);
+        const beforeCalculate = requests.filter((r) => route(r.url) === HOUSEHOLD_API);
         expect(beforeCalculate.filter(yours)).toEqual([]);
         expect(beforeCalculate.every((r) => JSON.parse(r.body).include.length === 0)).toBe(true);
         // Every answer has a default: one press asks the household API in
@@ -247,11 +278,19 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
           timeout: 5000,
         });
         for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
-        const stages = requests
-          .filter((r) => r.url === HOUSEHOLD_API && yours(r))
-          .map((r) => JSON.parse(r.body).include);
-        expect(stages).toEqual([[], ["sweep"], ["by_policy"]]);
-        expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(
+        const asked = requests.filter((r) => route(r.url) === HOUSEHOLD_API);
+        expect(asked.filter(yours).map((r) => JSON.parse(r.body).include)).toEqual([[], ["sweep"], ["by_policy"]]);
+        // Every request, the example cards' too, names each measure it
+        // asks about with that measure's approved commit. The saver's card
+        // also asks with the calculator-only savings rise, which has no
+        // published figures and so no approved definition to name
+        expect(asked.some((r) => JSON.parse(r.body).policies.includes(SAVINGS_INCOME_RATES_ID))).toBe(true);
+        for (const r of asked) {
+          const named = requestedDefinitions(r.url);
+          expect(named.map(([id]) => id)).toEqual(withoutCalculatorOnly(JSON.parse(r.body).policies).sort());
+          for (const [id, commit] of named) expect(commit).toBe(publishedDefinition(id).git_sha);
+        }
+        expect(requests.filter((r) => r.url.startsWith(API)).every((r) => route(r.url) === HOUSEHOLD_API)).toBe(
           true,
         );
         for (const pattern of FAILURE_TEXT) {
@@ -269,7 +308,10 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
   // (?tab=outlook&sub=…), each linking to its twin
   it.each([
     ["living", "Living standards", /^Change in income inequality/, "Living standards under current law", ["Incomes over time", "Growth across the distribution", "Inequality over time \\(current law\\)"]],
-    ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Change in poverty by group"]],
+    // Only while the policies' poverty figures are shown (povertyFigures.js)
+    ...(POVERTY_FIGURES_SHOWN
+      ? [["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Change in poverty by group"]]]
+      : []),
   ])("?sub=%s shows the measures, its twin on the Pre-measures forecast current law", async (sub, label, measures, currentLaw, cards) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     render(<App />);
@@ -321,7 +363,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     fireEvent.click(await screen.findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await screen.findByRole("button", { name: /^Calculate/ }));
     await waitFor(() =>
-      expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
+      expect(document.body.textContent).toMatch(/This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL/),
     );
     expect(requests.some((r) => r.url.startsWith(API))).toBe(false);
   });
@@ -333,7 +375,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       "fetch",
       vi.fn(async (input, init = {}) => {
         const url = typeof input === "string" ? input : input.url;
-        if (url === HOUSEHOLD_API) {
+        if (route(url) === HOUSEHOLD_API) {
           return new Promise((resolve, reject) => {
             init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
             held.push(() => resolve(serve(input, init)));
@@ -360,14 +402,14 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await waitFor(() => expect(held).toHaveLength(2));
     held.shift()();
     held.shift()();
-    await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3));
+    await waitFor(() => expect(requests.filter((r) => route(r.url) === HOUSEHOLD_API)).toHaveLength(3));
 
     // Back: the same view, with the finished answer, and nothing asked again
     fireEvent.click(screen.getByRole("tab", { name: "Household calculator" }));
     expect(screen.getByRole("tabpanel", { name: "Household calculator" })).toBe(personal);
     expect(await within(personal).findByText(/^Your change$/)).toBeInTheDocument();
     await waitFor(() => expect(personal.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull());
-    expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3);
+    expect(requests.filter((r) => route(r.url) === HOUSEHOLD_API)).toHaveLength(3);
     expect(held).toHaveLength(0);
   });
 
@@ -390,7 +432,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["All households", "Living standards", "Poverty", "Household calculator", "Pre-measures forecast", "Population impact"]) {
+    // Poverty only while its figures are shown (povertyFigures.js)
+    for (const tab of ["All households", "Living standards", ...(POVERTY_FIGURES_SHOWN ? ["Poverty"] : []), "Household calculator", "Pre-measures forecast", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -410,8 +453,9 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       "fetch",
       vi.fn(async (input, init = {}) => {
         const url = typeof input === "string" ? input : input.url;
-        // The household API never answers here
-        if (url === HOUSEHOLD_API) return new Promise(() => {});
+        // The household API never answers here (every request names the
+        // definitions it expects, so it is told by its route)
+        if (route(url) === HOUSEHOLD_API) return new Promise(() => {});
         return serve(input, init);
       }),
     );

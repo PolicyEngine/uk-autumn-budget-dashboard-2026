@@ -102,7 +102,7 @@ export function useConstituencyView({
   } else if (view.kind === "notice" && view.missingReform && regionalHasChoice) {
     view = {
       ...view,
-      reason: "Results for this policy are published by region only.",
+      reason: "We publish results for this policy by region only.",
     };
   }
   if (view.kind === "rows" && boundaries.status !== "ready") {
@@ -111,7 +111,7 @@ export function useConstituencyView({
         ? { kind: "loading" }
         : {
             kind: "notice",
-            reason: "The constituency boundaries could not be loaded.",
+            reason: "The page could not load the constituency boundaries.",
             detail: null,
           };
   }

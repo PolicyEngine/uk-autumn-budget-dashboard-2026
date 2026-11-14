@@ -4,6 +4,7 @@ import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import HouseholdCards from "./personal/HouseholdCards";
+import UnavailableMeasures from "./publication/UnavailableMeasures";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
@@ -32,7 +33,7 @@ export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
-import { withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { removableFromSelection, resultPolicies, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -70,7 +71,7 @@ export const FORM_GROUPS = [
     key: "spending",
     title: "Spending",
     hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
-    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "bus_fare_spending_per_year", "monthly_childcare"],
+    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "bus_fare_spending_per_year", "higher_stake_machine_losses_per_year", "monthly_childcare"],
     quiet: ["petrol_spending_per_year", "diesel_spending_per_year"],
   },
   {
@@ -79,6 +80,7 @@ export const FORM_GROUPS = [
     hint: "Your own income from savings, investments, property and self-employment, before tax.",
     fields: [
       "savings_interest_per_year",
+      "cash_isa_payments_per_year",
       "dividends_per_year",
       "property_income_per_year",
       "self_employment_receipts_per_year",
@@ -101,7 +103,7 @@ export const FORM_GROUPS = [
   {
     key: "pensions",
     title: "Pensions and student loan",
-    hint: "Pensions paid to you before tax, pension paid by salary sacrifice, and any student loan.",
+    hint: "Pensions you receive before tax, salary sacrifice pension, and any student loan.",
     fields: [
       "state_pension_per_year",
       "private_pension_per_year",
@@ -131,7 +133,7 @@ export const REGION_OPTIONS = [
 // The "region" question asks for a local authority (council), which sets
 // the region the calculation reads and is sent for its own Council Tax
 const LOCAL_AUTHORITY_HINT =
-  "Your council sets your region: Scotland has its own income tax rates, and the rent estimate and housing support follow the region, not your council. Council Tax is estimated from your band and your council's Band D.";
+  "Your council sets your region: Scotland has its own income tax rates, and the rent estimate and housing support follow the region, not your council. We estimate Council Tax from your band and your council's Band D.";
 
 const YES_NO = [
   { value: false, label: "No" },
@@ -195,7 +197,7 @@ const CHOICE_CONFIGS = {
     summary: (value) => `Band ${value}`,
     layout: "segmented",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
-    hint: "Estimated from your band and your council's Band D for 2026-27 (your region's average until you pick your council), grown with the OBR's forecast (Source: MHCLG, Welsh and Scottish governments, via policyengine-uk). Choose Band D if you are not sure.",
+    hint: "We estimate Council Tax from your band and your council's Band D for 2026-27 (your region's average until you pick your council), and grow it with the OBR's forecast (Source: MHCLG, Welsh and Scottish governments, via policyengine-uk). Choose Band D if you are not sure.",
   },
   claims_universal_credit: {
     label: "Universal Credit",
@@ -226,6 +228,24 @@ const NUMBER_CONFIGS = {
   partner_salary: { label: "Partner's salary in 2026", min: 0, max: 500000, step: 1000, money: true, suffix: "a year" },
   monthly_rent: { label: "Rent", min: 0, max: 10000, step: 25, money: true, suffix: "a month" },
   savings_interest_per_year: { label: "Savings interest", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
+  cash_isa_payments_per_year: {
+    label: "Cash ISA payments",
+    min: 0,
+    max: 20000,
+    step: 100,
+    money: true,
+    suffix: "a year",
+    hint: "New money you pay into cash ISAs each year, up to the £20,000 ISA limit. If you are under 65, the planned £12,000 cash limit would have left the rest outside an ISA, where you pay tax on its interest.",
+  },
+  higher_stake_machine_losses_per_year: {
+    label: "Lost on higher-stake gaming machines",
+    min: 0,
+    max: 100000,
+    step: 50,
+    money: true,
+    suffix: "a year",
+    hint: "What you put into gaming machines with a stake over £1 or a prize over £100, less what they paid out. Most of these are in adult gaming centres, bingo halls, betting shops and casinos; pub machines are not.",
+  },
   dividends_per_year: { label: "Dividends", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   property_income_per_year: { label: "Property income", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   private_pension_per_year: {
@@ -235,7 +255,7 @@ const NUMBER_CONFIGS = {
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Your private or workplace pension: pensions you are paid, before tax, not counting the State Pension.",
+    hint: "Your private or workplace pension: pensions you receive, before tax, not counting the State Pension.",
   },
   partner_private_pension_per_year: {
     label: "Partner's private or workplace pension",
@@ -261,7 +281,7 @@ const NUMBER_CONFIGS = {
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Enter your salary above after the sacrifice, as your payslip shows it. From April 2029 its National Insurance relief is capped at £2,000 a year; before then it changes no figure here.",
+    hint: "Enter your salary above after the sacrifice, as your payslip shows it. From April 2029 its National Insurance relief has a cap of £2,000 a year; before then it changes no figure here.",
   },
   petrol_spending_per_year: {
     label: "Petrol",
@@ -270,7 +290,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
+    hint: "We prefill this with the average household's spending (Source: ONS Family Spending, 2024-25).",
   },
   diesel_spending_per_year: {
     label: "Diesel",
@@ -279,7 +299,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
+    hint: "We prefill this with the average household's spending (Source: ONS Family Spending, 2024-25).",
   },
   electricity_spending_per_year: {
     label: "Electricity",
@@ -288,7 +308,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
+    hint: "Including VAT. We prefill this with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
   bus_fare_spending_per_year: {
     label: "Bus fares",
@@ -375,11 +395,11 @@ const regionName = (region) => REGION_OPTIONS.find(([value]) => value === region
 // The prefilled fields' notes: what the prefill is
 const PREFILL_HINTS = {
   state_pension_per_year: (year) =>
-    `Prefilled with the full new State Pension for ${fiscalYearTick(year)} (£${d3.format(",.0f")(
+    `We prefill this with the full new State Pension for ${fiscalYearTick(year)} (£${d3.format(",.0f")(
       statePensionFor(year).full,
     )}); change it if yours differs.`,
   partner_state_pension_per_year: (year) =>
-    `Prefilled with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
+    `We prefill this with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
   monthly_rent: (year, inputs) =>
     `Prefilled with the average private rent in ${regionName(inputs.region)} (Source: ONS, ${
       inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
@@ -551,6 +571,10 @@ function StepGroup({ group, number, last, open, onToggle, summary, children, opt
 // A phone's width, as HouseholdCalculator.css's phone layout
 const PHONE_QUERY = "(max-width: 640px)";
 
+/** Phrases as a list in words: "a", "a and b", "a, b and c". */
+const joinedPhrases = (phrases) =>
+  phrases.length > 1 ? `${phrases.slice(0, -1).join(", ")} and ${phrases[phrases.length - 1]}` : (phrases[0] ?? "");
+
 /** Whether the window matches a media query, following it as it changes. */
 function useNarrow(query) {
   const matches = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(query).matches;
@@ -588,6 +612,8 @@ const FORM_PANEL_ID = "household-form-panel";
  */
 // Each example's id and full answers, for the cards' background figures
 const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example) }));
+// No figures from the file (one object, so it stays the same between renders)
+const NO_PRESET_CHANGES = Object.freeze({});
 
 function HouseholdCalculator({
   selectedPolicies = [],
@@ -595,8 +621,11 @@ function HouseholdCalculator({
   year = DEFAULT_DISPLAY_YEAR,
   publicationKey = "",
   expectedEngine = null,
+  expectedDefinitions = null,
   presetEngine = null,
+  presetDefinitions = null,
   confirmPublication = null,
+  onRemoveUnavailable = null,
   active = true,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
@@ -642,24 +671,34 @@ function HouseholdCalculator({
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
   const [seeded, setSeeded] = useState(0);
-  // and each example's change in net income, for its card
-  const [presetChanges, setPresetChanges] = useState({});
-  // Whether the file has been read (until then the cards wait for it rather
-  // than ask the API)
-  const [presetsLoaded, setPresetsLoaded] = useState(false);
+  // and each example's change in net income, for its card, with the
+  // options (below) it was checked against
+  const [presetState, setPresetState] = useState({ key: null, changes: {} });
   // The measures the cards' figures are for: every published one, in the
   // page's order (#104: the page keeps no list of its own). The file's
   // answers count only for exactly these, under the engine their receipts
   // record (`presetEngine`, not the selection's: with nothing selected that
-  // is null, and none are loaded then).
+  // is null, and none are loaded then), and only when the file reports
+  // each one's approved definition (`presetDefinitions`, #136).
   const presetPolicies = useMemo(
     () => policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     [policies],
   );
   const presetKey = presetPolicies.join(",");
+  const presetOptionsKey = JSON.stringify([presetKey, publicationKey, presetEngine, presetDefinitions]);
+  // Figures checked against other options (the definitions or engine just
+  // changed) count for nothing, not even for the render before the file is
+  // read again: the cards wait for that, as they do before the first read
+  const presetsLoaded = presetState.key === presetOptionsKey;
+  const presetChanges = presetsLoaded ? presetState.changes : NO_PRESET_CHANGES;
   useEffect(() => {
     let live = true;
-    const options = { policies: presetPolicies, expectedEngine: presetEngine, publicationKey };
+    const options = {
+      policies: presetPolicies,
+      expectedEngine: presetEngine,
+      expectedDefinitions: presetDefinitions,
+      publicationKey,
+    };
     loadPresetResults(options).then((entries) => {
       if (!live || entries.length === 0) return;
       seedHouseholdImpactCache(entries);
@@ -667,15 +706,15 @@ function HouseholdCalculator({
     });
     loadPresetChanges(options).then((changes) => {
       if (!live) return;
-      setPresetChanges(changes);
-      setPresetsLoaded(true);
+      setPresetState({ key: presetOptionsKey, changes });
     });
     return () => {
       live = false;
     };
-    // presetKey stands for presetPolicies; presetEngine for its own JSON
+    // presetKey stands for presetPolicies; presetEngine and
+    // presetDefinitions for their own JSON
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetKey, publicationKey, JSON.stringify(presetEngine)]);
+  }, [presetKey, publicationKey, JSON.stringify(presetEngine), JSON.stringify(presetDefinitions)]);
 
   // The example shown, if any: its salary's source goes in "Based on"
   const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);
@@ -702,7 +741,8 @@ function HouseholdCalculator({
     allSelected &&
     HOUSEHOLD_EXAMPLES.every((example) => SELECTABLE_YEARS.every((y) => presetChanges[example.id]?.[y]));
   // Otherwise the cards' figures are asked for in the background, for the
-  // selected measures (useExampleFigures.js)
+  // selected measures, and checked as the calculator's own answers are
+  // (useExampleFigures.js)
   const fill = useExampleFigures({
     examples: EXAMPLE_REQUESTS,
     policies: householdPolicies,
@@ -710,6 +750,7 @@ function HouseholdCalculator({
     enabled: active && presetsLoaded && !presetsAnswer,
     publicationKey,
     expectedEngine,
+    expectedDefinitions,
     confirmPublication,
   });
   // Fill the form from an example and show its result at once (no
@@ -740,6 +781,7 @@ function HouseholdCalculator({
     enabled: submitted !== null,
     publicationKey,
     expectedEngine,
+    expectedDefinitions,
     confirmPublication,
     seeded,
     household: submitted?.household ?? null,
@@ -754,6 +796,21 @@ function HouseholdCalculator({
     submitted !== null &&
     requestKey(buildHouseholdRequest(inputs, { year, policies: requestPolicies })) !==
       requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
+  // Measures the API's code does not compute from their approved
+  // definitions (useHouseholdImpact): unavailable, with the remove action.
+  // A refusal answers the answers, year and policies sent, so it gives way
+  // once they change, as the headline does: it would otherwise list
+  // measures no longer selected, or refuse one as having no approved
+  // definition when it is only no longer selected (the definitions are the
+  // selection's), and a submission restored on coming back is one of those
+  const refusedDefinitions =
+    !changed && householdResult.status === "error" && householdResult.error?.kind === "definition"
+      ? householdResult.error.refused.map((item) => ({
+          id: item.id,
+          name: policies.find((policy) => policy.id === item.id)?.name ?? item.id,
+          why: item.problems,
+        }))
+      : [];
   // Busy while the result for these same answers is calculated (headline,
   // then the split by policy and the sweep). Changed answers can always be
   // sent: a press while the old request runs starts the new one rather than
@@ -1143,6 +1200,8 @@ function HouseholdCalculator({
     presetPolicies: withCalculatorOnly(presetPolicies),
     publicationKey,
     expectedEngine,
+    expectedDefinitions,
+    presetDefinitions,
     basisYear,
     enabled: placed !== null,
   });
@@ -1161,9 +1220,9 @@ function HouseholdCalculator({
         label: "You",
         note:
           placed.notModelled.length > 0
-            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
+            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} we do not model for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
             : submitted.policies.length !== withoutCalculatorOnly(submitted.policies).length
-              ? "Your change includes the savings income tax rise, which the dots leave out."
+              ? `Your change includes ${joinedPhrases(resultPolicies(submitted.policies).named)}, which the dots leave out.`
               : null,
       }
     : null;
@@ -1282,10 +1341,34 @@ function HouseholdCalculator({
         )}
         {(noneSelected || (submitted !== null && !changed)) && (
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
-          {selectionUnavailable ? (
+          {refusedDefinitions.length > 0 && householdResult.error.unchecked ? (
+            // Nothing to tell the measures apart by: removing them all would
+            // empty the national figures too, so offer to ask again instead
+            <UnavailableNotice reason="Household calculator can't be checked right now">
+              <p>
+                The household calculator isn&apos;t reporting the definitions it computes the measures from, so its
+                answers can&apos;t be checked against the published figures.
+              </p>
+              <button type="button" className="light-pill-button" onClick={householdResult.retry}>
+                Try again
+              </button>
+            </UnavailableNotice>
+          ) : refusedDefinitions.length > 0 ? (
+            <UnavailableMeasures
+              reason="Household calculator is unavailable for the selected measures"
+              summary="The household calculator does not compute these measures from the definitions their published figures were approved on:"
+              measures={refusedDefinitions}
+              // Only when taking them out of the selection lifts this: not
+              // for a calculator-only one, in every request, selected or not
+              // (PersonalImpactTab offers none then either)
+              onRemove={
+                removableFromSelection(refusedDefinitions.map(({ id }) => id), selectedPolicies) ? onRemoveUnavailable : undefined
+              }
+            />
+          ) : selectionUnavailable ? (
             <UnavailableNotice reason="Household calculator is unavailable for this selection">
-              <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
-              <p>Select policies that can all be calculated to see your household&apos;s results.</p>
+              <p>We cannot calculate these measures for one household: {unavailableNames.join(", ")}.</p>
+              <p>Select only policies we can calculate to see your household&apos;s results.</p>
             </UnavailableNotice>
           ) : (
             <SingleYearHeadline
@@ -1319,7 +1402,7 @@ function HouseholdCalculator({
       </div>
 
       {/* The results' sections, below the form and headline, once asked */}
-      {submitted !== null && !noneSelected && !selectionUnavailable && (
+      {submitted !== null && !noneSelected && !selectionUnavailable && refusedDefinitions.length === 0 && (
         <div role="region" aria-label="Your household's results">
           <SingleYearDetails
             result={householdResult}

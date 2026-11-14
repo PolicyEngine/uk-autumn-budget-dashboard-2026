@@ -236,7 +236,7 @@ function householdSteps({ params, kinds, household, salaryUsed, rows: allRows, e
           // Non-refundable: all the tax due is taken off, and no more
           const limited = taxAfter < SAME_CHANGE;
           const taper = /reduced by (£1 for every £\d+[^;.]*)/i.exec(reduction.note ?? "")?.[1];
-          const label = limited ? "Not used: more than the income tax due" : `Withdrawn by the taper${taper ? ` (${taper})` : ""}`;
+          const label = limited ? "Not used: more than the income tax due" : `Taper withdrawal${taper ? ` (${taper})` : ""}`;
           steps.push(stepRow(limited ? "tax_reduction_unused" : "tax_reduction_taper", label, 0, -withdrawn));
         }
         const taxPart = worked("income_tax_total", "Income tax", -taxBefore, -taxAfter, given);

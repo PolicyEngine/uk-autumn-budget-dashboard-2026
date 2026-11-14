@@ -162,3 +162,27 @@ it("repeats no At a glance fact in a card's points", () => {
     }
   }
 });
+
+describe("nounOf: a measure as a noun after 'the'", () => {
+  it("reads as a noun for every measure with a card, never a short name such as 'Fuel duty cut extended'", async () => {
+    const { POLICY_DETAILS, nounOf } = await import("./policyDetails");
+    const fuel = POLICY_DETAILS.find((entry) => entry.id === "fuel_duty_rise_deferral");
+    expect(nounOf({ id: fuel.id, description: fuel.writtenFor })).toBe("fuel duty cut");
+    const pta = POLICY_DETAILS.find((entry) => entry.id === "state_pension_income_tax_protection");
+    // A proper name keeps its capitals ("the Pension Tax Allowance", not "the pension Tax Allowance")
+    expect(nounOf({ id: pta.id, description: pta.writtenFor })).toBe("Pension Tax Allowance");
+  });
+  it("falls back to the short name with its first capital lowered", async () => {
+    const { nounOf } = await import("./policyDetails");
+    expect(nounOf({ id: "x", name: "Threshold freeze" })).toBe("threshold freeze");
+    expect(nounOf({ id: "y", name: "BADR cut" })).toBe("BADR cut");
+    // A proper name keeps its capitals when its entry no longer matches the publication
+    expect(nounOf({ id: "warm_home_discount_top_up", name: "Warm Home Discount top-up" })).toBe("Warm Home Discount top-up");
+    expect(nounOf({ id: "carers_allowance_earnings_taper", name: "Carer's Allowance earnings taper", description: "changed" })).toBe("Carer's Allowance earnings taper");
+  });
+  it("gives the savings income measure a noun, never 'the savings income tax up'", async () => {
+    const { POLICY_DETAILS, nounOf } = await import("./policyDetails");
+    const savings = POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up");
+    expect(nounOf({ id: savings.id, description: savings.writtenFor })).toBe("savings income tax rise");
+  });
+});

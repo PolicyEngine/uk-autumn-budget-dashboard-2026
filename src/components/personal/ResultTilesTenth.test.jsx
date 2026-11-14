@@ -93,7 +93,7 @@ describe("ResultTiles' average for your income tenth", () => {
     };
     catalogueRef.current = catalogue({});
     show();
-    expect(screen.getByText("Your tenth's average is not published")).toBeTruthy();
+    expect(screen.getByText("We have not published your tenth's average")).toBeTruthy();
   });
 
   it("shows no line for a withheld verified tenth, and never a zero average", () => {
@@ -104,7 +104,7 @@ describe("ResultTiles' average for your income tenth", () => {
     show();
     expect(screen.queryByText(/Not published|confidential/i)).toBeNull();
     expect(screen.queryByText(/Average for your income tenth/)).toBeNull();
-    expect(screen.queryByText("Your tenth's average is not published")).toBeNull();
+    expect(screen.queryByText("We have not published your tenth's average")).toBeNull();
   });
 
   it("says in the Your place tile, in one muted line, why there is no place", () => {
@@ -187,6 +187,6 @@ describe("ResultTiles show the header's selection", () => {
     expect(document.querySelector(".result-tile-missing")).toHaveTextContent(
       "Income distribution results for this combination of policies are not published yet.",
     );
-    expect(screen.getByText("Your tenth's average is not published")).toBeTruthy();
+    expect(screen.getByText("We have not published your tenth's average")).toBeTruthy();
   });
 });

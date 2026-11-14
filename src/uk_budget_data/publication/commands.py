@@ -115,7 +115,17 @@ def add_publish_parser(subparsers) -> None:
     withdrawing.add_argument("key")
     withdrawing.add_argument("--reason", required=True)
 
-    actions.add_parser("check", help="Re-run every gate (used by CI)")
+    checking = actions.add_parser(
+        "check", help="Re-run every gate (used by CI)"
+    )
+    checking.add_argument(
+        "--code-root",
+        type=Path,
+        default=None,
+        help="A checkout with full git history: also check that no area "
+        "code changed since the bound area run, and that its dataset is "
+        "the installed bundle's (as publish index does)",
+    )
     indexing = actions.add_parser(
         "index", help="Bind every flat CSV to this approved manifest snapshot"
     )
@@ -230,7 +240,10 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
             out("no manifest yet; legacy flat CSVs are unreceipted")
             return 0
         failures = check(
-            m.load_manifest(data_root), data_root=data_root, inputs=inputs
+            m.load_manifest(data_root),
+            data_root=data_root,
+            inputs=inputs,
+            code_root=getattr(parsed, "code_root", None),
         )
         for failure in failures:
             out(f"FAIL {failure}")

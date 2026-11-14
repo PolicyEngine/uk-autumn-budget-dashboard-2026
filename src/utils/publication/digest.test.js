@@ -202,7 +202,7 @@ describe("binding a receipt to its manifest entry", () => {
       const expected = entry.data_limits?.length
         ? [
             "the receipt records data limits: not computable on current " +
-              "data, so its figures cannot be shown",
+              "data, so we cannot show its figures",
           ]
         : [];
       expect(await receiptProblems(receipt, key, entry)).toEqual(expected);
@@ -214,7 +214,7 @@ describe("binding a receipt to its manifest entry", () => {
     const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
     receipt.dashboard.data_limits_registry_sha256 = "0".repeat(64);
     expect(await receiptProblems(receipt, "alpha", entry)).toContain(
-      "the receipt was generated against another data-limit registry",
+      "we generated the receipt against another data-limit registry",
     );
   });
 
@@ -232,7 +232,7 @@ describe("binding a receipt to its manifest entry", () => {
     const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
     receipt.dashboard.model_limits_registry_sha256 = "0".repeat(64);
     expect(await receiptProblems(receipt, "alpha", entry)).toContain(
-      "the receipt was generated against another model-limit registry",
+      "we generated the receipt against another model-limit registry",
     );
   });
 
@@ -258,8 +258,8 @@ describe("binding a receipt to its manifest entry", () => {
       expect(await receiptProblems(receipt, key, entry)).toEqual([]);
       entry.status = "approved";
       expect(await receiptProblems(receipt, key, entry)).toEqual([
-        "the receipt records model limits: held at provisional, so it " +
-          "cannot be shown as approved",
+        "the receipt records model limits: it stays provisional, so we " +
+          "cannot show it as approved",
       ]);
     },
   );
@@ -279,8 +279,8 @@ describe("binding a receipt to its manifest entry", () => {
           .model_limits[0],
       ];
       expect(await receiptProblems(receipt, key, entry)).toContain(
-        "the receipt records model limits: held at provisional, so it " +
-          "cannot be shown as approved",
+        "the receipt records model limits: it stays provisional, so we " +
+          "cannot show it as approved",
       );
     },
   );

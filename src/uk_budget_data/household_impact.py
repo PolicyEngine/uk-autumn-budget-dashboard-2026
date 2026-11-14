@@ -80,6 +80,9 @@ from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
+from uk_budget_data.budget_measures.planned_cash_isa_limit import (
+    planned_cash_isa_limit,
+)
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
@@ -89,7 +92,10 @@ from uk_budget_data.publication.combine import (
 )
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_ID,
+    CASH_ISA_LIMIT_ID,
     EMPLOYER_NI_ID,
+    MACHINE_GAMES_DUTY_FROM,
+    MACHINE_GAMES_DUTY_ID,
     TRADING_ALLOWANCE_FROM,
     WARM_HOME_DISCOUNT_ID,
     get_autumn_budget_2026_reforms,
@@ -191,6 +197,44 @@ HOUSEHOLD_NOTES: dict[str, dict] = {
             "and 70% of other eligible households (DESNZ receipt rates)."
         ),
     },
+    CASH_ISA_LIMIT_ID: {
+        "kind": "assumption",
+        "text": (
+            "Assumes that under the planned £12,000 limit you would pay the "
+            "same into cash ISAs each year from April 2027 and keep what the "
+            "limit leaves out in a taxable savings account, earning Bank Rate "
+            "as the OBR forecasts it, with the interest paid out each year. "
+            "The change is the income tax on that interest, which stays "
+            "tax-free in a cash ISA up to £20,000."
+        ),
+    },
+    MACHINE_GAMES_DUTY_ID: {
+        "kind": "assumption",
+        "text": (
+            "Counts the extra duty against you, as the share of your losses "
+            "on higher-stake gaming machines that goes in duty, with no "
+            "change in how much you play. The duty is paid by the machine's "
+            "operator, who may pass it on through lower payouts."
+        ),
+    },
+}
+
+# Answers the household carries that policyengine-uk 2.151.0 has no input
+# for. A measure's modifier defines each where the engine lacks it
+# (planned_cash_isa_limit), and run_scenario sets it on the built
+# simulation: the household itself is built without them, so neither
+# policyengine.py's input check nor the scenario-free copy the engine
+# builds of it (Simulation.baseline) sees a variable it does not know.
+CALCULATOR_INPUTS = ("cash_isa_subscriptions",)
+
+# The planned cash ISA limit's own numbers, its modifier's defaults, which
+# the skip rules read so that they cannot disagree with it
+CASH_ISA_LIMIT = {
+    name: parameter.default
+    for name, parameter in inspect.signature(
+        planned_cash_isa_limit
+    ).parameters.items()
+    if parameter.default is not inspect.Parameter.empty
 }
 
 INTERACTION_METHOD = (
@@ -314,6 +358,17 @@ PROGRAMMES = (
             "The change in VAT the measures make on the spending entered "
             "(electricity, petrol and diesel). The form asks about no other "
             "spending, so VAT itself is not shown: £0 before the Budget."
+        ),
+    ),
+    Programme(
+        "gambling_duty",
+        "Gambling duty",
+        "tax",
+        "gambling_duty",
+        "household",
+        note=(
+            "Machine Games Duty on the losses on higher-stake gaming "
+            "machines entered. The form asks about no other gambling."
         ),
     ),
     Programme("tv_licence", "TV licence", "tax", "tv_licence", "household"),
@@ -784,6 +839,9 @@ class HouseholdAnswers:
     salary_year: int = SALARY_YEAR
     dividend_income: float = 0
     savings_interest_income: float = 0
+    # New money the head pays into cash ISAs, £ a year, which the cash ISA
+    # limit kept at £20,000 reads (CALCULATOR_INPUTS)
+    cash_isa_subscriptions: float = 0
     property_income: float = 0
     # Private and workplace pensions in payment, £ a year
     private_pension_income: float = 0
@@ -799,6 +857,11 @@ class HouseholdAnswers:
     # bus_fare_spending), for the £2 bus fare cap. 0 (not asked) sets
     # nothing, so every other household is exactly as before.
     bus_fare_spending: float = 0
+    # Net losses (stakes less prizes) on gaming machines with a stake over
+    # £1 or a prize over £100, £ a year, for the Machine Games Duty rise.
+    # Set as the household's standard-rate machine takings, which only
+    # these machines' are in the form; 0 (not asked) sets nothing
+    higher_stake_machine_losses: float = 0
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)
@@ -1170,6 +1233,10 @@ def household_entities(
         people[0]["state_pension_reported"] = reported_state_pension(
             pension, pension_year
         )
+    if answers.cash_isa_subscriptions:
+        # Only when answered, so every other household is exactly as before
+        # (a calculator input: run_scenario sets it on the simulation)
+        people[0]["cash_isa_subscriptions"] = answers.cash_isa_subscriptions
     if answers.self_employed:
         # Only with self-employment answers, so every other household is
         # exactly as before: profit, and the receipts the trading allowance
@@ -1244,6 +1311,15 @@ def household_entities(
         # household total to bus_fare_spending_reported on loading and
         # gives it back unchanged without journeys
         household["bus_fare_spending"] = answers.bus_fare_spending
+    if answers.higher_stake_machine_losses:
+        # Only when answered, so every other household is exactly as
+        # before. policyengine-uk has no input for higher-stake machines
+        # (policyengine-uk#2731 adds one in 2.167.0): the measure raises the
+        # standard rate, and these are the household's only standard-rate
+        # takings, so its change is exact
+        household["machine_games_standard_rate_net_takings"] = (
+            answers.higher_stake_machine_losses
+        )
     if answers.brma is not None:
         household["brma"] = answers.brma
     household["local_authority"] = (
@@ -1499,6 +1575,42 @@ def _summed(values, axes_active: bool):
     return float(sum(values))
 
 
+def split_calculator_inputs(people: list) -> tuple[list, dict]:
+    """The people without their ``CALCULATOR_INPUTS``, and those inputs by
+    name, one value a person in the people's order (0 where not given):
+    only the inputs someone has."""
+    inputs = {
+        name: [float(person.get(name, 0)) for person in people]
+        for name in CALCULATOR_INPUTS
+        if any(name in person for person in people)
+    }
+    people = [
+        {
+            key: value
+            for key, value in person.items()
+            if key not in CALCULATOR_INPUTS
+        }
+        for person in people
+    ]
+    return people, inputs
+
+
+def set_calculator_inputs(simulation, inputs: dict, year: int) -> None:
+    """Each calculator input the simulation's engine has (a measure's
+    modifier defined it, on that measure's side), for ``year``. With the
+    sweep's axes the household repeats, so each person takes the value of
+    their position in it. On a side whose engine lacks the variable no
+    formula reads it, and it is left out."""
+    if not inputs:
+        return
+    position = simulation.populations["household"].members_position
+    for name, values in inputs.items():
+        if name in simulation.tax_benefit_system.variables:
+            simulation.set_input(
+                name, year, np.asarray(values, dtype=float)[position]
+            )
+
+
 def run_scenario(
     people: list,
     benunit: dict,
@@ -1521,10 +1633,12 @@ def run_scenario(
 
     from uk_budget_data.forecast import with_forecast
 
+    people, calculator_inputs = split_calculator_inputs(people)
     simulation = Simulation(
         situation=household_situation(people, benunit, household, year, axes),
         scenario=with_forecast(side_scenario(side)),
     )
+    set_calculator_inputs(simulation, calculator_inputs, year)
 
     def rate_part_values():
         return {
@@ -1987,7 +2101,14 @@ SKIP_REASONS = {
         "no dividend, savings or property income, or before 2027-28"
     ),
     "property_income_rates_up": "no property income, or before 2027-28",
-    "savings_income_rates_up": "no savings interest, or before 2027-28",
+    "savings_income_rates_up": (
+        "no savings interest or cash ISA payments over £12,000, or before "
+        "2027-28"
+    ),
+    "cash_isa_limit_kept": (
+        "no cash ISA payments over £12,000, aged 65 or over, or before "
+        "2027-28"
+    ),
     "trading_allowance_raise": (
         "no self-employment receipts, or before 2027-28"
     ),
@@ -1995,7 +2116,22 @@ SKIP_REASONS = {
         "no bus fares, not in England outside London, or outside 2026-27 "
         "to 2027-28"
     ),
+    "machine_games_duty_rise": (
+        "no losses on higher-stake gaming machines, or before 2027-28"
+    ),
 }
+
+
+def diverts_cash_isa_payments(answers: HouseholdAnswers, year: int) -> bool:
+    """Whether the planned cash ISA limit would leave some of the head's
+    cash ISA payments out in ``year``: in force, under 65, and paying more
+    than it (only the head's payments are asked)."""
+    return (
+        year >= CASH_ISA_LIMIT["first_year"]
+        and answers.age < CASH_ISA_LIMIT["full_limit_age"]
+        and min(answers.cash_isa_subscriptions, CASH_ISA_LIMIT["annual_limit"])
+        > CASH_ISA_LIMIT["limit"]
+    )
 
 
 def provably_unaffected(
@@ -2053,7 +2189,14 @@ def provably_unaffected(
         # finance costs, the other thing the property basic rate reaches.
         return year < 2027 or not answers.property_income
     if measure_id == "savings_income_rates_up":
-        return year < 2027 or not answers.savings_interest_income
+        # Its own run holds the cash ISA limit at pre-Budget law, where the
+        # cash the planned limit leaves out earns taxable interest
+        return year < 2027 or not (
+            answers.savings_interest_income
+            or diverts_cash_isa_payments(answers, year)
+        )
+    if measure_id == CASH_ISA_LIMIT_ID:
+        return not diverts_cash_isa_payments(answers, year)
     if measure_id == "trading_allowance_raise":
         # The allowance reads trading receipts (and profit), which only
         # the head's self-employment answers give.
@@ -2065,6 +2208,13 @@ def provably_unaffected(
             not answers.bus_fare_spending
             or answers.region not in BUS_FARE_CAP_REGIONS
             or year not in BUS_FARE_CAP_YEARS
+        )
+    if measure_id == MACHINE_GAMES_DUTY_ID:
+        # The duty reads the household's machine takings, which only its
+        # losses on higher-stake machines give.
+        return (
+            year < MACHINE_GAMES_DUTY_FROM
+            or not answers.higher_stake_machine_losses
         )
     return False
 

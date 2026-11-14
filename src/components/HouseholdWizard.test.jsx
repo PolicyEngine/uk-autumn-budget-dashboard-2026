@@ -4,6 +4,7 @@ import HouseholdCalculator, { FORM_GROUPS, WIZARD_DEFAULTS, resetSavedWizard } f
 import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
 import { parseAmount } from "./personal/FormControls";
 import { buildHouseholdRequest } from "../utils/householdImpactApi";
+import { APPROVED_COMMIT, approvedDefinition, requestedDefinitions, route } from "../test/definitionsFixture";
 
 beforeEach(() => {
   resetSavedWizard();
@@ -139,7 +140,9 @@ describe("the personal impact form", () => {
       "electricity_spending_per_year",
       // In the North West (the default), where the £2 bus fare cap applies
       "bus_fare_spending_per_year",
+      "higher_stake_machine_losses_per_year",
       "savings_interest_per_year",
+      "cash_isa_payments_per_year",
       "dividends_per_year",
       "property_income_per_year",
       "self_employment_receipts_per_year",
@@ -244,7 +247,7 @@ describe("the personal impact form", () => {
     fireEvent.keyDown(document, { key: "Tab" });
     fireEvent.focus(petrolInfo);
     expect(screen.getByRole("tooltip")).toHaveClass("tip");
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Including VAT. We prefill this with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("tooltip")).toBeNull();
     expect(document.querySelector(".info-icon, .info-icon-wrapper, .info-tooltip")).toBeNull();
@@ -304,7 +307,7 @@ describe("the personal impact form", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Children are 0 to 19.");
     fireEvent.blur(box("Child 1's age"));
     expect(value("Child 1's age")).toBe(19);
-    expect(screen.getByRole("alert")).toHaveTextContent("21 was changed to 19.");
+    expect(screen.getByRole("alert")).toHaveTextContent("We changed 21 to 19.");
   });
 
   it("asks private pensions, the partner's only with a partner, and hides the Council Tax band in Northern Ireland", () => {
@@ -335,7 +338,7 @@ describe("the personal impact form", () => {
     expect(field("state_pension_per_year")).toBeNull();
     fireEvent.change(box("Age"), { target: { value: "72" } });
     expect(value("Your State Pension")).toBe(13817);
-    expect(screen.getByText(/Prefilled with the full new State Pension for 2029-30 \(£13,817\)/)).toBeInTheDocument();
+    expect(screen.getByText(/We prefill this with the full new State Pension for 2029-30 \(£13,817\)/)).toBeInTheDocument();
     fireEvent.change(box("Your State Pension"), { target: { value: "9000" } });
     expect(value("Your State Pension")).toBe(9000);
   });
@@ -675,10 +678,12 @@ describe("the selected policies' questions", () => {
       "electricity_spending_per_year",
       "bus_fare_spending_per_year",
     ]);
-    // Savings interest always first, then in the table's order: property,
-    // then the trading allowance's
+    // Savings interest always first, then in the table's order: cash ISA
+    // payments (the cash ISA limit, always in the request, for an
+    // under-65), property, then the trading allowance's
     expect(asked("Savings and other income")).toEqual([
       "savings_interest_per_year",
+      "cash_isa_payments_per_year",
       "property_income_per_year",
       "self_employment_receipts_per_year",
       "self_employment_expenses_per_year",
@@ -690,8 +695,13 @@ describe("the selected policies' questions", () => {
     // Pension age: all of them, with no Other questions
     expect(asked("Pensions and student loan")).toEqual(["private_pension_per_year", "salary_sacrifice_per_year", "student_loan_plan"]);
     expect(otherToggle("Pensions and student loan")).toBeNull();
-    // The rest, collapsed in their own step until opened
-    expect(otherToggle("Spending")).toBeNull();
+    // The rest, collapsed in their own step until opened: in Spending, the
+    // losses on higher-stake gaming machines (the Machine Games Duty rise,
+    // which no row moves first)
+    const spendingOther = otherToggle("Spending");
+    expect(spendingOther).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(spendingOther);
+    expect(asked("Spending").at(-1)).toBe("higher_stake_machine_losses_per_year");
     const savingsOther = otherToggle("Savings and other income");
     expect(savingsOther).toHaveTextContent("Other questions");
     expect(savingsOther).toHaveAttribute("aria-expanded", "false");
@@ -806,7 +816,12 @@ describe("the selected policies' questions", () => {
     form(["trading_allowance_raise"]);
     fireEvent.click(stepToggle("Savings and other income"));
     // Savings interest is always first in its step
-    expect(asked("Savings and other income")).toEqual(["savings_interest_per_year", "self_employment_receipts_per_year", "self_employment_expenses_per_year"]);
+    expect(asked("Savings and other income")).toEqual([
+      "savings_interest_per_year",
+      "cash_isa_payments_per_year",
+      "self_employment_receipts_per_year",
+      "self_employment_expenses_per_year",
+    ]);
     expect(value("Self-employment or side income")).toBe(0);
     fireEvent.change(box("Self-employment or side income"), { target: { value: "3,000" } });
     fireEvent.blur(box("Self-employment or side income"));
@@ -832,9 +847,15 @@ describe("the selected policies' questions", () => {
     const API = "https://api.test/api/household-impact";
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
     // The household API never answers: the first request stays loading
-    vi.stubGlobal("fetch", vi.fn((url) => (url === API ? new Promise(() => {}) : Promise.resolve(new Response("{}", { status: 404 })))));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url) => (route(url) === API ? new Promise(() => {}) : Promise.resolve(new Response("{}", { status: 404 })))),
+    );
+    // With the measures' approved definitions, or the calculator asks
+    // nothing (useHouseholdImpact)
+    const expectedDefinitions = Object.fromEntries(ALL_SEVEN.map((id) => [id, approvedDefinition(id)]));
     try {
-      form(ALL_SEVEN, { year: 2027 });
+      form(ALL_SEVEN, { year: 2027, expectedDefinitions });
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       await waitFor(() => expect(screen.getByRole("button", { name: /Calculating/ })).toBeDisabled());
       // Edited while it runs: Calculate is pressable again, and the results
@@ -852,16 +873,24 @@ describe("the selected policies' questions", () => {
   it("sends the same request for the same answers, wherever they are asked", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
+    const urls = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url === API) bodies.push(JSON.parse(init.body));
+        // Every request names each measure's approved commit in its query
+        if (route(url) === API) {
+          bodies.push(JSON.parse(init.body));
+          urls.push(url);
+        }
         return new Response("{}", { status: 404 });
       }),
     );
+    // The definitions the measures' receipts approved: without them the
+    // calculator asks nothing (useHouseholdImpact)
+    const expectedDefinitions = Object.fromEntries(ALL_SEVEN.map((id) => [id, approvedDefinition(id)]));
     try {
-      form(ALL_SEVEN, { year: 2027 });
+      form(ALL_SEVEN, { year: 2027, expectedDefinitions });
       openSteps();
       fireEvent.change(box("Petrol"), { target: { value: "900" } });
       fireEvent.blur(box("Petrol"));
@@ -871,8 +900,11 @@ describe("the selected policies' questions", () => {
       const yours = () => bodies.find((body) => body.household.petrol_spending === 900 && body.include.length === 0);
       await waitFor(() => expect(yours()).toBeDefined());
       const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, council_tax_band: "B" };
-      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: ALL_SEVEN }));
+      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: [...ALL_SEVEN, "cash_isa_limit_kept", "machine_games_duty_rise"] }));
       expect(yours().household).toMatchObject({ petrol_spending: 900, council_tax_band: "B", diesel_spending: DEFAULT_SPENDING.diesel });
+      expect(requestedDefinitions(urls[bodies.indexOf(yours())]).sort()).toEqual(
+        ALL_SEVEN.map((id) => [id, APPROVED_COMMIT]).sort(),
+      );
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();
@@ -885,12 +917,16 @@ describe("the selected policies' questions", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url === API) bodies.push(JSON.parse(init.body));
+        // Every request names each measure's approved commit in its query
+        if (route(url) === API) bodies.push(JSON.parse(init.body));
         return new Response("{}", { status: 404 });
       }),
     );
+    // The definition the measure's receipt approved: without it the
+    // calculator asks nothing (useHouseholdImpact)
+    const expectedDefinitions = { bus_fare_cap_2027: approvedDefinition() };
     try {
-      const { unmount } = form(["bus_fare_cap_2027"], { year: 2027 });
+      const { unmount } = form(["bus_fare_cap_2027"], { year: 2027, expectedDefinitions });
       openSteps();
       // The North West, by default: asked first in Spending, with its note
       expect(asked("Spending")[0]).toBe("bus_fare_spending_per_year");
@@ -910,7 +946,7 @@ describe("the selected policies' questions", () => {
       expect(yours().policies).toContain("bus_fare_cap_2027");
       // Kept for the session, as every answer is
       unmount();
-      form(["bus_fare_cap_2027"], { year: 2027 });
+      form(["bus_fare_cap_2027"], { year: 2027, expectedDefinitions });
       openSteps();
       expect(value("Bus fares")).toBe(500);
       // In London the cap does not apply: not asked, and not sent
@@ -944,29 +980,42 @@ describe("the selected policies' questions", () => {
   it("always adds the savings income tax rise to a household's request, the cards' too", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
+    const urls = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url === API) bodies.push(JSON.parse(init.body));
+        if (route(url) === API) {
+          bodies.push(JSON.parse(init.body));
+          urls.push(url);
+        }
         return new Response("{}", { status: 404 });
       }),
     );
     // The header's selection: the published measures, savings not among them
     const published = ALL_SEVEN.filter((id) => id !== "savings_income_rates_up");
+    // The published measures' approved definitions; the savings rise has
+    // none, having no published figures (calculatorOnlyMeasures.js)
+    const expectedDefinitions = Object.fromEntries(published.map((id) => [id, approvedDefinition(id)]));
     try {
-      form(published, { year: 2027 });
+      form(published, { year: 2027, expectedDefinitions });
       openSteps();
       fireEvent.change(box("Savings interest"), { target: { value: "12000" } });
       fireEvent.blur(box("Savings interest"));
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
-      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up"]);
-      // Every example card's figures are asked with it too
+      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up", "cash_isa_limit_kept", "machine_games_duty_rise"]);
+      // Asked, not refused for having no approved definition, and naming
+      // only the published measures' definitions
+      const named = published.map((id) => [id, APPROVED_COMMIT]).sort();
+      expect(requestedDefinitions(urls[bodies.indexOf(headline()[0])]).sort()).toEqual(named);
+      // Every example card's figures are asked with them too, naming the
+      // same definitions
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
       expect(cards.length).toBeGreaterThan(0);
-      expect(cards.every((body) => body.policies.at(-1) === "savings_income_rates_up")).toBe(true);
+      expect(cards.every((body) => body.policies.slice(-3).join() === "savings_income_rates_up,cash_isa_limit_kept,machine_games_duty_rise")).toBe(true);
+      for (const body of cards) expect(requestedDefinitions(urls[bodies.indexOf(body)]).sort()).toEqual(named);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

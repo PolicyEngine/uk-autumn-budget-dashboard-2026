@@ -38,12 +38,13 @@ import { PublicationCheckContext, serialisedChecks } from "./utils/publication/c
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import ViewSkeleton, { BootSkeleton } from "./components/publication/ViewSkeleton";
 import { bootView } from "./utils/bootView";
+import { POVERTY_FIGURES_SHOWN } from "./utils/povertyFigures";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalNotice } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { trackEvent, trackLinkClicks } from "./utils/analytics";
+import { trackEngagement, trackEvent, trackLinkClicks } from "./utils/analytics";
 import { createBandIntent, createSiteNavIntent, isProgrammaticScroll, LANDSCAPE_PHONE_QUERY, isTouchOnly, pointerWantsSiteNav, SITE_NAV_DWELL_MS, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
@@ -79,7 +80,8 @@ const VIEW_CODE = {
   "dashboard:all": [ConstituencyMap, DecileImpactCard, HouseholdScatter],
   "dashboard:age": [AgeSection],
   "dashboard:living": [GrowthWithMeasuresCard, InequalityChart],
-  "dashboard:poverty": [PovertyMeasuresRow],
+  // Withheld for now (povertyFigures.js): no sub-tab, so no code to load
+  ...(POVERTY_FIGURES_SHOWN ? { "dashboard:poverty": [PovertyMeasuresRow] } : {}),
   household: [PersonalImpactTab],
   outlook: [LivingStandardsTab],
   policies: [PolicyCards, UnmodelledMeasures],
@@ -536,19 +538,21 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     return () => observer.disconnect();
   }, []);
 
-  // The site nav is hidden above the window by default, so the title band
-  // sits at the top of the page. Scrolling never brings it in: it slides in
-  // above the band when the pointer rests at the top edge of the window
-  // (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS: utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // The site nav is in the page's flow at its top (globals.css), so it is
+  // in view on load above the title band and a scroll down takes it away
+  // with the page. Scrolling never brings it back: once it has scrolled
+  // away it slides in above the band when the pointer rests at the top
+  // edge of the window (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS:
+  // utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
   // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
   // band and tab rows move down under it, so it never covers the Year and
   // Policies pills; the slide is instant under reduced motion). Once in, it stays
   // SITE_NAV_MIN_MS, and while the pointer or focus is in it or one of its
   // menus is open, then hides SITE_NAV_LEAVE_MS after they leave. Any
   // scroll down by the reader hides it at once (unless it is in use), and
-  // within its own height of the page's top it is hidden. A touch-only
-  // device has no pointer to bring it in with: there it shows only while
-  // the page is at its very top (createSiteNavIntent).
+  // within its own height of the page's top it goes back to its place in
+  // the flow. A touch-only device has no pointer to bring it in with: there
+  // it shows only while the page is at its very top (createSiteNavIntent).
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -901,8 +905,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   useEffect(() => {
     openViewRef.current = handleTabChange;
   });
-  // Clicks on the report's download and on our posts (utils/analytics.js)
+  // Clicks on the report's download, our posts and other sites, and how
+  // far and how long people stay (utils/analytics.js)
   useEffect(() => trackLinkClicks(), []);
+  useEffect(() => trackEngagement(), []);
   useEffect(() => {
     const onOpenView = (event) => {
       const { tab, anchor } = event.detail || {};
@@ -1109,8 +1115,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         </div>
       );
     }
+    // The sub-tab is not offered while the poverty figures are withheld
+    // (povertyFigures.js); this keeps it from rendering if asked for anyway
     if (sub === "poverty") {
-      if (!results) return null;
+      if (!results || !POVERTY_FIGURES_SHOWN) return null;
       return (
         <div className="results-container">
           <SectionHeading
@@ -1364,7 +1372,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             <SectionHeading
               icon="fileText"
               title="Policies we model"
-              subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how it is modelled.`}
+              subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how we model it.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards

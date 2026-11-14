@@ -161,7 +161,7 @@ describe("the page's measures in the constituency views", () => {
     for (const selected of [[IDS[0]], IDS]) {
       expect((await show(catalogue, selected)).view).toMatchObject({
         kind: "notice",
-        reason: "Results by constituency are not yet published.",
+        reason: "We have not yet published results by constituency.",
       });
     }
   });

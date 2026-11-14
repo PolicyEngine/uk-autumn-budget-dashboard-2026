@@ -1,0 +1,229 @@
+October 2026 Economic and fiscal outlook
+Speaking notes for presentation1 by:
+Jonathan Haskel, Chair, Office for Budget Responsibility.
+
+
+
+  Fiscal context
+        • IMF data shows that in 2006 the UK had net debt of around 40% of
+          GDP, close to the average of other advanced economies and well
+          below the average of other G7 economies.
+
+        • In the subsequent two decades, the UK’s net debt has risen
+          significantly to now be above the average of other G7 countries.
+
+        • And after the rise in borrowing in the pandemic, countries have been
+          trying to get borrowing down.
+
+  Major economic developments since March
+        • That’s the fiscal context over the last couple of decades. But now,
+          let’s look at the major economic developments since our last forecast
+          in March.
+
+        • Since March, there have been several adverse developments:
+
+                o First, energy prices have risen significantly. The blue line in this
+                  chart shows that oil prices at the time we produced the forecast
+                  were expected to be significantly higher than the yellow line of
+    1
+        As prepared for delivery.
+                                               1
+         our March forecast in the near term and slightly higher in the
+         medium term.
+
+       o There have also been similar developments with gas prices
+         since March.
+
+       o And energy prices have risen even further since we took market
+         pricing for this forecast. In recent days, they have been around
+         the top of the swathes in the charts which show the range since
+         the Middle East conflict.
+
+  • Interest rates as implied by market pricing are also significantly
+    higher than at the time of our March forecast.
+
+  • And gilt yields are up across all maturities compared to our March
+    forecast. Since we took market pricing they have continued to be
+    volatile, but remain at around the same level as when we closed our
+    fiscal forecast.
+
+GDP and inflation forecasts
+  • The rise in energy prices and interest rates since March has led to a
+    deterioration in the near-term economic outlook.
+
+  • This includes weaker GDP growth and higher inflation:
+
+       o In 2027, we now expect GDP growth of around 1%, down from
+         about 1½% back in our March forecast.
+
+       o And we anticipate that CPI inflation will be around 3½% rather
+         than falling back to 2%.
+
+       o But in 2028 CPI inflation returns to target – about a year later
+         than we expected in March.
+
+                                    2
+       o And we expect that the level of real GDP will move back to our
+         March forecast by 2030.
+
+RHDI
+  • As you can see, real household disposable income per person has
+    recovered from the fall in the aftermath of the pandemic and 2022
+    energy price spike. And, in March, we expected it to grow gradually
+    in each year of the forecast.
+
+  • We now expect RHDI per person to fall this year before recovering.
+    By 2029-30, a decade after the pandemic, we expect that it will be
+    only 1 per cent above pre-pandemic levels.
+
+  • What’s driving that weakness? This is what economists call a
+    negative terms-of-trade shock – a way of saying that what we like to
+    buy from other countries has got more expensive, so our real
+    incomes have fallen.
+
+Fiscal developments since March
+  • Let’s turn now to the fiscal implications of these economic
+    developments. What’s happened since March?
+
+       o The blue bars show that receipts are up, much of which is due
+         to higher inflation increasing the forecast for earnings and
+         profits, which drive personal and corporate taxes.
+
+       o But green borrowing costs are also up – compared to March,
+         debt interest is forecast to be £14 billion higher on average in
+         each forecast year.
+
+
+
+
+                                    3
+      o And then yellow non-debt interest spending rises – a large part
+        of which is driven by higher welfare payments indexed to
+        inflation.
+
+      o This adds up to an average of an extra £11bn per year of
+        increased   borrowing   before   reflecting any   policy
+        announcements from the government.
+
+Policy decisions at the Budget
+  • All of that is on a pre-measures basis – so before new policy
+    decisions that the Government has made since March. But now for
+    policy. What has the Government decided to do? Two key points:
+
+      o In the near term, the total effects of the Government’s decisions
+        are to increase borrowing by an average of around £5 billion
+        a year in each of the next three years.
+
+      o The total effect of Government policies then reduce borrowing
+        by an average of around £3 billion per year in each of the
+        subsequent two years, rising to £9 billion in the final year of the
+        forecast.
+
+  • Where does that leave borrowing reflecting the impacts of new
+    Government policy since March?
+
+      o That’s the white diamonds, which tells you borrowing rises in
+        all years relative to March plans by an average of £13 billion
+        per year.
+
+      o And the white diamonds are close to the green bars. This tells
+        you that the increase in borrowing in each year relative to what
+        we expected in March is broadly equivalent to the increased
+        debt interest spending. This is because the other changes to the
+                                    4
+         forecasts for receipts and spending, much of which are driven
+         by higher inflation, are broadly offsetting.
+
+Fiscal outcomes
+  • What does this mean for the forecast path of borrowing?
+
+  • Let me show you the planned paths of borrowing in the last few
+    Budgets. And here are the latest plans for public sector net
+    borrowing. There are three key points to highlight.
+
+  • First, fiscal consolidation has started. Black lines are outturns and
+    show that borrowing has declined from around 5 per cent of GDP
+    between 2022-23 and 2024-25, to 4.4 per cent of GDP in 2025-
+    26.
+
+  • Second, however, near-term borrowing is more than was expected
+    in November 2025. Borrowing between 2026-27 and 2028-29 is
+    now forecast to be around 0.5 per cent of GDP higher on average
+    than forecast in November 2025.
+
+  • Third, what about the medium term?
+
+       o As you can see from how the green and yellow lines converge,
+         the fiscal plans set out in this Parliament all ultimately aimed
+         for borrowing to fall to about 2 per cent of GDP by the end of
+         the forecasts. The plan set out at this Budget also reaches that
+         level by 2029-30 and stays at just below that level to 2031-32.
+
+       o Now, the government has not published detailed spending
+         plans for each of those final three years. Instead it sets
+         assumptions for the path of overall spending. These
+         assumptions, after taking into account areas of protected
+         spending such as health, defence and core schools, imply that
+                                    5
+          real terms day-to-day spending in unprotected departments
+          would fall by 2.6% in each of the final three years of the
+          forecast. We have set out fuller analysis of this in the EFO.
+
+       o And as the right-hand chart shows, delivery of this
+         consolidation would be enough to just stabilise debt (PSND ex
+         BoE) at around 94% of GDP. But this would remain high by
+         historical and international standards.
+
+Fiscal rules
+  • What do these plans then mean for the Government’s performance
+    against its fiscal rules?
+  • First, we look at the fiscal mandate for the current budget to be in
+    surplus in 2029-30:
+       o the black line is the forecast path of the current budget.
+       o the target year is 29/30 which is the vertical dotted line and the
+         red dot is at zero in that year.
+       o so this shows you the fiscal rule is met on the central forecast
+         and this gap (between dot and black line in 29/30) is £15bn.
+  • Now for the supplementary rule – through which the government
+    must ensure that Public Sector Net Financial Liabilities is falling in
+    2029-30:
+       o The dot is the previous year’s figure and the gap shows it’s
+         falling by £24bn.
+  • These are small margins – with the one against the fiscal mandate
+    being below the average post-pandemic revision in pre-measures
+    borrowing in the third year of the forecast. And there remains
+    significant uncertainty, as we show through these fan charts.
+  • As you can see, the bands are wide which show that outcomes
+    significantly higher or lower than our central forecast are quite likely.
+    The probability of meeting the fiscal mandate is now 56% and the
+                                      6
+    probability of meeting the supplementary target is now 54%. These
+    are broadly unchanged from last year.
+
+Risks
+  • Most of this presentation relates to our central forecast but there are
+    significant risks and uncertainties around this which we discuss
+    extensively in the EFO.
+  • In terms of economic and fiscal risks, we have the following:
+        o Economic: energy prices, productivity growth, labour market
+          outlook
+        o Fiscal: debt servicing costs, departmental spending, welfare
+          spending.
+
+Summary
+  • Challenging fiscal background…
+        o Government debt at elevated levels
+        o Since March, higher energy prices and interest rates
+  • Economic forecast:
+        o 2027 GDP growth lowered to 1%
+        o 2027 CPI inflation higher at 3½%
+        o But inflation falls and growth recovers in medium-term
+  • Fiscal forecast:
+        o Near-term pace of consolidation slows
+        o Fiscal rules forecast to be met in 2029-30: Current budget in
+          surplus by £15bn, with probability of 56%; PSNFL falling by
+          £24bn, with probability of 54%.
+        o Plans would stabilise debt but still at elevated levels
+        o Wide range of upside and downside risks
+                                      7
+

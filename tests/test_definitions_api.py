@@ -7,6 +7,7 @@ definitions don't depend on the household and the household answer doesn't
 depend on them: the cached answer is shared whatever commits are named.
 """
 
+import re
 import sys
 import uuid
 import warnings
@@ -144,6 +145,27 @@ def test_a_malformed_definition_is_a_400_before_any_calculation(
     response = client.post(f"{ROUTE}?{query}", json=REQUEST)
     assert response.status_code == 400
     assert "definition" in response.json()["detail"]
+    assert _fake_calculation == []
+
+
+def test_measures_unregistered_in_the_body_are_the_422_the_page_reads(
+    _fake_calculation,
+):
+    """The page lists such measures unavailable by reading this 422
+    (``unregisteredMeasures`` in householdImpactApi.js): every item on
+    ``body.policies``, its message ending ``Unknown measures: `` and the
+    ids, sorted and joined by ", ". Change one side, change the other
+    (review of 52ec7a10)."""
+    policies = ["zz_new_measure", MEASURES[0], "aa_other"]
+    response = client.post(ROUTE, json={**REQUEST, "policies": policies})
+    assert response.status_code == 422
+    [item] = response.json()["detail"]
+    assert item["loc"] == ["body", "policies"]
+    # \Z, not $: Python's $ also matches before a final newline, and the
+    # page's JavaScript $ does not.
+    match = re.search(r"Unknown measures: (.+)\Z", item["msg"])
+    assert match is not None
+    assert match.group(1).split(", ") == ["aa_other", "zz_new_measure"]
     assert _fake_calculation == []
 
 

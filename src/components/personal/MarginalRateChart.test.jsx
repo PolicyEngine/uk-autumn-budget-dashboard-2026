@@ -114,7 +114,7 @@ describe("MarginalRateChart", () => {
     expect(screen.getByText(/^At £110,000 your marginal tax rate stays at 62%, so of your next £1,000 you keep £380\./)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     // The parts are always the rate with the policies (own.after), so it says so
-    expect(screen.getByText(/your marginal rate with the policies is made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
+    expect(screen.getByText(/your marginal rate with the policies consists of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
     // The PA taper's note, which the legend had behind an "i", is a definition
     expect(document.querySelector(".chart-more-info")).toHaveTextContent(/Personal allowance taper/);
   });
@@ -194,22 +194,22 @@ describe("MarginalRateChart", () => {
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     const about = () => document.querySelector(".chart-more-info");
     expect(about()).toHaveTextContent("Each layer is one tax's or benefit taper's part of the rate; the line is the total rate.");
-    expect(about()).toHaveTextContent(/A part that lowers the rate .* is drawn below 0%/);
+    expect(about()).toHaveTextContent(/A part that lowers the rate .* sits below 0%/);
     chooseOption(document.body, "Change");
     expect(about()).toHaveTextContent("The line is the change in the total rate, in percentage points.");
     expect(about()).not.toHaveTextContent(/the line is the total rate|The line is the total rate\./);
-    expect(about()).not.toHaveTextContent(/drawn below 0%|marked at its edge/);
+    expect(about()).not.toHaveTextContent(/sits below 0%|shows as a mark at its edge/);
   });
 
   it("describes the downloaded image by the view drawn: one total, and that side's parts (W6 G1)", () => {
     expect(rateExportDescription("before", true, "2027-28")).toBe(
-      "Share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28 under current law, by part.",
+      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28 under current law, by part.",
     );
     expect(rateExportDescription("after", false, "2027-28")).toBe(
-      "Share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28 with the policies.",
+      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28 with the policies.",
     );
     expect(rateExportDescription("change", false, "2027-28")).toBe(
-      "The change the selected policies make to the share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28, in percentage points.",
+      "The change the selected policies make to the share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28, in percentage points.",
     );
     for (const view of ["before", "after", "change"]) {
       expect(rateExportDescription(view, true, "2027-28")).not.toMatch(/under current law and with/);
@@ -233,7 +233,7 @@ describe("MarginalRateChart", () => {
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     const about = document.querySelector(".chart-more-info");
     expect(about).toHaveTextContent(
-      "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range each extra £1 of income costs about 53p in income tax: 20p at the basic rate (19p at the starter rate in Scotland) plus 33p of the reduction withdrawn.",
+      "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range each extra £1 of income costs about 53p in income tax: 20p at the basic rate (19p at the starter rate in Scotland) plus 33p as the reduction falls.",
     );
     expect(about).not.toHaveTextContent(/only income is the State Pension|Any earnings take the whole allowance away|first pound earned/);
   });
@@ -282,7 +282,7 @@ describe("the two Across earnings cards in step", () => {
     const by = (chips, key) => chips.find((chip) => chip.key === key);
     expect(by(net, "income_tax").disabled).toBe(false);
     expect(by(net, "universal_credit")).toMatchObject({ disabled: true, tip: "No effect for this household" });
-    expect(by(net, "pa_taper")).toMatchObject({ disabled: true, tip: "Included in income tax on this card" });
+    expect(by(net, "pa_taper")).toMatchObject({ disabled: true, tip: "Part of income tax on this card" });
     expect(by(rate, "earnings").disabled).toBe(true);
     // The same colour on both
     for (const chip of net.slice(0, -1)) expect(by(rate, chip.key).colour).toBe(chip.colour);
@@ -314,7 +314,7 @@ describe("changeRateTicks headroom", () => {
 describe("the Both view (Vahid, 28 Oct)", () => {
   it("describes both totals in its export, and lists both and the change in its tooltip", () => {
     expect(rateExportDescription("both", true, "2027-28")).toBe(
-      "Share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28, under current law and with the policies.",
+      "Share of each extra pound of salary that taxes and benefit withdrawals take in 2027-28, under current law and with the policies.",
     );
     const { container } = render(
       <RateTooltip active yearLabel="2027-28" parts={null} view="both" payload={[{ payload: { income: 30000, beforeRaw: 0.2, afterRaw: 0, change: -0.2 } }]} />,
