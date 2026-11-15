@@ -12,11 +12,12 @@
  * on 29 October (María): its effect rests on what a household pays into
  * cash ISAs, which our survey data do not hold yet. The Machine Games
  * Duty rise joined them on 2 November: our survey data hold no gambling
- * yet, and the model cannot tell higher-stake machines from the rest. On
- * the next certified national (policyengine.py#731) both have data, but
- * stay here: the cash ISA figure rests on where savers would have put the
- * excess, and the duty's on machines the Budget leaves at 20%. To publish
- * one, take it out of this list and add it to the package
+ * yet. On the next certified national (policyengine.py#731) both have
+ * data. The cash ISA limit stays here: its figure rests on where savers
+ * would have put the excess. The duty charges 75.7% of standard-rate
+ * takings at the higher rate on survey data (the Category B share, 3
+ * November) and is published with the bundle-adoption regeneration. To
+ * publish one, take it out of this list and add it to the package
  * (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS in reforms.py). This is the one
  * place the page names them outside the measure catalogue.
  */

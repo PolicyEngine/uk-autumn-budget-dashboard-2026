@@ -1302,10 +1302,16 @@ FIRST_YEARS = {
 }
 
 
-def test_machine_games_duty_rise_is_five_points_on_the_standard_rate():
-    """The standard rate (the higher-stake machines' in the Household
-    calculator) is 25% from 2027-28, and the lower and higher rates are as
-    they were: £1,000 of standard-rate takings pay £250 of duty, not £200."""
+def test_machine_games_duty_rise_is_five_points_on_higher_stake_takings():
+    """For one household, whose standard-rate takings are all on
+    higher-stake machines (the Household calculator's answer), the duty on
+    them is 25% from 2027-28: £1,000 pay £250, not £200. The rule is a
+    modifier (budget_measures/machine_games_higher_stake_rate.py,
+    tests/test_machine_games_higher_stake.py), not a rate change."""
+    from uk_budget_data.budget_measures.machine_games_higher_stake_rate import (
+        machine_games_higher_stake_rate,
+    )
+
     year = 2029
     sit = situation(
         {"p": _person(year, employment_income=30_000)},
@@ -1316,11 +1322,9 @@ def test_machine_games_duty_rise_is_five_points_on_the_standard_rate():
     )
     assert before == pytest.approx(200, abs=PENNY)
     assert after == pytest.approx(250, abs=PENNY)
-    changes = get_reform("machine_games_duty_rise").parameter_changes
-    assert list(changes) == [reforms.MACHINE_GAMES_STANDARD_RATE]
-    assert changes[reforms.MACHINE_GAMES_STANDARD_RATE] == {
-        str(y): 0.25 for y in POLICY_YEARS if y >= 2027
-    }
+    measure = get_reform("machine_games_duty_rise")
+    assert not measure.parameter_changes
+    assert measure.simulation_modifier is machine_games_higher_stake_rate
 
 
 def test_every_measure_has_a_first_year_check():

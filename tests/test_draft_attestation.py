@@ -14,6 +14,7 @@ SCRIPT = (
 )
 HAND_WRITTEN = (
     reforms.BUS_FARE_CAP_ID,
+    reforms.MACHINE_GAMES_DUTY_ID,
     reforms.PLAN_2_ID,
     reforms.STATE_PENSION_ALLOWANCE_ID,
 )
@@ -25,6 +26,7 @@ BUDGET_MODIFIERS = (
     reforms.ELECTRICITY_VAT_ID,
     reforms.FUEL_DUTY_DEFERRAL_ID,
     reforms.HOUSEHOLD_ENERGY_PAYMENT_ID,
+    reforms.MACHINE_GAMES_DUTY_ID,
     reforms.STATE_PENSION_ALLOWANCE_ID,
 )
 

@@ -19,6 +19,7 @@ may live here).
 Year Y is fiscal year Y-(Y+1).
 """
 
+import inspect
 from datetime import date
 from typing import Optional
 
@@ -42,6 +43,9 @@ from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
 )
 from uk_budget_data.budget_measures.household_energy_payment_2026 import (
     household_energy_payment_2026,
+)
+from uk_budget_data.budget_measures.machine_games_higher_stake_rate import (
+    machine_games_higher_stake_rate,
 )
 from uk_budget_data.budget_measures.pension_tax_allowance import (
     pension_tax_allowance,
@@ -140,9 +144,6 @@ BUS_FARE_CAP_ID = "bus_fare_cap_2027"
 CASH_ISA_LIMIT_ID = "cash_isa_limit_kept"
 MACHINE_GAMES_DUTY_ID = "machine_games_duty_rise"
 TRADING_ALLOWANCE = "gov.hmrc.income_tax.allowances.trading_allowance"
-MACHINE_GAMES_STANDARD_RATE = (
-    "gov.hmrc.gambling_duty.machine_games.rates.standard"
-)
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
@@ -1093,24 +1094,27 @@ def _create_cash_isa_limit_kept() -> Reform:
 # machine suppliers from 1 April 2028 (+£20m, +£15m, +£15m, +£10m), which
 # changes who pays, not the rate, and is not modelled.
 #
-# policyengine-uk 2.151.0 and 2.164.2 split takings only by the duty's
-# existing bands (lower 5%, standard 20%, higher 25%), with no input for
-# the higher-stake part of the standard band (policyengine-uk#2731 adds
-# one in 2.167.0). So the measure raises the standard rate, from 2027-28:
-# - In the Household calculator this is exact: the form asks only for
-#   losses on higher-stake machines and sets them as the household's
-#   standard-rate takings.
-# - On survey data it reaches every standard-rate machine, pubs' Category C
-#   and D machines too, so it is an upper bound on the static cost (about
-#   1 / 0.757 of it on the Gambling Commission's Category B share; María,
-#   policyengine.py#731, 2 November 2026). Held back from the national
-#   results (calculatorOnlyMeasures.js) until the engine and the data carry
-#   the split. The certified data the dashboard runs on today hold no
-#   gambling takings at all (data limit machine_games_standard_rate).
-# Annual keys: the engine applies the change from 6 April 2027, so
-# 2026-27, which the Treasury also scores at £0, has none of it.
-MACHINE_GAMES_DUTY_FROM = 2027
-MACHINE_GAMES_DUTY_HIGHER_STAKE_RATE = 0.25
+# The rule is policyengine-uk#2731's, as a modifier on machine_games_duty
+# (budget_measures/machine_games_higher_stake_rate.py): the higher-stake
+# part of standard-rate takings pays the higher rate from 2027-28. On
+# survey data that part is 75.7% of standard-rate takings, the Gambling
+# Commission's Category B share, a floor (María and Vahid, 3 November
+# 2026); in the Household calculator it is all of them, since the form
+# asks only for losses on higher-stake machines. The bases grow with the
+# OBR's October 2026 forecast (forecast/gambling.py, policyengine-uk#2761).
+#
+# Held back from the national results (calculatorOnlyMeasures.js) until
+# the bundle-adoption PR regenerates them on policyengine-uk 2.165.1 and
+# national f6e33b93: the certified data the page runs on today (a6299504)
+# hold no gambling takings at all (data limit machine_games_standard_rate).
+# To publish it there, add MACHINE_GAMES_DUTY_ID to
+# AUTUMN_BUDGET_2026_COMBINED_COMPONENTS and take its entry out of
+# calculatorOnlyMeasures.js.
+MACHINE_GAMES_DUTY_FROM = (
+    inspect.signature(machine_games_higher_stake_rate)
+    .parameters["first_year"]
+    .default
+)
 
 
 def _create_machine_games_duty_rise() -> Reform:
@@ -1122,19 +1126,15 @@ def _create_machine_games_duty_rise() -> Reform:
             "over £1 or a prize over £100 rises from 20% to 25% of net "
             "takings from 1 April 2027; lower-stake machines stay at 20%. "
             "The duty is counted against the households whose gambling "
-            "losses make up the takings, with no change in play. The model "
-            "has no separate input for higher-stake machines, so the "
-            "change raises its standard rate: exact for one household, "
-            "whose losses on higher-stake machines the form asks for, but "
-            "on survey data it also reaches lower-stake machines, so there "
-            "is no national figure yet."
+            "losses make up the takings, with no change in play. For one "
+            "household the form asks for its losses on higher-stake "
+            "machines. On survey data, which do not split machines by "
+            "stake, 75.7% of standard-rate takings are taken to be on "
+            "higher-stake machines (the Gambling Commission's Category B "
+            "share, a floor), and the takings grow with the OBR's betting "
+            "and gaming forecast."
         ),
-        parameter_changes=rate_change(
-            MACHINE_GAMES_STANDARD_RATE,
-            _years_from(
-                MACHINE_GAMES_DUTY_FROM, MACHINE_GAMES_DUTY_HIGHER_STAKE_RATE
-            ),
-        ),
+        simulation_modifier=machine_games_higher_stake_rate,
     )
 
 

@@ -188,7 +188,12 @@ def test_every_simulation_route_uses_the_forecast(monkeypatch):
         assert scenario.parameter_changes[OBR + "consumer_price_index"] == (
             forecast_parameter_changes()[OBR + "consumer_price_index"]
         )
-        assert scenario.applied_before_data_load
+        # The growth rates before data load; the gambling bases after it
+        # (forecast.gambling)
+        before, after = scenario.parts_by_data_load()
+        assert before.applied_before_data_load
+        assert before.parameter_changes == scenario.parameter_changes
+        assert after.simulation_modifier is not None
 
 
 def test_record_names_its_source():
