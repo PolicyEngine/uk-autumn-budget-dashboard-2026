@@ -671,6 +671,41 @@ export const POLICY_DETAILS = [
       example: { spending: 500, saved: { "2026-27": 13, "2027-28": 40 } },
     },
   },
+  // Held back from the national results (reforms.py, company_car_tax_2030)
+  // until policyengine.py#731's release carries the dd99a1dcd pair: this
+  // entry shows only once the catalogue publishes the measure.
+  {
+    id: "company_car_tax_2030",
+    shortName: "Company car tax up",
+    noun: "company car tax rise",
+    sentence: "raising company car tax rates by 1 point",
+    name: "Company car tax rates up 1 point in 2030-31",
+    description: "Raise every company car tax rate by 1 point from April 2030",
+    writtenFor:
+      "From 6 April 2030 every company car appropriate percentage, the share of a car's list price taxed each year as a benefit in kind, is 1 percentage point above its 2029-30 rate: 10% for zero-emission cars instead of 9%, 20% for cars emitting 1 to 50 g/km instead of 19%, and 1 point more in every other band, up to a maximum of 40%. The car fuel benefit, which uses the same percentage, rises with it. Employees pay more income tax on the benefit, and employers more Class 1A National Insurance, which the model keeps with the employer as revenue. Cars, list prices and fuel are held fixed, with no switching to cheaper cars.",
+    summary: "Raises the share of a company car's list price taxed each year by 1 point.",
+    points: [
+      { label: "Electric cars", text: "10% instead of 9%." },
+      { label: "Maximum", text: "40% instead of 39%." },
+      { label: "Example", text: "£30,000 petrol car, 120 g/km: £120 more for a higher rate taxpayer." },
+    ],
+    details: [
+      "Adds 1 point to every appropriate percentage from 2030-31, the zero-emission rate and the maximum included.",
+      "The car fuel benefit uses the same percentage, so it rises too.",
+      "Employers' Class 1A National Insurance on the benefit stays with the employer; no household bears it.",
+      "Assumption: cars, list prices and fuel stay fixed; no one switches to a cheaper car.",
+    ],
+    starts: "Apr 2030",
+    affects: "Employees with a company car",
+    type: "Income tax",
+    inForce: { from: "2030-04" },
+    source: {
+      label: "HM Treasury, Budget 2026, paragraph 6.207",
+      href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+    // budgetRows: [86] comes with the measure's row in
+    // data_inputs/treasury/mapping.csv, when it is published.
+  },
 ];
 
 const DETAILS_BY_ID = Object.fromEntries(

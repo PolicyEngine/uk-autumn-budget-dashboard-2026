@@ -18,7 +18,8 @@ comparator_basis: post_behavioural
 # expenses to the allowance), property income (incorporation; Table 6.1
 # row 61), savings income (shifting into ISAs; row 62), the cash ISA limit
 # (savers using cash ISAs up to £20,000; row 11, all of it behaviour) and
-# Machine Games Duty (lower payouts and less play; row 56). Their years
+# Machine Games Duty (lower payouts and less play; row 56) and company car
+# tax (users switching to cheaper company cars; row 86). Their years
 # pass within the wider band below.
 # The Pension Tax Allowance costing "assumes no behavioural response" and the
 # Household Energy Payment is a flat payment with no costing page, so both
@@ -32,6 +33,7 @@ includes_behaviour:
   - savings_income_rates_up
   - cash_isa_limit_kept
   - machine_games_duty_rise
+  - company_car_tax_2030
 # PROPOSAL: 25% of the Treasury's figure, with the ordinary £50m floor. The
 # ordinary 10% covers data and forecast differences; up to about 15% more
 # covers a behavioural offset the static model cannot reproduce. Behaviour

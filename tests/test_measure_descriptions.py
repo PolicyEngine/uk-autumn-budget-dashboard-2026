@@ -47,6 +47,8 @@ TAX_NAMES = {
         r"\bHICBC\b",
         # Budget 2026's reduction in pensioners' income tax.
         r"(?i:\bpension tax allowance\b)",
+        # Company car tax is income tax on the company car benefit.
+        rf"(?i:\bcompany[- ]car[- ]{TAX}\b)",
     ),
     "National Insurance": (
         r"(?i:\bnational[- ]insurance\b)",
@@ -168,6 +170,8 @@ DECLARED = {
     # The tax on the interest the planned limit's excess would have earned
     "cash_isa_limit_kept": {"income tax"},
     "machine_games_duty_rise": {"gambling duties"},
+    # The benefit's income tax, and employers' Class 1A on it
+    "company_car_tax_2030": {"income tax", "National Insurance"},
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(
@@ -369,6 +373,7 @@ def test_the_names_are_read_as_copy_uses_them():
         "R&D tax relief": {"corporation tax"},
         "the High Income Child Benefit Charge": {"income tax"},
         "a Pension Tax Allowance": {"income tax"},
+        "Company car tax rates up 1 point": {"income tax"},
         "where employers spread increased NI costs": {"National Insurance"},
         "attract employee and employer National Insurance": {
             "National Insurance"
