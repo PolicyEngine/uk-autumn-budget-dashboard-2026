@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_TITLE, formatMillions, groupsOf, unmodelledSubtitle } from "./UnmodelledMeasures";
 import { WHY_NOT_MODELLED } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
+import { explainerFor } from "../../utils/explainers";
 import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
@@ -41,6 +45,12 @@ describe("the unmodelled measures (unmodelledMeasures.js)", () => {
     }
     const ids = UNMODELLED_MEASURES.map((measure) => measure.id);
     expect(new Set(ids).size).toBe(ids.length);
+    // No id is a registry id (reforms.py's *_ID constants): explainers.js
+    // looks both up in one list
+    const registry = readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "uk_budget_data", "reforms.py"), "utf8");
+    const registered = new Set([...registry.matchAll(/^[A-Z0-9_]+_ID = "([^"]+)"$/gm)].map((match) => match[1]));
+    expect(registered.size).toBeGreaterThan(0);
+    expect(ids.filter((id) => registered.has(id))).toEqual([]);
   });
 
   it("give each Table 6.1 row its number and a figure for each of the table's six years", () => {
@@ -259,6 +269,35 @@ describe("UnmodelledMeasures", () => {
       const link = within(card).getByRole("link", { name: new RegExp(`^${label}\\s*\\(opens in a new tab\\)$`) });
       expect(link).toHaveAttribute("href", seeAlso.href);
       expect(link).toHaveAttribute("target", "_blank");
+    }
+  });
+
+  it("links our policy brief in the footer of a card we have one for: the adjusted Triple Lock's", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    // The cards explainers.js names, each with its post
+    const briefed = UNMODELLED_MEASURES.filter(({ id }) => explainerFor(id));
+    expect(Object.fromEntries(briefed.map(({ id }) => [id, explainerFor(id).href]))).toEqual({
+      "adjusted-triple-lock": "https://www.policyengine.org/uk/research/uk-triple-lock-budget-2026",
+    });
+    for (const { id } of UNMODELLED_MEASURES) {
+      const card = document.getElementById(`unmodelled-${id}`);
+      const links = within(card).queryAllByRole("link", { name: /^Read policy brief/ });
+      const explainer = explainerFor(id);
+      if (!explainer) {
+        expect(links, id).toHaveLength(0);
+        continue;
+      }
+      expect(links, id).toHaveLength(1);
+      const [link] = links;
+      const title = explainer.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      expect(link).toHaveAccessibleName(new RegExp(`^Read policy brief: ${title}\\s*\\(opens in a new tab\\)$`));
+      expect(link).toHaveAttribute("href", explainer.href);
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      // In the footer, as on the modelled cards: seen without opening the
+      // Treasury costing
+      expect(link.closest(".policy-card-actions")).not.toBeNull();
     }
   });
 
