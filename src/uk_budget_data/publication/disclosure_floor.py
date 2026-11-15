@@ -17,18 +17,25 @@ the changed records (``pipeline.scatter_survey_households``), as the binned
 scatter and the results by area do.
 
 The age table may leave rows out, so its thin cells are withheld with
-whatever would give them back by difference (``withheld_age_labels``): a
-thin single year of age takes the other single ages of its band with it,
-so the bands and "all" stay; a thin band leaves only "all"; a thin "all"
-leaves no row. The decile tables keep their identifying columns and
+whatever would give them back by difference (``withheld_age_labels``,
+#358): in a band that is not thin, its thin single years of age are left
+out, and further single ages only while the ages left out, with the band's
+ages that have no row of their own, rest together on fewer than
+SURVEY_HOUSEHOLD_FLOOR survey households (``age_extra_ages``); the bands
+and "all" stay. The band less its published single ages then gives back
+only a group that clears the floor. A thin band leaves only "all"; a thin
+"all" leaves no row. The decile tables keep their identifying columns and
 withhold every value in a thin decile's row, plus the winners and losers
 "all" row that would give it back by difference. A combined run also
 withholds its members' withheld cells, in the age table as in the decile
 tables (#340): the package's own rows less the other members' would give
 back a member's withheld age, so the package takes each member's thin age
-groups as its own (``recorded_thin_age_groups``) before choosing the rows
-to leave out. The receipt's ``withheld_cells`` names the age rows left
-out, which no file then holds. When "all" itself is thin, the
+groups and withheld age rows as its own (``recorded_thin_age_groups``)
+before choosing the rows to leave out, and adds ages to them by its own
+survey households (``withheld_age_cells`` gives the argument). The
+receipt's ``withheld_cells`` names the age rows left out, which no file
+then holds, and its ``age_extra_cells`` the single ages among them that
+were added only to bring a band's withheld group up to the floor. When "all" itself is thin, the
 whole measure and its costing rest on too few households: that run keeps
 the warning and publication refusal, or is refused before writing when
 THIN_DECILES_ENV is "refuse".
@@ -151,6 +158,107 @@ def thin_cells(
     ``survey`` names the survey household behind each of the simulations'
     households, in the engine's household order.
     """
+    return thin_cells_and_extra_ages(baseline, reformed, years, survey)[0]
+
+
+def _single_age_key(label: str) -> int:
+    return int(label.rstrip("+"))
+
+
+def _band_single_ages(groups: dict[str, np.ndarray], band: str) -> list[str]:
+    """The single years of age with a row in ``band``, youngest first."""
+    bands = {label for label, _, _ in AGE_BANDS}
+    singles = [
+        label
+        for label in groups
+        if label not in bands
+        and label not in (AGE_BAND_ALL, NO_BAND)
+        and not label.endswith(OTHER_AGES)
+    ]
+    return sorted(
+        (label for label in singles if _band_of_single_age(label) == band),
+        key=_single_age_key,
+    )
+
+
+def age_extra_ages(
+    groups: dict[str, np.ndarray],
+    changed: np.ndarray,
+    survey: np.ndarray,
+    thin: list[str],
+) -> dict[str, list[str]]:
+    """The single ages, by band, to withhold beside ``thin`` (#358).
+
+    ``groups``, ``changed`` and ``survey`` are by person, as for
+    ``thin_groups``; ``thin`` is the year's thin groups and any it
+    inherits from a package's members. In each band that is not itself
+    thin, the withheld group is its single ages in ``thin`` and its ages
+    without a row (OTHER_AGES), which the band less its published single
+    ages gives back. While that group rests on 1 to SURVEY_HOUSEHOLD_FLOOR
+    - 1 survey households, the band's single age with a row that is not in
+    it and has the fewest survey households with a change, and at least
+    one, joins it; ties go to the youngest. A single age outside ``thin``
+    with a change has at least SURVEY_HOUSEHOLD_FLOOR survey households,
+    so one is always enough. Only bands that need an age are named; a
+    year with a thin band, "all" or NO_BAND withholds every single age
+    anyway and names none.
+
+    Not handled: whether a single age has a row is decided by its record
+    count (``age_groups``), but ``AgeImpactCalculator`` also drops a group
+    whose weights sum to zero. An extra age with zero total weight would
+    publish no row and so add nothing to the group the band gives back.
+    This assumes no single age with a row has zero total weight."""
+    bands = [label for label, _, _ in AGE_BANDS]
+    if AGE_BAND_ALL in thin or NO_BAND in thin or set(bands) & set(thin):
+        return {}
+
+    def households(members):
+        return len(np.unique(survey[members & changed]))
+
+    extra = {}
+    for band in bands:
+        singles = _band_single_ages(groups, band)
+        withheld = [label for label in singles if label in thin]
+        if not withheld and band + OTHER_AGES not in thin:
+            continue
+        members = groups[band + OTHER_AGES].copy()
+        for label in withheld:
+            members |= groups[label]
+        added = []
+        candidates = sorted(
+            (
+                (households(groups[label]), _single_age_key(label), label)
+                for label in singles
+                if label not in withheld
+            ),
+        )
+        candidates = [c for c in candidates if c[0] > 0]
+        while 0 < households(members) < SURVEY_HOUSEHOLD_FLOOR:
+            if not candidates:
+                # Not reached unless the band itself is thin: withhold
+                # every single age of the band.
+                added = [label for label in singles if label not in withheld]
+                break
+            _, _, label = candidates.pop(0)
+            added.append(label)
+            members |= groups[label]
+        if added:
+            extra[band] = sorted(added, key=_single_age_key)
+    return extra
+
+
+def thin_cells_and_extra_ages(
+    baseline,
+    reformed,
+    years: list[int],
+    survey,
+    inherited: Optional[dict[int, list[str]]] = None,
+) -> tuple[dict[tuple[str, int], list[str]], dict[int, dict[str, list[str]]]]:
+    """``thin_cells``, and the single ages each year's age table withholds
+    beside its thin groups and ``inherited`` ones (``age_extra_ages``), by
+    year and band. ``inherited`` names, by year, a combined run's members'
+    thin age groups and withheld age rows (``recorded_thin_age_groups``),
+    so the package's extra ages are chosen by its own survey households."""
     survey = np.asarray(survey)
     households = pd.Index(
         _values(baseline, "household_id", years[0], "household")
@@ -165,6 +273,7 @@ def thin_cells(
     if (position < 0).any():
         raise ValueError("a person's household is not among the households")
     found = {}
+    extra_ages = {}
     for year in years:
         change = _values(
             reformed, "household_net_income", year, "household"
@@ -184,7 +293,15 @@ def thin_cells(
         thin = thin_groups(groups, changed[position], survey[position])
         if thin:
             found[(AGE_TABLE, year)] = thin
-    return found
+        extra = age_extra_ages(
+            groups,
+            changed[position],
+            survey[position],
+            sorted(set(thin) | set((inherited or {}).get(year, []))),
+        )
+        if extra:
+            extra_ages[year] = extra
+    return found, extra_ages
 
 
 def floor_record(
@@ -192,6 +309,7 @@ def floor_record(
     *,
     withheld: Optional[dict[tuple[str, int], list[str]]] = None,
     not_checked_because: Optional[str] = None,
+    extra_ages: Optional[dict[int, dict[str, list[str]]]] = None,
 ) -> dict:
     """Record the floor in an artifact's receipt.
 
@@ -202,7 +320,13 @@ def floor_record(
     withholding. ``survey_households`` is the decile and age tables'
     floor, SURVEY_HOUSEHOLD_FLOOR; the binned scatter's is
     SCATTER_MIN_HOUSEHOLDS. A run whose survey households cannot be told
-    apart records that it was not checked, and why."""
+    apart records that it was not checked, and why. ``age_extra_cells``,
+    only where there are any, names by year and band the single ages
+    withheld only to bring a band's withheld group up to the floor
+    (``age_extra_ages``), for reviewers; every age row left out is also in
+    ``withheld_cells``. No gate re-applies the rule from it:
+    ``validate.withholding_problems`` checks only that the withheld rows
+    are absent."""
     cells = [
         {"table": table, "year": year, "groups": list(labels)}
         for (table, year), labels in sorted(found.items())
@@ -229,9 +353,49 @@ def floor_record(
             for (table, year), labels in sorted(withheld.items())
             if labels
         ]
+    bands = [label for label, _, _ in AGE_BANDS]
+    extra_cells = [
+        {"table": AGE_TABLE, "year": year, "band": band, "groups": list(ages)}
+        for year, by_band in sorted((extra_ages or {}).items())
+        for band, ages in sorted(
+            by_band.items(), key=lambda item: bands.index(item[0])
+        )
+        if ages
+    ]
+    if extra_cells:
+        record["age_extra_cells"] = extra_cells
     if not_checked_because is not None:
         record["not_checked_because"] = not_checked_because
     return record
+
+
+def recorded_extra_ages(record: dict) -> dict[int, dict[str, list[str]]]:
+    """A receipt's extra single ages by year and band (``floor_record``'s
+    ``age_extra_cells``), validated; none for a receipt made before #358.
+    Only the tests read it: no gate checks the recorded ages against the
+    rule."""
+    if not isinstance(record, dict):
+        raise ValueError("its disclosure floor is not an object")
+    cells = record.get("age_extra_cells") or []
+    if not isinstance(cells, list):
+        raise ValueError("its age_extra_cells are not a list")
+    bands = {label for label, _, _ in AGE_BANDS}
+    found: dict[int, dict[str, list[str]]] = {}
+    for cell in cells:
+        if (
+            not isinstance(cell, dict)
+            or cell.get("table") != AGE_TABLE
+            or type(cell.get("year")) is not int
+            or cell.get("band") not in bands
+            or not valid_age_labels(cell.get("groups"))
+            or any(
+                label in bands or label == AGE_BAND_ALL
+                for label in cell["groups"]
+            )
+        ):
+            raise ValueError("its age_extra_cells cell is invalid")
+        found.setdefault(cell["year"], {})[cell["band"]] = list(cell["groups"])
+    return found
 
 
 def decile_label(label) -> str:
@@ -363,7 +527,9 @@ def _band_of_single_age(label: str) -> str:
 
 
 def withheld_age_labels(
-    thin: list[str], labels: list[str]
+    thin: list[str],
+    labels: list[str],
+    extra: Optional[dict[str, list[str]]] = None,
 ) -> Optional[set[str]]:
     """Which of a year's age table ``labels`` to withhold, given its
     ``thin`` groups (``age_groups``), so that no published row, nor any sum
@@ -372,10 +538,17 @@ def withheld_age_labels(
     - "all" thin: every row.
     - A band thin, or the people in no band: every row but "all", since the
       bands add up to it.
-    - Otherwise every single year of age in a band with a thin single age,
-      or whose ages without a row are thin; the bands, "all" and the other
-      bands' single ages stay. Each band is then either whole, giving back
-      only its ages without a row, which are not thin, or shown as one row.
+    - Otherwise, with ``extra`` (by band, from ``age_extra_ages``, which
+      the survey households decide; a band it does not name needs none):
+      the thin single ages, and each band's extra ages. The bands, "all"
+      and every other single age stay. A band less its published single
+      ages then gives back only the ages withheld with its ages without a
+      row, which together clear the floor (#358).
+    - Without ``extra``, where no survey households were counted: every
+      single year of age in a band with a thin single age, or whose ages
+      without a row are thin, as before #358. Each band is then either
+      whole, giving back only its ages without a row, which are not thin,
+      or shown as one row.
     """
     if AGE_BAND_ALL in thin:
         return None
@@ -390,13 +563,19 @@ def withheld_age_labels(
         )
         for label in thin
     }
-    return {
+    singles = [
         label
         for label in labels
         if label not in bands
         and label != AGE_BAND_ALL
         and _band_of_single_age(label) in dirty
-    }
+    ]
+    if extra is None:
+        return set(singles)
+    named = set(thin)
+    for band in dirty:
+        named.update(extra.get(band, []))
+    return {label for label in singles if label in named}
 
 
 def age_labels_in_order(labels) -> list[str]:
@@ -461,15 +640,36 @@ def withheld_age_cells(
     rows: list[dict],
     found: dict[tuple[str, int], list[str]],
     inherited: Optional[dict[int, list[str]]] = None,
+    extra_ages: Optional[dict[int, dict[str, list[str]]]] = None,
 ) -> dict[tuple[str, int], list[str]]:
     """The labels of the age table's rows to leave out, by (AGE_TABLE,
     year), in row order: its thin cells and any row that would give one
     back (``withheld_age_labels``), year by year.
 
+    ``extra_ages`` gives, by year and band, the single ages withheld only
+    to bring a band's withheld group up to the floor
+    (``thin_cells_and_extra_ages``, from ``thin`` and ``inherited``). None
+    means no survey households were counted, and each band with a thin or
+    inherited single age is withheld whole, as before #358.
+
     ``inherited`` names, by year, a combined run's members' thin age
-    groups (``recorded_thin_age_groups``): the package leaves out what each
-    member left out, and what its own rows less the other members' would
-    give back (#340)."""
+    groups and withheld age rows (``recorded_thin_age_groups``): the
+    package leaves out what each member left out, and what its own rows
+    less the other members' would give back (#340). Why that is enough
+    under #358, where a member leaves out only part of a band: the
+    package's row for a group is the members' rows for it added up. Each
+    member M publishes every single age outside the set W(M) it withheld,
+    and its band, so M's rows give back W(M) with the band's ages without a
+    row as one group, which cleared the floor in M's run, and nothing finer.
+    The package withholds a set U holding every member's W(M) (read from
+    ``withheld_cells``, extra ages included), so every age it publishes M
+    publishes too, and the package's band less its published ages gives
+    back the members' groups U with the ages without a row, added up. For
+    each member, that group is W(M) and its ages without a row plus single
+    ages M publishes, so it gives back nothing M's own rows do not; and the
+    package's extra ages, chosen by its own survey households, make the
+    package's own group clear the floor. Members' receipts from before
+    #358 name whole bands, which the package withholds whole."""
     labels: dict[int, list[str]] = {}
     for row in rows:
         labels.setdefault(row["year"], []).append(row["age_band"])
@@ -483,7 +683,11 @@ def withheld_age_cells(
     for year, year_labels in sorted(labels.items()):
         if not thin.get(year):
             continue
-        dropped = withheld_age_labels(sorted(thin[year]), year_labels)
+        dropped = withheld_age_labels(
+            sorted(thin[year]),
+            year_labels,
+            None if extra_ages is None else extra_ages.get(year, {}),
+        )
         dropped = set(year_labels) if dropped is None else dropped
         if dropped:
             withheld[(AGE_TABLE, year)] = age_labels_in_order(dropped)
@@ -494,9 +698,10 @@ def withhold_thin_age_rows(
     rows: list[dict],
     found: dict[tuple[str, int], list[str]],
     inherited: Optional[dict[int, list[str]]] = None,
+    extra_ages: Optional[dict[int, dict[str, list[str]]]] = None,
 ) -> list[dict]:
     """The age table's rows without those ``withheld_age_cells`` names."""
-    withheld = withheld_age_cells(rows, found, inherited)
+    withheld = withheld_age_cells(rows, found, inherited, extra_ages)
     return [
         row
         for row in rows
