@@ -1011,7 +1011,7 @@ wheels = [
 
 [[package]]
 name = "policyengine"
-version = "6.11.1"
+version = "6.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "h5py" },
@@ -1023,9 +1023,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/34/5c/b0900e634ea1073426877e929850816914a182eb1cecacd2e99d705be63a/policyengine-6.11.1.tar.gz", hash = "sha256:af277f572638377522834f7335e6668905e3c414859c61e8ea4f201b522a8625", size = 1549029, upload-time = "2026-10-27T01:31:08.885Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/67/ec/5e8c266599d461c355c7bfdb84a5fa5a5e15a86e04995874e82eab07b2bc/policyengine-6.14.0.tar.gz", hash = "sha256:aebc3668d72c6f151803446928530f104e36e5b83b7f73c272aeb08397d300d9", size = 1607946, upload-time = "2026-11-05T05:24:53.677Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/79/8788bb21fbcdd5404864656daa9d92b06d9fb5314bfc9b598a780dbcb1ee/policyengine-6.11.1-py3-none-any.whl", hash = "sha256:9ada4083d27ee4f4ca637335371186e3b3fd1607e00980c03a14d293e385080b", size = 539750, upload-time = "2026-10-27T01:31:07.018Z" },
+    { url = "https://files.pythonhosted.org/packages/88/fb/5a9f0dd968032ad6c89e0495b4627a24daff45d8459d0f38d4a6cdd1e5ca/policyengine-6.14.0-py3-none-any.whl", hash = "sha256:61b14267bbe772c35b348b0731a9cdb21de863511d52264a264a5cf74129b282", size = 558163, upload-time = "2026-11-05T05:24:51.946Z" },
 ]
 
 [package.optional-dependencies]
@@ -1771,7 +1771,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "openpyxl", specifier = ">=3.1.0" },
     { name = "pandas", specifier = ">=2.2.0" },
-    { name = "policyengine", extras = ["uk"], specifier = ">=6.11.1" },
+    { name = "policyengine", extras = ["uk"], specifier = ">=6.14.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
