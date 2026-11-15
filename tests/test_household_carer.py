@@ -133,7 +133,7 @@ def test_the_taper_is_skipped_only_where_it_cannot_move_the_household(
     answers, year, expected
 ):
     assert (
-        household_impact.provably_unaffected(TAPER, Answers(**answers), year)
+        household_impact.rule_says_unaffected(TAPER, Answers(**answers), year)
         is expected
     )
 
